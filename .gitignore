@@ -24,3 +24,6 @@ Icon.iconset
 # Swift Package Manager metadata (leave sources tracked)
 # Packages/
 # Package.resolved
+/builds
+/build
+/.tmp
