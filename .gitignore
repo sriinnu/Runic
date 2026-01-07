@@ -1,0 +1,26 @@
+# Xcode user/session
+xcuserdata/
+
+# Build products
+.build/
+DerivedData
+
+# Bundles / artifacts
+CodexBar.app
+Codexbar.app
+*.ipa
+*.dSYM*
+*.zip
+*.delta
+*.dmg
+*.pkg
+*.tar.gz
+*.tgz
+Icon.iconset
+
+# Misc
+.DS_Store
+
+# Swift Package Manager metadata (leave sources tracked)
+# Packages/
+# Package.resolved

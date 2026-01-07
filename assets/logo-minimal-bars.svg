@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <!-- clean two-bar meter - exactly what the menu bar shows -->
+  
+  <!-- session bar (thick, 70% filled) -->
+  <rect x="64" y="88" width="128" height="32" rx="16" fill="#14B8A6" opacity="0.25"/>
+  <rect x="64" y="88" width="90" height="32" rx="16" fill="#14B8A6"/>
+  
+  <!-- weekly bar (thin, 55% filled) -->
+  <rect x="64" y="136" width="128" height="16" rx="8" fill="#2DD4BF" opacity="0.25"/>
+  <rect x="64" y="136" width="70" height="16" rx="8" fill="#2DD4BF"/>
+  
+  <!-- simple reset indicators -->
+  <circle cx="194" cy="104" r="4" fill="#0D9488"/>
+  <circle cx="194" cy="144" r="3" fill="#0D9488"/>
+</svg>

@@ -1,0 +1,117 @@
+# Runic 🎚️ - May your tokens never run out.
+
+Tiny macOS 14+ menu bar app that keeps your Codex, Claude, Cursor, Gemini, Antigravity, Droid (Factory), Copilot, and z.ai limits visible (session + weekly where available) and shows when each window resets. One status item per provider (or Merge Icons mode); enable what you use from Settings. No Dock icon, minimal UI, dynamic bar icons in the menu bar.
+
+<img src="runic.png" alt="Runic menu screenshot" width="520" />
+
+## Roadmap
+- Windows and iOS versions are planned (owner-authorized).
+
+## Install
+
+### Requirements
+- macOS 14+ (Sonoma).
+- Apple Silicon (arm64) and Intel (x86_64).
+
+### Option A: GitHub Releases (recommended, Sparkle updates)
+1) Download the latest zip from GitHub Releases.
+2) Unzip and move `Runic.app` to `/Applications`.
+3) Open it (first run: right-click → Open).
+4) Sparkle will keep you updated automatically (About → “Automatically check for updates”).
+
+Download: <https://github.com/sriinnu/runic/releases>
+### Option B: Homebrew (updates via brew, Sparkle disabled)
+```bash
+brew install --cask sriinnu/tap/runic
+```
+Upgrade:
+```bash
+brew upgrade --cask sriinnu/tap/runic
+```
+
+### First run (developer-friendly)
+- Open Settings → Providers and enable what you use.
+- Install/sign in to the provider sources you rely on (e.g. `codex`, `claude`, `gemini`, browser cookies, or OAuth; Antigravity requires the Antigravity app running).
+- Optional: Settings → General → “Access OpenAI via web” to add Codex dashboard extras.
+
+## Providers
+
+- [Codex](docs/codex.md) — Local Codex CLI RPC (+ PTY fallback) and optional OpenAI web dashboard extras.
+- [Claude](docs/claude.md) — OAuth API or browser cookies (+ CLI PTY fallback); session + weekly usage.
+- [Cursor](docs/cursor.md) — Browser session cookies for plan + usage + billing resets.
+- [Gemini](docs/gemini.md) — OAuth-backed quota API using Gemini CLI credentials (no browser cookies).
+- [Antigravity](docs/antigravity.md) — Local language server probe (experimental); no external auth.
+- [Droid](docs/factory.md) — Browser cookies + WorkOS token flows for Factory usage + billing.
+- [Copilot](docs/copilot.md) — GitHub device flow + Copilot internal usage API.
+- [z.ai](docs/zai.md) — API token (Keychain) for quota + MCP windows.
+- Open to new providers: [provider authoring guide](docs/provider.md).
+
+## Icon & Screenshot
+The menu bar icon is a tiny two-bar meter:
+- Top bar: 5‑hour/session window. If weekly is missing/exhausted and credits are available, it becomes a thicker credits bar.
+- Bottom bar: weekly window (hairline).
+- Errors/stale data dim the icon; status overlays indicate incidents.
+
+## Features
+- Multi-provider menu bar with per-provider toggles (Settings → Providers).
+- Session + weekly meters with reset countdowns.
+- Optional Codex web dashboard enrichments (code review remaining, usage breakdown, credits history).
+- Local cost-usage scan for Codex + Claude (last 30 days).
+- Provider status polling with incident badges in the menu and icon overlay.
+- Merge Icons mode to combine providers into one status item + switcher.
+- Refresh cadence presets (manual, 1m, 2m, 5m, 15m).
+- Bundled CLI (`runic`) for scripts and CI (including `runic cost --provider codex|claude` for local cost usage); Linux CLI builds available.
+- WidgetKit widget mirrors the menu card snapshot.
+- Privacy-first: on-device parsing by default; browser cookies are opt-in and reused (no passwords stored).
+
+## Privacy note
+Wondering if Runic scans your disk? It doesn’t crawl your filesystem; it reads a small set of known locations (browser cookies/local storage, local JSONL logs) when the related features are enabled. See the discussion and audit notes in [issue #12](https://github.com/sriinnu/Runic/issues/12).
+
+## macOS permissions (why they’re needed)
+- **Full Disk Access (optional)**: only required to read Safari cookies/local storage for web-based providers (Codex web, Claude web, Cursor, Droid/Factory). If you don’t grant it, use Chrome/Firefox cookies or CLI-only sources instead.
+- **Keychain access (prompted by macOS)**:
+  - Chrome cookie import needs the “Chrome Safe Storage” key to decrypt cookies.
+  - Claude OAuth credentials (written by the Claude CLI) are read from Keychain when present.
+  - z.ai API token is stored in Keychain from Preferences → Providers; Copilot stores its API token in Keychain during device flow.
+- **Files & Folders prompts (folder/volume access)**: Runic launches provider CLIs (codex/claude/gemini/antigravity). If those CLIs read a project directory or external drive, macOS may ask Runic for that folder/volume (e.g., Desktop or an external volume). This is driven by the CLI’s working directory, not background disk scanning.
+- **What we do not request**: no Screen Recording, Accessibility, or Automation permissions; no passwords are stored (browser cookies are reused when you opt in).
+
+## Docs
+- Providers overview: [docs/providers.md](docs/providers.md)
+- Provider authoring: [docs/provider.md](docs/provider.md)
+- UI & icon notes: [docs/ui.md](docs/ui.md)
+- CLI reference: [docs/cli.md](docs/cli.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Refresh loop: [docs/refresh-loop.md](docs/refresh-loop.md)
+- Status polling: [docs/status.md](docs/status.md)
+- Sparkle updates: [docs/sparkle.md](docs/sparkle.md)
+- Release checklist: [docs/RELEASING.md](docs/RELEASING.md)
+
+## Getting started (dev)
+- Clone the repo and open it in Xcode or run the scripts directly.
+- Launch once, then toggle providers in Settings → Providers.
+- Install/sign in to provider sources you rely on (CLIs, browser cookies, or OAuth).
+- Optional: enable “Access OpenAI via web” for Codex dashboard extras.
+
+## Build from source
+```bash
+swift build -c release          # or debug for development
+./Scripts/package_app.sh        # builds to builds/versions/<athena-runic-version-build-number>/Runic.app
+RUNIC_SIGNING=adhoc ./Scripts/package_app.sh  # ad-hoc signing (no Apple Developer account)
+open builds/latest/Runic.app
+```
+
+Dev loop:
+```bash
+./Scripts/compile_and_run.sh
+./Scripts/compile_and_run_adhoc.sh  # sets RUNIC_SIGNING=adhoc
+```
+
+## Related
+
+
+## Credits
+Inspired by [ccusage](https://github.com/ryoppippi/ccusage) (MIT), specifically the cost usage tracking.
+
+## License
+MIT • Srinivas Pendela ([sriinnu](https://x.com/sriinnu))

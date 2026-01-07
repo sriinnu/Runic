@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>CodexBar</title>
+        <item>
+            <title>0.16.0</title>
+            <pubDate>Mon, 29 Dec 2025 19:03:57 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/CodexBar/main/appcast.xml</link>
+            <sparkle:version>46</sparkle:version>
+            <sparkle:shortVersionString>0.16.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>CodexBar 0.16.0</h2>
+<ul>
+<li>Menu bar: optional “percent mode” (provider brand icons + percentage labels) via Advanced toggle.</li>
+<li>CLI: add <code>codexbar cost</code> to print local cost usage (text/JSON) for Codex + Claude.</li>
+<li>Cost: align local cost scanner with ccusage; stabilize parsing/decoding and handle large JSONL lines.</li>
+<li>Claude: skip pricing for unknown models (tokens still tracked) to avoid hard-coded legacy prices.</li>
+<li>Performance: reduce menu bar CPU usage by caching morph icons, skipping redundant status-item updates, and caching provider enablement/order during animations.</li>
+<li>Menu: improve provider switcher hover contrast in light mode.</li>
+<li>Icons: refresh Droid + Claude brand assets to better match menu sizing.</li>
+<li>CI: avoid interactive login-shell probes to reduce noisy “CLI missing” errors.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/CodexBar/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/CodexBar/releases/download/v0.16.0/CodexBar-0.16.0.zip" length="7607740" type="application/octet-stream" sparkle:edSignature="D/d9z4+8/gqpeoXBKkmEkzpPrzs9pp1DQeCETkndA2kyi1wKTAjPyw6Hj6V1Pe3T5ge66E0N5De88ilUp6WmBw=="/>
+        </item>
+        <item>
+            <title>0.15.3</title>
+            <pubDate>Sun, 28 Dec 2025 20:18:41 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/CodexBar/main/appcast.xml</link>
+            <sparkle:version>45</sparkle:version>
+            <sparkle:shortVersionString>0.15.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>CodexBar 0.15.3</h2>
+<ul>
+<li>Codex: default to OAuth usage API (ChatGPT backend) with CLI-only override in Debug.</li>
+<li>Codex: map OAuth credits balance directly, avoiding web fallback for credits.</li>
+<li>Preferences: add optional “Access OpenAI via web” toggle and show blended source labels when web extras are active.</li>
+<li>Copilot: replace blocking auth wait dialog with a non-modal sheet to avoid stuck login.</li>
+</ul>
+<ul>
+<li>CI: stabilize Claude CLI version detection test.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/CodexBar/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/CodexBar/releases/download/v0.15.3/CodexBar-0.15.3.zip" length="7549248" type="application/octet-stream" sparkle:edSignature="3xoy09WoQnTuskCqIPRHriFPmmTJCVZ4BIgufRNLqfNhszmE1MSf2pWQVYzgt0SBVDrY+12/0dCie9TG0RqTBg=="/>
+        </item>
+        <item>
+            <title>0.15.2</title>
+            <pubDate>Sun, 28 Dec 2025 18:51:01 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/CodexBar/main/appcast.xml</link>
+            <sparkle:version>44</sparkle:version>
+            <sparkle:shortVersionString>0.15.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>CodexBar 0.15.2</h2>
+<ul>
+<li>Copilot: fix device-flow waiting modal to close reliably after auth (and avoid stuck waits).</li>
+<li>Packaging: include the KeyboardShortcuts resource bundle to prevent Settings → Keyboard shortcut crashes in packaged builds.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/CodexBar/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/CodexBar/releases/download/v0.15.2/CodexBar-0.15.2.zip" length="7413967" type="application/octet-stream" sparkle:edSignature="vv7kPaGk0vzAj1AJ5EEbRE0kXtE4iIscrkhxsjU8X+BDT5HQkwJTully+OivJFCksjuUyaZIV74tfi1kWlSWDQ=="/>
+        </item>
+        <item>
+            <title>0.14.0</title>
+            <pubDate>Thu, 25 Dec 2025 03:56:15 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/CodexBar/main/appcast.xml</link>
+            <sparkle:version>41</sparkle:version>
+            <sparkle:shortVersionString>0.14.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>CodexBar 0.14.0</h2>
+<ul>
+<li>Antigravity: new local provider for the Antigravity language server (Claude + Gemini quotas) with an experimental toggle; improved plan display + debug output; clearer not-running/port errors; hide account switch.</li>
+<li>Status: poll Google Workspace incidents for Gemini + Antigravity; Status Page opens the Workspace status page.</li>
+            <li>Settings: add Providers tab; move cost usage + status toggles to General; keep display controls in Advanced.</li>
+<li>Menu/UI: widen the menu for four providers; cards/charts adapt to menu width; tighten provider switcher/toggle spacing; keep menus refreshed while open.</li>
+<li>Gemini: hide the dashboard action when unsupported.</li>
+<li>Claude: fix Extra usage spend/limit units (cents); improve CLI probe stability; surface web session info in Debug.</li>
+<li>OpenAI web: fix dashboard ghost overlay on desktop (WebKit keepalive window).</li>
+<li>Debug: add a debug-lldb build mode for troubleshooting.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/CodexBar/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/CodexBar/releases/download/v0.14.0/CodexBar-0.14.0.zip" length="5382347" type="application/octet-stream" sparkle:edSignature="qhj8jnqH/eOXEP2plbZyTb8w1x0Afcpix0kC+pzMh5jX9Lkf3Yg2Bvd6/vsKdhOObEwJjQZRb/RKiSBx55J3DA=="/>
+        </item>
+        <item>
+            <title>0.13.0</title>
+            <pubDate>Wed, 24 Dec 2025 01:53:35 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/CodexBar/main/appcast.xml</link>
+            <sparkle:version>40</sparkle:version>
+            <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/sriinnu/CodexBar/releases/download/v0.13.0/CodexBar-0.13.0.zip" length="5099083" type="application/octet-stream" sparkle:edSignature="EmhEmcTFQEpuQG6vZ288l9j278VjnpQdQcmZnU1JDvzERVTtnIg+8RDlsHV9niwejaOBPX6mvXST3vNJHpwADA=="/>
+        </item>
+        <item>
+            <title>0.12.0</title>
+            <pubDate>Tue, 23 Dec 2025 04:39:05 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/CodexBar/main/appcast.xml</link>
+            <sparkle:version>39</sparkle:version>
+            <sparkle:shortVersionString>0.12.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/sriinnu/CodexBar/releases/download/v0.12.0/CodexBar-0.12.0.zip" length="4888386" type="application/octet-stream" sparkle:edSignature="tQMHO/RNAbvwRHXYnLAkNV2ksiV722qR8fEYzcbipgetacfPnwnLJ0Pe/lAiZ03PBmj3BkisHb74GosUlSV+DQ=="/>
+        </item>
+    </channel>
+</rss>

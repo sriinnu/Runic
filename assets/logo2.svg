@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <!-- dual-ring meter - emphasizes two separate tracking windows -->
+  
+  <!-- outer ring (weekly window - 60% arc) -->
+  <circle cx="128" cy="128" r="96" 
+          stroke="#2DD4BF" 
+          stroke-width="16" 
+          opacity="0.2"
+          stroke-dasharray="602 602"/>
+  <circle cx="128" cy="128" r="96" 
+          stroke="#2DD4BF" 
+          stroke-width="16" 
+          stroke-dasharray="361 241"
+          stroke-linecap="round"
+          transform="rotate(-90 128 128)"/>
+  
+  <!-- inner ring (session window - 75% arc) -->
+  <circle cx="128" cy="128" r="64" 
+          stroke="#14B8A6" 
+          stroke-width="20" 
+          opacity="0.2"
+          stroke-dasharray="402 402"/>
+  <circle cx="128" cy="128" r="64" 
+          stroke="#14B8A6" 
+          stroke-width="20" 
+          stroke-dasharray="301 101"
+          stroke-linecap="round"
+          transform="rotate(-90 128 128)"/>
+  
+  <!-- center usage indicator -->
+  <circle cx="128" cy="128" r="28" fill="#0F766E"/>
+  
+  <!-- micro bars -->
+  <g fill="#14B8A6">
+    <rect x="118" y="120" width="6" height="16" rx="3"/>
+    <rect x="128" y="116" width="6" height="24" rx="3"/>
+    <rect x="138" y="122" width="6" height="12" rx="3"/>
+  </g>
+  
+  <!-- reset markers -->
+  <circle cx="128" cy="24" r="6" fill="#2DD4BF"/>
+  <circle cx="128" cy="20" r="6" fill="#14B8A6"/>
+</svg>

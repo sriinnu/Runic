@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <!-- session window (thick) -->
+  <path d="M64 96
+           C64 64 104 64 128 96
+           C152 128 192 128 192 96
+           C192 64 152 64 128 96
+           C104 128 64 128 64 96"
+        stroke="#14B8A6" stroke-width="18"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- weekly window (thin + lighter) -->
+  <path d="M76 176
+           C76 152 108 152 128 176
+           C148 200 180 200 180 176
+           C180 152 148 152 128 176
+           C108 200 76 200 76 176"
+        stroke="#14B8A6" stroke-opacity="0.35" stroke-width="10"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- telemetry knot (center accent) -->
+  <rect x="112" y="80" width="32" height="32" rx="16" fill="#2DD4BF"/>
+
+  <!-- usage bars (darker teal) -->
+  <g fill="#0F766E">
+    <rect x="118" y="90" width="8" height="22" rx="4"/>
+    <rect x="128" y="86" width="8" height="26" rx="4"/>
+    <rect x="138" y="92" width="8" height="20" rx="4"/>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="76 100 360 360" fill="none">
+  <!-- Chip 1 (Bottom) -->
+  <ellipse cx="256" cy="380" rx="100" ry="40" fill="#1D4ED8" />
+  <path d="M156 380 V 400 C 156 422, 200 440, 256 440 C 312 440, 356 422, 356 400 V 380" fill="#1E3A8A" />
+  
+  <!-- Chip 2 -->
+  <ellipse cx="256" cy="340" rx="100" ry="40" fill="#2563EB" />
+  <path d="M156 340 V 360 C 156 382, 200 400, 256 400 C 312 400, 356 382, 356 360 V 340" fill="#1D4ED8" />
+
+  <!-- Chip 3 -->
+  <ellipse cx="256" cy="300" rx="100" ry="40" fill="#3B82F6" />
+  <path d="M156 300 V 320 C 156 342, 200 360, 256 360 C 312 360, 356 342, 356 320 V 300" fill="#2563EB" />
+
+  <!-- Chip 4 (Top - Glowing) -->
+  <ellipse cx="256" cy="260" rx="100" ry="40" fill="#60A5FA" />
+  <path d="M156 260 V 280 C 156 302, 200 320, 256 320 C 312 320, 356 302, 356 280 V 260" fill="#3B82F6" />
+  
+  <!-- Top Surface Glow -->
+  <ellipse cx="256" cy="260" rx="80" ry="30" fill="#93C5FD" opacity="0.5" />
+
+  <!-- Floating "Spent" Token (Ghost) -->
+  <ellipse cx="256" cy="160" rx="100" ry="40" stroke="#60A5FA" stroke-width="2" stroke-dasharray="8 8" fill="none" opacity="0.3" />
+
+</svg>

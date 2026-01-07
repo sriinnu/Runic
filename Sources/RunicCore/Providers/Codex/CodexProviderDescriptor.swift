@@ -1,0 +1,237 @@
+import RunicMacroSupport
+import Foundation
+
+@ProviderDescriptorRegistration
+@ProviderDescriptorDefinition
+public enum CodexProviderDescriptor {
+    static func makeDescriptor() -> ProviderDescriptor {
+        ProviderDescriptor(
+            id: .codex,
+            metadata: ProviderMetadata(
+                id: .codex,
+                displayName: "Codex",
+                sessionLabel: "Session",
+                weeklyLabel: "Weekly",
+                opusLabel: nil,
+                supportsOpus: false,
+                supportsCredits: true,
+                creditsHint: "Credits unavailable; keep Codex running to refresh.",
+                toggleTitle: "Show Codex usage",
+                cliName: "codex",
+                defaultEnabled: true,
+                isPrimaryProvider: true,
+                usesAccountFallback: true,
+                browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
+                dashboardURL: "https://chatgpt.com/codex/settings/usage",
+                statusPageURL: "https://status.openai.com/"),
+            branding: ProviderBranding(
+                iconStyle: .codex,
+                iconResourceName: "ProviderIcon-codex",
+                color: ProviderColor(red: 73 / 255, green: 163 / 255, blue: 176 / 255)),
+            tokenCost: ProviderTokenCostConfig(
+                supportsTokenCost: true,
+                noDataMessage: self.noDataMessage),
+            fetchPlan: ProviderFetchPlan(
+                sourceModes: [.auto, .web, .cli, .oauth],
+                pipeline: ProviderFetchPipeline(resolveStrategies: self.resolveStrategies)),
+            cli: ProviderCLIConfig(
+                name: "codex",
+                versionDetector: { ProviderVersionDetector.codexVersion() }))
+    }
+
+    private static func resolveStrategies(context: ProviderFetchContext) async -> [any ProviderFetchStrategy] {
+        let cli = CodexCLIUsageStrategy()
+        let oauth = CodexOAuthFetchStrategy()
+        let web = CodexWebDashboardStrategy()
+
+        switch context.runtime {
+        case .cli:
+            switch context.sourceMode {
+            case .oauth:
+                return [oauth]
+            case .web:
+                return [web]
+            case .cli:
+                return [cli]
+            case .auto:
+                return [web, cli]
+            }
+        case .app:
+            let settings = context.settings
+            let debugMenuEnabled = settings?.debugMenuEnabled ?? false
+            let codexSettings = settings?.codex
+            let selected = codexSettings?.usageDataSource ?? .oauth
+            let hasOAuthCredentials = (try? CodexOAuthCredentialsStore.load()) != nil
+            let strategy = Self.resolveUsageStrategy(
+                debugMenuEnabled: debugMenuEnabled,
+                selectedDataSource: selected,
+                hasOAuthCredentials: hasOAuthCredentials)
+            switch strategy.dataSource {
+            case .oauth:
+                return [oauth, cli]
+            case .cli:
+                return [cli]
+            }
+        }
+    }
+
+    private static func noDataMessage() -> String {
+        let fm = FileManager.default
+        let home = fm.homeDirectoryForCurrentUser.path
+        let root = ProcessInfo.processInfo.environment["CODEX_HOME"].flatMap { raw -> String? in
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+            return "\(trimmed)/sessions"
+        } ?? "\(home)/.codex/sessions"
+        return "No Codex sessions found in \(root)."
+    }
+
+    public static func resolveUsageStrategy(
+        debugMenuEnabled: Bool,
+        selectedDataSource: CodexUsageDataSource,
+        hasOAuthCredentials: Bool) -> CodexUsageStrategy
+    {
+        if debugMenuEnabled {
+            if selectedDataSource == .oauth, !hasOAuthCredentials {
+                return CodexUsageStrategy(dataSource: .cli)
+            }
+            return CodexUsageStrategy(dataSource: selectedDataSource)
+        }
+
+        if hasOAuthCredentials {
+            return CodexUsageStrategy(dataSource: .oauth)
+        }
+        return CodexUsageStrategy(dataSource: .cli)
+    }
+}
+
+public struct CodexUsageStrategy: Equatable, Sendable {
+    public let dataSource: CodexUsageDataSource
+}
+
+struct CodexCLIUsageStrategy: ProviderFetchStrategy {
+    let id: String = "codex.cli"
+    let kind: ProviderFetchKind = .cli
+
+    func isAvailable(_: ProviderFetchContext) async -> Bool { true }
+
+    func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
+        let usage = try await context.fetcher.loadLatestUsage()
+        let credits = await context.includeCredits ? (try? context.fetcher.loadLatestCredits()) : nil
+        return self.makeResult(
+            usage: usage,
+            credits: credits,
+            sourceLabel: "codex-cli")
+    }
+
+    func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
+        false
+    }
+}
+
+struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
+    let id: String = "codex.oauth"
+    let kind: ProviderFetchKind = .oauth
+
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        (try? CodexOAuthCredentialsStore.load()) != nil
+    }
+
+    func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
+        var credentials = try CodexOAuthCredentialsStore.load()
+
+        if credentials.needsRefresh, !credentials.refreshToken.isEmpty {
+            credentials = try await CodexTokenRefresher.refresh(credentials)
+            try CodexOAuthCredentialsStore.save(credentials)
+        }
+
+        let usage = try await CodexOAuthUsageFetcher.fetchUsage(
+            accessToken: credentials.accessToken,
+            accountId: credentials.accountId)
+
+        return self.makeResult(
+            usage: Self.mapUsage(usage, credentials: credentials),
+            credits: Self.mapCredits(usage.credits),
+            sourceLabel: "oauth")
+    }
+
+    func shouldFallback(on error: Error, context: ProviderFetchContext) -> Bool {
+        guard context.sourceMode == .auto else { return false }
+        if let fetchError = error as? CodexOAuthFetchError {
+            switch fetchError {
+            case .unauthorized, .invalidResponse, .serverError, .networkError:
+                return true
+            }
+        }
+        if error is CodexOAuthCredentialsError { return true }
+        if error is CodexTokenRefresher.RefreshError { return true }
+        return false
+    }
+
+    private static func mapUsage(_ response: CodexUsageResponse, credentials: CodexOAuthCredentials) -> UsageSnapshot {
+        let primary = Self.makeWindow(response.rateLimit?.primaryWindow)
+        let secondary = Self.makeWindow(response.rateLimit?.secondaryWindow)
+
+        let identity = ProviderIdentitySnapshot(
+            providerID: .codex,
+            accountEmail: Self.resolveAccountEmail(from: credentials),
+            accountOrganization: nil,
+            loginMethod: Self.resolvePlan(response: response, credentials: credentials))
+
+        return UsageSnapshot(
+            primary: primary ?? RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
+            secondary: secondary,
+            tertiary: nil,
+            updatedAt: Date(),
+            identity: identity)
+    }
+
+    private static func mapCredits(_ credits: CodexUsageResponse.CreditDetails?) -> CreditsSnapshot? {
+        guard let credits, let balance = credits.balance else { return nil }
+        return CreditsSnapshot(remaining: balance, events: [], updatedAt: Date())
+    }
+
+    private static func makeWindow(_ window: CodexUsageResponse.WindowSnapshot?) -> RateWindow? {
+        guard let window else { return nil }
+        let resetDate = Date(timeIntervalSince1970: TimeInterval(window.resetAt))
+        let resetDescription = UsageFormatter.resetDescription(from: resetDate)
+        return RateWindow(
+            usedPercent: Double(window.usedPercent),
+            windowMinutes: window.limitWindowSeconds / 60,
+            resetsAt: resetDate,
+            resetDescription: resetDescription)
+    }
+
+    private static func resolveAccountEmail(from credentials: CodexOAuthCredentials) -> String? {
+        guard let idToken = credentials.idToken,
+              let payload = UsageFetcher.parseJWT(idToken)
+        else {
+            return nil
+        }
+
+        let profileDict = payload["https://api.openai.com/profile"] as? [String: Any]
+        let email = (payload["email"] as? String) ?? (profileDict?["email"] as? String)
+        return email?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func resolvePlan(response: CodexUsageResponse, credentials: CodexOAuthCredentials) -> String? {
+        if let plan = response.planType?.rawValue, !plan.isEmpty { return plan }
+        guard let idToken = credentials.idToken,
+              let payload = UsageFetcher.parseJWT(idToken)
+        else {
+            return nil
+        }
+        let authDict = payload["https://api.openai.com/auth"] as? [String: Any]
+        let plan = (authDict?["chatgpt_plan_type"] as? String) ?? (payload["chatgpt_plan_type"] as? String)
+        return plan?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+#if DEBUG
+extension CodexOAuthFetchStrategy {
+    static func _mapUsageForTesting(_ data: Data, credentials: CodexOAuthCredentials) throws -> UsageSnapshot {
+        let usage = try JSONDecoder().decode(CodexUsageResponse.self, from: data)
+        return Self.mapUsage(usage, credentials: credentials)
+    }
+}
+#endif
