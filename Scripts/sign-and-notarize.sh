@@ -2,7 +2,7 @@
 set -euo pipefail
 
 APP_NAME="Runic"
-APP_IDENTITY="Developer ID Application: Peter Steinberger (Y5PE65HELJ)"
+APP_IDENTITY="${APP_IDENTITY:-Developer ID Application: YOUR_NAME (TEAMID)}"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 APP_BUNDLE="${ROOT}/builds/latest/${APP_NAME}.app"
 source "$ROOT/version.env"
