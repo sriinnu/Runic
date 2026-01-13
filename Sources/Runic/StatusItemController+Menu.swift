@@ -305,7 +305,8 @@ extension StatusItemController {
     }
 
     private func scheduleOpenMenuRefresh(for menu: NSMenu) {
-        self.refreshNow()
+        guard self.settings.refreshFrequency != .manual else { return }
+        Task { await self.store.refresh(trigger: .menuOpen) }
         let key = ObjectIdentifier(menu)
         self.menuRefreshTasks[key]?.cancel()
         self.menuRefreshTasks[key] = Task { @MainActor [weak self, weak menu] in
@@ -318,7 +319,7 @@ extension StatusItemController {
             let isStale = provider.map { self.store.isStale(provider: $0) } ?? self.store.isStale
             let hasSnapshot = provider.map { self.store.snapshot(for: $0) != nil } ?? true
             guard isStale || !hasSnapshot else { return }
-            self.refreshNow()
+            await self.store.refresh(trigger: .menuOpen)
         }
     }
 

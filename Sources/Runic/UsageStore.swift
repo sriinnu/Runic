@@ -3,6 +3,7 @@ import RunicCore
 import Foundation
 import Observation
 import Silo
+import CoreGraphics
 
 // MARK: - Observation helpers
 
@@ -41,12 +42,24 @@ extension UsageStore {
         _ = self.pathDebugInfo
         _ = self.statuses
         _ = self.probeLogs
+        _ = self.autoRefreshSuspensionReason
+        _ = self.lastRefreshTrigger
+        _ = self.lastRefreshAt
+        _ = self.lastAutoRefreshDisableReason
+        _ = self.lastAutoRefreshDisableAt
         return 0
     }
 
     func observeSettingsChanges() {
         withObservationTracking {
             _ = self.settings.refreshFrequency
+            _ = self.settings.autoDisableRefreshWhenIdleEnabled
+            _ = self.settings.autoDisableRefreshWhenIdleMinutes
+            _ = self.settings.autoDisableRefreshOnSleepEnabled
+            _ = self.settings.autoRefreshWarningEnabled
+            _ = self.settings.autoRefreshWarningThreshold
+            _ = self.settings.autoSuspendInactiveProvidersEnabled
+            _ = self.settings.autoSuspendInactiveProvidersMinutes
             _ = self.settings.statusChecksEnabled
             _ = self.settings.sessionQuotaNotificationsEnabled
             _ = self.settings.usageBarsShowUsed
@@ -61,8 +74,7 @@ extension UsageStore {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.observeSettingsChanges()
-                self.startTimer()
-                await self.refresh()
+                await self.handleSettingsChange()
             }
         }
     }
@@ -138,6 +150,65 @@ enum ProviderStatusIndicator: String {
         case .critical: "Critical issue"
         case .maintenance: "Maintenance"
         case .unknown: "Status unknown"
+        }
+    }
+}
+
+enum RefreshTrigger: String {
+    case manual
+    case menuOpen
+    case autoTimer
+    case settingsChange
+    case login
+    case resume
+    case startup
+
+    var isAuto: Bool {
+        switch self {
+        case .manual, .settingsChange, .login: false
+        case .menuOpen, .autoTimer, .resume, .startup: true
+        }
+    }
+
+    var menuLabel: String {
+        switch self {
+        case .manual: "Manual"
+        case .menuOpen: "Menu open"
+        case .autoTimer: "Auto"
+        case .settingsChange: "Settings"
+        case .login: "Login"
+        case .resume: "Resume"
+        case .startup: "Startup"
+        }
+    }
+}
+
+enum AutoRefreshSuspensionReason: String {
+    case systemSleep
+    case screenSleep
+    case sessionInactive
+
+    var label: String {
+        switch self {
+        case .systemSleep: "Sleeping"
+        case .screenSleep: "Display asleep"
+        case .sessionInactive: "Session inactive"
+        }
+    }
+}
+
+enum AutoRefreshDisableReason: String {
+    case idle
+    case systemSleep
+    case screenSleep
+    case sessionInactive
+
+    var label: String {
+        switch self {
+        case .idle: "idle"
+        case .systemSleep: "sleep"
+        case .screenSleep: "display sleep"
+        case .sessionInactive: "lock"
         }
     }
 }
@@ -232,6 +303,19 @@ final class UsageStore {
     @ObservationIgnored private var lastOpenAIDashboardCookieImportAttemptAt: Date?
     @ObservationIgnored private var lastOpenAIDashboardCookieImportEmail: String?
     @ObservationIgnored private var openAIWebAccountDidChange: Bool = false
+    private var autoRefreshSuspensionReason: AutoRefreshSuspensionReason?
+    private(set) var lastRefreshTrigger: RefreshTrigger?
+    private(set) var lastRefreshAt: Date?
+    private(set) var lastAutoRefreshDisableReason: AutoRefreshDisableReason?
+    private(set) var lastAutoRefreshDisableAt: Date?
+    @ObservationIgnored private var autoRefreshRunCount: Int = 0
+    @ObservationIgnored private var autoRefreshWarningSent: Bool = false
+    @ObservationIgnored private var suppressNextSettingsRefresh: Bool = false
+    @ObservationIgnored private var lastUsageDeltaAt: [UsageProvider: Date] = [:]
+    @ObservationIgnored private var lastLedgerActivityAt: [UsageProvider: Date] = [:]
+    @ObservationIgnored private var lastRefreshFrequency: RefreshFrequency = .manual
+    @ObservationIgnored private var lastAutoRefreshWarningEnabled: Bool = true
+    @ObservationIgnored private var lastAutoRefreshWarningThreshold: Int = 10
 
     @ObservationIgnored private let codexFetcher: UsageFetcher
     @ObservationIgnored private let claudeFetcher: any ClaudeUsageFetching
@@ -273,6 +357,9 @@ final class UsageStore {
         self.registry = registry
         self.sessionQuotaNotifier = sessionQuotaNotifier
         self.providerMetadata = registry.metadata
+        self.lastRefreshFrequency = settings.refreshFrequency
+        self.lastAutoRefreshWarningEnabled = settings.autoRefreshWarningEnabled
+        self.lastAutoRefreshWarningThreshold = settings.autoRefreshWarningThreshold
         self
             .failureGates = Dictionary(uniqueKeysWithValues: UsageProvider.allCases
                 .map { ($0, ConsecutiveFailureGate()) })
@@ -289,7 +376,9 @@ final class UsageStore {
         LoginShellPathCache.shared.captureOnce { [weak self] _ in
             Task { @MainActor in self?.refreshPathDebugInfo() }
         }
-        Task { await self.refresh() }
+        if self.settings.refreshFrequency != .manual {
+            Task { await self.refresh(trigger: .startup) }
+        }
         self.startTimer()
         self.startTokenTimer()
     }
@@ -356,6 +445,60 @@ final class UsageStore {
             (self.isEnabled(.cursor) && self.errors[.cursor] != nil) ||
             (self.isEnabled(.factory) && self.errors[.factory] != nil) ||
             (self.isEnabled(.copilot) && self.errors[.copilot] != nil)
+    }
+
+    func autoRefreshStatusLine() -> String? {
+        if self.settings.refreshFrequency == .manual {
+            if let reason = self.lastAutoRefreshDisableReason {
+                return "Auto-refresh: Manual (switched after \(reason.label))"
+            }
+            return "Auto-refresh: Manual"
+        }
+        if let reason = self.autoRefreshSuspensionReason {
+            return "Auto-refresh: Paused (\(reason.label))"
+        }
+        return "Auto-refresh: \(self.settings.refreshFrequency.label)"
+    }
+
+    func setAutoRefreshSuspended(_ reason: AutoRefreshSuspensionReason?) {
+        self.autoRefreshSuspensionReason = reason
+    }
+
+    func disableAutoRefreshForSystemPause(_ reason: AutoRefreshSuspensionReason) {
+        let detail = self.systemPauseDetailText(reason)
+        self.disableAutoRefresh(
+            reason: self.disableReason(for: reason),
+            idPrefix: "auto-refresh-system",
+            body: "Runic switched auto-refresh to Manual because \(detail).")
+    }
+
+    func handleAutoRefreshSystemPause(_ reason: AutoRefreshSuspensionReason) {
+        if self.settings.autoDisableRefreshOnSleepEnabled {
+            self.disableAutoRefreshForSystemPause(reason)
+        } else {
+            self.setAutoRefreshSuspended(reason)
+        }
+    }
+
+    func lastRefreshStatusLine(now: Date = .now) -> String? {
+        guard let trigger = self.lastRefreshTrigger,
+              let refreshedAt = self.lastRefreshAt else { return nil }
+        let relative = refreshedAt.relativeDescription(now: now)
+        return "Last refresh: \(trigger.menuLabel) • \(relative)"
+    }
+
+    func autoRefreshSwitchLine(now: Date = .now) -> String? {
+        guard self.settings.refreshFrequency == .manual,
+              let reason = self.lastAutoRefreshDisableReason,
+              let disabledAt = self.lastAutoRefreshDisableAt else { return nil }
+        let relative = disabledAt.relativeDescription(now: now)
+        return "Auto-refresh switched to Manual after \(reason.label) • \(relative)"
+    }
+
+    func autoRefreshDisableBadgeText() -> String? {
+        guard self.settings.refreshFrequency == .manual,
+              let reason = self.lastAutoRefreshDisableReason else { return nil }
+        return "Manual because of \(reason.label)"
     }
 
     func enabledProviders() -> [UsageProvider] {
@@ -468,32 +611,50 @@ final class UsageStore {
         self.ledgerUpdatedAt[provider]
     }
 
-    func refresh(forceTokenUsage: Bool = false) async {
+    func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
         guard !self.isRefreshing else { return }
+        let now = Date()
+        if trigger.isAuto, !self.shouldRunAutoRefresh(trigger: trigger, now: now) {
+            return
+        }
+        if trigger.isAuto {
+            self.recordAutoRefreshRunIfNeeded(trigger: trigger)
+        }
+
+        self.lastRefreshTrigger = trigger
+        self.lastRefreshAt = now
         self.isRefreshing = true
         defer { self.isRefreshing = false }
 
+        let inactiveProviders = trigger.isAuto ? self.inactiveProviders(now: now) : []
+        let skipCodexExtras = trigger.isAuto && inactiveProviders.contains(.codex)
+
         await withTaskGroup(of: Void.self) { group in
             for provider in UsageProvider.allCases {
-                group.addTask { await self.refreshProvider(provider) }
-                group.addTask { await self.refreshStatus(provider) }
+                if inactiveProviders.contains(provider) { continue }
+                group.addTask { await self.refreshProvider(provider, trigger: trigger) }
+                group.addTask { await self.refreshStatus(provider, trigger: trigger) }
             }
-            group.addTask { await self.refreshCreditsIfNeeded() }
+            if !skipCodexExtras {
+                group.addTask { await self.refreshCreditsIfNeeded() }
+            }
         }
 
         // Token-cost usage can be slow; run it outside the refresh group so we don't block menu updates.
-        self.scheduleTokenRefresh(force: forceTokenUsage)
+        self.scheduleTokenRefresh(force: forceTokenUsage, trigger: trigger, inactiveProviders: inactiveProviders)
 
         // OpenAI web scrape depends on the current Codex account email (which can change after login/account switch).
         // Run this after Codex usage refresh so we don't accidentally scrape with stale credentials.
-        await self.refreshOpenAIDashboardIfNeeded(force: forceTokenUsage)
+        if !skipCodexExtras {
+            await self.refreshOpenAIDashboardIfNeeded(force: forceTokenUsage)
+        }
 
-        if self.openAIDashboardRequiresLogin {
-            await self.refreshProvider(.codex)
+        if self.openAIDashboardRequiresLogin, !skipCodexExtras {
+            await self.refreshProvider(.codex, trigger: trigger)
             await self.refreshCreditsIfNeeded()
         }
 
-        self.scheduleLedgerRefresh(force: forceTokenUsage)
+        self.scheduleLedgerRefresh(force: forceTokenUsage, inactiveProviders: inactiveProviders)
         self.persistWidgetSnapshot(reason: "refresh")
     }
 
@@ -517,6 +678,29 @@ final class UsageStore {
         self.observeSettingsChanges()
     }
 
+    private func handleSettingsChange() async {
+        let refreshChanged = self.settings.refreshFrequency != self.lastRefreshFrequency
+        let warningEnabledChanged = self.settings.autoRefreshWarningEnabled != self.lastAutoRefreshWarningEnabled
+        let warningThresholdChanged = self.settings.autoRefreshWarningThreshold
+            != self.lastAutoRefreshWarningThreshold
+        if refreshChanged || warningEnabledChanged || warningThresholdChanged {
+            self.resetAutoRefreshWarningState()
+            self.lastRefreshFrequency = self.settings.refreshFrequency
+            self.lastAutoRefreshWarningEnabled = self.settings.autoRefreshWarningEnabled
+            self.lastAutoRefreshWarningThreshold = self.settings.autoRefreshWarningThreshold
+        }
+        if refreshChanged, !self.suppressNextSettingsRefresh {
+            self.clearAutoRefreshDisableReason()
+        }
+        self.startTimer()
+        self.startTokenTimer()
+        guard !self.suppressNextSettingsRefresh else {
+            self.suppressNextSettingsRefresh = false
+            return
+        }
+        await self.refresh(trigger: .settingsChange)
+    }
+
     private func startTimer() {
         self.timerTask?.cancel()
         guard let wait = self.settings.refreshFrequency.seconds else { return }
@@ -525,25 +709,198 @@ final class UsageStore {
         self.timerTask = Task.detached(priority: .utility) { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(wait))
-                await self?.refresh()
+                await self?.refresh(trigger: .autoTimer)
             }
         }
     }
 
     private func startTokenTimer() {
         self.tokenTimerTask?.cancel()
+        guard self.settings.refreshFrequency != .manual else { return }
+        guard self.settings.costUsageEnabled else { return }
         let wait = self.tokenFetchTTL
         self.tokenTimerTask = Task.detached(priority: .utility) { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(wait))
-                await self?.scheduleTokenRefresh(force: false)
+                let inactive = await self?.inactiveProviders(now: Date()) ?? []
+                await self?.scheduleTokenRefresh(
+                    force: false,
+                    trigger: .autoTimer,
+                    inactiveProviders: inactive)
             }
         }
     }
 
-    private func scheduleLedgerRefresh(force: Bool) {
+    private func shouldRunAutoRefresh(trigger: RefreshTrigger, now: Date) -> Bool {
+        guard trigger.isAuto else { return true }
+        guard self.settings.refreshFrequency != .manual else { return false }
+        if self.autoRefreshSuspensionReason != nil { return false }
+
+        if self.settings.autoDisableRefreshWhenIdleEnabled,
+           let idleSeconds = self.currentIdleSeconds()
+        {
+            let thresholdMinutes = max(1, self.settings.autoDisableRefreshWhenIdleMinutes)
+            let thresholdSeconds = TimeInterval(thresholdMinutes) * 60
+            if idleSeconds >= thresholdSeconds {
+                self.disableAutoRefreshForIdle(thresholdMinutes: thresholdMinutes)
+                return false
+            }
+        }
+        return true
+    }
+
+    private func disableAutoRefreshForIdle(thresholdMinutes: Int) {
+        self.disableAutoRefresh(
+            reason: .idle,
+            idPrefix: "auto-refresh-idle",
+            body: "Runic switched auto-refresh to Manual after \(thresholdMinutes) minutes of inactivity. "
+                + "Use Refresh in the menu when you want new data.")
+    }
+
+    private func disableAutoRefresh(reason: AutoRefreshDisableReason, idPrefix: String, body: String) {
+        guard self.settings.refreshFrequency != .manual else { return }
+        self.suppressNextSettingsRefresh = true
+        self.settings.refreshFrequency = .manual
+        self.autoRefreshSuspensionReason = nil
+        self.lastAutoRefreshDisableReason = reason
+        self.lastAutoRefreshDisableAt = Date()
+        AppNotifications.shared.post(
+            idPrefix: idPrefix,
+            title: "Auto-refresh switched to Manual",
+            body: body)
+    }
+
+    private func clearAutoRefreshDisableReason() {
+        self.lastAutoRefreshDisableReason = nil
+        self.lastAutoRefreshDisableAt = nil
+    }
+
+    private func systemPauseDetailText(_ reason: AutoRefreshSuspensionReason) -> String {
+        switch reason {
+        case .systemSleep:
+            return "your Mac went to sleep"
+        case .screenSleep:
+            return "the display went to sleep"
+        case .sessionInactive:
+            return "your session became inactive"
+        }
+    }
+
+    private func disableReason(for reason: AutoRefreshSuspensionReason) -> AutoRefreshDisableReason {
+        switch reason {
+        case .systemSleep: .systemSleep
+        case .screenSleep: .screenSleep
+        case .sessionInactive: .sessionInactive
+        }
+    }
+
+    private func currentIdleSeconds() -> TimeInterval? {
+        #if os(macOS)
+        let seconds = CGEventSourceSecondsSinceLastEventType(.combinedSessionState, .anyInputEventType)
+        return seconds >= 0 ? seconds : nil
+        #else
+        return nil
+        #endif
+    }
+
+    private func recordAutoRefreshRunIfNeeded(trigger: RefreshTrigger) {
+        guard trigger == .autoTimer else { return }
+        guard self.settings.autoRefreshWarningEnabled else { return }
+        guard !self.autoRefreshWarningSent else { return }
+        let threshold = max(1, self.settings.autoRefreshWarningThreshold)
+        self.autoRefreshRunCount += 1
+        guard self.autoRefreshRunCount >= threshold else { return }
+        self.autoRefreshWarningSent = true
+        AppNotifications.shared.post(
+            idPrefix: "auto-refresh-warning",
+            title: "Auto-refresh is enabled",
+            body: "Runic has auto-refreshed \(threshold) times. Auto-refresh can touch CLIs, "
+                + "logs, or browser cookies depending on provider settings. Switch to Manual if you prefer "
+                + "click-only refresh.")
+    }
+
+    private func resetAutoRefreshWarningState() {
+        self.autoRefreshRunCount = 0
+        self.autoRefreshWarningSent = false
+    }
+
+    private func inactiveProviders(now: Date) -> Set<UsageProvider> {
+        guard self.settings.autoSuspendInactiveProvidersEnabled else { return [] }
+        let thresholdMinutes = max(1, self.settings.autoSuspendInactiveProvidersMinutes)
+        let thresholdSeconds = TimeInterval(thresholdMinutes) * 60
+
+        var inactive: Set<UsageProvider> = []
+        for provider in UsageProvider.allCases {
+            guard self.isEnabled(provider) else { continue }
+            guard let lastActivity = self.lastActivityAt(for: provider) else { continue }
+            if now.timeIntervalSince(lastActivity) >= thresholdSeconds {
+                inactive.insert(provider)
+            }
+        }
+        return inactive
+    }
+
+    private func lastActivityAt(for provider: UsageProvider) -> Date? {
+        let ledger = self.lastLedgerActivityAt[provider]
+        let delta = self.lastUsageDeltaAt[provider]
+        switch (ledger, delta) {
+        case let (l?, d?):
+            return max(l, d)
+        case let (l?, nil):
+            return l
+        case let (nil, d?):
+            return d
+        case (nil, nil):
+            return nil
+        }
+    }
+
+    private func recordUsageActivity(
+        provider: UsageProvider,
+        previous: UsageSnapshot?,
+        current: UsageSnapshot)
+    {
+        if previous == nil || self.usageChanged(previous: previous, current: current) {
+            self.lastUsageDeltaAt[provider] = current.updatedAt
+        }
+    }
+
+    private func usageChanged(previous: UsageSnapshot?, current: UsageSnapshot) -> Bool {
+        guard let previous else { return true }
+
+        func windowChanged(_ lhs: RateWindow?, _ rhs: RateWindow?) -> Bool {
+            switch (lhs, rhs) {
+            case (nil, nil):
+                return false
+            case let (l?, r?):
+                return abs(l.usedPercent - r.usedPercent) >= 0.1
+            case (nil, _), (_, nil):
+                return true
+            }
+        }
+
+        if windowChanged(previous.primary, current.primary) { return true }
+        if windowChanged(previous.secondary, current.secondary) { return true }
+        if windowChanged(previous.tertiary, current.tertiary) { return true }
+
+        switch (previous.providerCost, current.providerCost) {
+        case (nil, nil):
+            return false
+        case let (lhs?, rhs?):
+            if lhs.used != rhs.used { return true }
+            if lhs.limit != rhs.limit { return true }
+            return false
+        case (nil, _), (_, nil):
+            return true
+        }
+    }
+
+    private func scheduleLedgerRefresh(
+        force: Bool,
+        inactiveProviders: Set<UsageProvider>)
+    {
         let now = Date()
-        let sources = self.ledgerSources(now: now)
+        let sources = self.ledgerSources(now: now, inactiveProviders: inactiveProviders)
         let providers = sources.map(\.0)
         if providers.isEmpty { return }
         if !force {
@@ -604,13 +961,24 @@ final class UsageStore {
                         self.ledgerProjectBreakdowns.removeValue(forKey: provider)
                     }
 
+                    if let lastActivity = result.lastActivityByProvider[provider] {
+                        self.lastLedgerActivityAt[provider] = lastActivity
+                    }
+
                     self.ledgerUpdatedAt[provider] = result.updatedAt
                 }
             }
         }
     }
 
-    private func scheduleTokenRefresh(force: Bool) {
+    private func scheduleTokenRefresh(
+        force: Bool,
+        trigger: RefreshTrigger,
+        inactiveProviders: Set<UsageProvider>)
+    {
+        if trigger.isAuto, !self.shouldRunAutoRefresh(trigger: trigger, now: Date()) {
+            return
+        }
         if force {
             self.tokenRefreshSequenceTask?.cancel()
             self.tokenRefreshSequenceTask = nil
@@ -627,7 +995,11 @@ final class UsageStore {
             }
             for provider in UsageProvider.allCases {
                 if Task.isCancelled { break }
-                await self.refreshTokenUsage(provider, force: force)
+                await self.refreshTokenUsage(
+                    provider,
+                    force: force,
+                    trigger: trigger,
+                    inactiveProviders: inactiveProviders)
             }
         }
     }
@@ -647,16 +1019,20 @@ final class UsageStore {
         let modelBreakdownsByProvider: [UsageProvider: [UsageLedgerModelSummary]]
         let projectBreakdownsByProvider: [UsageProvider: [UsageLedgerProjectSummary]]
         let errorsByProvider: [UsageProvider: String]
+        let lastActivityByProvider: [UsageProvider: Date]
         let updatedAt: Date
         let providers: [UsageProvider]
     }
 
-    private func ledgerSources(now: Date) -> [(UsageProvider, any UsageLedgerSource)] {
+    private func ledgerSources(
+        now: Date,
+        inactiveProviders: Set<UsageProvider>) -> [(UsageProvider, any UsageLedgerSource)]
+    {
         let candidates: [(UsageProvider, any UsageLedgerSource)] = [
             (.claude, ClaudeUsageLogSource(maxAgeDays: self.ledgerMaxAgeDays, now: now)),
             (.codex, CodexUsageLogSource(maxAgeDays: self.ledgerMaxAgeDays, now: now)),
         ]
-        return candidates.filter { self.isEnabled($0.0) }
+        return candidates.filter { self.isEnabled($0.0) && !inactiveProviders.contains($0.0) }
     }
 
     private func loadLedgerInsights(
@@ -672,6 +1048,7 @@ final class UsageStore {
                 modelBreakdownsByProvider: [:],
                 projectBreakdownsByProvider: [:],
                 errorsByProvider: [:],
+                lastActivityByProvider: [:],
                 updatedAt: now,
                 providers: [])
         }
@@ -699,6 +1076,15 @@ final class UsageStore {
                 case let .failure(error):
                     errors[provider] = error.localizedDescription
                 }
+            }
+        }
+
+        var lastActivityByProvider: [UsageProvider: Date] = [:]
+        for entry in entries {
+            if let current = lastActivityByProvider[entry.provider] {
+                if entry.timestamp > current { lastActivityByProvider[entry.provider] = entry.timestamp }
+            } else {
+                lastActivityByProvider[entry.provider] = entry.timestamp
             }
         }
 
@@ -766,11 +1152,12 @@ final class UsageStore {
             modelBreakdownsByProvider: modelBreakdownsByProvider,
             projectBreakdownsByProvider: projectBreakdownsByProvider,
             errorsByProvider: errors,
+            lastActivityByProvider: lastActivityByProvider,
             updatedAt: now,
             providers: providers)
     }
 
-    private func refreshProvider(_ provider: UsageProvider) async {
+    private func refreshProvider(_ provider: UsageProvider, trigger _: RefreshTrigger) async {
         guard let spec = self.providerSpecs[provider] else { return }
 
         if !spec.isEnabled() {
@@ -787,6 +1174,8 @@ final class UsageStore {
                 self.statuses.removeValue(forKey: provider)
                 self.lastKnownSessionRemaining.removeValue(forKey: provider)
                 self.lastTokenFetchAt.removeValue(forKey: provider)
+                self.lastUsageDeltaAt.removeValue(forKey: provider)
+                self.lastLedgerActivityAt.removeValue(forKey: provider)
             }
             return
         }
@@ -794,6 +1183,7 @@ final class UsageStore {
         self.refreshingProviders.insert(provider)
         defer { self.refreshingProviders.remove(provider) }
 
+        let previousSnapshot = self.snapshots[provider]
         let outcome = await spec.fetch()
         await MainActor.run {
             self.lastFetchAttempts[provider] = outcome.attempts
@@ -808,6 +1198,10 @@ final class UsageStore {
                 self.lastSourceLabels[provider] = result.sourceLabel
                 self.errors[provider] = nil
                 self.failureGates[provider]?.recordSuccess()
+                self.recordUsageActivity(
+                    provider: provider,
+                    previous: previousSnapshot,
+                    current: scoped)
             }
         case let .failure(error):
             await MainActor.run {
@@ -879,8 +1273,10 @@ final class UsageStore {
         self.sessionQuotaNotifier.post(transition: transition, provider: provider)
     }
 
-    private func refreshStatus(_ provider: UsageProvider) async {
+    private func refreshStatus(_ provider: UsageProvider, trigger _: RefreshTrigger) async {
+        guard self.isEnabled(provider) else { return }
         guard self.settings.statusChecksEnabled else { return }
+        guard self.settings.refreshFrequency != .manual else { return }
         guard let meta = self.providerMetadata[provider] else { return }
 
         do {
@@ -1582,7 +1978,12 @@ extension UsageStore {
         return nil
     }
 
-    private func refreshTokenUsage(_ provider: UsageProvider, force: Bool) async {
+    private func refreshTokenUsage(
+        _ provider: UsageProvider,
+        force: Bool,
+        trigger: RefreshTrigger,
+        inactiveProviders: Set<UsageProvider>) async
+    {
         guard provider == .codex || provider == .claude else {
             self.tokenSnapshots.removeValue(forKey: provider)
             self.tokenErrors[provider] = nil
@@ -1604,6 +2005,10 @@ extension UsageStore {
             self.tokenErrors[provider] = nil
             self.tokenFailureGates[provider]?.reset()
             self.lastTokenFetchAt.removeValue(forKey: provider)
+            return
+        }
+
+        if trigger.isAuto, inactiveProviders.contains(provider), !force {
             return
         }
 

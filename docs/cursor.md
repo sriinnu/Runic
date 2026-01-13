@@ -22,7 +22,7 @@ Cursor is web-only. Usage is fetched via browser cookies or a stored WebKit sess
 
 2) **Stored session cookies** (fallback)
    - Captured by the "Add Account" WebKit login flow.
-   - Stored at: `~/Library/Application Support/CodexBar/cursor-session.json`.
+   - Stored at: `~/Library/Application Support/Runic/cursor-session.json`.
 
 ## API endpoints
 - `GET https://cursor.com/api/usage-summary`
@@ -42,5 +42,5 @@ Cursor is web-only. Usage is fetched via browser cookies or a stored WebKit sess
 - Reset: billing cycle end date.
 
 ## Key files
-- `Sources/CodexBarCore/Providers/Cursor/CursorStatusProbe.swift`
-- `Sources/CodexBar/CursorLoginRunner.swift` (login flow)
+- `Sources/RunicCore/Providers/Cursor/CursorStatusProbe.swift`
+- `Sources/Runic/CursorLoginRunner.swift` (login flow)

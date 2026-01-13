@@ -70,4 +70,4 @@ Gemini uses the Gemini CLI OAuth credentials and private quota APIs. No browser 
 - Email from `id_token` JWT claims.
 
 ## Key files
-- `Sources/CodexBarCore/Providers/Gemini/GeminiStatusProbe.swift`
+- `Sources/RunicCore/Providers/Gemini/GeminiStatusProbe.swift`

@@ -32,7 +32,7 @@ struct PreferencesView: View {
                 .tabItem { Label("Providers", systemImage: "square.grid.2x2") }
                 .tag(PreferencesTab.providers)
 
-            AdvancedPane(settings: self.settings)
+            AdvancedPane(settings: self.settings, store: self.store)
                 .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
                 .tag(PreferencesTab.advanced)
 

@@ -6,10 +6,16 @@ import SwiftUI
 @MainActor
 struct AdvancedPane: View {
     @Bindable var settings: SettingsStore
+    @Bindable var store: UsageStore
     @State private var isInstallingCLI = false
     @State private var cliStatus: String?
 
     var body: some View {
+        let inactiveMinutes = max(1, self.settings.autoSuspendInactiveProvidersMinutes)
+        let inactiveThresholdLabel = inactiveMinutes % 60 == 0
+            ? "\(inactiveMinutes / 60) hr"
+            : "\(inactiveMinutes) min"
+
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 16) {
                 SettingsSection(contentSpacing: 6) {
@@ -28,6 +34,131 @@ struct AdvancedPane: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+                    if let badgeText = self.store.autoRefreshDisableBadgeText() {
+                        Text(badgeText)
+                            .font(.caption2.weight(.medium))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color(nsColor: .controlBackgroundColor))
+                            .clipShape(Capsule())
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("Auto-refresh can switch to Manual when your Mac is idle or sleeps/locks. Adjust below.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Divider()
+
+                SettingsSection(contentSpacing: 10) {
+                    Text("Auto-refresh safety")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle(isOn: self.$settings.autoDisableRefreshWhenIdleEnabled) {
+                            Text("Switch to Manual when idle")
+                                .font(.body)
+                        }
+                        .toggleStyle(.checkbox)
+
+                        Text("If your Mac is idle for the threshold below, Runic switches auto-refresh to Manual.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: 12) {
+                            Text("Idle threshold")
+                                .font(.body)
+                            Spacer()
+                            Stepper(
+                                value: self.$settings.autoDisableRefreshWhenIdleMinutes,
+                                in: 1...60) {
+                                    Text("\(self.settings.autoDisableRefreshWhenIdleMinutes) min")
+                                }
+                                .labelsHidden()
+                        }
+                        .disabled(!self.settings.autoDisableRefreshWhenIdleEnabled)
+                        .opacity(self.settings.autoDisableRefreshWhenIdleEnabled ? 1 : 0.5)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle(isOn: self.$settings.autoDisableRefreshOnSleepEnabled) {
+                            Text("Switch to Manual on sleep/lock")
+                                .font(.body)
+                        }
+                        .toggleStyle(.checkbox)
+
+                        Text("When your Mac sleeps or locks, auto-refresh moves to Manual to avoid background checks.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle(isOn: self.$settings.autoRefreshWarningEnabled) {
+                            Text("Warn after repeated auto-refreshes")
+                                .font(.body)
+                        }
+                        .toggleStyle(.checkbox)
+
+                        Text("Sends a notification after the configured number of auto-refresh cycles.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: 12) {
+                            Text("Warning threshold")
+                                .font(.body)
+                            Spacer()
+                            Stepper(
+                                value: self.$settings.autoRefreshWarningThreshold,
+                                in: 5...100) {
+                                    Text("\(self.settings.autoRefreshWarningThreshold) runs")
+                                }
+                                .labelsHidden()
+                        }
+                        .disabled(!self.settings.autoRefreshWarningEnabled)
+                        .opacity(self.settings.autoRefreshWarningEnabled ? 1 : 0.5)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle(isOn: self.$settings.autoSuspendInactiveProvidersEnabled) {
+                            Text("Skip inactive providers")
+                                .font(.body)
+                        }
+                        .toggleStyle(.checkbox)
+
+                        Text("Pauses auto-refresh for providers with no usage changes for the threshold below.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: 12) {
+                            Text("Inactive threshold")
+                                .font(.body)
+                            Spacer()
+                            Stepper(
+                                value: self.$settings.autoSuspendInactiveProvidersMinutes,
+                                in: 30...10080,
+                                step: 30) {
+                                    Text(inactiveThresholdLabel)
+                                }
+                                .labelsHidden()
+                        }
+                        .disabled(!self.settings.autoSuspendInactiveProvidersEnabled)
+                        .opacity(self.settings.autoSuspendInactiveProvidersEnabled ? 1 : 0.5)
+                    }
+
+                    Text("Auto-refresh can read local logs or browser cookies depending on provider settings.")
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Auto-refresh also switches to Manual when your Mac sleeps or is locked.")
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Divider()

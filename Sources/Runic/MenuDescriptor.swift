@@ -242,6 +242,21 @@ struct MenuDescriptor {
             entries.append(.action(accountLabel, loginAction))
         }
 
+        entries.append(.action("Refresh now", .refresh))
+        if let refreshLine = store.autoRefreshStatusLine() {
+            entries.append(.text(refreshLine, .secondary))
+        }
+        if let switchLine = store.autoRefreshSwitchLine() {
+            entries.append(.text(switchLine, .secondary))
+        }
+        if settings.refreshFrequency == .manual {
+            entries.append(.text("Manual mode avoids background refreshes that may touch tokens.", .secondary))
+            entries.append(.text("Use Refresh now to update usage.", .secondary))
+        }
+        if let lastRefreshLine = store.lastRefreshStatusLine() {
+            entries.append(.text(lastRefreshLine, .secondary))
+        }
+
         if metadata?.dashboardURL != nil {
             entries.append(.action("Usage Dashboard", .dashboard))
         }

@@ -29,6 +29,10 @@ actor ClaudeCLISession {
     private var processGroup: pid_t?
     private var binaryPath: String?
     private var startedAt: Date?
+    private var lastActivityAt: Date?
+    private var idleShutdownTask: Task<Void, Never>?
+    private var isCapturing = false
+    private let idleShutdownDelay: TimeInterval = 90
 
     private let sendOnSubstrings: [String: String] = [
         "Do you trust the files in this folder?": "y\r",
@@ -73,6 +77,13 @@ actor ClaudeCLISession {
         sendEnterEvery: TimeInterval? = nil) async throws -> String
     {
         try self.ensureStarted(binary: binary)
+        self.isCapturing = true
+        self.lastActivityAt = Date()
+        defer {
+            self.isCapturing = false
+            self.lastActivityAt = Date()
+            self.scheduleIdleShutdown()
+        }
         if let startedAt {
             let sinceStart = Date().timeIntervalSince(startedAt)
             if sinceStart < 0.4 {
@@ -175,6 +186,8 @@ actor ClaudeCLISession {
     }
 
     func reset() {
+        self.idleShutdownTask?.cancel()
+        self.idleShutdownTask = nil
         self.cleanup()
     }
 
@@ -235,6 +248,7 @@ actor ClaudeCLISession {
         self.processGroup = processGroup
         self.binaryPath = binary
         self.startedAt = Date()
+        self.lastActivityAt = self.startedAt
     }
 
     private func cleanup() {
@@ -269,6 +283,8 @@ actor ClaudeCLISession {
         self.primaryFD = -1
         self.processGroup = nil
         self.startedAt = nil
+        self.lastActivityAt = nil
+        self.isCapturing = false
     }
 
     private func readChunk() -> Data {
@@ -294,5 +310,23 @@ actor ClaudeCLISession {
         guard let data = text.data(using: .utf8) else { return }
         guard let handle = self.primaryHandle else { throw SessionError.processExited }
         try handle.write(contentsOf: data)
+    }
+
+    private func scheduleIdleShutdown() {
+        self.idleShutdownTask?.cancel()
+        let deadline = Date().addingTimeInterval(self.idleShutdownDelay)
+        self.idleShutdownTask = Task { [weak self] in
+            let delay = self?.idleShutdownDelay ?? 0
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+            await self?.shutdownIfIdle(since: deadline)
+        }
+    }
+
+    private func shutdownIfIdle(since deadline: Date) {
+        guard !self.isCapturing else { return }
+        guard let lastActivityAt, lastActivityAt <= deadline else { return }
+        self.cleanup()
     }
 }

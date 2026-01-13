@@ -5,7 +5,7 @@ extension StatusItemController {
     // MARK: - Actions reachable from menus
 
     @objc func refreshNow() {
-        Task { await self.store.refresh(forceTokenUsage: true) }
+        Task { await self.store.refresh(trigger: .manual, forceTokenUsage: true) }
     }
 
     @objc func installUpdate() {
@@ -109,7 +109,7 @@ extension StatusItemController {
 
             let shouldRefresh = await self.runLoginFlow(provider: provider)
             if shouldRefresh {
-                await self.store.refresh()
+                await self.store.refresh(trigger: .login, forceTokenUsage: true)
                 print("[Runic] Triggered refresh after login")
             }
         }

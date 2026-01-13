@@ -232,6 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settings: SettingsStore?
     private var account: AccountInfo?
     private var preferencesSelection: PreferencesSelection?
+    private var refreshLifecycleObservers: [NSObjectProtocol] = []
 
     func configure(store: UsageStore, settings: SettingsStore, account: AccountInfo, selection: PreferencesSelection) {
         self.store = store
@@ -243,6 +244,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppNotifications.shared.requestAuthorizationOnStartup()
         self.ensureStatusController()
+        self.installAutoRefreshLifecycleObservers()
         KeyboardShortcuts.onKeyUp(for: .openMenu) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.statusController?.openMenuFromShortcut()
@@ -274,5 +276,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             fallbackAccount,
             self.updaterController,
             PreferencesSelection())
+    }
+
+    private func installAutoRefreshLifecycleObservers() {
+        guard self.refreshLifecycleObservers.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+
+        self.refreshLifecycleObservers.append(center.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.store?.handleAutoRefreshSystemPause(.systemSleep)
+            })
+
+        self.refreshLifecycleObservers.append(center.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.store?.setAutoRefreshSuspended(nil)
+                Task { await self?.store?.refresh(trigger: .resume) }
+            })
+
+        self.refreshLifecycleObservers.append(center.addObserver(
+            forName: NSWorkspace.screensDidSleepNotification,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.store?.handleAutoRefreshSystemPause(.screenSleep)
+            })
+
+        self.refreshLifecycleObservers.append(center.addObserver(
+            forName: NSWorkspace.screensDidWakeNotification,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.store?.setAutoRefreshSuspended(nil)
+                Task { await self?.store?.refresh(trigger: .resume) }
+            })
+
+        self.refreshLifecycleObservers.append(center.addObserver(
+            forName: NSWorkspace.sessionDidResignActiveNotification,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.store?.handleAutoRefreshSystemPause(.sessionInactive)
+            })
+
+        self.refreshLifecycleObservers.append(center.addObserver(
+            forName: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.store?.setAutoRefreshSuspended(nil)
+                Task { await self?.store?.refresh(trigger: .resume) }
+            })
     }
 }

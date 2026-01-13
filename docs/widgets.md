@@ -1,9 +1,9 @@
 ---
-summary: "WidgetKit snapshot pipeline + visibility troubleshooting for CodexBar widgets."
+summary: "WidgetKit snapshot pipeline + visibility troubleshooting for Runic widgets."
 read_when:
   - Modifying WidgetKit extension behavior or snapshot format
   - Debugging widget update timing
-  - Widget gallery shows no CodexBar widgets
+  - Widget gallery shows no Runic widgets
 ---
 
 # Widgets
@@ -13,7 +13,7 @@ read_when:
 - Widgets read the snapshot and render usage/credits/history states.
 
 ## Extension
-- `Sources/CodexBarWidget` contains timeline + views.
+- `Sources/RunicWidget` contains timeline + views.
 - Keep data shape in sync with `WidgetSnapshot` in the main app.
 
 ## Visibility troubleshooting (macOS 14+)
@@ -22,37 +22,37 @@ registration, signing, or daemon caching (not SwiftUI code).
 
 ### 1) Verify the extension bundle exists where macOS expects it
 ```
-APP="/Applications/CodexBar.app"
-WAPPEX="$APP/Contents/PlugIns/CodexBarWidget.appex"
+APP="/Applications/Runic.app"
+WAPPEX="$APP/Contents/PlugIns/RunicWidget.appex"
 
 ls -la "$WAPPEX" "$WAPPEX/Contents" "$WAPPEX/Contents/MacOS"
 ```
 
 ### 2) PlugInKit registration (pkd)
 ```
-pluginkit -m -p com.apple.widgetkit-extension -v | grep -i codexbar || true
-pluginkit -m -p com.apple.widgetkit-extension -i com.sriinnu.codexbar.widget -vv
+pluginkit -m -p com.apple.widgetkit-extension -v | grep -i runic || true
+pluginkit -m -p com.apple.widgetkit-extension -i com.sriinnu.athena.runic.widget -vv
 ```
 Notes:
 - `+` = elected to use, `-` = ignored (PlugInKit elections).
 - If missing or ignored, force-add and re-elect:
 ```
 pluginkit -a "$WAPPEX"
-pluginkit -e use -p com.apple.widgetkit-extension -i com.sriinnu.codexbar.widget
+pluginkit -e use -p com.apple.widgetkit-extension -i com.sriinnu.athena.runic.widget
 ```
 - Check for duplicates (old installs or version precedence):
 ```
-pluginkit -m -D -p com.apple.widgetkit-extension -i com.sriinnu.codexbar.widget -vv
+pluginkit -m -D -p com.apple.widgetkit-extension -i com.sriinnu.athena.runic.widget -vv
 ```
 If multiple paths appear, delete older installs and bump `CFBundleVersion`.
 
 ### 3) Code signing + Gatekeeper assessment
 Widgets are loaded by system daemons. Any signing failure can hide the widget.
 ```
-codesign --verify --deep --strict --verbose=4 /Applications/CodexBar.app
+codesign --verify --deep --strict --verbose=4 /Applications/Runic.app
 codesign --verify --strict --verbose=4 "$WAPPEX"
-codesign --verify --strict --verbose=4 "$WAPPEX/Contents/MacOS/CodexBarWidget"
-spctl --assess --type execute --verbose=4 /Applications/CodexBar.app
+codesign --verify --strict --verbose=4 "$WAPPEX/Contents/MacOS/RunicWidget"
+spctl --assess --type execute --verbose=4 /Applications/Runic.app
 ```
 
 ### 4) Restart the right daemons (NotificationCenter alone is not enough)
@@ -68,9 +68,9 @@ log stream --style compact --predicate '(process == "pkd" OR process == "chronod
 ```
 
 ### 6) Packaging sanity checks
-- Widget bundle id should be `com.sriinnu.codexbar.widget`.
+- Widget bundle id should be `com.sriinnu.athena.runic.widget`.
 - `NSExtensionPointIdentifier` must be `com.apple.widgetkit-extension`.
-- Bundle folder name should match: `CodexBarWidget.appex`.
+- Bundle folder name should match: `RunicWidget.appex`.
 
 Optional: re-seed LaunchServices (rarely helps, but low risk):
 ```

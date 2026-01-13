@@ -82,12 +82,12 @@ Claude supports three usage data paths plus local cost usage. Source selection i
   - Uses per-model token counts (input, cache read/create, output).
   - Deduplicates streaming chunks by `message.id + requestId` (usage is cumulative per chunk).
 - Cache:
-  - `~/Library/Caches/CodexBar/cost-usage/claude-v1.json`
+  - `~/Library/Caches/Runic/cost-usage/claude-v1.json`
 
 ## Key files
-- OAuth: `Sources/CodexBarCore/Providers/Claude/ClaudeOAuth/*`
-- Web API: `Sources/CodexBarCore/Providers/Claude/ClaudeWeb/ClaudeWebAPIFetcher.swift`
-- CLI PTY: `Sources/CodexBarCore/Providers/Claude/ClaudeStatusProbe.swift`,
-  `Sources/CodexBarCore/Providers/Claude/ClaudeCLISession.swift`
-- Cost usage: `Sources/CodexBarCore/CostUsageFetcher.swift`,
-  `Sources/CodexBarCore/Vendored/CostUsage/*`
+- OAuth: `Sources/RunicCore/Providers/Claude/ClaudeOAuth/*`
+- Web API: `Sources/RunicCore/Providers/Claude/ClaudeWeb/ClaudeWebAPIFetcher.swift`
+- CLI PTY: `Sources/RunicCore/Providers/Claude/ClaudeStatusProbe.swift`,
+  `Sources/RunicCore/Providers/Claude/ClaudeCLISession.swift`
+- Cost usage: `Sources/RunicCore/CostUsageFetcher.swift`,
+  `Sources/RunicCore/Vendored/CostUsage/*`

@@ -7,15 +7,16 @@ import Testing
 @Suite
 struct SettingsStoreTests {
     @Test
-    func defaultRefreshFrequencyIsFiveMinutes() {
+    func defaultRefreshFrequencyIsManual() {
         let suite = "SettingsStoreTests-default"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
 
         let store = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
 
-        #expect(store.refreshFrequency == .fiveMinutes)
-        #expect(store.refreshFrequency.seconds == 300)
+        #expect(store.refreshFrequency == .manual)
+        #expect(store.refreshFrequency.seconds == nil)
+        #expect(store.autoDisableRefreshOnSleepEnabled == true)
     }
 
     @Test

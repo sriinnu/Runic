@@ -8,11 +8,11 @@ read_when:
 
 # Codex OAuth Resolver Implementation Plan
 
-> Replicate Codex's direct OAuth token usage in CodexBar instead of calling the CLI.
+> Replicate Codex's direct OAuth token usage in Runic instead of calling the CLI.
 
 ## Background
 
-Currently, CodexBar fetches Codex usage by:
+Currently, Runic fetches Codex usage by:
 1. Running `codex` CLI in PTY mode
 2. Sending `/status` command
 3. Parsing the text output
@@ -86,7 +86,7 @@ User-Agent: codex-cli
 **Quick checks**
 - Command: `cat ~/.codex/auth.json`
 - Command: `curl -H "Authorization: Bearer <access_token>" -H "ChatGPT-Account-Id: <account_id>" -H "User-Agent: codex-cli" https://chatgpt.com/backend-api/wham/usage`
-- Command: `CodexBarCLI usage --provider codex --source oauth --json --pretty`
+- Command: `RunicCLI usage --provider codex --source oauth --json --pretty`
 
 **Response:**
 ```json
@@ -122,9 +122,9 @@ User-Agent: codex-cli
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `CodexOAuthCredentials.swift` | `Sources/CodexBarCore/Providers/Codex/CodexOAuth/` | Token storage model + loader |
-| `CodexOAuthUsageFetcher.swift` | `Sources/CodexBarCore/Providers/Codex/CodexOAuth/` | API client for usage endpoint |
-| `CodexTokenRefresher.swift` | `Sources/CodexBarCore/Providers/Codex/CodexOAuth/` | Token refresh logic |
+| `CodexOAuthCredentials.swift` | `Sources/RunicCore/Providers/Codex/CodexOAuth/` | Token storage model + loader |
+| `CodexOAuthUsageFetcher.swift` | `Sources/RunicCore/Providers/Codex/CodexOAuth/` | API client for usage endpoint |
+| `CodexTokenRefresher.swift` | `Sources/RunicCore/Providers/Codex/CodexOAuth/` | Token refresh logic |
 
 ### Files to Modify
 
@@ -347,7 +347,7 @@ public enum CodexOAuthUsageFetcher {
         var request = URLRequest(url: resolveUsageURL())
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("CodexBar", forHTTPHeaderField: "User-Agent")
+        request.setValue("Runic", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if let accountId {
@@ -617,7 +617,7 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
 ## Testing
 
 1. Ensure `~/.codex/auth.json` exists (run `codex` to log in first)
-2. Run CodexBar with debug logging enabled
+2. Run Runic with debug logging enabled
 3. Verify OAuth strategy is selected and API calls succeed
 4. Test token refresh by manually setting `last_refresh` to old date
 5. Test fallback by temporarily renaming auth.json

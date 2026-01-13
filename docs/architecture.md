@@ -8,17 +8,17 @@ read_when:
 # Architecture overview
 
 ## Modules
-- `Sources/CodexBarCore`: fetch + parse (Codex RPC, PTY runner, Claude probes, OpenAI web scraping, status polling).
-- `Sources/CodexBar`: state + UI (UsageStore, SettingsStore, StatusItemController, menus, icon rendering).
-- `Sources/CodexBarWidget`: WidgetKit extension wired to the shared snapshot.
-- `Sources/CodexBarCLI`: bundled CLI for `codexbar` usage/status output.
-- `Sources/CodexBarMacros`: SwiftSyntax macros for provider registration.
-- `Sources/CodexBarMacroSupport`: shared macro support used by app/core/CLI targets.
-- `Sources/CodexBarClaudeWatchdog`: helper process for stable Claude CLI PTY sessions.
-- `Sources/CodexBarClaudeWebProbe`: CLI helper to diagnose Claude web fetches.
+- `Sources/RunicCore`: fetch + parse (Codex RPC, PTY runner, Claude probes, OpenAI web scraping, status polling).
+- `Sources/Runic`: state + UI (UsageStore, SettingsStore, StatusItemController, menus, icon rendering).
+- `Sources/RunicWidget`: WidgetKit extension wired to the shared snapshot.
+- `Sources/RunicCLI`: bundled CLI for `runic` usage/status output.
+- `Sources/RunicMacros`: SwiftSyntax macros for provider registration.
+- `Sources/RunicMacroSupport`: shared macro support used by app/core/CLI targets.
+- `Sources/RunicClaudeWatchdog`: helper process for stable Claude CLI PTY sessions.
+- `Sources/RunicClaudeWebProbe`: CLI helper to diagnose Claude web fetches.
 
 ## Entry points
-- `CodexBarApp`: SwiftUI keepalive + Settings scene.
+- `RunicApp`: SwiftUI keepalive + Settings scene.
 - `AppDelegate`: wires status controller, Sparkle updater, notifications.
 
 ## Data flow

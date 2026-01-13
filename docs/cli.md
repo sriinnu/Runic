@@ -1,40 +1,40 @@
 ---
-summary: "CodexBar CLI for fetching usage from the command line."
+summary: "Runic CLI for fetching usage from the command line."
 read_when:
-  - "You want to call CodexBar data from scripts or a terminal."
+  - "You want to call Runic data from scripts or a terminal."
   - "Adding or modifying Commander-based CLI commands."
   - "Aligning menubar and CLI output/behavior."
 ---
 
-# CodexBar CLI
+# Runic CLI
 
 A lightweight Commander-based CLI that mirrors the menubar app’s data paths (Codex web/RPC → PTY fallback; Claude web by default with CLI fallback and OAuth debug).
 Use it when you need usage numbers in scripts, CI, or dashboards without UI.
 
 ## Install
-- In the app: **Preferences → Advanced → Install CLI**. This symlinks `CodexBarCLI` to `/usr/local/bin/codexbar` and `/opt/homebrew/bin/codexbar`.
-- From the repo: `./bin/install-codexbar-cli.sh` (same symlink targets).
-- Manual: `ln -sf "/Applications/CodexBar.app/Contents/Helpers/CodexBarCLI" /usr/local/bin/codexbar`.
+- In the app: **Preferences → Advanced → Install CLI**. This symlinks `RunicCLI` to `/usr/local/bin/runic` and `/opt/homebrew/bin/runic`.
+- From the repo: `./bin/install-runic-cli.sh` (same symlink targets).
+- Manual: `ln -sf "/Applications/Runic.app/Contents/Helpers/RunicCLI" /usr/local/bin/runic`.
 
 ### Linux install
-- Download `CodexBarCLI-<tag>-linux-<arch>.tar.gz` from GitHub Releases (x86_64 + aarch64).
-- Extract; run `./codexbar` (symlink) or `./CodexBarCLI`.
+- Download `RunicCLI-<tag>-linux-<arch>.tar.gz` from GitHub Releases (x86_64 + aarch64).
+- Extract; run `./runic` (symlink) or `./RunicCLI`.
 
 ```
-tar -xzf CodexBarCLI-0.14.1-linux-x86_64.tar.gz
-./codexbar --version
-./codexbar usage --format json --pretty
+tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
+./runic --version
+./runic usage --format json --pretty
 ```
 
 ## Build
-- `./Scripts/package_app.sh` (or `./Scripts/compile_and_run.sh`) bundles `CodexBarCLI` into `CodexBar.app/Contents/Helpers/CodexBarCLI`.
-- Standalone: `swift build -c release --product CodexBarCLI` (binary at `./.build/release/CodexBarCLI`).
+- `./Scripts/package_app.sh` (or `./Scripts/compile_and_run.sh`) bundles `RunicCLI` into `Runic.app/Contents/Helpers/RunicCLI`.
+- Standalone: `swift build -c release --product RunicCLI` (binary at `./.build/release/RunicCLI`).
 - Dependencies: Swift 6.2+, Commander package (`https://github.com/steipete/Commander`).
 
 ## Command
-- `codexbar` defaults to the `usage` command.
+- `runic` defaults to the `usage` command.
   - `--format text|json` (default: text).
-- `codexbar cost` prints local token cost usage (Claude + Codex) without web/CLI access.
+- `runic cost` prints local token cost usage (Claude + Codex) without web/CLI access.
   - `--format text|json` (default: text).
   - `--refresh` ignores cached scans.
 - `--provider codex|claude|zai|gemini|antigravity|cursor|factory|copilot|both|all` (default: your in-app toggles; falls back to Codex).
@@ -56,7 +56,7 @@ tar -xzf CodexBarCLI-0.14.1-linux-x86_64.tar.gz
 - Global flags: `-h/--help`, `-V/--version`, `-v/--verbose`, `--no-color`, `--log-level <trace|verbose|debug|info|warning|error|critical>`, `--json-output`.
 
 ### Cost JSON payload
-`codexbar cost --format json` emits an array of payloads (one per provider).
+`runic cost --format json` emits an array of payloads (one per provider).
 - `provider`, `source`, `updatedAt`
 - `sessionTokens`, `sessionCostUSD`
 - `last30DaysTokens`, `last30DaysCostUSD`
@@ -65,16 +65,16 @@ tar -xzf CodexBarCLI-0.14.1-linux-x86_64.tar.gz
 
 ## Example usage
 ```
-codexbar                          # text, respects app toggles
-codexbar --provider claude        # force Claude
-codexbar --provider all           # query all providers (honors your logins/toggles)
-codexbar --format json --pretty   # machine output
-codexbar --format json --provider both
-codexbar cost                     # local cost usage (last 30 days + today)
-codexbar cost --provider claude --format json --pretty
-COPILOT_API_TOKEN=... codexbar --provider copilot --format json --pretty
-codexbar --status                 # include status page indicator/description
-codexbar --provider codex --source web --format json --pretty
+runic                          # text, respects app toggles
+runic --provider claude        # force Claude
+runic --provider all           # query all providers (honors your logins/toggles)
+runic --format json --pretty   # machine output
+runic --format json --provider both
+runic cost                     # local cost usage (last 30 days + today)
+runic cost --provider claude --format json --pretty
+COPILOT_API_TOKEN=... runic --provider copilot --format json --pretty
+runic --status                 # include status page indicator/description
+runic --provider codex --source web --format json --pretty
 ```
 
 ### Sample output (text)
@@ -146,11 +146,11 @@ Plan: Pro
 - 1: unexpected failure
 
 ## Notes
-- CLI reuses menubar toggles when present (prefers `com.steipete.codexbar{,.debug}` defaults), otherwise defaults to Codex only.
+- CLI reuses menubar toggles when present (prefers `com.sriinnu.athena.runic{,.debug}` defaults), otherwise defaults to Codex only.
 - Text output uses ANSI colors when stdout is a rich TTY; disable with `--no-color` or `NO_COLOR`/`TERM=dumb`.
 - Copilot CLI queries require `COPILOT_API_TOKEN` (GitHub OAuth token).
 - Prefer Codex RPC first, then PTY fallback; Claude defaults to web with CLI fallback when cookies are missing.
-- OpenAI web requires a signed-in `chatgpt.com` session in Safari, Chrome, or Firefox. No passwords are stored; CodexBar reuses cookies.
-- Safari cookie import may require granting CodexBar Full Disk Access (System Settings → Privacy & Security → Full Disk Access).
+- OpenAI web requires a signed-in `chatgpt.com` session in Safari, Chrome, or Firefox. No passwords are stored; Runic reuses cookies.
+- Safari cookie import may require granting Runic Full Disk Access (System Settings → Privacy & Security → Full Disk Access).
 - The `openaiDashboard` JSON field is normally sourced from the app’s cached dashboard snapshot; `--source auto|web` refreshes it live via WebKit using a per-account cookie store.
 - Future: optional `--from-cache` flag to read the menubar app’s persisted snapshot (if/when that file lands).

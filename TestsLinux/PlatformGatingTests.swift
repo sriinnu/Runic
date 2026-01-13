@@ -1,4 +1,4 @@
-import CodexBarCore
+import RunicCore
 import Testing
 
 @Suite

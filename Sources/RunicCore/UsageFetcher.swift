@@ -1,4 +1,9 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 
 public struct RateWindow: Codable, Equatable, Sendable {
     public let usedPercent: Double
@@ -272,6 +277,7 @@ private final class CodexRPCClient: @unchecked Sendable {
     private let stdoutLineStream: AsyncStream<Data>
     private let stdoutLineContinuation: AsyncStream<Data>.Continuation
     private var nextID = 1
+    private var processGroup: pid_t?
 
     private final class LineBuffer: @unchecked Sendable {
         private let lock = NSLock()
@@ -335,6 +341,11 @@ private final class CodexRPCClient: @unchecked Sendable {
             throw RPCWireError.startFailed(error.localizedDescription)
         }
 
+        let pid = self.process.processIdentifier
+        if setpgid(pid, pid) == 0 {
+            self.processGroup = pid
+        }
+
         let stdoutHandle = self.stdoutPipe.fileHandleForReading
         let stdoutLineContinuation = self.stdoutLineContinuation
         let stdoutBuffer = LineBuffer()
@@ -387,9 +398,27 @@ private final class CodexRPCClient: @unchecked Sendable {
     }
 
     func shutdown() {
+        self.stdoutPipe.fileHandleForReading.readabilityHandler = nil
+        self.stderrPipe.fileHandleForReading.readabilityHandler = nil
         if self.process.isRunning {
             self.process.terminate()
         }
+        if let pgid = self.processGroup {
+            kill(-pgid, SIGTERM)
+        }
+        let waitDeadline = Date().addingTimeInterval(2.0)
+        while self.process.isRunning, Date() < waitDeadline {
+            usleep(100_000)
+        }
+        if self.process.isRunning {
+            if let pgid = self.processGroup {
+                kill(-pgid, SIGKILL)
+            }
+            kill(self.process.processIdentifier, SIGKILL)
+        }
+        try? self.stdinPipe.fileHandleForWriting.close()
+        try? self.stdoutPipe.fileHandleForReading.close()
+        try? self.stderrPipe.fileHandleForReading.close()
     }
 
     // MARK: - JSON-RPC helpers

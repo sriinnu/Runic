@@ -47,6 +47,38 @@ final class SettingsStore {
         didSet { self.userDefaults.set(self.refreshFrequency.rawValue, forKey: "refreshFrequency") }
     }
 
+    var autoDisableRefreshWhenIdleEnabled: Bool {
+        didSet { self.userDefaults.set(self.autoDisableRefreshWhenIdleEnabled, forKey: "autoDisableRefreshWhenIdleEnabled") }
+    }
+
+    var autoDisableRefreshWhenIdleMinutes: Int {
+        didSet { self.userDefaults.set(self.autoDisableRefreshWhenIdleMinutes, forKey: "autoDisableRefreshWhenIdleMinutes") }
+    }
+
+    var autoDisableRefreshOnSleepEnabled: Bool {
+        didSet { self.userDefaults.set(self.autoDisableRefreshOnSleepEnabled, forKey: "autoDisableRefreshOnSleepEnabled") }
+    }
+
+    var autoRefreshWarningEnabled: Bool {
+        didSet { self.userDefaults.set(self.autoRefreshWarningEnabled, forKey: "autoRefreshWarningEnabled") }
+    }
+
+    var autoRefreshWarningThreshold: Int {
+        didSet { self.userDefaults.set(self.autoRefreshWarningThreshold, forKey: "autoRefreshWarningThreshold") }
+    }
+
+    var autoSuspendInactiveProvidersEnabled: Bool {
+        didSet {
+            self.userDefaults.set(self.autoSuspendInactiveProvidersEnabled, forKey: "autoSuspendInactiveProvidersEnabled")
+        }
+    }
+
+    var autoSuspendInactiveProvidersMinutes: Int {
+        didSet {
+            self.userDefaults.set(self.autoSuspendInactiveProvidersMinutes, forKey: "autoSuspendInactiveProvidersMinutes")
+        }
+    }
+
     var launchAtLogin: Bool {
         didSet {
             self.userDefaults.set(self.launchAtLogin, forKey: "launchAtLogin")
@@ -241,6 +273,13 @@ final class SettingsStore {
     var menuObservationToken: Int {
         _ = self.providerOrderRaw
         _ = self.refreshFrequency
+        _ = self.autoDisableRefreshWhenIdleEnabled
+        _ = self.autoDisableRefreshWhenIdleMinutes
+        _ = self.autoDisableRefreshOnSleepEnabled
+        _ = self.autoRefreshWarningEnabled
+        _ = self.autoRefreshWarningThreshold
+        _ = self.autoSuspendInactiveProvidersEnabled
+        _ = self.autoSuspendInactiveProvidersMinutes
         _ = self.launchAtLogin
         _ = self.debugMenuEnabled
         _ = self.statusChecksEnabled
@@ -317,8 +356,22 @@ final class SettingsStore {
         self.openRouterTokenStore = openRouterTokenStore
         self.groqTokenStore = groqTokenStore
         self.providerOrderRaw = userDefaults.stringArray(forKey: "providerOrder") ?? []
-        let raw = userDefaults.string(forKey: "refreshFrequency") ?? RefreshFrequency.fiveMinutes.rawValue
-        self.refreshFrequency = RefreshFrequency(rawValue: raw) ?? .fiveMinutes
+        let raw = userDefaults.string(forKey: "refreshFrequency") ?? RefreshFrequency.manual.rawValue
+        self.refreshFrequency = RefreshFrequency(rawValue: raw) ?? .manual
+        self.autoDisableRefreshWhenIdleEnabled = userDefaults.object(
+            forKey: "autoDisableRefreshWhenIdleEnabled") as? Bool ?? true
+        self.autoDisableRefreshWhenIdleMinutes = userDefaults.object(
+            forKey: "autoDisableRefreshWhenIdleMinutes") as? Int ?? 5
+        self.autoDisableRefreshOnSleepEnabled = userDefaults.object(
+            forKey: "autoDisableRefreshOnSleepEnabled") as? Bool ?? true
+        self.autoRefreshWarningEnabled = userDefaults.object(
+            forKey: "autoRefreshWarningEnabled") as? Bool ?? true
+        self.autoRefreshWarningThreshold = userDefaults.object(
+            forKey: "autoRefreshWarningThreshold") as? Int ?? 10
+        self.autoSuspendInactiveProvidersEnabled = userDefaults.object(
+            forKey: "autoSuspendInactiveProvidersEnabled") as? Bool ?? true
+        self.autoSuspendInactiveProvidersMinutes = userDefaults.object(
+            forKey: "autoSuspendInactiveProvidersMinutes") as? Int ?? 720
         self.launchAtLogin = userDefaults.object(forKey: "launchAtLogin") as? Bool ?? false
         self.debugMenuEnabled = userDefaults.object(forKey: "debugMenuEnabled") as? Bool ?? false
         self.debugLoadingPatternRaw = userDefaults.string(forKey: "debugLoadingPattern")

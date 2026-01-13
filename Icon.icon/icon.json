@@ -6,8 +6,8 @@
     {
       "layers" : [
         {
-          "image-name" : "codexbar.png",
-          "name" : "codexbar",
+          "image-name" : "runic.png",
+          "name" : "runic",
           "position" : {
             "scale" : 1.4,
             "translation-in-points" : [
