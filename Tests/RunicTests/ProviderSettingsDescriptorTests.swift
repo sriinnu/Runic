@@ -11,7 +11,7 @@ struct ProviderSettingsDescriptorTests {
     func toggleIDsAreUniqueAcrossProviders() {
         let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-unique")!
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-unique")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
         let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
 
         var statusByID: [String: String] = [:]
@@ -70,7 +70,7 @@ struct ProviderSettingsDescriptorTests {
     func codexDoesNotExposeOpenAIWebToggle() {
         let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-codex")!
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-codex")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
         let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
 
         let context = ProviderSettingsContext(
@@ -101,7 +101,7 @@ struct ProviderSettingsDescriptorTests {
     func claudeDoesNotExposeSettingsToggles() {
         let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-claude")!
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-claude")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
         let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
 
         let context = ProviderSettingsContext(
@@ -131,7 +131,7 @@ struct ProviderSettingsDescriptorTests {
     func claudeWebExtrasAutoDisablesWhenLeavingCLI() {
         let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-claude-invariant")!
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-claude-invariant")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
         settings.debugMenuEnabled = true
         settings.claudeUsageDataSource = .cli
         settings.claudeWebExtrasEnabled = true

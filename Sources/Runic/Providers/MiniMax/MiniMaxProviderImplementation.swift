@@ -1,4 +1,3 @@
-import AppKit
 import RunicCore
 import RunicMacroSupport
 import Foundation
@@ -11,21 +10,12 @@ struct MiniMaxProviderImplementation: ProviderImplementation {
     func settingsFields(context: ProviderSettingsContext) -> [ProviderSettingsFieldDescriptor] {
         [
             ProviderSettingsFieldDescriptor(
-                id: "minimax-api-token",
-                title: "API token",
-                subtitle: "Stored in Keychain (encrypted). Press Return to save.",
+                id: "minimax-cookie-header",
+                title: "Cookie header (manual)",
+                subtitle: "Paste a Cookie: header or Copy as cURL. Stored in Keychain. Press Return to save.",
                 kind: .secure,
-                placeholder: "Paste token…",
-                binding: context.stringBinding(\.minimaxAPIToken),
-                actions: [],
-                isVisible: nil),
-            ProviderSettingsFieldDescriptor(
-                id: "minimax-group-id",
-                title: "Group ID",
-                subtitle: "Stored in Keychain (encrypted). Press Return to save.",
-                kind: .secure,
-                placeholder: "Paste Group ID…",
-                binding: context.stringBinding(\.minimaxGroupID),
+                placeholder: "Paste Cookie header or cURL…",
+                binding: context.stringBinding(\.minimaxCookieHeader),
                 actions: [],
                 isVisible: nil),
         ]

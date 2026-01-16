@@ -18,7 +18,7 @@ struct AppDelegateTests {
         }
         defer { StatusItemController.factory = StatusItemController.defaultFactory }
 
-        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
         let fetcher = UsageFetcher()
         let store = UsageStore(fetcher: fetcher, settings: settings)
         let account = fetcher.loadAccountInfo()

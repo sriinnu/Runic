@@ -1,7 +1,7 @@
 import AppKit
 
 final class PaddedToggleButton: NSButton {
-    var contentPadding = NSEdgeInsets(top: 6, left: 10, bottom: 6, right: 10) {
+    var contentPadding = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8) {
         didSet {
             if oldValue.top != self.contentPadding.top ||
                 oldValue.left != self.contentPadding.left ||
@@ -30,12 +30,12 @@ final class InlineIconToggleButton: NSButton {
     private var isConfiguring = false // Batch invalidation during setup
     private var iconSize: CGFloat = 16
 
-    var contentPadding = NSEdgeInsets(top: 6, left: 10, bottom: 6, right: 10) {
+    var contentPadding = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8) {
         didSet {
             self.paddingConstraints.first { $0.firstAttribute == .top }?.constant = self.contentPadding.top
             self.paddingConstraints.first { $0.firstAttribute == .leading }?.constant = self.contentPadding.left
             self.paddingConstraints.first { $0.firstAttribute == .trailing }?.constant = -self.contentPadding.right
-            self.paddingConstraints.first { $0.firstAttribute == .bottom }?.constant = -(self.contentPadding.bottom + 4)
+            self.paddingConstraints.first { $0.firstAttribute == .bottom }?.constant = -(self.contentPadding.bottom + 1)
             if !self.isConfiguring { self.invalidateIntrinsicContentSize() }
         }
     }
@@ -114,7 +114,7 @@ final class InlineIconToggleButton: NSButton {
 
         self.stack.orientation = .horizontal
         self.stack.alignment = .centerY
-        self.stack.spacing = 1
+        self.stack.spacing = 2
         self.stack.translatesAutoresizingMaskIntoConstraints = false
         self.stack.addArrangedSubview(self.iconView)
         self.stack.addArrangedSubview(self.titleField)
@@ -137,7 +137,7 @@ final class InlineIconToggleButton: NSButton {
         centerX.priority = .defaultHigh
         let bottom = self.stack.bottomAnchor.constraint(
             lessThanOrEqualTo: self.bottomAnchor,
-            constant: -(self.contentPadding.bottom + 4))
+            constant: -(self.contentPadding.bottom + 2))
         self.paddingConstraints = [top, leading, trailing, bottom, centerX]
 
         NSLayoutConstraint.activate(self.paddingConstraints + self.iconSizeConstraints)
@@ -153,7 +153,7 @@ final class StackedToggleButton: NSButton {
     private var isConfiguring = false // Batch invalidation during setup
     private var iconSize: CGFloat = 16
 
-    var contentPadding = NSEdgeInsets(top: 5, left: 8, bottom: 5, right: 8) {
+    var contentPadding = NSEdgeInsets(top: 3, left: 6, bottom: 3, right: 6) {
         didSet {
             self.paddingConstraints.first { $0.firstAttribute == .top }?.constant = self.contentPadding.top
             self.paddingConstraints.first { $0.firstAttribute == .leading }?.constant = self.contentPadding.left
@@ -259,7 +259,7 @@ final class StackedToggleButton: NSButton {
             constant: -self.contentPadding.right)
         let bottom = self.stack.bottomAnchor.constraint(
             lessThanOrEqualTo: self.bottomAnchor,
-            constant: -(self.contentPadding.bottom + 4))
+            constant: -(self.contentPadding.bottom + 2))
         self.paddingConstraints = [top, leading, trailing, bottom]
 
         NSLayoutConstraint.activate(self.paddingConstraints + self.iconSizeConstraints)

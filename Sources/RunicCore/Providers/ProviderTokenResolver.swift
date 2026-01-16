@@ -24,7 +24,7 @@ public enum ProviderTokenResolver {
     private static let keychainService = "com.sriinnu.athena.Runic"
     private static let zaiAccount = "zai-api-token"
     private static let copilotAccount = "copilot-api-token"
-    private static let minimaxAccount = "minimax-api-token"
+    private static let minimaxCookieAccount = "minimax-cookie-header"
     private static let minimaxGroupAccount = "minimax-group-id"
     private static let openRouterAccount = "openrouter-api-token"
     private static let groqAccount = "groq-api-token"
@@ -39,6 +39,12 @@ public enum ProviderTokenResolver {
 
     public static func minimaxToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.minimaxResolution(environment: environment)?.token
+    }
+
+    public static func minimaxCookieHeader(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.minimaxCookieHeaderResolution(environment: environment)?.token
     }
 
     public static func minimaxGroupID(
@@ -84,10 +90,16 @@ public enum ProviderTokenResolver {
     public static func minimaxResolution(
         environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
     {
-        if let token = self.keychainToken(service: self.keychainService, account: self.minimaxAccount) {
+        self.minimaxCookieHeaderResolution(environment: environment)
+    }
+
+    public static func minimaxCookieHeaderResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.minimaxCookieAccount) {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
-        if let token = MiniMaxSettingsReader.apiToken(environment: environment) {
+        if let token = MiniMaxSettingsReader.cookieHeader(environment: environment) {
             return ProviderTokenResolution(token: token, source: .environment)
         }
         return nil

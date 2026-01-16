@@ -181,6 +181,10 @@ extension StatusItemController {
                     }
                     menu.addItem(item)
                 case let .action(title, action):
+                    if case .refresh = action {
+                        menu.addItem(self.makePersistentRefreshItem(title: title))
+                        break
+                    }
                     let (selector, represented) = self.selector(for: action)
                     let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
                     item.target = self
@@ -229,8 +233,8 @@ extension StatusItemController {
             selected: selected,
             width: self.menuCardWidth(for: providers, menu: menu),
             showsIcons: self.settings.switcherShowsIcons,
-            iconProvider: { [weak self] provider in
-                self?.switcherIcon(for: provider) ?? NSImage()
+            iconProvider: { [weak self] provider, iconSize in
+                self?.switcherIcon(for: provider, size: iconSize) ?? NSImage()
             },
             weeklyRemainingProvider: { [weak self] provider in
                 self?.switcherWeeklyRemaining(for: provider)
@@ -373,8 +377,8 @@ extension StatusItemController {
     }
 
     private func menuCardHeight(for view: NSView, width: CGFloat) -> CGFloat {
-        let basePadding: CGFloat = 6
-        let descenderSafety: CGFloat = 1
+        let basePadding: CGFloat = MenuCardMetrics.menuItemBasePadding
+        let descenderSafety: CGFloat = MenuCardMetrics.menuItemDescenderPadding
 
         // Fast path: use protocol-based measurement when available (avoids layout passes)
         if let measured = view as? MenuCardMeasuring {
@@ -411,8 +415,8 @@ extension StatusItemController {
         let hasExtraUsage = model.providerCost != nil
         let hasCost = model.tokenUsage != nil
         let hasInsights = model.insights != nil
-        let bottomPadding = CGFloat(hasCredits ? 4 : 6)
-        let sectionSpacing = CGFloat(6)
+        let bottomPadding = MenuCardMetrics.sectionBottomPadding
+        let sectionSpacing = MenuCardMetrics.sectionTopPadding
         let usageBottomPadding = bottomPadding
         let creditsBottomPadding = bottomPadding
 
@@ -508,8 +512,8 @@ extension StatusItemController {
         }
     }
 
-    private func switcherIcon(for provider: UsageProvider) -> NSImage {
-        if let brand = ProviderBrandIcon.image(for: provider) {
+    private func switcherIcon(for provider: UsageProvider, size: CGFloat) -> NSImage {
+        if let brand = ProviderBrandIcon.image(for: provider, size: size) {
             return brand
         }
 
@@ -533,6 +537,7 @@ extension StatusItemController {
             tilt: 0,
             statusIndicator: indicator)
         image.isTemplate = true
+        image.size = NSSize(width: size, height: size)
         return image
     }
 
@@ -623,6 +628,100 @@ extension StatusItemController {
         }
     }
 
+    @MainActor
+    private final class MenuActionButtonView: NSView, MenuCardHighlighting {
+        private let iconView = NSImageView()
+        private let titleField: NSTextField
+        private let stack = NSStackView()
+        private let highlightLayer = CALayer()
+        private let onSelect: () -> Void
+        private var isHighlighted = false
+
+        init(title: String, image: NSImage?, onSelect: @escaping () -> Void) {
+            self.titleField = NSTextField(labelWithString: title)
+            self.onSelect = onSelect
+            super.init(frame: .zero)
+            self.wantsLayer = true
+            self.layer?.insertSublayer(self.highlightLayer, at: 0)
+            self.highlightLayer.cornerRadius = 6
+
+            self.iconView.image = image
+            self.iconView.contentTintColor = NSColor.secondaryLabelColor
+            self.iconView.imageScaling = .scaleNone
+            self.iconView.translatesAutoresizingMaskIntoConstraints = false
+
+            self.titleField.font = NSFont.menuFont(ofSize: NSFont.systemFontSize)
+            self.titleField.lineBreakMode = .byTruncatingTail
+            self.titleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+            self.stack.orientation = .horizontal
+            self.stack.alignment = .centerY
+            self.stack.spacing = 6
+            self.stack.translatesAutoresizingMaskIntoConstraints = false
+            if image != nil {
+                self.stack.addArrangedSubview(self.iconView)
+            }
+            self.stack.addArrangedSubview(self.titleField)
+            self.addSubview(self.stack)
+
+            var constraints: [NSLayoutConstraint] = [
+                self.stack.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 18),
+                self.stack.trailingAnchor.constraint(lessThanOrEqualTo: self.trailingAnchor, constant: -10),
+                self.stack.topAnchor.constraint(equalTo: self.topAnchor, constant: 2),
+                self.stack.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -2),
+            ]
+
+            if image != nil {
+                constraints.append(self.iconView.widthAnchor.constraint(equalToConstant: 16))
+                constraints.append(self.iconView.heightAnchor.constraint(equalToConstant: 16))
+            }
+
+            NSLayoutConstraint.activate(constraints)
+
+            let click = NSClickGestureRecognizer(target: self, action: #selector(self.handleClick))
+            self.addGestureRecognizer(click)
+            self.updateColors()
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) {
+            nil
+        }
+
+        override func layout() {
+            super.layout()
+            self.highlightLayer.frame = self.bounds.insetBy(dx: 6, dy: 2)
+        }
+
+        override var intrinsicContentSize: NSSize {
+            let size = self.stack.fittingSize
+            return NSSize(width: size.width + 28, height: size.height + 4)
+        }
+
+        func setHighlighted(_ highlighted: Bool) {
+            self.isHighlighted = highlighted
+            self.updateColors()
+        }
+
+        private func updateColors() {
+            let textColor = self.isHighlighted ? NSColor.selectedMenuItemTextColor : NSColor.controlTextColor
+            let iconColor = self.isHighlighted ? NSColor.selectedMenuItemTextColor : NSColor.secondaryLabelColor
+            self.titleField.textColor = textColor
+            if self.iconView.image?.isTemplate == true {
+                self.iconView.contentTintColor = iconColor
+            } else {
+                self.iconView.contentTintColor = nil
+            }
+            self.highlightLayer.backgroundColor = self.isHighlighted
+                ? NSColor.selectedContentBackgroundColor.cgColor
+                : NSColor.clear.cgColor
+        }
+
+        @objc private func handleClick() {
+            self.onSelect()
+        }
+    }
+
     private struct MenuCardSectionContainerView<Content: View>: View {
         @Bindable var highlightState: MenuCardHighlightState
         let showsSubmenuIndicator: Bool
@@ -670,6 +769,31 @@ extension StatusItemController {
             image.size = NSSize(width: 16, height: 16)
             item.image = image
         }
+        return item
+    }
+
+    private func makePersistentRefreshItem(title: String) -> NSMenuItem {
+        let image = NSImage(
+            systemSymbolName: MenuDescriptor.MenuActionSystemImage.refresh.rawValue,
+            accessibilityDescription: nil) ?? NSImage(
+                systemSymbolName: "arrow.triangle.2.circlepath",
+                accessibilityDescription: nil)
+        image?.isTemplate = true
+        image?.size = NSSize(width: 16, height: 16)
+        let view = MenuActionButtonView(title: title, image: image) { [weak self] in
+            self?.refreshNow()
+        }
+        let size = view.fittingSize
+        if size.height <= 1 {
+            let fallback = NSMenuItem(title: title, action: #selector(self.refreshNow), keyEquivalent: "")
+            fallback.target = self
+            fallback.image = image
+            return fallback
+        }
+        view.frame = NSRect(origin: .zero, size: size)
+        let item = NSMenuItem()
+        item.view = view
+        item.isEnabled = true
         return item
     }
 
@@ -1078,16 +1202,16 @@ private final class ProviderSwitcherView: NSView {
         selected: UsageProvider?,
         width: CGFloat,
         showsIcons: Bool,
-        iconProvider: (UsageProvider) -> NSImage,
+        iconProvider: (UsageProvider, CGFloat) -> NSImage,
         weeklyRemainingProvider: @escaping (UsageProvider) -> Double?,
         onSelect: @escaping (UsageProvider) -> Void)
     {
         let minimumGap: CGFloat = 1
-        let iconSize: CGFloat = 26
+        let iconSize: CGFloat = 34
         self.segments = providers.map { provider in
             let fullTitle = Self.switcherTitle(for: provider)
-            let icon = iconProvider(provider)
-            // Avoid any resampling: we ship exact 16pt/32px assets for crisp rendering.
+            let icon = iconProvider(provider, iconSize)
+            // Avoid any resampling: we render icons at the target point size for crisp output.
             icon.size = NSSize(width: iconSize, height: iconSize)
             return Segment(
                 provider: provider,
@@ -1111,8 +1235,8 @@ private final class ProviderSwitcherView: NSView {
             count: self.segments.count,
             maxAllowedSegmentWidth: initialMaxAllowedSegmentWidth,
             stackedIcons: self.stackedIcons)
-        self.rowSpacing = self.stackedIcons ? 8 : 6
-        self.rowHeight = self.stackedIcons ? 56 : 46
+        self.rowSpacing = self.stackedIcons ? 3 : 3
+        self.rowHeight = self.stackedIcons ? 56 : 42
         let height: CGFloat = self.useTwoRows ? (self.rowHeight * 2 + self.rowSpacing) : self.rowHeight
         self.preferredWidth = width
         super.init(frame: NSRect(x: 0, y: 0, width: width, height: height))
@@ -1446,14 +1570,14 @@ private final class ProviderSwitcherView: NSView {
         stackedIcons: Bool) -> Bool
     {
         guard count > 1 else { return false }
-        let minimumComfortableAverage: CGFloat = stackedIcons ? 44 : 54
+        let minimumComfortableAverage: CGFloat = stackedIcons ? 52 : 54
         return maxAllowedSegmentWidth < minimumComfortableAverage
     }
 
     private static func switcherOuterPadding(for width: CGFloat, count: Int, minimumGap: CGFloat) -> CGFloat {
         // Align with the card's left/right content grid when possible.
-        let preferred: CGFloat = 16
-        let reduced: CGFloat = 10
+        let preferred: CGFloat = MenuCardMetrics.horizontalPadding
+        let reduced: CGFloat = 8
         let minimal: CGFloat = 6
 
         func averageButtonWidth(outerPadding: CGFloat) -> CGFloat {
@@ -1463,7 +1587,7 @@ private final class ProviderSwitcherView: NSView {
         }
 
         // Only sacrifice padding when we'd otherwise squeeze buttons into unreadable widths.
-        let minimumComfortableAverage: CGFloat = count >= 5 ? 46 : 54
+        let minimumComfortableAverage: CGFloat = count >= 5 ? 50 : 56
 
         if averageButtonWidth(outerPadding: preferred) >= minimumComfortableAverage { return preferred }
         if averageButtonWidth(outerPadding: reduced) >= minimumComfortableAverage { return reduced }
@@ -1571,7 +1695,7 @@ private final class ProviderSwitcherView: NSView {
                 let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
                 let titleWidth = ceil((self.segments[index].title as NSString).size(withAttributes: [.font: font])
                     .width)
-                let contentPadding: CGFloat = 4 + 4
+                let contentPadding: CGFloat = 6 + 6
                 let extraSlack: CGFloat = 1
                 desiredWidths.append(ceil(titleWidth + contentPadding + extraSlack))
             } else {

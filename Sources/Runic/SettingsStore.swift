@@ -208,6 +208,11 @@ final class SettingsStore {
         didSet { self.schedulePersistMiniMaxAPIToken() }
     }
 
+    /// MiniMax manual Cookie header (stored in Keychain).
+    var minimaxCookieHeader: String {
+        didSet { self.schedulePersistMiniMaxCookieHeader() }
+    }
+
     /// MiniMax Group ID (stored in Keychain).
     var minimaxGroupID: String {
         didSet { self.schedulePersistMiniMaxGroupID() }
@@ -300,6 +305,7 @@ final class SettingsStore {
         _ = self.switcherShowsIcons
         _ = self.zaiAPIToken
         _ = self.minimaxAPIToken
+        _ = self.minimaxCookieHeader
         _ = self.minimaxGroupID
         _ = self.copilotAPIToken
         _ = self.openRouterAPIToken
@@ -320,6 +326,8 @@ final class SettingsStore {
     @ObservationIgnored private var zaiTokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let minimaxTokenStore: any MiniMaxTokenStoring
     @ObservationIgnored private var minimaxTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let minimaxCookieHeaderStore: any MiniMaxCookieHeaderStoring
+    @ObservationIgnored private var minimaxCookieHeaderPersistTask: Task<Void, Never>?
     @ObservationIgnored private let minimaxGroupIDStore: any MiniMaxGroupIDStoring
     @ObservationIgnored private var minimaxGroupIDPersistTask: Task<Void, Never>?
     @ObservationIgnored private let copilotTokenStore: any CopilotTokenStoring
@@ -343,6 +351,7 @@ final class SettingsStore {
         userDefaults: UserDefaults = .standard,
         zaiTokenStore: any ZaiTokenStoring = KeychainZaiTokenStore(),
         minimaxTokenStore: any MiniMaxTokenStoring = KeychainMiniMaxTokenStore(),
+        minimaxCookieHeaderStore: any MiniMaxCookieHeaderStoring = KeychainMiniMaxCookieHeaderStore(),
         minimaxGroupIDStore: any MiniMaxGroupIDStoring = KeychainMiniMaxGroupIDStore(),
         copilotTokenStore: any CopilotTokenStoring = KeychainCopilotTokenStore(),
         openRouterTokenStore: any OpenRouterTokenStoring = KeychainOpenRouterTokenStore(),
@@ -351,6 +360,7 @@ final class SettingsStore {
         self.userDefaults = userDefaults
         self.zaiTokenStore = zaiTokenStore
         self.minimaxTokenStore = minimaxTokenStore
+        self.minimaxCookieHeaderStore = minimaxCookieHeaderStore
         self.minimaxGroupIDStore = minimaxGroupIDStore
         self.copilotTokenStore = copilotTokenStore
         self.openRouterTokenStore = openRouterTokenStore
@@ -410,6 +420,7 @@ final class SettingsStore {
         self.switcherShowsIcons = userDefaults.object(forKey: "switcherShowsIcons") as? Bool ?? true
         self.zaiAPIToken = (try? zaiTokenStore.loadToken()) ?? ""
         self.minimaxAPIToken = (try? minimaxTokenStore.loadToken()) ?? ""
+        self.minimaxCookieHeader = (try? minimaxCookieHeaderStore.loadHeader()) ?? ""
         self.minimaxGroupID = (try? minimaxGroupIDStore.loadGroupID()) ?? ""
         self.copilotAPIToken = (try? copilotTokenStore.loadToken()) ?? ""
         self.openRouterAPIToken = (try? openRouterTokenStore.loadToken()) ?? ""
@@ -691,6 +702,31 @@ final class SettingsStore {
             }.value
             if let error {
                 RunicLog.logger("minimax-token-store").error("Failed to persist MiniMax token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistMiniMaxCookieHeader() {
+        self.minimaxCookieHeaderPersistTask?.cancel()
+        let header = self.minimaxCookieHeader
+        let store = self.minimaxCookieHeaderStore
+        self.minimaxCookieHeaderPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try store.storeHeader(header)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("minimax-cookie-store").error("Failed to persist MiniMax cookie header: \(error)")
             }
         }
     }

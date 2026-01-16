@@ -8,111 +8,106 @@ struct GeneralPane: View {
     @Bindable var store: UsageStore
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 16) {
-                SettingsSection(contentSpacing: 12) {
-                    Text("System")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    PreferenceToggleRow(
-                        title: "Start at Login",
-                        subtitle: "Automatically opens Runic when you start your Mac.",
-                        binding: self.$settings.launchAtLogin)
-                }
+        PreferencesPane {
+            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
+                Text("System")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                PreferenceToggleRow(
+                    title: "Start at Login",
+                    subtitle: "Automatically opens Runic when you start your Mac.",
+                    binding: self.$settings.launchAtLogin)
+            }
 
-                Divider()
+            Divider()
 
-                SettingsSection(contentSpacing: 12) {
-                    Text("Usage")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
+            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
+                Text("Usage")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Toggle(isOn: self.$settings.costUsageEnabled) {
-                                Text("Show cost summary")
-                                    .font(.body)
-                            }
-                            .toggleStyle(.checkbox)
-
-                            Text("Reads local usage logs. Shows today + last 30 days cost in the menu.")
-                                .font(.footnote)
-                                .foregroundStyle(.tertiary)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            if self.settings.costUsageEnabled {
-                                Text("Auto-refresh: hourly · Timeout: 10m")
-                                    .font(.footnote)
-                                    .foregroundStyle(.tertiary)
-
-                                self.costStatusLine(provider: .claude)
-                                self.costStatusLine(provider: .codex)
-                            }
+                VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle(isOn: self.$settings.costUsageEnabled) {
+                            Text("Show cost summary")
+                                .font(.body)
                         }
+                        .toggleStyle(.checkbox)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Toggle(isOn: self.$settings.openAIWebAccessEnabled) {
-                                Text("Access OpenAI via web")
-                                    .font(.body)
-                            }
-                            .toggleStyle(.checkbox)
+                        Text("Reads local usage logs. Shows today + last 30 days cost in the menu.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                            Text("Imports browser cookies for dashboard extras (credits history, code review).")
+                        if self.settings.costUsageEnabled {
+                            Text("Auto-refresh: hourly · Timeout: 10m")
                                 .font(.footnote)
                                 .foregroundStyle(.tertiary)
-                                .fixedSize(horizontal: false, vertical: true)
+
+                            self.costStatusLine(provider: .claude)
+                            self.costStatusLine(provider: .codex)
                         }
                     }
-                }
 
-                Divider()
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle(isOn: self.$settings.openAIWebAccessEnabled) {
+                            Text("Access OpenAI via web")
+                                .font(.body)
+                        }
+                        .toggleStyle(.checkbox)
 
-                SettingsSection(contentSpacing: 12) {
-                    Text("Status")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    PreferenceToggleRow(
-                        title: "Check provider status",
-                        subtitle: "Polls OpenAI/Claude status pages and Google Workspace for " +
-                            "Gemini/Antigravity, surfacing incidents in the icon and menu.",
-                        binding: self.$settings.statusChecksEnabled)
-                    PreferenceToggleRow(
-                        title: "Vibrant menu bar icon",
-                        subtitle: "Uses a data-reactive color ramp to show usage pressure at a glance.",
-                        binding: self.$settings.menuBarVibrantIconEnabled)
-                }
-
-                Divider()
-
-                SettingsSection(contentSpacing: 12) {
-                    Text("Notifications")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    PreferenceToggleRow(
-                        title: "Session quota notifications",
-                        subtitle: "Notifies when the 5-hour session quota hits 0% and when it becomes " +
-                            "available again.",
-                        binding: self.$settings.sessionQuotaNotificationsEnabled)
-                }
-
-                Divider()
-
-                SettingsSection(contentSpacing: 12) {
-                    HStack {
-                        Spacer()
-                        Button("Quit Runic") { NSApp.terminate(nil) }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.large)
+                        Text("Imports browser cookies for dashboard extras (credits history, code review).")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+
+            Divider()
+
+            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
+                Text("Status")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                PreferenceToggleRow(
+                    title: "Check provider status",
+                    subtitle: "Polls OpenAI/Claude status pages and Google Workspace for " +
+                        "Gemini/Antigravity, surfacing incidents in the icon and menu.",
+                    binding: self.$settings.statusChecksEnabled)
+                PreferenceToggleRow(
+                    title: "Vibrant menu bar icon",
+                    subtitle: "Uses a data-reactive color ramp to show usage pressure at a glance.",
+                    binding: self.$settings.menuBarVibrantIconEnabled)
+            }
+
+            Divider()
+
+            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
+                Text("Notifications")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                PreferenceToggleRow(
+                    title: "Session quota notifications",
+                    subtitle: "Notifies when the 5-hour session quota hits 0% and when it becomes " +
+                        "available again.",
+                    binding: self.$settings.sessionQuotaNotificationsEnabled)
+            }
+
+            Divider()
+
+            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
+                HStack {
+                    Spacer()
+                    Button("Quit Runic") { NSApp.terminate(nil) }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                }
+            }
         }
     }
 

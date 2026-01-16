@@ -6,9 +6,9 @@ private enum ProviderListMetrics {
     static let rowSpacing: CGFloat = 12
     static let rowInsets = EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0)
     static let dividerBottomInset: CGFloat = 8
-    static let listTopPadding: CGFloat = 12
+    static let listTopPadding: CGFloat = 0
     static let checkboxSize: CGFloat = 18
-    static let iconSize: CGFloat = 18
+    static let iconSize: CGFloat = 24
     static let reorderHandleSize: CGFloat = 12
     static let reorderDotSize: CGFloat = 2
     static let reorderDotSpacing: CGFloat = 3
@@ -26,7 +26,7 @@ struct ProvidersPane: View {
     private var providers: [UsageProvider] { self.settings.orderedProviders() }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        PreferencesListPane {
             ProviderListView(
                 providers: self.providers,
                 store: self.store,
@@ -43,7 +43,6 @@ struct ProvidersPane: View {
                     self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
                 })
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             self.runSettingsDidBecomeActiveHooks()
         }
@@ -101,7 +100,7 @@ struct ProvidersPane: View {
         }
 
         // Cursor is web-based, no CLI version to detect
-        if provider == .cursor {
+        if provider == .cursor || provider == .minimax {
             return "web • \(usageText)"
         }
         if provider == .zai {
@@ -330,7 +329,7 @@ private struct ProviderListBrandIcon: View {
     let provider: UsageProvider
 
     var body: some View {
-        if let brand = ProviderBrandIcon.image(for: self.provider) {
+        if let brand = ProviderBrandIcon.image(for: self.provider, size: ProviderListMetrics.iconSize) {
             Image(nsImage: brand)
                 .resizable()
                 .scaledToFit()

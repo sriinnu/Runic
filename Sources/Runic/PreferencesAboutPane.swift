@@ -96,9 +96,8 @@ struct AboutPane: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.top, 4)
-        .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+        .padding(.vertical, PreferencesLayoutMetrics.paneVertical)
         .onAppear {
             guard !self.didLoadUpdaterState else { return }
             // Align Sparkle's flag with the persisted preference on first load.

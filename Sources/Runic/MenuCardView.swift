@@ -2,6 +2,20 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+enum MenuCardMetrics {
+    static let horizontalPadding: CGFloat = 12
+    static let headerTopPadding: CGFloat = 1
+    static let headerBottomPadding: CGFloat = 1
+    static let sectionTopPadding: CGFloat = 5
+    static let sectionBottomPadding: CGFloat = 3
+    static let sectionSpacing: CGFloat = 7
+    static let blockSpacing: CGFloat = 5
+    static let lineSpacing: CGFloat = 3
+    static let menuItemBasePadding: CGFloat = 4
+    static let menuItemDescenderPadding: CGFloat = 1
+    static let tailPadding: CGFloat = 2
+}
+
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
 struct UsageMenuCardView: View {
     struct Model {
@@ -96,7 +110,7 @@ struct UsageMenuCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             UsageMenuCardHeaderView(model: self.model)
 
             if self.hasDetails {
@@ -117,11 +131,11 @@ struct UsageMenuCardView: View {
                 let hasCost = hasExtraUsage || hasTokenCost
                 let hasInsights = self.model.insights != nil
 
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
                     if hasUsage {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
                             ForEach(self.model.metrics) { metric in
-                                VStack(alignment: .leading, spacing: 6) {
+                                VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                                     Text(metric.title)
                                         .font(.body)
                                         .fontWeight(.medium)
@@ -172,7 +186,7 @@ struct UsageMenuCardView: View {
                         Divider()
                     }
                     if let tokenUsage = self.model.tokenUsage {
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                             Text("Cost")
                                 .font(.body)
                                 .fontWeight(.medium)
@@ -206,12 +220,12 @@ struct UsageMenuCardView: View {
                         InsightsContent(section: insights)
                     }
                 }
-                .padding(.bottom, self.model.creditsText == nil ? 6 : 0)
+                .padding(.bottom, self.model.creditsText == nil ? MenuCardMetrics.tailPadding : 0)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 2)
-        .padding(.bottom, 2)
+        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+        .padding(.top, MenuCardMetrics.headerTopPadding)
+        .padding(.bottom, MenuCardMetrics.headerBottomPadding)
         .frame(width: self.width, alignment: .leading)
     }
 
@@ -226,7 +240,7 @@ private struct UsageMenuCardHeaderView: View {
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline) {
                 Text(self.model.providerName)
                     .font(.headline)
@@ -327,7 +341,7 @@ private struct ProviderCostContent: View {
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text(self.section.title)
                 .font(.body)
                 .fontWeight(.medium)
@@ -352,7 +366,7 @@ private struct InsightsContent: View {
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text(self.section.title)
                 .font(.body)
                 .fontWeight(.medium)
@@ -406,16 +420,16 @@ struct UsageMenuCardHeaderSectionView: View {
     let width: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             UsageMenuCardHeaderView(model: self.model)
 
             if self.showDivider {
                 Divider()
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 2)
-        .padding(.bottom, self.model.subtitleStyle == .error ? 2 : 0)
+        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+        .padding(.top, MenuCardMetrics.headerTopPadding)
+        .padding(.bottom, self.model.subtitleStyle == .error ? MenuCardMetrics.headerBottomPadding : 0)
         .frame(width: self.width, alignment: .leading)
     }
 }
@@ -428,7 +442,7 @@ struct UsageMenuCardUsageSectionView: View {
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
             if self.model.metrics.isEmpty {
                 if let placeholder = self.model.placeholder {
                     Text(placeholder)
@@ -437,7 +451,7 @@ struct UsageMenuCardUsageSectionView: View {
                 }
             } else {
                 ForEach(self.model.metrics) { metric in
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                         Text(metric.title)
                             .font(.body)
                             .fontWeight(.medium)
@@ -468,8 +482,8 @@ struct UsageMenuCardUsageSectionView: View {
                 Divider()
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
+        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+        .padding(.top, MenuCardMetrics.sectionTopPadding)
         .padding(.bottom, self.bottomPadding)
         .frame(width: self.width, alignment: .leading)
     }
@@ -498,7 +512,7 @@ struct UsageMenuCardCreditsSectionView: View {
 
     var body: some View {
         if let credits = self.model.creditsText {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                 CreditsBarContent(
                     creditsText: credits,
                     creditsRemaining: self.model.creditsRemaining,
@@ -509,7 +523,7 @@ struct UsageMenuCardCreditsSectionView: View {
                     Divider()
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, MenuCardMetrics.horizontalPadding)
             .padding(.top, self.topPadding)
             .padding(.bottom, self.bottomPadding)
             .frame(width: self.width, alignment: .leading)
@@ -539,7 +553,7 @@ private struct CreditsBarContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text("Credits")
                 .font(.body)
                 .fontWeight(.medium)
@@ -583,7 +597,7 @@ struct UsageMenuCardInsightsSectionView: View {
     var body: some View {
         if let insights = self.model.insights {
             InsightsContent(section: insights)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, MenuCardMetrics.horizontalPadding)
                 .padding(.top, self.topPadding)
                 .padding(.bottom, self.bottomPadding)
                 .frame(width: self.width, alignment: .leading)
@@ -602,9 +616,9 @@ struct UsageMenuCardCostSectionView: View {
         let hasTokenCost = self.model.tokenUsage != nil
         return Group {
             if hasTokenCost {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: MenuCardMetrics.blockSpacing) {
                     if let tokenUsage = self.model.tokenUsage {
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                             Text("Cost")
                                 .font(.body)
                                 .fontWeight(.medium)
@@ -632,7 +646,7 @@ struct UsageMenuCardCostSectionView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, MenuCardMetrics.horizontalPadding)
                 .padding(.top, self.topPadding)
                 .padding(.bottom, self.bottomPadding)
                 .frame(width: self.width, alignment: .leading)
@@ -653,7 +667,7 @@ struct UsageMenuCardExtraUsageSectionView: View {
                 ProviderCostContent(
                     section: providerCost,
                     progressColor: self.model.progressColor)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, MenuCardMetrics.horizontalPadding)
                     .padding(.top, self.topPadding)
                     .padding(.bottom, self.bottomPadding)
                     .frame(width: self.width, alignment: .leading)

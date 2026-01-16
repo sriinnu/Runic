@@ -5,6 +5,7 @@ enum PreferencesTab: String, Hashable {
     case general
     case providers
     case advanced
+    case help
     case about
     case debug
 
@@ -36,6 +37,10 @@ struct PreferencesView: View {
                 .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
                 .tag(PreferencesTab.advanced)
 
+            HelpPane()
+                .tabItem { Label("Help", systemImage: "questionmark.circle") }
+                .tag(PreferencesTab.help)
+
             AboutPane(updater: self.updater)
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(PreferencesTab.about)
@@ -46,8 +51,8 @@ struct PreferencesView: View {
                     .tag(PreferencesTab.debug)
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
+        .padding(.horizontal, PreferencesLayoutMetrics.outerHorizontal)
+        .padding(.vertical, PreferencesLayoutMetrics.outerVertical)
         .frame(width: PreferencesTab.windowWidth, height: self.contentHeight)
         .onAppear {
             self.updateHeight(for: self.selection.tab, animate: false)

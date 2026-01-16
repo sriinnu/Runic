@@ -3,13 +3,15 @@ import Foundation
 public struct MiniMaxSettingsReader: Sendable {
     private static let log = RunicLog.logger("minimax-settings")
 
-    public static let apiTokenKey = "MINIMAX_API_KEY"
+    public static let cookieKey = "MINIMAX_COOKIE"
+    public static let cookieHeaderKey = "MINIMAX_COOKIE_HEADER"
     public static let groupIDKey = "MINIMAX_GROUP_ID"
 
-    public static func apiToken(
+    public static func cookieHeader(
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
-        if let token = self.cleaned(environment[apiTokenKey]) { return token }
+        if let header = self.cleaned(environment[cookieHeaderKey]) { return header }
+        if let header = self.cleaned(environment[cookieKey]) { return header }
         return nil
     }
 
@@ -38,13 +40,13 @@ public struct MiniMaxSettingsReader: Sendable {
 }
 
 public enum MiniMaxSettingsError: LocalizedError, Sendable {
-    case missingToken
+    case missingCookieHeader
     case missingGroupID
 
     public var errorDescription: String? {
         switch self {
-        case .missingToken:
-            "MiniMax API token not found. Set it in Settings → Providers → MiniMax or via MINIMAX_API_KEY."
+        case .missingCookieHeader:
+            "MiniMax session cookie not found. Set it in Settings → Providers → MiniMax or via MINIMAX_COOKIE."
         case .missingGroupID:
             "MiniMax Group ID not found. Set it in Settings → Providers → MiniMax or via MINIMAX_GROUP_ID."
         }

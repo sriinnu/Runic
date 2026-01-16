@@ -796,7 +796,8 @@ final class UsageStore {
 
     private func currentIdleSeconds() -> TimeInterval? {
         #if os(macOS)
-        let seconds = CGEventSourceSecondsSinceLastEventType(.combinedSessionState, .anyInputEventType)
+        guard let anyInputType = CGEventType(rawValue: UInt32.max) else { return nil }
+        let seconds = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: anyInputType)
         return seconds >= 0 ? seconds : nil
         #else
         return nil

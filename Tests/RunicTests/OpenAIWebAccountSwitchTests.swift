@@ -8,7 +8,7 @@ import Testing
 struct OpenAIWebAccountSwitchTests {
     @Test
     func clearsDashboardWhenCodexEmailChanges() {
-        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
         settings.refreshFrequency = .manual
 
         let store = UsageStore(fetcher: UsageFetcher(), settings: settings)
@@ -31,7 +31,7 @@ struct OpenAIWebAccountSwitchTests {
 
     @Test
     func keepsDashboardWhenCodexEmailStaysSame() {
-        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
         settings.refreshFrequency = .manual
 
         let store = UsageStore(fetcher: UsageFetcher(), settings: settings)

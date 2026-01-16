@@ -1,5 +1,5 @@
 ---
-summary: "Provider data sources and parsing overview (Codex, Claude, Gemini, Antigravity, Cursor, Droid/Factory, z.ai, Copilot)."
+summary: "Provider data sources and parsing overview (Codex, Claude, Gemini, Antigravity, Cursor, Droid/Factory, MiniMax, z.ai, Copilot)."
 read_when:
   - Adding or modifying provider fetch/parsing
   - Adjusting provider labels, toggles, or metadata
@@ -20,6 +20,7 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, plus p
 | Antigravity | Local LSP/HTTP probe (`local`). |
 | Cursor | Web API via cookies → stored WebKit session (`web`). |
 | Droid/Factory | Web cookies → stored tokens → local storage → WorkOS cookies (`web`). |
+| MiniMax | Web cookies + Chromium local storage token (`web`). |
 | z.ai | API token (Keychain/env) → quota API (`api`). |
 | Copilot | API token (device flow/env) → copilot_internal API (`api`). |
 
@@ -69,6 +70,13 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, plus p
 - Multiple fallback strategies (cookies → stored tokens → local storage → WorkOS cookies).
 - Status: `https://status.factory.ai`.
 - Details: `docs/factory.md`.
+
+## MiniMax
+- Web-only. Uses browser cookies plus a Chromium local storage access token.
+- Primary endpoint: `https://platform.minimax.io/user-center/payment/coding-plan` (HTML parse).
+- Fallback endpoint: `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains`.
+- Status: none yet.
+- Details: `docs/minimax.md`.
 
 ## Copilot
 - GitHub device flow OAuth token + `api.github.com/copilot_internal/user`.

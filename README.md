@@ -29,6 +29,15 @@ Upgrade:
 brew upgrade --cask sriinnu/tap/runic
 ```
 
+### Gatekeeper notes (if macOS blocks the app)
+- First launch: right-click `Runic.app` → Open.
+- If blocked: System Settings → Privacy & Security → Open Anyway.
+- For self-built/unsigned builds, remove quarantine after moving the app:
+```bash
+xattr -dr com.apple.quarantine /Applications/Runic.app
+```
+Only do this if you trust the source.
+
 ### First run (developer-friendly)
 - Open Settings → Providers and enable what you use.
 - Install/sign in to the provider sources you rely on (e.g. `codex`, `claude`, `gemini`, browser cookies, or OAuth; Antigravity requires the Antigravity app running).
@@ -105,6 +114,25 @@ Dev loop:
 ```bash
 ./Scripts/compile_and_run.sh
 ./Scripts/compile_and_run_adhoc.sh  # sets RUNIC_SIGNING=adhoc
+```
+
+## Developer ID signing (for GitHub distribution)
+You need an Apple Developer Program membership and a Developer ID Application certificate.
+
+1) Apple Developer portal → Certificates, Identifiers & Profiles → Certificates → "+" → "Developer ID Application".
+2) Generate a CSR in Keychain Access and upload it.
+3) Download the cert and install it (double‑click).
+4) Confirm it exists:
+```bash
+security find-identity -v -p codesigning
+```
+5) Package with your identity:
+```bash
+APP_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./Scripts/package_app.sh
+```
+6) Notarize for public distribution:
+```bash
+./Scripts/sign-and-notarize.sh
 ```
 
 ## Related

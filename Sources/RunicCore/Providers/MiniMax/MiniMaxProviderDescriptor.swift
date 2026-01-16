@@ -10,8 +10,8 @@ public enum MiniMaxProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .minimax,
                 displayName: "MiniMax",
-                sessionLabel: "Tokens",
-                weeklyLabel: "Daily",
+                sessionLabel: "Plan",
+                weeklyLabel: "Cycle",
                 opusLabel: nil,
                 supportsOpus: false,
                 supportsCredits: false,
@@ -21,7 +21,8 @@ public enum MiniMaxProviderDescriptor {
                 defaultEnabled: false,
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
-                dashboardURL: "https://api.minimax.chat/usercenter/billing",
+                browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
+                dashboardURL: "https://platform.minimax.io/user-center/payment/coding-plan",
                 statusPageURL: nil),
             branding: ProviderBranding(
                 iconStyle: .minimax,
@@ -31,8 +32,8 @@ public enum MiniMaxProviderDescriptor {
                 supportsTokenCost: false,
                 noDataMessage: { "MiniMax cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
-                sourceModes: [.auto, .cli],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [MiniMaxAPIFetchStrategy()] })),
+                sourceModes: [.auto, .web],
+                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [MiniMaxWebFetchStrategy()] })),
             cli: ProviderCLIConfig(
                 name: "minimax",
                 aliases: ["minimax-api"],
@@ -40,36 +41,23 @@ public enum MiniMaxProviderDescriptor {
     }
 }
 
-struct MiniMaxAPIFetchStrategy: ProviderFetchStrategy {
-    let id: String = "minimax.api"
-    let kind: ProviderFetchKind = .apiToken
+struct MiniMaxWebFetchStrategy: ProviderFetchStrategy {
+    let id: String = "minimax.web"
+    let kind: ProviderFetchKind = .web
 
-    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveToken(environment: context.env) != nil
-    }
+    func isAvailable(_: ProviderFetchContext) async -> Bool { true }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let apiKey = Self.resolveToken(environment: context.env) else {
-            throw MiniMaxSettingsError.missingToken
-        }
-        guard let groupID = Self.resolveGroupID(environment: context.env) else {
-            throw MiniMaxSettingsError.missingGroupID
-        }
-        let usage = try await MiniMaxUsageFetcher.fetchUsage(apiKey: apiKey, groupID: groupID)
+        let fetcher = MiniMaxWebUsageFetcher()
+        let result = try await fetcher.fetchUsage(
+            timeout: context.webTimeout,
+            logger: context.verbose ? { RunicLog.logger("minimax-web").debug("\($0)") } : nil)
         return self.makeResult(
-            usage: usage.toUsageSnapshot(),
-            sourceLabel: "api")
+            usage: result.usage,
+            sourceLabel: result.sourceLabel)
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveToken(environment: [String: String]) -> String? {
-        ProviderTokenResolver.minimaxToken(environment: environment)
-    }
-
-    private static func resolveGroupID(environment: [String: String]) -> String? {
-        ProviderTokenResolver.minimaxGroupID(environment: environment)
     }
 }

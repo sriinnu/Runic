@@ -23,302 +23,317 @@ struct DebugPane: View {
     #endif
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 20) {
-                SettingsSection {
-                    PreferenceToggleRow(
-                        title: "Force animation on next refresh",
-                        subtitle: "Temporarily shows the loading animation after the next refresh.",
-                        binding: self.$store.debugForceAnimation)
+        PreferencesPane {
+            SettingsSection {
+                PreferenceToggleRow(
+                    title: "Force animation on next refresh",
+                    subtitle: "Temporarily shows the loading animation after the next refresh.",
+                    binding: self.$store.debugForceAnimation)
+            }
+
+            SettingsSection(
+                title: "Loading animations",
+                caption: "Pick a pattern and replay it in the menu bar. \"Random\" keeps the existing behavior.")
+            {
+                Picker("Animation pattern", selection: self.animationPatternBinding) {
+                    Text("Random (default)").tag(nil as LoadingPattern?)
+                    ForEach(LoadingPattern.allCases) { pattern in
+                        Text(pattern.displayName).tag(Optional(pattern))
+                    }
                 }
+                .pickerStyle(.radioGroup)
 
-                SettingsSection(
-                    title: "Loading animations",
-                    caption: "Pick a pattern and replay it in the menu bar. \"Random\" keeps the existing behavior.")
-                {
-                    Picker("Animation pattern", selection: self.animationPatternBinding) {
-                        Text("Random (default)").tag(nil as LoadingPattern?)
-                        ForEach(LoadingPattern.allCases) { pattern in
-                            Text(pattern.displayName).tag(Optional(pattern))
-                        }
-                    }
-                    .pickerStyle(.radioGroup)
-
-                    Button("Replay selected animation") {
-                        self.replaySelectedAnimation()
-                    }
-                    .keyboardShortcut(.defaultAction)
-
-                    Button {
-                        NotificationCenter.default.post(name: .runicDebugBlinkNow, object: nil)
-                    } label: {
-                        Label("Blink now", systemImage: "eyes")
-                    }
-                    .controlSize(.small)
+                Button("Replay selected animation") {
+                    self.replaySelectedAnimation()
                 }
+                .keyboardShortcut(.defaultAction)
 
-                SettingsSection(
-                    title: "Codex data source",
-                    caption: "Debug override for Codex usage fetching.")
-                {
-                    Picker("Source", selection: self.$settings.codexUsageDataSource) {
-                        ForEach(CodexUsageDataSource.allCases) { source in
-                            Text(source.displayName).tag(source)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .frame(width: 240)
+                Button {
+                    NotificationCenter.default.post(name: .runicDebugBlinkNow, object: nil)
+                } label: {
+                    Label("Blink now", systemImage: "eyes")
                 }
+                .controlSize(.small)
+            }
 
-                SettingsSection(
-                    title: "Claude data source",
-                    caption: "Debug override for Claude usage fetching.")
-                {
-                    Picker("Source", selection: self.$settings.claudeUsageDataSource) {
-                        ForEach(ClaudeUsageDataSource.allCases) { source in
-                            Text(source.displayName).tag(source)
-                        }
+            SettingsSection(
+                title: "Codex data source",
+                caption: "Debug override for Codex usage fetching.")
+            {
+                Picker("Source", selection: self.$settings.codexUsageDataSource) {
+                    ForEach(CodexUsageDataSource.allCases) { source in
+                        Text(source.displayName).tag(source)
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 240)
                 }
+                .pickerStyle(.menu)
+                .frame(width: 240)
+            }
 
-                SettingsSection(
-                    title: "Probe logs",
-                    caption: "Fetch the latest PTY scrape for Codex or Claude; Copy keeps the full text.")
-                {
-                    Picker("Provider", selection: self.$currentLogProvider) {
-                        Text("Codex").tag(UsageProvider.codex)
-                        Text("Claude").tag(UsageProvider.claude)
+            SettingsSection(
+                title: "Claude data source",
+                caption: "Debug override for Claude usage fetching.")
+            {
+                Picker("Source", selection: self.$settings.claudeUsageDataSource) {
+                    ForEach(ClaudeUsageDataSource.allCases) { source in
+                        Text(source.displayName).tag(source)
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 240)
+                }
+                .pickerStyle(.menu)
+                .frame(width: 240)
+            }
 
-                    HStack(spacing: 12) {
-                        Button { self.loadLog(self.currentLogProvider) } label: {
-                            Label("Fetch log", systemImage: "arrow.clockwise")
+            SettingsSection(
+                title: "Probe logs",
+                caption: "Fetch the latest PTY scrape for Codex or Claude; Copy keeps the full text.")
+            {
+                Picker("Provider", selection: self.$currentLogProvider) {
+                    Text("Codex").tag(UsageProvider.codex)
+                    Text("Claude").tag(UsageProvider.claude)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 240)
+
+                HStack(spacing: 12) {
+                    Button { self.loadLog(self.currentLogProvider) } label: {
+                        Label("Fetch log", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(self.isLoadingLog)
+
+                    Button { self.copyToPasteboard(self.logText) } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    .disabled(self.logText.isEmpty)
+
+                    Button { self.saveLog(self.currentLogProvider) } label: {
+                        Label("Save to file", systemImage: "externaldrive.badge.plus")
+                    }
+                    .disabled(self.isLoadingLog && self.logText.isEmpty)
+
+                    if self.currentLogProvider == .claude {
+                        Button { self.loadClaudeDump() } label: {
+                            Label("Load parse dump", systemImage: "doc.text.magnifyingglass")
                         }
                         .disabled(self.isLoadingLog)
-
-                        Button { self.copyToPasteboard(self.logText) } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
-                        }
-                        .disabled(self.logText.isEmpty)
-
-                        Button { self.saveLog(self.currentLogProvider) } label: {
-                            Label("Save to file", systemImage: "externaldrive.badge.plus")
-                        }
-                        .disabled(self.isLoadingLog && self.logText.isEmpty)
-
-                        if self.currentLogProvider == .claude {
-                            Button { self.loadClaudeDump() } label: {
-                                Label("Load parse dump", systemImage: "doc.text.magnifyingglass")
-                            }
-                            .disabled(self.isLoadingLog)
-                        }
                     }
+                }
 
+                Button {
+                    self.settings.rerunProviderDetection()
+                    self.loadLog(self.currentLogProvider)
+                } label: {
+                    Label("Re-run provider autodetect", systemImage: "dot.radiowaves.left.and.right")
+                }
+                .controlSize(.small)
+
+                ZStack(alignment: .topLeading) {
+                    ScrollView {
+                        Text(self.displayedLog)
+                            .font(.system(.footnote, design: .monospaced))
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                    }
+                    .frame(minHeight: 160, maxHeight: 220)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(6)
+
+                    if self.isLoadingLog {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                            .padding()
+                    }
+                }
+            }
+
+            SettingsSection(
+                title: "Fetch strategy attempts",
+                caption: "Last fetch pipeline decisions and errors for a provider.")
+            {
+                Picker("Provider", selection: self.$currentFetchProvider) {
+                    ForEach(UsageProvider.allCases, id: \.self) { provider in
+                        Text(provider.rawValue.capitalized).tag(provider)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 240)
+
+                ScrollView {
+                    Text(self.fetchAttemptsText(for: self.currentFetchProvider))
+                        .font(.system(.footnote, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                }
+                .frame(minHeight: 120, maxHeight: 220)
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(6)
+            }
+
+            SettingsSection(
+                title: "OpenAI web access",
+                caption: "Cookie import + WebKit scrape logs from the last “Access OpenAI via web” attempt.")
+            {
+                HStack(spacing: 12) {
+                    Button { self.copyToPasteboard(self.store.openAIDashboardCookieImportDebugLog ?? "") } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    .disabled((self.store.openAIDashboardCookieImportDebugLog ?? "").isEmpty)
+                }
+
+                ScrollView {
+                    Text(self.store.openAIDashboardCookieImportDebugLog?.isEmpty == false
+                        ? (self.store.openAIDashboardCookieImportDebugLog ?? "")
+                        : "No log yet. Enable “Access OpenAI via web” in General to run an import.")
+                        .font(.system(.footnote, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                }
+                .frame(minHeight: 120, maxHeight: 180)
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(6)
+            }
+
+            SettingsSection(
+                title: "Caches",
+                caption: "Clear cached cost scan results.")
+            {
+                let isTokenRefreshActive = self.store.isTokenRefreshInFlight(for: .codex)
+                    || self.store.isTokenRefreshInFlight(for: .claude)
+
+                HStack(spacing: 12) {
                     Button {
-                        self.settings.rerunProviderDetection()
-                        self.loadLog(self.currentLogProvider)
+                        Task { await self.clearCostCache() }
                     } label: {
-                        Label("Re-run provider autodetect", systemImage: "dot.radiowaves.left.and.right")
+                        Label("Clear cost cache", systemImage: "trash")
+                    }
+                    .disabled(self.isClearingCostCache || isTokenRefreshActive)
+
+                    if let status = self.costCacheStatus {
+                        Text(status)
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
+            SettingsSection(
+                title: "Notifications",
+                caption: "Trigger test notifications for the 5-hour session window (depleted/restored).")
+            {
+                Picker("Provider", selection: self.$currentLogProvider) {
+                    Text("Codex").tag(UsageProvider.codex)
+                    Text("Claude").tag(UsageProvider.claude)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 240)
+
+                HStack(spacing: 12) {
+                    Button {
+                        self.postSessionNotification(.depleted, provider: self.currentLogProvider)
+                    } label: {
+                        Label("Post depleted", systemImage: "bell.badge")
                     }
                     .controlSize(.small)
 
-                    ZStack(alignment: .topLeading) {
-                        ScrollView {
-                            Text(self.displayedLog)
-                                .font(.system(.footnote, design: .monospaced))
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(8)
-                        }
-                        .frame(minHeight: 160, maxHeight: 220)
-                        .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(6)
-
-                        if self.isLoadingLog {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                                .padding()
-                        }
+                    Button {
+                        self.postSessionNotification(.restored, provider: self.currentLogProvider)
+                    } label: {
+                        Label("Post restored", systemImage: "bell")
                     }
+                    .controlSize(.small)
+                }
+            }
+
+            #if DEBUG
+            SettingsSection(
+                title: "Error simulation",
+                caption: "Inject a fake error message into the menu card for layout testing.")
+            {
+                Picker("Provider", selection: self.$currentErrorProvider) {
+                    Text("Codex").tag(UsageProvider.codex)
+                    Text("Claude").tag(UsageProvider.claude)
+                    Text("Gemini").tag(UsageProvider.gemini)
+                    Text("Antigravity").tag(UsageProvider.antigravity)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 240)
+
+                TextField("Simulated error text", text: self.$simulatedErrorText, axis: .vertical)
+                    .lineLimit(4)
+
+                HStack(spacing: 12) {
+                    Button {
+                        self.store._setErrorForTesting(
+                            self.simulatedErrorText,
+                            provider: self.currentErrorProvider)
+                    } label: {
+                        Label("Set menu error", systemImage: "exclamationmark.triangle")
+                    }
+                    .controlSize(.small)
+
+                    Button {
+                        self.store._setErrorForTesting(nil, provider: self.currentErrorProvider)
+                    } label: {
+                        Label("Clear menu error", systemImage: "xmark.circle")
+                    }
+                    .controlSize(.small)
                 }
 
-                SettingsSection(
-                    title: "Fetch strategy attempts",
-                    caption: "Last fetch pipeline decisions and errors for a provider.")
-                {
-                    Picker("Provider", selection: self.$currentFetchProvider) {
-                        ForEach(UsageProvider.allCases, id: \.self) { provider in
-                            Text(provider.rawValue.capitalized).tag(provider)
-                        }
+                let supportsTokenError = self.currentErrorProvider == .codex || self.currentErrorProvider == .claude
+                HStack(spacing: 12) {
+                    Button {
+                        self.store._setTokenErrorForTesting(
+                            self.simulatedErrorText,
+                            provider: self.currentErrorProvider)
+                    } label: {
+                        Label("Set cost error", systemImage: "banknote")
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 240)
+                    .controlSize(.small)
+                    .disabled(!supportsTokenError)
 
+                    Button {
+                        self.store._setTokenErrorForTesting(nil, provider: self.currentErrorProvider)
+                    } label: {
+                        Label("Clear cost error", systemImage: "xmark.circle")
+                    }
+                    .controlSize(.small)
+                    .disabled(!supportsTokenError)
+                }
+            }
+            #endif
+
+            SettingsSection(
+                title: "CLI paths",
+                caption: "Resolved Codex binary and PATH layers; startup login PATH capture (short timeout).")
+            {
+                self.binaryRow(title: "Codex binary", value: self.store.pathDebugInfo.codexBinary)
+                self.binaryRow(title: "Claude binary", value: self.store.pathDebugInfo.claudeBinary)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Effective PATH")
+                        .font(.callout.weight(.semibold))
                     ScrollView {
-                        Text(self.fetchAttemptsText(for: self.currentFetchProvider))
+                        Text(self.store.pathDebugInfo.effectivePATH.isEmpty
+                            ? "Unavailable"
+                            : self.store.pathDebugInfo.effectivePATH)
                             .font(.system(.footnote, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
+                            .padding(6)
                     }
-                    .frame(minHeight: 120, maxHeight: 220)
+                    .frame(minHeight: 60, maxHeight: 110)
                     .background(Color(NSColor.textBackgroundColor))
                     .cornerRadius(6)
                 }
 
-                SettingsSection(
-                    title: "OpenAI web access",
-                    caption: "Cookie import + WebKit scrape logs from the last “Access OpenAI via web” attempt.")
-                {
-                    HStack(spacing: 12) {
-                        Button { self.copyToPasteboard(self.store.openAIDashboardCookieImportDebugLog ?? "") } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
-                        }
-                        .disabled((self.store.openAIDashboardCookieImportDebugLog ?? "").isEmpty)
-                    }
-
-                    ScrollView {
-                        Text(self.store.openAIDashboardCookieImportDebugLog?.isEmpty == false
-                            ? (self.store.openAIDashboardCookieImportDebugLog ?? "")
-                            : "No log yet. Enable “Access OpenAI via web” in General to run an import.")
-                            .font(.system(.footnote, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                    }
-                    .frame(minHeight: 120, maxHeight: 180)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
-                }
-
-                SettingsSection(
-                    title: "Caches",
-                    caption: "Clear cached cost scan results.")
-                {
-                    let isTokenRefreshActive = self.store.isTokenRefreshInFlight(for: .codex)
-                        || self.store.isTokenRefreshInFlight(for: .claude)
-
-                    HStack(spacing: 12) {
-                        Button {
-                            Task { await self.clearCostCache() }
-                        } label: {
-                            Label("Clear cost cache", systemImage: "trash")
-                        }
-                        .disabled(self.isClearingCostCache || isTokenRefreshActive)
-
-                        if let status = self.costCacheStatus {
-                            Text(status)
-                                .font(.footnote)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-
-                SettingsSection(
-                    title: "Notifications",
-                    caption: "Trigger test notifications for the 5-hour session window (depleted/restored).")
-                {
-                    Picker("Provider", selection: self.$currentLogProvider) {
-                        Text("Codex").tag(UsageProvider.codex)
-                        Text("Claude").tag(UsageProvider.claude)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 240)
-
-                    HStack(spacing: 12) {
-                        Button {
-                            self.postSessionNotification(.depleted, provider: self.currentLogProvider)
-                        } label: {
-                            Label("Post depleted", systemImage: "bell.badge")
-                        }
-                        .controlSize(.small)
-
-                        Button {
-                            self.postSessionNotification(.restored, provider: self.currentLogProvider)
-                        } label: {
-                            Label("Post restored", systemImage: "bell")
-                        }
-                        .controlSize(.small)
-                    }
-                }
-
-                #if DEBUG
-                SettingsSection(
-                    title: "Error simulation",
-                    caption: "Inject a fake error message into the menu card for layout testing.")
-                {
-                    Picker("Provider", selection: self.$currentErrorProvider) {
-                        Text("Codex").tag(UsageProvider.codex)
-                        Text("Claude").tag(UsageProvider.claude)
-                        Text("Gemini").tag(UsageProvider.gemini)
-                        Text("Antigravity").tag(UsageProvider.antigravity)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 240)
-
-                    TextField("Simulated error text", text: self.$simulatedErrorText, axis: .vertical)
-                        .lineLimit(4)
-
-                    HStack(spacing: 12) {
-                        Button {
-                            self.store._setErrorForTesting(
-                                self.simulatedErrorText,
-                                provider: self.currentErrorProvider)
-                        } label: {
-                            Label("Set menu error", systemImage: "exclamationmark.triangle")
-                        }
-                        .controlSize(.small)
-
-                        Button {
-                            self.store._setErrorForTesting(nil, provider: self.currentErrorProvider)
-                        } label: {
-                            Label("Clear menu error", systemImage: "xmark.circle")
-                        }
-                        .controlSize(.small)
-                    }
-
-                    let supportsTokenError = self.currentErrorProvider == .codex || self.currentErrorProvider == .claude
-                    HStack(spacing: 12) {
-                        Button {
-                            self.store._setTokenErrorForTesting(
-                                self.simulatedErrorText,
-                                provider: self.currentErrorProvider)
-                        } label: {
-                            Label("Set cost error", systemImage: "banknote")
-                        }
-                        .controlSize(.small)
-                        .disabled(!supportsTokenError)
-
-                        Button {
-                            self.store._setTokenErrorForTesting(nil, provider: self.currentErrorProvider)
-                        } label: {
-                            Label("Clear cost error", systemImage: "xmark.circle")
-                        }
-                        .controlSize(.small)
-                        .disabled(!supportsTokenError)
-                    }
-                }
-                #endif
-
-                SettingsSection(
-                    title: "CLI paths",
-                    caption: "Resolved Codex binary and PATH layers; startup login PATH capture (short timeout).")
-                {
-                    self.binaryRow(title: "Codex binary", value: self.store.pathDebugInfo.codexBinary)
-                    self.binaryRow(title: "Claude binary", value: self.store.pathDebugInfo.claudeBinary)
-
+                if let loginPATH = self.store.pathDebugInfo.loginShellPATH {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Effective PATH")
+                        Text("Login shell PATH (startup capture)")
                             .font(.callout.weight(.semibold))
                         ScrollView {
-                            Text(self.store.pathDebugInfo.effectivePATH.isEmpty
-                                ? "Unavailable"
-                                : self.store.pathDebugInfo.effectivePATH)
+                            Text(loginPATH)
                                 .font(.system(.footnote, design: .monospaced))
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -328,28 +343,8 @@ struct DebugPane: View {
                         .background(Color(NSColor.textBackgroundColor))
                         .cornerRadius(6)
                     }
-
-                    if let loginPATH = self.store.pathDebugInfo.loginShellPATH {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Login shell PATH (startup capture)")
-                                .font(.callout.weight(.semibold))
-                            ScrollView {
-                                Text(loginPATH)
-                                    .font(.system(.footnote, design: .monospaced))
-                                    .textSelection(.enabled)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(6)
-                            }
-                            .frame(minHeight: 60, maxHeight: 110)
-                            .background(Color(NSColor.textBackgroundColor))
-                            .cornerRadius(6)
-                        }
-                    }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
         }
     }
 

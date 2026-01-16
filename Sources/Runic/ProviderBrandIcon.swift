@@ -3,11 +3,11 @@ import RunicCore
 
 @MainActor
 enum ProviderBrandIcon {
-    private static let size = NSSize(width: 16, height: 16)
     private static let cache = NSCache<NSString, NSImage>()
 
-    static func image(for provider: UsageProvider) -> NSImage? {
-        let key = provider.rawValue as NSString
+    static func image(for provider: UsageProvider, size: CGFloat = 16) -> NSImage? {
+        let cacheSize = Int(size.rounded())
+        let key = "\(provider.rawValue)-\(cacheSize)" as NSString
         if let cached = self.cache.object(forKey: key) {
             return cached
         }
@@ -19,9 +19,10 @@ enum ProviderBrandIcon {
             return nil
         }
 
-        image.size = self.size
+        let targetSize = NSSize(width: size, height: size)
+        image.size = targetSize
         image.isTemplate = true
-        let tinted = self.tintedImage(image, color: self.brandColor(for: provider))
+        let tinted = self.tintedImage(image, color: self.brandColor(for: provider), size: targetSize)
         self.cache.setObject(tinted, forKey: key)
         return tinted
     }
@@ -35,9 +36,9 @@ enum ProviderBrandIcon {
             alpha: 1)
     }
 
-    private static func tintedImage(_ image: NSImage, color: NSColor) -> NSImage {
-        let rect = NSRect(origin: .zero, size: image.size)
-        let tinted = NSImage(size: image.size)
+    private static func tintedImage(_ image: NSImage, color: NSColor, size: NSSize) -> NSImage {
+        let rect = NSRect(origin: .zero, size: size)
+        let tinted = NSImage(size: size)
         tinted.lockFocus()
         color.setFill()
         rect.fill()
