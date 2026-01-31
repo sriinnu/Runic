@@ -9,6 +9,15 @@ cd "$ROOT"
 # Public-facing app name. (We keep SwiftPM target/module names as-is to avoid a massive refactor.)
 APP_NAME="Runic"
 
+# Local signing overrides (kept out of git).
+for LOCAL_ENV in "${HOME}/.config/runic/local.env" "${ROOT}/.runic.local.env"; do
+  if [[ -f "$LOCAL_ENV" ]]; then
+    # shellcheck disable=SC1090
+    source "$LOCAL_ENV"
+    break
+  fi
+done
+
 # Load version info
 source "$ROOT/version.env"
 

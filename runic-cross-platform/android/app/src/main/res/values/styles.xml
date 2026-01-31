@@ -1,0 +1,38 @@
+<!--
+  @file styles.xml
+  @description Android theme styles with Material You support.
+  Enables dynamic color theming on Android 12+.
+-->
+<resources>
+    <!-- Base application theme with Material You support -->
+    <style name="Theme.Runic" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Enable dynamic colors (Material You) on Android 12+ -->
+        <item name="android:enableEdgeToEdge">true</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+
+        <!-- Dynamic color attributes -->
+        <item name="colorPrimary">@android:color/system_accent1_500</item>
+        <item name="colorPrimaryVariant">@android:color/system_accent1_700</item>
+        <item name="colorOnPrimary">@android:color/system_accent1_0</item>
+        <item name="colorSecondary">@android:color/system_accent2_500</item>
+        <item name="colorSecondaryVariant">@android:color/system_accent2_700</item>
+        <item name="colorOnSecondary">@android:color/system_accent2_0</item>
+
+        <!-- Surface colors -->
+        <item name="android:colorBackground">@android:color/system_neutral1_50</item>
+        <item name="colorSurface">@android:color/system_neutral1_10</item>
+        <item name="colorOnSurface">@android:color/system_neutral1_900</item>
+
+        <!-- Error colors -->
+        <item name="colorError">@android:color/system_error_500</item>
+        <item name="colorOnError">@android:color/system_error_0</item>
+    </style>
+
+    <!-- Splash screen theme -->
+    <style name="Theme.Runic.Splash" parent="Theme.Runic">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>

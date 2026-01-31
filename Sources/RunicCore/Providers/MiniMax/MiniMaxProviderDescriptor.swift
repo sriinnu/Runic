@@ -32,8 +32,8 @@ public enum MiniMaxProviderDescriptor {
                 supportsTokenCost: false,
                 noDataMessage: { "MiniMax cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
-                sourceModes: [.auto, .web],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [MiniMaxWebFetchStrategy()] })),
+                sourceModes: [.auto, .api, .web],
+                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [MiniMaxAPIFetchStrategy(), MiniMaxWebFetchStrategy()] })),
             cli: ProviderCLIConfig(
                 name: "minimax",
                 aliases: ["minimax-api"],
@@ -59,5 +59,30 @@ struct MiniMaxWebFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
+    }
+}
+
+struct MiniMaxAPIFetchStrategy: ProviderFetchStrategy {
+    let id: String = "minimax.api"
+    let kind: ProviderFetchKind = .api
+
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        ProviderTokenResolver.minimaxApiKeyResolution(environment: context.env) != nil
+    }
+
+    func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
+        guard let tokenRes = ProviderTokenResolver.minimaxApiKeyResolution(environment: context.env) else {
+            throw ProviderFetchError.missingCredentials
+        }
+        
+        let snapshot = try await MiniMaxUsageFetcher.fetchUsage(apiKey: tokenRes.token)
+        
+        return self.makeResult(
+            usage: snapshot.toUsageSnapshot(),
+            sourceLabel: "API")
+    }
+
+    func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
+        true
     }
 }

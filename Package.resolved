@@ -2,12 +2,12 @@
   "originHash" : "3fca5ea9ac5d22e641167aa227d7797c105962615e2587b1645e678e2e7bfbc7",
   "pins" : [
     {
-      "identity" : "helix",
+      "identity" : "cryptoswift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/sriinnu/Helix",
+      "location" : "https://github.com/krzyzanowskim/CryptoSwift.git",
       "state" : {
-        "revision" : "db241302976c1192245c28ea5a9ab7b87bc651cc",
-        "version" : "1.0.0"
+        "revision" : "e45a26384239e028ec87fbcc788f513b67e10d8f",
+        "version" : "1.9.0"
       }
     },
     {
@@ -17,15 +17,6 @@
       "state" : {
         "revision" : "ac12762853126cf2e7ad63a6a58e1c9f58c6a0ee",
         "version" : "1.17.0"
-      }
-    },
-    {
-      "identity" : "silo",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/sriinnu/Silo",
-      "state" : {
-        "revision" : "7c6d87fbe938a96b3724adf256f74d1beecb9480",
-        "version" : "1.0.0"
       }
     },
     {

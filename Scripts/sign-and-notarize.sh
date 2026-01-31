@@ -2,8 +2,15 @@
 set -euo pipefail
 
 APP_NAME="Runic"
-APP_IDENTITY="${APP_IDENTITY:-Developer ID Application: YOUR_NAME (TEAMID)}"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+for LOCAL_ENV in "${HOME}/.config/runic/local.env" "${ROOT}/.runic.local.env"; do
+  if [[ -f "$LOCAL_ENV" ]]; then
+    # shellcheck disable=SC1090
+    source "$LOCAL_ENV"
+    break
+  fi
+done
+APP_IDENTITY="${APP_IDENTITY:-Developer ID Application: YOUR_NAME (TEAMID)}"
 APP_BUNDLE="${ROOT}/builds/latest/${APP_NAME}.app"
 source "$ROOT/version.env"
 ZIP_NAME="${APP_NAME}-${MARKETING_VERSION}.zip"

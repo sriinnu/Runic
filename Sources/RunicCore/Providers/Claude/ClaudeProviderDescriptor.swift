@@ -52,6 +52,8 @@ public enum ClaudeProviderDescriptor {
                 return [ClaudeCLIFetchStrategy(useWebExtras: false)]
             case .auto:
                 return [ClaudeWebFetchStrategy(), ClaudeCLIFetchStrategy(useWebExtras: false)]
+            case .api:
+                return []
             }
         case .app:
             let hasWebSession = ClaudeWebAPIFetcher.hasSessionKey()

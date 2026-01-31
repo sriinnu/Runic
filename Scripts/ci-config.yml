@@ -1,0 +1,474 @@
+################################################################################
+# GitHub Actions CI/CD Configuration for Runic
+#
+# This workflow builds and tests Runic across all platforms:
+# - macOS application
+# - iOS application
+# - Android application (via React Native)
+# - Windows application (via React Native Windows)
+#
+# Triggers:
+# - Push to main branch
+# - Pull requests to main branch
+# - Manual workflow dispatch
+#
+# Features:
+# - Build matrix for all platforms
+# - Automated testing
+# - Code quality checks (SwiftLint, ESLint)
+# - Artifact uploading
+# - Optional deployment to TestFlight/internal testing
+#
+# Usage:
+#   Copy this file to: .github/workflows/ci.yml
+#   Configure secrets in GitHub repository settings
+################################################################################
+
+name: Runic CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to TestFlight/Play Store'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  # Node.js version for React Native builds
+  NODE_VERSION: '18.x'
+
+  # Java version for Android builds
+  JAVA_VERSION: '17'
+
+  # Xcode version for iOS/macOS builds
+  XCODE_VERSION: '15.0'
+
+jobs:
+  ################################################################################
+  # Code Quality Checks
+  ################################################################################
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: runic-cross-platform/package-lock.json
+
+      - name: Install dependencies (React Native)
+        working-directory: runic-cross-platform
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: runic-cross-platform
+        run: |
+          if grep -q '"lint"' package.json; then
+            npm run lint
+          else
+            echo "No lint script found, skipping"
+          fi
+
+      - name: Run Prettier check
+        working-directory: runic-cross-platform
+        run: |
+          if grep -q '"format:check"' package.json; then
+            npm run format:check
+          else
+            echo "No format:check script found, skipping"
+          fi
+
+      - name: TypeScript type check
+        working-directory: runic-cross-platform
+        run: |
+          if [ -f "tsconfig.json" ]; then
+            npx tsc --noEmit
+          else
+            echo "No TypeScript configuration found, skipping"
+          fi
+
+  ################################################################################
+  # macOS Build and Test
+  ################################################################################
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-14
+    needs: code-quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        run: swiftlint lint --strict
+        continue-on-error: true
+
+      - name: Resolve Swift dependencies
+        run: swift package resolve
+
+      - name: Run tests
+        run: swift test --parallel
+
+      - name: Build macOS app
+        run: |
+          chmod +x scripts/build-macos.sh
+          ./scripts/build-macos.sh --skip-tests --skip-signing
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: builds/macos/Runic.app
+          retention-days: 7
+
+      - name: Upload macOS ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-zip
+          path: builds/macos/*.zip
+          retention-days: 7
+
+  ################################################################################
+  # iOS Build and Test
+  ################################################################################
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-14
+    needs: code-quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: RuniciOS/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install dependencies
+        working-directory: RuniciOS
+        run: |
+          if [ -f "Podfile" ]; then
+            pod install
+          fi
+
+      - name: Run iOS tests
+        run: |
+          chmod +x scripts/build-ios.sh
+          ./scripts/build-ios.sh --simulator --skip-signing
+        continue-on-error: true
+
+      - name: Build iOS for simulator
+        run: |
+          chmod +x scripts/build-ios.sh
+          ./scripts/build-ios.sh --simulator --skip-tests --configuration Debug
+
+      # Note: Device builds require code signing certificates
+      # Configure in GitHub Secrets for production builds
+      - name: Build iOS for device (if secrets available)
+        if: ${{ secrets.IOS_CERTIFICATE_P12 != '' }}
+        env:
+          IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          # Import certificate and provisioning profile
+          echo "$IOS_CERTIFICATE_P12" | base64 --decode > certificate.p12
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > profile.mobileprovision
+
+          # Install certificate
+          security create-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-keychain-settings -t 3600 -u build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+
+          # Install provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+          # Build
+          ./scripts/build-ios.sh --device --archive --skip-tests
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: builds/ios/
+          retention-days: 7
+
+  ################################################################################
+  # Android Build and Test
+  ################################################################################
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    needs: code-quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: runic-cross-platform/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        working-directory: runic-cross-platform
+        run: npm ci
+
+      - name: Make Gradle wrapper executable
+        working-directory: runic-cross-platform/android
+        run: chmod +x gradlew
+
+      - name: Run Android lint
+        working-directory: runic-cross-platform
+        run: |
+          chmod +x ../scripts/build-android.sh
+          ../scripts/build-android.sh --skip-tests --variant debug --dry-run
+          cd android && ./gradlew lint
+        continue-on-error: true
+
+      - name: Run Android tests
+        working-directory: runic-cross-platform/android
+        run: ./gradlew test
+        continue-on-error: true
+
+      - name: Build debug APK
+        run: |
+          chmod +x scripts/build-android.sh
+          ./scripts/build-android.sh --skip-tests --variant debug
+
+      - name: Build release APK (if keystore available)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # Decode and setup keystore
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > runic-cross-platform/android/app/release.keystore
+
+          # Create keystore.properties
+          cat > runic-cross-platform/android/keystore.properties << EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=app/release.keystore
+          EOF
+
+          # Build release
+          ./scripts/build-android.sh --skip-tests --variant release --aab
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: builds/android/*.apk
+          retention-days: 7
+
+      - name: Upload Android AAB
+        uses: actions/upload-artifact@v4
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        with:
+          name: android-aab
+          path: builds/android/*.aab
+          retention-days: 7
+
+  ################################################################################
+  # Windows Build and Test
+  ################################################################################
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    needs: code-quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: runic-cross-platform/package-lock.json
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install dependencies
+        working-directory: runic-cross-platform
+        run: npm ci
+
+      - name: Initialize React Native Windows
+        working-directory: runic-cross-platform
+        run: |
+          if (!(Test-Path "windows")) {
+            npx react-native-windows-init --overwrite
+          }
+
+      - name: Build Windows app
+        working-directory: runic-cross-platform
+        run: npx react-native run-windows --no-launch --arch x64 --release
+        continue-on-error: true
+
+      - name: Copy build artifacts
+        run: |
+          New-Item -ItemType Directory -Force -Path builds/windows
+          Copy-Item -Path runic-cross-platform/windows/x64/Release/* -Destination builds/windows/ -Recurse
+        continue-on-error: true
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: builds/windows/
+          retention-days: 7
+
+  ################################################################################
+  # Deployment (Optional)
+  ################################################################################
+
+  deploy:
+    name: Deploy to Distribution
+    runs-on: macos-14
+    needs: [build-macos, build-ios, build-android, build-windows]
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      # Deploy iOS to TestFlight
+      - name: Deploy to TestFlight
+        if: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          # Install and use fastlane or xcrun altool for TestFlight upload
+          # This is a placeholder - implement based on your deployment strategy
+          echo "Deploying to TestFlight..."
+
+      # Deploy Android to Play Console
+      - name: Deploy to Play Console
+        if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          # Use fastlane or Play Console API for deployment
+          # This is a placeholder - implement based on your deployment strategy
+          echo "Deploying to Play Console..."
+
+  ################################################################################
+  # Build Summary
+  ################################################################################
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-macos, build-ios, build-android, build-windows]
+    if: always()
+
+    steps:
+      - name: Generate build summary
+        run: |
+          echo "# Runic Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS: ${{ needs.build-macos.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- iOS: ${{ needs.build-ios.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Android: ${{ needs.build-android.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows: ${{ needs.build-windows.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build artifacts are available in the Actions artifacts section." >> $GITHUB_STEP_SUMMARY
+
+################################################################################
+# Required GitHub Secrets
+#
+# Configure these secrets in your GitHub repository settings:
+#
+# iOS:
+#   - IOS_CERTIFICATE_P12: Base64-encoded P12 certificate
+#   - IOS_CERTIFICATE_PASSWORD: Certificate password
+#   - IOS_PROVISIONING_PROFILE: Base64-encoded provisioning profile
+#   - APP_STORE_CONNECT_API_KEY: API key for TestFlight uploads
+#
+# Android:
+#   - ANDROID_KEYSTORE_BASE64: Base64-encoded keystore file
+#   - ANDROID_KEYSTORE_PASSWORD: Keystore password
+#   - ANDROID_KEY_ALIAS: Key alias
+#   - ANDROID_KEY_PASSWORD: Key password
+#   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: Service account JSON for Play Console
+#
+# To encode files as base64:
+#   macOS/Linux: base64 -i file.p12 -o file.p12.base64
+#   Windows: certutil -encode file.p12 file.p12.base64
+################################################################################

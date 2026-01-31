@@ -8,7 +8,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 PREV_VER=${PREV_TAG#v}
 APP_NAME="Runic"
 
-ZIP_URL="https://github.com/sriinnu/athena/Runic/releases/download/${PREV_TAG}/${APP_NAME}-${PREV_VER}.zip"
+ZIP_URL="https://github.com/sriinnu/Runic/releases/download/${PREV_TAG}/${APP_NAME}-${PREV_VER}.zip"
 TMP_DIR=$(mktemp -d /tmp/runic-live.XXXX)
 trap 'rm -rf "$TMP_DIR"' EXIT
 

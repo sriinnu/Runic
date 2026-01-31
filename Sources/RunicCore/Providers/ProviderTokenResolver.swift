@@ -24,6 +24,7 @@ public enum ProviderTokenResolver {
     private static let keychainService = "com.sriinnu.athena.Runic"
     private static let zaiAccount = "zai-api-token"
     private static let copilotAccount = "copilot-api-token"
+    private static let minimaxAccount = "minimax-api-token"
     private static let minimaxCookieAccount = "minimax-cookie-header"
     private static let minimaxGroupAccount = "minimax-group-id"
     private static let openRouterAccount = "openrouter-api-token"
@@ -90,7 +91,22 @@ public enum ProviderTokenResolver {
     public static func minimaxResolution(
         environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
     {
-        self.minimaxCookieHeaderResolution(environment: environment)
+        if let api = self.minimaxApiKeyResolution(environment: environment) {
+            return api
+        }
+        return self.minimaxCookieHeaderResolution(environment: environment)
+    }
+
+    public static func minimaxApiKeyResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.minimaxAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["MINIMAX_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
     }
 
     public static func minimaxCookieHeaderResolution(

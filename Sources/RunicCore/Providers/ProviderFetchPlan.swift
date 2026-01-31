@@ -8,6 +8,7 @@ public enum ProviderRuntime: Sendable {
 public enum ProviderSourceMode: String, CaseIterable, Sendable {
     case auto
     case web
+    case api
     case cli
     case oauth
 
@@ -104,17 +105,21 @@ public struct ProviderFetchOutcome: @unchecked Sendable {
 
 public enum ProviderFetchError: LocalizedError, Sendable {
     case noAvailableStrategy(UsageProvider)
+    case missingCredentials
 
     public var errorDescription: String? {
         switch self {
         case let .noAvailableStrategy(provider):
-            "No available fetch strategy for \(provider.rawValue)."
+            return "No available fetch strategy for \(provider.rawValue)."
+        case .missingCredentials:
+            return "Missing or invalid credentials."
         }
     }
 }
 
 public enum ProviderFetchKind: Sendable {
     case cli
+    case api
     case web
     case oauth
     case apiToken

@@ -37,6 +37,9 @@ let package = Package(
                     .product(name: "Logging", package: "swift-log"),
                     .product(name: "Silo", package: "Silo"),
                 ],
+                exclude: [
+                    "Sync",
+                ],
                 swiftSettings: [
                     .enableUpcomingFeature("StrictConcurrency"),
                 ]),

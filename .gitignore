@@ -20,6 +20,42 @@ Icon.iconset
 
 # Misc
 .DS_Store
+.runic.local.env
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*_key
+*_secret
+credentials.json
+secrets.json
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# TypeScript build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
 
 # Swift Package Manager metadata (leave sources tracked)
 # Packages/
@@ -27,3 +63,28 @@ Icon.iconset
 /builds
 /build
 /.tmp
+
+# API server runtime
+api-server/dist/
+api-server/node_modules/
+api-server/*.db
+
+# MCP servers runtime
+mcp-servers/*/dist/
+mcp-servers/*/node_modules/
+mcp-servers/*/*.db
+
+# React Native
+runic-cross-platform/node_modules/
+runic-cross-platform/android/build/
+runic-cross-platform/android/app/build/
+runic-cross-platform/ios/build/
+runic-cross-platform/windows/build/
+runic-cross-platform/.expo/
+runic-cross-platform/.expo-shared/
+
+# iOS build
+RuniciOS/build/
+RuniciOS/Pods/
+RuniciOS/*.xcworkspace
+!RuniciOS/*.xcworkspace/contents.xcworkspacedata

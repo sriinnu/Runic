@@ -55,6 +55,8 @@ public enum CodexProviderDescriptor {
                 return [cli]
             case .auto:
                 return [web, cli]
+            case .api:
+                return []
             }
         case .app:
             let settings = context.settings
