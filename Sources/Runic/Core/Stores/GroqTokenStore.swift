@@ -33,6 +33,7 @@ struct KeychainGroqTokenStore: GroqTokenStoring {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
+            kSecUseDataProtectionKeychain as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
@@ -68,6 +69,7 @@ struct KeychainGroqTokenStore: GroqTokenStoring {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
+            kSecUseDataProtectionKeychain as String: true,
         ]
         let attributes: [String: Any] = [
             kSecValueData as String: data,
@@ -99,6 +101,7 @@ struct KeychainGroqTokenStore: GroqTokenStoring {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
+            kSecUseDataProtectionKeychain as String: true,
         ]
         let status = SecItemDelete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound {

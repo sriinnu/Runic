@@ -25,6 +25,7 @@ struct CostHistoryChartMenuView: View {
     private let totalCostUSD: Double?
     private let width: CGFloat
     @State private var selectedDateKey: String?
+    @State private var showHoverHint = true
 
     init(provider: UsageProvider, daily: [DailyEntry], totalCostUSD: Double?, width: CGFloat) {
         self.provider = provider
@@ -35,7 +36,7 @@ struct CostHistoryChartMenuView: View {
 
     var body: some View {
         let model = Self.makeModel(provider: self.provider, daily: self.daily)
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No cost history data.")
                     .font(.footnote)
@@ -68,7 +69,9 @@ struct CostHistoryChartMenuView: View {
                     }
                 }
                 .chartLegend(.hidden)
-                .frame(height: 130)
+                .frame(height: RunicSpacing.chartHeight)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(self.chartAccessibilityLabel(model: model))
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
@@ -88,16 +91,27 @@ struct CostHistoryChartMenuView: View {
                     }
                 }
 
+                if self.showHoverHint {
+                    HStack(spacing: RunicSpacing.xxs) {
+                        Image(systemName: "cursorarrow.click.2")
+                            .font(.caption2)
+                        Text("Hover to explore")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.tertiary)
+                    .transition(.opacity)
+                }
+
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -108,13 +122,20 @@ struct CostHistoryChartMenuView: View {
 
             if let total = self.totalCostUSD {
                 Text("Total (30d): \(UsageFormatter.usdString(total))")
-                    .font(.caption)
+                    .font(.system(.caption, design: .rounded))
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+        .padding(.vertical, RunicSpacing.xs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
+        .onChange(of: self.selectedDateKey) { _, newValue in
+            if newValue != nil, self.showHoverHint {
+                withAnimation(RunicAnimation.chartHintFade) {
+                    self.showHoverHint = false
+                }
+            }
+        }
     }
 
     private struct Model {
@@ -322,5 +343,26 @@ struct CostHistoryChartMenuView: View {
             .map { "\($0.name) \(UsageFormatter.usdString($0.costUSD))" }
         guard !parts.isEmpty else { return nil }
         return "Top: \(parts.joined(separator: " · "))"
+    }
+
+    private func chartAccessibilityLabel(model: Model) -> String {
+        guard !model.points.isEmpty else { return "Cost history chart, no data" }
+
+        let dayCount = model.dateKeys.count
+        let totalCost = model.points.reduce(0.0) { $0 + $1.costUSD }
+        let totalText = UsageFormatter.usdString(totalCost)
+
+        var label = "Cost history: \(dayCount) day\(dayCount == 1 ? "" : "s"), total \(totalText)"
+
+        if let peakKey = model.peakKey,
+           let peak = model.pointsByDateKey[peakKey],
+           let peakDate = Self.dateFromDayKey(peakKey)
+        {
+            let peakCost = UsageFormatter.usdString(peak.costUSD)
+            let peakDay = peakDate.formatted(.dateTime.month(.abbreviated).day())
+            label += ", peak \(peakCost) on \(peakDay)"
+        }
+
+        return label
     }
 }

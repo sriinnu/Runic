@@ -7,37 +7,37 @@ import SwiftUI
 /// These values are carefully tuned for readability and visual hierarchy.
 enum MenuCardMetrics {
     /// Horizontal padding on left/right edges of card content
-    static let horizontalPadding: CGFloat = 12
-    
+    static let horizontalPadding: CGFloat = RunicSpacing.sm  // 12
+
     /// Top padding for the header section (provider name, email)
-    static let headerTopPadding: CGFloat = 1
-    
+    static let headerTopPadding: CGFloat = RunicSpacing.xxs  // 4
+
     /// Bottom padding for the header section
-    static let headerBottomPadding: CGFloat = 1
-    
+    static let headerBottomPadding: CGFloat = RunicSpacing.xxs  // 4
+
     /// Top padding for content sections (usage, credits, cost)
-    static let sectionTopPadding: CGFloat = 5
-    
+    static let sectionTopPadding: CGFloat = RunicSpacing.xs  // 8
+
     /// Bottom padding for content sections
-    static let sectionBottomPadding: CGFloat = 3
-    
+    static let sectionBottomPadding: CGFloat = RunicSpacing.xxs  // 4
+
     /// Vertical spacing between major sections (e.g., Session vs Weekly)
-    static let sectionSpacing: CGFloat = 8  // Increased from 7 for better breathing room
-    
+    static let sectionSpacing: CGFloat = RunicSpacing.xs  // 8
+
     /// Spacing between related blocks of content
-    static let blockSpacing: CGFloat = 5
-    
+    static let blockSpacing: CGFloat = RunicSpacing.xs  // 8
+
     /// Spacing between individual text lines within a section
-    static let lineSpacing: CGFloat = 4  // Increased from 3 for improved readability
-    
+    static let lineSpacing: CGFloat = RunicSpacing.xxs  // 4
+
     /// Base padding for menu items
-    static let menuItemBasePadding: CGFloat = 4
-    
+    static let menuItemBasePadding: CGFloat = RunicSpacing.xxs  // 4
+
     /// Additional padding for text with descenders (y, g, p, q, j)
-    static let menuItemDescenderPadding: CGFloat = 1
-    
+    static let menuItemDescenderPadding: CGFloat = RunicSpacing.xxxs  // 2
+
     /// Tail padding at the end of sections
-    static let tailPadding: CGFloat = 2
+    static let tailPadding: CGFloat = RunicSpacing.xxs  // 4
 }
 
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
@@ -107,12 +107,25 @@ struct UsageMenuCardView: View {
             let errorLine: String?
         }
 
+        enum HeaderBadgeStyle {
+            case info
+            case warning
+            case error
+        }
+
+        struct HeaderBadge {
+            let text: String
+            let style: HeaderBadgeStyle
+        }
+
+        let provider: UsageProvider
         let providerName: String
         let email: String
         let subtitleText: String
         let subtitleStyle: SubtitleStyle
         let planText: String?
         let topModelLine: String?
+        let headerBadge: HeaderBadge?
         let metrics: [Metric]
         let usageMetricDisplayMode: UsageMetricDisplayMode
         let creditsText: String?
@@ -136,18 +149,20 @@ struct UsageMenuCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             UsageMenuCardHeaderView(model: self.model)
 
             if self.hasDetails {
                 Divider()
+                    .padding(.vertical, RunicSpacing.xxs)
             }
 
             if self.model.metrics.isEmpty {
                 if let placeholder = self.model.placeholder {
-                    Text(placeholder)
-                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                        .font(.subheadline)
+                    MenuEmptyStateView(
+                        providerName: self.model.providerName,
+                        placeholder: placeholder,
+                        isHighlighted: self.isHighlighted)
                 }
             } else {
                 let hasUsage = !self.model.metrics.isEmpty
@@ -176,7 +191,7 @@ struct UsageMenuCardView: View {
                                         HStack(alignment: .firstTextBaseline) {
                                             if displayMode.showsPercent {
                                                 Text(metric.percentLabel)
-                                                    .font(.footnote)
+                                                    .font(.system(.footnote, design: .rounded))
                                             }
                                             if let reset = metric.resetText {
                                                 if displayMode.showsPercent {
@@ -200,6 +215,7 @@ struct UsageMenuCardView: View {
                     }
                     if hasUsage, hasCredits || hasCost || hasInsights {
                         Divider()
+                            .padding(.vertical, RunicSpacing.xxs)
                     }
                     if let credits = self.model.creditsText {
                         CreditsBarContent(
@@ -211,6 +227,7 @@ struct UsageMenuCardView: View {
                     }
                     if hasCredits, hasCost || hasInsights {
                         Divider()
+                            .padding(.vertical, RunicSpacing.xxs)
                     }
                     if let providerCost = self.model.providerCost {
                         ProviderCostContent(
@@ -219,6 +236,7 @@ struct UsageMenuCardView: View {
                     }
                     if hasExtraUsage, hasTokenCost || hasInsights {
                         Divider()
+                            .padding(.vertical, RunicSpacing.xxs)
                     }
                     if let tokenUsage = self.model.tokenUsage {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
@@ -237,19 +255,29 @@ struct UsageMenuCardView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             if let error = tokenUsage.errorLine, !error.isEmpty {
-                                Text(error)
-                                    .font(.footnote)
-                                    .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
-                                    .lineLimit(4)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .overlay {
-                                        ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)
-                                    }
+                                HStack(alignment: .top, spacing: RunicSpacing.xs) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.footnote)
+                                        .foregroundStyle(RunicColors.error)
+                                    Text(error)
+                                        .font(.footnote)
+                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
+                                        .lineLimit(4)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(RunicSpacing.xs)
+                                .background(
+                                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                        .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
+                                .overlay {
+                                    ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)
+                                }
                             }
                         }
                     }
                     if hasCost, hasInsights {
                         Divider()
+                            .padding(.vertical, RunicSpacing.xxs)
                     }
                     if let insights = self.model.insights {
                         InsightsContent(section: insights)
@@ -275,20 +303,44 @@ private struct UsageMenuCardHeaderView: View {
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(self.model.providerName)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            HStack(alignment: .center, spacing: RunicSpacing.sm) {
+                ProviderAvatarView(provider: self.model.provider)
+
+                VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+                    Text(self.model.providerName)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    if !self.model.email.isEmpty {
+                        ProfilePill(
+                            text: self.model.email,
+                            systemImage: "person.crop.circle",
+                            tint: self.brandAccent)
+                            .lineLimit(1)
+                    }
+                }
+
                 Spacer()
-                Text(self.model.email)
-                    .font(.subheadline)
-                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+
+                VStack(alignment: .trailing, spacing: RunicSpacing.xxxs) {
+                    if let badge = self.model.headerBadge {
+                        MenuHeaderBadgeView(badge: badge, isHighlighted: self.isHighlighted)
+                    }
+                    if let plan = self.model.planText {
+                        ProfilePill(
+                            text: plan,
+                            systemImage: "sparkles",
+                            tint: self.brandAccent,
+                            style: .plan)
+                            .lineLimit(1)
+                    }
+                }
             }
+
             let subtitleAlignment: VerticalAlignment = self.model.subtitleStyle == .error ? .top : .firstTextBaseline
             HStack(alignment: subtitleAlignment) {
                 Text(self.model.subtitleText)
-                    .font(.footnote)
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(self.subtitleColor)
                     .lineLimit(self.model.subtitleStyle == .error ? 4 : 1)
                     .multilineTextAlignment(.leading)
@@ -299,13 +351,8 @@ private struct UsageMenuCardHeaderView: View {
                 if self.model.subtitleStyle == .error, !self.model.subtitleText.isEmpty {
                     CopyIconButton(copyText: self.model.subtitleText, isHighlighted: self.isHighlighted)
                 }
-                if let plan = self.model.planText {
-                    Text(plan)
-                        .font(.footnote)
-                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                        .lineLimit(1)
-                }
             }
+
             if let topModelLine = self.model.topModelLine {
                 Text(topModelLine)
                     .font(.footnote)
@@ -313,6 +360,10 @@ private struct UsageMenuCardHeaderView: View {
                     .lineLimit(1)
             }
         }
+        .padding(.horizontal, RunicSpacing.xs)
+        .padding(.vertical, RunicSpacing.xs)
+        .background(self.headerBackground)
+        .overlay(self.headerBorder)
     }
 
     private var subtitleColor: Color {
@@ -322,6 +373,257 @@ private struct UsageMenuCardHeaderView: View {
         case .error: MenuHighlightStyle.error(self.isHighlighted)
         }
     }
+
+    private var brandAccent: Color {
+        let color = ProviderDescriptorRegistry.descriptor(for: self.model.provider).branding.color
+        return Color(red: color.red, green: color.green, blue: color.blue)
+    }
+
+    private var headerBackground: some View {
+        let base = self.brandNSColor
+        let top = base.blended(withFraction: 0.35, of: .white) ?? base
+        let bottom = base.blended(withFraction: 0.25, of: .black) ?? base
+        let start = Color(nsColor: top).opacity(RunicColors.Opacity.medium)
+        let end = Color(nsColor: bottom).opacity(RunicColors.Opacity.light)
+        return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+            .fill(LinearGradient(colors: [start, end], startPoint: .topLeading, endPoint: .bottomTrailing))
+    }
+
+    private var headerBorder: some View {
+        return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+            .stroke(Color.white.opacity(RunicColors.Opacity.medium), lineWidth: 0.7)
+    }
+
+    private var brandNSColor: NSColor {
+        let color = ProviderDescriptorRegistry.descriptor(for: self.model.provider).branding.color
+        return NSColor(calibratedRed: CGFloat(color.red), green: CGFloat(color.green), blue: CGFloat(color.blue), alpha: 1)
+    }
+}
+
+private struct ProviderAvatarView: View {
+    let provider: UsageProvider
+
+    var body: some View {
+        let size: CGFloat = 40
+        let base = self.brandNSColor
+        let top = base.blended(withFraction: 0.35, of: .white) ?? base
+        let mid = base.blended(withFraction: 0.15, of: .black) ?? base
+        let bottom = base.blended(withFraction: 0.35, of: .black) ?? base
+
+        let coreGradient = LinearGradient(
+            colors: [Color(nsColor: top), Color(nsColor: mid), Color(nsColor: bottom)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing)
+
+        let ringGradient = AngularGradient(
+            colors: [
+                Color.white.opacity(RunicColors.Opacity.vivid),
+                Color(nsColor: top).opacity(RunicColors.Opacity.emphasis),
+                Color.white.opacity(RunicColors.Opacity.medium),
+                Color(nsColor: bottom).opacity(RunicColors.Opacity.prominent),
+                Color.white.opacity(RunicColors.Opacity.vivid),
+            ],
+            center: .center)
+
+        ZStack {
+            RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                .fill(coreGradient)
+                .shadow(color: Color(nsColor: base).opacity(0.25), radius: 6, x: 0, y: 4)
+
+            RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                .stroke(ringGradient, lineWidth: 1.2)
+
+            RoundedRectangle(cornerRadius: RunicCornerRadius.lg - 2, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.45), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing))
+                .padding(RunicSpacing.xxxs)
+                .blendMode(.screen)
+
+            if let icon = ProviderBrandIcon.templateImage(for: self.provider, size: 18) {
+                Image(nsImage: icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(Color.white.opacity(0.95))
+                    .shadow(color: Color.black.opacity(0.18), radius: 1, x: 0, y: 1)
+            } else {
+                Text(self.fallbackInitials)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.white.opacity(0.95))
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                .stroke(Color.white.opacity(RunicColors.Opacity.medium), lineWidth: 0.6))
+    }
+
+    private var brandNSColor: NSColor {
+        let color = ProviderDescriptorRegistry.descriptor(for: self.provider).branding.color
+        return NSColor(calibratedRed: CGFloat(color.red), green: CGFloat(color.green), blue: CGFloat(color.blue), alpha: 1)
+    }
+
+    private var fallbackInitials: String {
+        let name = ProviderDescriptorRegistry.descriptor(for: self.provider).metadata.displayName
+        let parts = name.split(separator: " ")
+        if parts.count >= 2 {
+            return "\(parts[0].prefix(1))\(parts[1].prefix(1))"
+        }
+        return String(name.prefix(2)).uppercased()
+    }
+}
+
+private struct ProfilePill: View {
+    enum Style { case email, plan }
+
+    let text: String
+    let systemImage: String
+    let tint: Color
+    var style: Style = .email
+
+    var body: some View {
+        HStack(spacing: RunicSpacing.xxxs) {
+            Image(systemName: self.systemImage)
+                .font(.caption2.weight(.semibold))
+            Text(self.text)
+                .font(.caption.weight(.medium))
+        }
+        .padding(.horizontal, RunicSpacing.compact)
+        .padding(.vertical, RunicSpacing.xxxs)
+        .foregroundStyle(self.foregroundColor)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.backgroundColor))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.borderColor, lineWidth: 0.5))
+    }
+
+    private var foregroundColor: Color {
+        switch self.style {
+        case .email:
+            return .secondary
+        case .plan:
+            return self.tint.opacity(RunicColors.Opacity.vivid)
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch self.style {
+        case .email:
+            return Color(nsColor: .quaternaryLabelColor).opacity(RunicColors.Opacity.emphasis)
+        case .plan:
+            return self.tint.opacity(RunicColors.Opacity.light)
+        }
+    }
+
+    private var borderColor: Color {
+        switch self.style {
+        case .email:
+            return Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.strong)
+        case .plan:
+            return self.tint.opacity(RunicColors.Opacity.medium)
+        }
+    }
+}
+
+
+private struct MenuHeaderBadgeView: View {
+    let badge: UsageMenuCardView.Model.HeaderBadge
+    let isHighlighted: Bool
+
+    var body: some View {
+        HStack(spacing: RunicSpacing.xxs) {
+            if self.badge.style == .info {
+                ProgressView()
+                    .controlSize(.mini)
+                    .scaleEffect(0.7)
+                    .frame(width: 10, height: 10)
+            } else {
+                Image(systemName: self.badgeIcon)
+                    .font(.caption2.weight(.semibold))
+            }
+            Text(self.badge.text)
+                .font(.caption2.weight(.semibold))
+        }
+        .padding(.horizontal, RunicSpacing.compact)
+        .padding(.vertical, RunicSpacing.xxxs)
+        .foregroundStyle(self.foregroundColor)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.backgroundColor))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.borderColor, lineWidth: 0.5))
+    }
+
+    private var badgeIcon: String {
+        switch self.badge.style {
+        case .info: return "arrow.triangle.2.circlepath"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .error: return "xmark.circle.fill"
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch self.badge.style {
+        case .info:
+            return Color(nsColor: .systemBlue).opacity(self.isHighlighted ? 0.25 : 0.12)
+        case .warning:
+            return Color(nsColor: .systemOrange).opacity(self.isHighlighted ? 0.35 : 0.15)
+        case .error:
+            return Color(nsColor: .systemRed).opacity(self.isHighlighted ? 0.35 : 0.15)
+        }
+    }
+
+    private var foregroundColor: Color {
+        switch self.badge.style {
+        case .info:
+            return Color(nsColor: .systemBlue).opacity(RunicColors.Opacity.vivid)
+        case .warning:
+            return Color(nsColor: .systemOrange)
+        case .error:
+            return Color(nsColor: .systemRed)
+        }
+    }
+
+    private var borderColor: Color {
+        switch self.badge.style {
+        case .info:
+            return Color(nsColor: .systemBlue).opacity(RunicColors.Opacity.medium)
+        case .warning:
+            return Color(nsColor: .systemOrange).opacity(RunicColors.Opacity.strong)
+        case .error:
+            return Color(nsColor: .systemRed).opacity(RunicColors.Opacity.strong)
+        }
+    }
+}
+
+private struct MenuEmptyStateView: View {
+    let providerName: String
+    let placeholder: String
+    let isHighlighted: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+            HStack(spacing: RunicSpacing.xxs) {
+                Image(systemName: "sparkles")
+                    .font(.caption.weight(.semibold))
+                Text("Connect \(self.providerName)")
+                    .font(.subheadline.weight(.semibold))
+            }
+            Text(self.placeholder)
+                .font(.footnote)
+                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            Text("Open Settings → Providers, add credentials, then refresh.")
+                .font(.footnote)
+                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 }
 
 private struct CopyIconButtonStyle: ButtonStyle {
@@ -329,13 +631,13 @@ private struct CopyIconButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(4)
+            .padding(RunicSpacing.xxs)
             .background {
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
                     .fill(MenuHighlightStyle.secondary(self.isHighlighted).opacity(configuration.isPressed ? 0.18 : 0))
             }
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(RunicAnimation.highlight, value: configuration.isPressed)
     }
 }
 
@@ -349,7 +651,7 @@ private struct CopyIconButton: View {
     var body: some View {
         Button {
             self.copyToPasteboard()
-            withAnimation(.easeOut(duration: 0.12)) {
+            withAnimation(RunicAnimation.highlight) {
                 self.didCopy = true
             }
             self.resetTask?.cancel()
@@ -395,7 +697,7 @@ private struct ProviderCostContent: View {
                     .font(.footnote)
                 Spacer()
                 Text(String(format: "%.0f%% used", min(100, max(0, self.section.percentUsed))))
-                    .font(.footnote)
+                    .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
         }
@@ -445,11 +747,20 @@ private struct InsightsContent: View {
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let error = self.section.errorLine {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
-                    .lineLimit(4)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: RunicSpacing.xs) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(RunicColors.error)
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(RunicSpacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
             }
         }
     }
@@ -461,11 +772,12 @@ struct UsageMenuCardHeaderSectionView: View {
     let width: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             UsageMenuCardHeaderView(model: self.model)
 
             if self.showDivider {
                 Divider()
+                    .padding(.vertical, RunicSpacing.xxs)
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -486,9 +798,10 @@ struct UsageMenuCardUsageSectionView: View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
             if self.model.metrics.isEmpty {
                 if let placeholder = self.model.placeholder {
-                    Text(placeholder)
-                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                        .font(.subheadline)
+                    MenuEmptyStateView(
+                        providerName: self.model.providerName,
+                        placeholder: placeholder,
+                        isHighlighted: self.isHighlighted)
                 }
             } else {
                 ForEach(self.model.metrics) { metric in
@@ -507,7 +820,7 @@ struct UsageMenuCardUsageSectionView: View {
                             HStack(alignment: .firstTextBaseline) {
                                 if displayMode.showsPercent {
                                     Text(metric.percentLabel)
-                                        .font(.footnote)
+                                        .font(.system(.footnote, design: .rounded))
                                 }
                                 if let reset = metric.resetText {
                                     if displayMode.showsPercent {
@@ -530,6 +843,7 @@ struct UsageMenuCardUsageSectionView: View {
             }
             if self.showBottomDivider {
                 Divider()
+                    .padding(.vertical, RunicSpacing.xxs)
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -571,6 +885,7 @@ struct UsageMenuCardCreditsSectionView: View {
                     progressColor: self.model.progressColor)
                 if self.showBottomDivider {
                     Divider()
+                        .padding(.vertical, RunicSpacing.xxs)
                 }
             }
             .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -614,15 +929,15 @@ private struct CreditsBarContent: View {
                     accessibilityLabel: "Credits remaining")
                 HStack(alignment: .firstTextBaseline) {
                     Text(self.creditsText)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                     Spacer()
                     Text(self.scaleText)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 }
             } else {
                 Text(self.creditsText)
-                    .font(.caption)
+                    .font(.system(.caption, design: .rounded))
             }
             if let hintText, !hintText.isEmpty {
                 Text(hintText)
@@ -673,9 +988,9 @@ struct UsageMenuCardCostSectionView: View {
                                 .font(.body)
                                 .fontWeight(.medium)
                             Text(tokenUsage.sessionLine)
-                                .font(.caption)
+                                .font(.system(.caption, design: .rounded))
                             Text(tokenUsage.monthLine)
-                                .font(.caption)
+                                .font(.system(.caption, design: .rounded))
                             if let hint = tokenUsage.hintLine, !hint.isEmpty {
                                 Text(hint)
                                     .font(.footnote)
@@ -684,14 +999,23 @@ struct UsageMenuCardCostSectionView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             if let error = tokenUsage.errorLine, !error.isEmpty {
-                                Text(error)
-                                    .font(.footnote)
-                                    .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
-                                    .lineLimit(4)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .overlay {
-                                        ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)
-                                    }
+                                HStack(alignment: .top, spacing: RunicSpacing.xs) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.footnote)
+                                        .foregroundStyle(RunicColors.error)
+                                    Text(error)
+                                        .font(.footnote)
+                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
+                                        .lineLimit(4)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(RunicSpacing.xs)
+                                .background(
+                                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                        .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
+                                .overlay {
+                                    ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)
+                                }
                             }
                         }
                     }
@@ -756,6 +1080,8 @@ extension UsageMenuCardView.Model {
     }
 
     static func make(_ input: Input) -> UsageMenuCardView.Model {
+        let trimmedError = input.lastError?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedError = (trimmedError?.isEmpty ?? true) ? nil : trimmedError
         let email = Self.email(
             for: input.provider,
             snapshot: input.snapshot,
@@ -788,16 +1114,25 @@ extension UsageMenuCardView.Model {
         let subtitle = Self.subtitle(
             snapshot: input.snapshot,
             isRefreshing: input.isRefreshing,
-            lastError: input.lastError)
-        let placeholder = input.snapshot == nil && !input.isRefreshing && input.lastError == nil ? "No usage yet" : nil
+            lastError: normalizedError)
+        let headerBadge: HeaderBadge? = if input.isRefreshing {
+            HeaderBadge(text: "Refreshing", style: .info)
+        } else if normalizedError != nil {
+            HeaderBadge(text: "Issue", style: .error)
+        } else {
+            nil
+        }
+        let placeholder = input.snapshot == nil && !input.isRefreshing && normalizedError == nil ? "No usage yet" : nil
 
         return UsageMenuCardView.Model(
+            provider: input.provider,
             providerName: input.metadata.displayName,
             email: email,
             subtitleText: subtitle.text,
             subtitleStyle: subtitle.style,
             planText: planText,
             topModelLine: topModelLine,
+            headerBadge: headerBadge,
             metrics: metrics,
             usageMetricDisplayMode: input.usageMetricDisplayMode,
             creditsText: creditsText,

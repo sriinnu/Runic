@@ -105,7 +105,7 @@ final class InlineIconToggleButton: NSButton {
 
         self.iconView.imageScaling = .scaleNone
         self.iconView.translatesAutoresizingMaskIntoConstraints = false
-        self.titleField.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        self.titleField.font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
         self.titleField.alignment = .left
         self.titleField.lineBreakMode = .byTruncatingTail
         self.titleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -114,7 +114,7 @@ final class InlineIconToggleButton: NSButton {
 
         self.stack.orientation = .horizontal
         self.stack.alignment = .centerY
-        self.stack.spacing = 2
+        self.stack.spacing = 6
         self.stack.translatesAutoresizingMaskIntoConstraints = false
         self.stack.addArrangedSubview(self.iconView)
         self.stack.addArrangedSubview(self.titleField)
@@ -228,14 +228,14 @@ final class StackedToggleButton: NSButton {
 
         self.iconView.imageScaling = .scaleNone
         self.iconView.translatesAutoresizingMaskIntoConstraints = false
-        self.titleField.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
+        self.titleField.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
         self.titleField.alignment = .center
         self.titleField.lineBreakMode = .byTruncatingTail
         self.setContentTintColor(NSColor.secondaryLabelColor)
 
         self.stack.orientation = .vertical
         self.stack.alignment = .centerX
-        self.stack.spacing = 0
+        self.stack.spacing = 4
         self.stack.translatesAutoresizingMaskIntoConstraints = false
         self.stack.addArrangedSubview(self.iconView)
         self.stack.addArrangedSubview(self.titleField)

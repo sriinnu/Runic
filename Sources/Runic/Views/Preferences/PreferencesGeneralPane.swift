@@ -28,8 +28,8 @@ struct GeneralPane: View {
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.costUsageEnabled) {
                             Text("Show cost summary")
                                 .font(.body)
@@ -51,7 +51,7 @@ struct GeneralPane: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.openAIWebAccessEnabled) {
                             Text("Access OpenAI via web")
                                 .font(.body)
@@ -96,6 +96,99 @@ struct GeneralPane: View {
                     subtitle: "Notifies when the 5-hour session quota hits 0% and when it becomes " +
                         "available again.",
                     binding: self.$settings.sessionQuotaNotificationsEnabled)
+            }
+
+            PreferencesDivider()
+
+            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
+                Text("Display Settings")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Menu refresh rate")
+                            .font(.body)
+
+                        Picker("", selection: self.$settings.refreshFrequency) {
+                            ForEach(RefreshFrequency.allCases) { option in
+                                Text(option.label).tag(option)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        Text("How often to automatically refresh usage data.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Chart style")
+                            .font(.body)
+
+                        Picker("", selection: self.$settings.chartStyle) {
+                            Text("Line").tag(ChartStyle.line)
+                            Text("Area").tag(ChartStyle.area)
+                            Text("Bar").tag(ChartStyle.bar)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 360)
+
+                        Text("Visual style for usage charts and graphs.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Number format")
+                            .font(.body)
+
+                        Picker("", selection: self.$settings.numberFormat) {
+                            Text("Abbreviated (45.2K)").tag(NumberFormat.abbreviated)
+                            Text("Full (45,234)").tag(NumberFormat.full)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 360)
+
+                        Text("How to display large numbers in the UI.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Date format")
+                            .font(.body)
+
+                        Picker("", selection: self.$settings.dateFormat) {
+                            Text("Relative (2h ago)").tag(DateFormat.relative)
+                            Text("Absolute (Jan 31, 2:30 PM)").tag(DateFormat.absolute)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 360)
+
+                        Text("How to display timestamps throughout the app.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Theme")
+                            .font(.body)
+
+                        Picker("", selection: self.$settings.theme) {
+                            Text("System").tag(Theme.system)
+                            Text("Light").tag(Theme.light)
+                            Text("Dark").tag(Theme.dark)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 360)
+
+                        Text("App appearance (requires restart).")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
             }
 
             PreferencesDivider()

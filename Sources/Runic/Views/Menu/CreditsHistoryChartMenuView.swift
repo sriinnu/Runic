@@ -27,7 +27,7 @@ struct CreditsHistoryChartMenuView: View {
 
     var body: some View {
         let model = Self.makeModel(from: self.breakdown)
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No credits history data.")
                     .font(.footnote)
@@ -60,7 +60,7 @@ struct CreditsHistoryChartMenuView: View {
                     }
                 }
                 .chartLegend(.hidden)
-                .frame(height: 130)
+                .frame(height: RunicSpacing.chartHeight)
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
@@ -83,13 +83,13 @@ struct CreditsHistoryChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -99,13 +99,13 @@ struct CreditsHistoryChartMenuView: View {
 
                 if let total = model.totalCreditsUsed {
                     Text("Total (30d): \(total.formatted(.number.precision(.fractionLength(0...2)))) credits")
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+        .padding(.vertical, RunicSpacing.xs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
     }
 
@@ -120,7 +120,7 @@ struct CreditsHistoryChartMenuView: View {
         let maxCreditsUsed: Double
     }
 
-    private static let barColor = Color(red: 73 / 255, green: 163 / 255, blue: 176 / 255)
+    private static let barColor = RunicColors.creditsChartBar
     private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
     private static func capHeight(maxValue: Double) -> Double {
         maxValue * 0.05

@@ -29,7 +29,7 @@ struct UsageBreakdownChartMenuView: View {
 
     var body: some View {
         let model = Self.makeModel(from: self.breakdown)
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No usage breakdown data.")
                     .font(.footnote)
@@ -63,7 +63,9 @@ struct UsageBreakdownChartMenuView: View {
                     }
                 }
                 .chartLegend(.hidden)
-                .frame(height: 130)
+                .frame(height: RunicSpacing.chartHeight)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(self.chartAccessibilityLabel(model: model))
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
@@ -86,13 +88,13 @@ struct UsageBreakdownChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -103,13 +105,13 @@ struct UsageBreakdownChartMenuView: View {
                 LazyVGrid(
                     columns: [GridItem(.adaptive(minimum: 110), alignment: .leading)],
                     alignment: .leading,
-                    spacing: 6)
+                    spacing: RunicSpacing.compact)
                 {
                     ForEach(model.services, id: \.self) { service in
-                        HStack(spacing: 6) {
+                        HStack(spacing: RunicSpacing.compact) {
                             Circle()
                                 .fill(model.color(for: service))
-                                .frame(width: 7, height: 7)
+                                .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(service)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -119,8 +121,8 @@ struct UsageBreakdownChartMenuView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+        .padding(.vertical, RunicSpacing.xs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
     }
 
@@ -215,19 +217,13 @@ struct UsageBreakdownChartMenuView: View {
     private static func colorForService(_ service: String) -> Color {
         let lower = service.lowercased()
         if lower == "cli" {
-            return Color(red: 0.26, green: 0.55, blue: 0.96)
+            return RunicColors.chartPalette[0]
         }
         if lower.contains("github"), lower.contains("review") {
-            return Color(red: 0.94, green: 0.53, blue: 0.18)
+            return RunicColors.chartPalette[1]
         }
-        let palette: [Color] = [
-            Color(red: 0.46, green: 0.75, blue: 0.36),
-            Color(red: 0.80, green: 0.45, blue: 0.92),
-            Color(red: 0.26, green: 0.78, blue: 0.86),
-            Color(red: 0.94, green: 0.74, blue: 0.26),
-        ]
-        let idx = abs(service.hashValue) % palette.count
-        return palette[idx]
+        let idx = abs(service.hashValue) % RunicColors.chartPalette.count
+        return RunicColors.chartPalette[idx]
     }
 
     private static func axisDates(fromSortedDays sortedDays: [OpenAIDashboardDailyBreakdown]) -> [Date] {
@@ -367,5 +363,36 @@ struct UsageBreakdownChartMenuView: View {
             .joined(separator: " · ")
 
         return ("\(dayLabel): \(total)", services)
+    }
+
+    private func chartAccessibilityLabel(model: Model) -> String {
+        guard !model.points.isEmpty else { return "Usage breakdown chart, no data" }
+
+        let dayCount = model.dayDates.count
+
+        // Compute per-service totals
+        var serviceTotals: [String: Double] = [:]
+        for point in model.points {
+            serviceTotals[point.service, default: 0] += point.creditsUsed
+        }
+        let grandTotal = serviceTotals.values.reduce(0, +)
+
+        // Build percentage parts sorted by usage descending
+        let parts: [String] = serviceTotals
+            .sorted { lhs, rhs in
+                if lhs.value == rhs.value { return lhs.key < rhs.key }
+                return lhs.value > rhs.value
+            }
+            .prefix(5)
+            .map { service, total in
+                let pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0
+                return "\(service) \(String(format: "%.0f", pct))%"
+            }
+
+        var label = "Usage breakdown: \(dayCount) day\(dayCount == 1 ? "" : "s")"
+        if !parts.isEmpty {
+            label += ", \(parts.joined(separator: ", "))"
+        }
+        return label
     }
 }

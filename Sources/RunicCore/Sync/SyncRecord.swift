@@ -185,8 +185,8 @@ public struct UserPreferencesSyncRecord: SyncableRecord {
         record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
         record["refreshInterval"] = refreshInterval as CKRecordValue
         record["enabledProviders"] = enabledProviders as CKRecordValue
-        record["notificationsEnabled"] = notificationsEnabled ? 1 : 0 as CKRecordValue
-        record["autoRefreshEnabled"] = autoRefreshEnabled ? 1 : 0 as CKRecordValue
+        record["notificationsEnabled"] = (notificationsEnabled ? 1 : 0) as CKRecordValue
+        record["autoRefreshEnabled"] = (autoRefreshEnabled ? 1 : 0) as CKRecordValue
         record["theme"] = theme as CKRecordValue
         record["displayFormat"] = displayFormat as CKRecordValue
 
@@ -273,7 +273,7 @@ public struct AlertConfigurationSyncRecord: SyncableRecord {
         record["warningThreshold"] = warningThreshold as CKRecordValue
         record["criticalThreshold"] = criticalThreshold as CKRecordValue
         record["notificationChannels"] = notificationChannels as CKRecordValue
-        record["enabled"] = enabled ? 1 : 0 as CKRecordValue
+        record["enabled"] = (enabled ? 1 : 0) as CKRecordValue
 
         return record
     }
@@ -373,7 +373,9 @@ private func getOrCreateEncryptionKey() -> SymmetricKey {
 private func saveToKeychain(key: String, data: Data) {
     let query: [String: Any] = [
         kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "com.sriinnu.athena.Runic",
         kSecAttrAccount as String: key,
+        kSecUseDataProtectionKeychain as String: true,
         kSecValueData as String: data,
         kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
     ]
@@ -384,7 +386,9 @@ private func saveToKeychain(key: String, data: Data) {
 private func loadFromKeychain(key: String) -> Data? {
     let query: [String: Any] = [
         kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "com.sriinnu.athena.Runic",
         kSecAttrAccount as String: key,
+        kSecUseDataProtectionKeychain as String: true,
         kSecReturnData as String: true
     ]
     var result: AnyObject?
