@@ -1423,7 +1423,7 @@ extension UsageMenuCardView.Model {
 
         var projectLine: String?
         if let topProject {
-            let name = topProject.projectID ?? "Unknown project"
+            let name = topProject.projectName ?? topProject.projectID ?? "Unknown project"
             let tokens = UsageFormatter.tokenCountString(topProject.totals.totalTokens)
             var parts = ["Top project: \(name) · \(tokens) tokens"]
             if let cost = topProject.totals.costUSD {

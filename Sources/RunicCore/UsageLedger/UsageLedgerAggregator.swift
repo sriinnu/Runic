@@ -184,6 +184,7 @@ public enum UsageLedgerAggregator {
             UsageLedgerModelSummary(
                 provider: key.provider,
                 projectID: key.projectID,
+                projectName: key.projectID == nil ? nil : acc.projectName,
                 model: key.model,
                 entryCount: acc.entryCount,
                 totals: acc.totals)
@@ -208,6 +209,7 @@ public enum UsageLedgerAggregator {
             UsageLedgerProjectSummary(
                 provider: key.provider,
                 projectID: key.projectID,
+                projectName: key.projectID == nil ? nil : acc.projectName,
                 entryCount: acc.entryCount,
                 totals: acc.totals,
                 modelsUsed: acc.models)
@@ -294,6 +296,7 @@ private struct AggregateAccumulator {
     private(set) var costSum: Double = 0
     private(set) var hasCost: Bool = false
     private(set) var entryCount: Int = 0
+    private(set) var projectName: String?
     private var modelSet: Set<String> = []
 
     init() {}
@@ -313,6 +316,12 @@ private struct AggregateAccumulator {
         if let cost = entry.costUSD {
             self.costSum += cost
             self.hasCost = true
+        }
+        if self.projectName == nil {
+            let trimmed = entry.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let trimmed, !trimmed.isEmpty {
+                self.projectName = trimmed
+            }
         }
         if let model = entry.model, !model.isEmpty {
             self.modelSet.insert(model)

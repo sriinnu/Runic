@@ -252,8 +252,28 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     ?? self.firstString(from: payload, keys: ["session_id", "sessionId"])
                     ?? self.firstString(from: obj, keys: ["session_id", "sessionId"])
                     ?? file.sessionID
+
+                let infoProject = info["project"] as? [String: Any]
+                let payloadProject = payload?["project"] as? [String: Any]
+                let rootProject = obj["project"] as? [String: Any]
                 let projectID = self.firstString(from: info, keys: ["project_id", "projectId"])
                     ?? self.firstString(from: payload, keys: ["project_id", "projectId"])
+                    ?? self.firstString(from: obj, keys: ["project_id", "projectId"])
+                    ?? self.firstString(from: infoProject, keys: ["id", "project_id", "projectId"])
+                    ?? self.firstString(from: payloadProject, keys: ["id", "project_id", "projectId"])
+                    ?? self.firstString(from: rootProject, keys: ["id", "project_id", "projectId"])
+                let projectName = self.firstString(
+                    from: info,
+                    keys: ["project_name", "projectName", "workspace_name", "workspaceName"])
+                    ?? self.firstString(
+                        from: payload,
+                        keys: ["project_name", "projectName", "workspace_name", "workspaceName"])
+                    ?? self.firstString(
+                        from: obj,
+                        keys: ["project_name", "projectName", "workspace_name", "workspaceName"])
+                    ?? self.firstString(from: infoProject, keys: ["name", "project_name", "projectName", "title"])
+                    ?? self.firstString(from: payloadProject, keys: ["name", "project_name", "projectName", "title"])
+                    ?? self.firstString(from: rootProject, keys: ["name", "project_name", "projectName", "title"])
                 let requestID = self.firstString(
                     from: info,
                     keys: ["request_id", "requestId", "event_id", "eventId"])
@@ -283,6 +303,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     timestamp: timestamp,
                     sessionID: sessionID,
                     projectID: projectID,
+                    projectName: projectName,
                     model: model,
                     inputTokens: deltaInput,
                     outputTokens: deltaOutput,

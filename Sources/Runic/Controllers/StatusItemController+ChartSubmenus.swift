@@ -74,7 +74,7 @@ extension StatusItemController {
 
             let limited = modelBreakdown.prefix(limit)
             for summary in limited {
-                let project = summary.projectID ?? "Unknown project"
+                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
                 let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 var title = "\(project) · \(summary.model): \(tokens) tokens"
@@ -93,7 +93,7 @@ extension StatusItemController {
 
             let limited = projectBreakdown.prefix(limit)
             for summary in limited {
-                let project = summary.projectID ?? "Unknown project"
+                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
                 let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 let modelsText = summary.modelsUsed.isEmpty
@@ -123,6 +123,23 @@ extension StatusItemController {
         submenu.addItem(openItem)
 
         return submenu
+    }
+
+    func displayProjectName(projectID: String?, projectName: String?) -> String {
+        let trimmedProjectName = projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedProjectName, !trimmedProjectName.isEmpty {
+            return trimmedProjectName
+        }
+        guard let projectID, !projectID.isEmpty else {
+            return "Unknown project"
+        }
+        if let budgetName = ProjectBudgetStore.getBudget(projectID: projectID)?.projectName?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !budgetName.isEmpty
+        {
+            return budgetName
+        }
+        return projectID
     }
 
     // MARK: - Private chart builders

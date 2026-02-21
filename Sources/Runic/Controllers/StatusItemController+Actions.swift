@@ -306,7 +306,7 @@ extension StatusItemController {
         if let topProject {
             lines.append("")
             lines.append("## Top project")
-            let project = topProject.projectID ?? "Unknown project"
+            let project = self.displayProjectName(projectID: topProject.projectID, projectName: topProject.projectName)
             var line = "- \(project): \(UsageFormatter.tokenCountString(topProject.totals.totalTokens)) tokens"
             if let cost = topProject.totals.costUSD {
                 line += " (\(UsageFormatter.usdString(cost)))"
@@ -318,7 +318,7 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Models by project")
             for summary in modelBreakdown {
-                let project = summary.projectID ?? "Unknown project"
+                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
                 var line = "- \(project) - \(summary.model): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens"
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
@@ -331,7 +331,7 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Projects")
             for summary in projectBreakdown {
-                let project = summary.projectID ?? "Unknown project"
+                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
                 var line = "- \(project): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens"
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
