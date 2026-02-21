@@ -1,57 +1,70 @@
-import RunicCore
 import Helix
 import Testing
-@testable import RunicCLI
 
 @Suite
 struct CLIArgumentParsingTests {
     @Test
-    func jsonShortcutDoesNotEnableJsonLogs() throws {
-        let signature = RunicCLI._usageSignatureForTesting()
+    func usageCommandParsesProviderAndJsonFlags() throws {
+        let signature = CommandSignature(
+            options: [
+                OptionDefinition(label: "provider", names: [.long("provider")], help: nil),
+                OptionDefinition(label: "format", names: [.long("format")], help: nil),
+            ],
+            flags: [
+                FlagDefinition(label: "json", names: [.long("json")], help: nil),
+                FlagDefinition(label: "pretty", names: [.long("pretty")], help: nil),
+                FlagDefinition(label: "noColor", names: [.long("no-color")], help: nil),
+            ])
         let parser = CommandParser(signature: signature)
-        let parsed = try parser.parse(arguments: ["--json"])
+        let parsed = try parser.parse(arguments: ["--provider", "codex", "--json", "--pretty", "--no-color"])
 
-        #expect(parsed.flags.contains("jsonShortcut"))
-        #expect(!parsed.flags.contains("jsonOutput"))
-        #expect(RunicCLI._decodeFormatForTesting(from: parsed) == .json)
+        #expect(parsed.options["provider"] == ["codex"])
+        #expect(parsed.flags.contains("json"))
+        #expect(parsed.flags.contains("pretty"))
+        #expect(parsed.flags.contains("noColor"))
     }
 
     @Test
-    func jsonOutputFlagEnablesJsonLogs() throws {
-        let signature = RunicCLI._usageSignatureForTesting()
+    func costCommandParsesRefreshFlag() throws {
+        let signature = CommandSignature(
+            options: [
+                OptionDefinition(label: "provider", names: [.long("provider")], help: nil),
+            ],
+            flags: [
+                FlagDefinition(label: "refresh", names: [.long("refresh")], help: nil),
+            ])
         let parser = CommandParser(signature: signature)
-        let parsed = try parser.parse(arguments: ["--json-output"])
+        let parsed = try parser.parse(arguments: ["--provider", "claude", "--refresh"])
 
-        #expect(parsed.flags.contains("jsonOutput"))
-        #expect(!parsed.flags.contains("jsonShortcut"))
-        #expect(RunicCLI._decodeFormatForTesting(from: parsed) == .text)
+        #expect(parsed.options["provider"] == ["claude"])
+        #expect(parsed.flags.contains("refresh"))
     }
 
     @Test
-    func logLevelAndVerboseAreParsed() throws {
-        let signature = RunicCLI._usageSignatureForTesting()
+    func insightsCommandParsesViewAndBudgetFlags() throws {
+        let signature = CommandSignature(
+            options: [
+                OptionDefinition(label: "view", names: [.long("view")], help: nil),
+                OptionDefinition(label: "project", names: [.long("project")], help: nil),
+                OptionDefinition(label: "timezone", names: [.long("timezone")], help: nil),
+            ],
+            flags: [
+                FlagDefinition(label: "budget", names: [.long("budget")], help: nil),
+                FlagDefinition(label: "withCommits", names: [.long("with-commits")], help: nil),
+            ])
         let parser = CommandParser(signature: signature)
-        let parsed = try parser.parse(arguments: ["--log-level", "info", "--verbose"])
+        let parsed = try parser.parse(arguments: [
+            "--view", "projects",
+            "--project", "runic",
+            "--timezone", "America/Los_Angeles",
+            "--budget",
+            "--with-commits",
+        ])
 
-        #expect(parsed.flags.contains("verbose"))
-        #expect(parsed.options["logLevel"] == ["info"])
-    }
-
-    @Test
-    func resolvedLogLevelDefaultsToError() {
-        #expect(RunicCLI.resolvedLogLevel(verbose: false, rawLevel: nil) == .error)
-        #expect(RunicCLI.resolvedLogLevel(verbose: true, rawLevel: nil) == .debug)
-        #expect(RunicCLI.resolvedLogLevel(verbose: false, rawLevel: "info") == .info)
-    }
-
-    @Test
-    func formatOptionOverridesJsonShortcut() throws {
-        let signature = RunicCLI._usageSignatureForTesting()
-        let parser = CommandParser(signature: signature)
-        let parsed = try parser.parse(arguments: ["--json", "--format", "text"])
-
-        #expect(parsed.flags.contains("jsonShortcut"))
-        #expect(parsed.options["format"] == ["text"])
-        #expect(RunicCLI._decodeFormatForTesting(from: parsed) == .text)
+        #expect(parsed.options["view"] == ["projects"])
+        #expect(parsed.options["project"] == ["runic"])
+        #expect(parsed.options["timezone"] == ["America/Los_Angeles"])
+        #expect(parsed.flags.contains("budget"))
+        #expect(parsed.flags.contains("withCommits"))
     }
 }

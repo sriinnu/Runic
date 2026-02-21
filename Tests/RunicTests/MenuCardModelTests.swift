@@ -4,6 +4,54 @@ import SwiftUI
 import Testing
 @testable import Runic
 
+private extension UsageMenuCardView.Model.Input {
+    init(
+        provider: UsageProvider,
+        metadata: ProviderMetadata,
+        snapshot: UsageSnapshot?,
+        credits: CreditsSnapshot?,
+        creditsError: String?,
+        dashboard: OpenAIDashboardSnapshot?,
+        dashboardError: String?,
+        tokenSnapshot: CostUsageTokenSnapshot?,
+        tokenError: String?,
+        account: AccountInfo,
+        isRefreshing: Bool,
+        lastError: String?,
+        usageBarsShowUsed: Bool,
+        tokenCostUsageEnabled: Bool,
+        showOptionalCreditsAndExtraUsage: Bool,
+        now: Date)
+    {
+        self.init(
+            provider: provider,
+            metadata: metadata,
+            snapshot: snapshot,
+            credits: credits,
+            creditsError: creditsError,
+            dashboard: dashboard,
+            dashboardError: dashboardError,
+            tokenSnapshot: tokenSnapshot,
+            tokenError: tokenError,
+            ledgerDaily: nil,
+            ledgerActiveBlock: nil,
+            ledgerTopModel: nil,
+            ledgerTopProject: nil,
+            ledgerReliability: nil,
+            ledgerRouting: nil,
+            ledgerError: nil,
+            ledgerUpdatedAt: nil,
+            account: account,
+            isRefreshing: isRefreshing,
+            lastError: lastError,
+            usageBarsShowUsed: usageBarsShowUsed,
+            usageMetricDisplayMode: .barsAndPercent,
+            tokenCostUsageEnabled: tokenCostUsageEnabled,
+            showOptionalCreditsAndExtraUsage: showOptionalCreditsAndExtraUsage,
+            now: now)
+    }
+}
+
 @Suite
 struct MenuCardModelTests {
     @Test

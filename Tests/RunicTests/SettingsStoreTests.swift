@@ -119,16 +119,8 @@ struct SettingsStoreTests {
 
         let storeA = SettingsStore(userDefaults: defaultsA, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
 
-        #expect(storeA.orderedProviders() == [
-            .gemini,
-            .codex,
-            .claude,
-            .cursor,
-            .factory,
-            .antigravity,
-            .copilot,
-            .zai,
-        ])
+        let expectedAppended = UsageProvider.allCases.filter { ![.gemini, .codex].contains($0) }
+        #expect(storeA.orderedProviders() == [.gemini, .codex] + expectedAppended)
 
         // Move one provider; ensure it's persisted across instances.
         let antigravityIndex = storeA.orderedProviders().firstIndex(of: .antigravity)!

@@ -5,7 +5,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
 source "$ROOT/version.env"
-source "$HOME/Projects/agent-scripts/release/sparkle_lib.sh"
+source "$ROOT/Scripts/release-lib.sh"
 
 APPCAST="$ROOT/appcast.xml"
 APP_NAME="Runic"
@@ -13,11 +13,14 @@ ARTIFACT_PREFIX="Runic-"
 BUNDLE_ID="com.steipete.runic"
 TAG="v${MARKETING_VERSION}"
 
-err() { echo "ERROR: $*" >&2; exit 1; }
-
 require_clean_worktree
 ensure_changelog_finalized "$MARKETING_VERSION"
 ensure_appcast_monotonic "$APPCAST" "$MARKETING_VERSION" "$BUILD_NUMBER"
+
+CURRENT_BRANCH=$(git branch --show-current)
+if [[ "$CURRENT_BRANCH" != "main" ]]; then
+  err "Release must be run from branch 'main' (current: $CURRENT_BRANCH)"
+fi
 
 swiftformat Sources Tests >/dev/null
 swiftlint --strict
@@ -37,8 +40,15 @@ NOTES_FILE=$(mktemp /tmp/runic-notes.XXXXXX.md)
 extract_notes_from_changelog "$MARKETING_VERSION" "$NOTES_FILE"
 trap 'rm -f "$KEY_FILE" "$NOTES_FILE"' EXIT
 
-git tag -f "$TAG"
-git push -f origin "$TAG"
+if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+  err "Tag already exists locally: $TAG"
+fi
+if git ls-remote --tags origin "$TAG" | grep -q "refs/tags/$TAG$"; then
+  err "Tag already exists on origin: $TAG"
+fi
+
+git tag "$TAG"
+git push origin "$TAG"
 
 gh release create "$TAG" ${APP_NAME}-${MARKETING_VERSION}.zip ${APP_NAME}-${MARKETING_VERSION}.dSYM.zip \
   --title "${APP_NAME} ${MARKETING_VERSION}" \
@@ -62,7 +72,5 @@ if [[ "${RUN_SPARKLE_UPDATE_TEST:-0}" == "1" ]]; then
 fi
 
 check_assets "$TAG" "$ARTIFACT_PREFIX"
-
-git push origin --tags
 
 echo "Release ${MARKETING_VERSION} complete."

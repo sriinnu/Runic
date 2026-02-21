@@ -83,7 +83,10 @@ struct UsageMenuCardView: View {
 
         struct TokenUsageSection: Sendable {
             let sessionLine: String
+            let sessionDetailLine: String?
             let monthLine: String
+            let monthDetailLine: String?
+            let updatedLine: String
             let hintLine: String?
             let errorLine: String?
             let errorCopyText: String?
@@ -249,8 +252,21 @@ struct UsageMenuCardView: View {
                                 .fontWeight(.medium)
                             Text(tokenUsage.sessionLine)
                                 .font(.footnote)
+                            if let sessionDetail = tokenUsage.sessionDetailLine {
+                                Text(sessionDetail)
+                                    .font(.footnote)
+                                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                            }
                             Text(tokenUsage.monthLine)
                                 .font(.footnote)
+                            if let monthDetail = tokenUsage.monthDetailLine {
+                                Text(monthDetail)
+                                    .font(.footnote)
+                                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                            }
+                            Text(tokenUsage.updatedLine)
+                                .font(.caption)
+                                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             if let hint = tokenUsage.hintLine, !hint.isEmpty {
                                 Text(hint)
                                     .font(.footnote)
@@ -1013,8 +1029,21 @@ struct UsageMenuCardCostSectionView: View {
                                 .fontWeight(.medium)
                             Text(tokenUsage.sessionLine)
                                 .font(.system(.caption, design: .rounded))
+                            if let sessionDetail = tokenUsage.sessionDetailLine {
+                                Text(sessionDetail)
+                                    .font(.footnote)
+                                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                            }
                             Text(tokenUsage.monthLine)
                                 .font(.system(.caption, design: .rounded))
+                            if let monthDetail = tokenUsage.monthDetailLine {
+                                Text(monthDetail)
+                                    .font(.footnote)
+                                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                            }
+                            Text(tokenUsage.updatedLine)
+                                .font(.caption)
+                                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             if let hint = tokenUsage.hintLine, !hint.isEmpty {
                                 Text(hint)
                                     .font(.footnote)
@@ -1354,7 +1383,8 @@ extension UsageMenuCardView.Model {
         guard enabled else { return nil }
         guard let snapshot else { return nil }
 
-        let sessionCost = snapshot.sessionCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
+        let sessionCostValue = snapshot.sessionCostUSD
+        let sessionCost = sessionCostValue.map { UsageFormatter.usdString($0) } ?? "—"
         let sessionTokens = snapshot.sessionTokens.map { UsageFormatter.tokenCountString($0) }
         let sessionLine: String = {
             if let sessionTokens {
@@ -1362,8 +1392,19 @@ extension UsageMenuCardView.Model {
             }
             return "Today: \(sessionCost)"
         }()
+        let sessionDetailLine: String? = {
+            guard let cost = sessionCostValue,
+                  let tokens = snapshot.sessionTokens,
+                  let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: tokens)
+            else {
+                return nil
+            }
+            return "Today efficiency: \(per1K)"
+        }()
 
-        let monthCost = snapshot.last30DaysCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
+        let fallbackCost = snapshot.daily.compactMap(\.costUSD).reduce(0, +)
+        let monthCostValue = snapshot.last30DaysCostUSD ?? (fallbackCost > 0 ? fallbackCost : nil)
+        let monthCost = monthCostValue.map { UsageFormatter.usdString($0) } ?? "—"
         let fallbackTokens = snapshot.daily.compactMap(\.totalTokens).reduce(0, +)
         let monthTokensValue = snapshot.last30DaysTokens ?? (fallbackTokens > 0 ? fallbackTokens : nil)
         let monthTokens = monthTokensValue.map { UsageFormatter.tokenCountString($0) }
@@ -1373,14 +1414,50 @@ extension UsageMenuCardView.Model {
             }
             return "Last 30 days: \(monthCost)"
         }()
+        let monthDetailLine: String? = {
+            var parts: [String] = []
+            if let cost = monthCostValue,
+               let tokens = monthTokensValue,
+               let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: tokens)
+            {
+                parts.append(per1K)
+            }
+
+            if let cost = monthCostValue, let tokens = monthTokensValue, tokens > 0 {
+                let days = Self.observedUsageDays(snapshot)
+                let avgCostPerDay = cost / Double(days)
+                let avgTokensPerDay = Int((Double(tokens) / Double(days)).rounded())
+                parts.append("Avg \(UsageFormatter.usdRateString(avgCostPerDay))/day")
+                parts.append("Avg \(UsageFormatter.tokenCountString(avgTokensPerDay)) tok/day")
+            }
+
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        }()
+        let updatedLine = UsageFormatter.updatedString(from: snapshot.updatedAt)
         let err = (error?.isEmpty ?? true) ? nil : error
         let hintLine = err == nil ? "Token totals are estimates and may lag provider dashboards." : nil
         return TokenUsageSection(
             sessionLine: sessionLine,
+            sessionDetailLine: sessionDetailLine,
             monthLine: monthLine,
+            monthDetailLine: monthDetailLine,
+            updatedLine: updatedLine,
             hintLine: hintLine,
             errorLine: err,
             errorCopyText: (error?.isEmpty ?? true) ? nil : error)
+    }
+
+    private static func observedUsageDays(_ snapshot: CostUsageTokenSnapshot) -> Int {
+        let nonEmptyDays = snapshot.daily.filter { entry in
+            (entry.totalTokens ?? 0) > 0 || (entry.costUSD ?? 0) > 0
+        }.count
+        if nonEmptyDays > 0 {
+            return min(30, nonEmptyDays)
+        }
+        if !snapshot.daily.isEmpty {
+            return min(30, snapshot.daily.count)
+        }
+        return 30
     }
 
     private static func providerCostSection(
@@ -1507,7 +1584,7 @@ extension UsageMenuCardView.Model {
 
         var projectLine: String?
         if let topProject {
-            let name = topProject.displayProjectName
+            let name = Self.insightsProjectDisplayName(topProject)
             let tokens = UsageFormatter.tokenCountString(topProject.totals.totalTokens)
             var parts = ["Top project: \(name) · \(tokens) tokens · \(topProject.entryCount) req"]
             if let cost = topProject.totals.costUSD {
@@ -1555,6 +1632,79 @@ extension UsageMenuCardView.Model {
             routingDetail: routingDetail,
             updatedLine: updatedLine,
             errorLine: (error?.isEmpty ?? true) ? nil : error)
+    }
+
+    private static func insightsProjectDisplayName(_ summary: UsageLedgerProjectSummary) -> String {
+        let displayName = summary.displayProjectName
+        guard let annotation = self.projectIdentityAnnotation(
+            displayName: displayName,
+            projectID: summary.projectID,
+            confidence: summary.projectNameConfidence,
+            source: summary.projectNameSource)
+        else {
+            return displayName
+        }
+        return "\(displayName) [\(annotation)]"
+    }
+
+    private static func projectIdentityAnnotation(
+        displayName: String,
+        projectID: String?,
+        confidence: UsageLedgerProjectNameConfidence?,
+        source: UsageLedgerProjectNameSource?) -> String?
+    {
+        let normalizedSource = source ?? .unknown
+        let normalizedConfidence = confidence ?? .none
+
+        let shouldAnnotateSource = normalizedSource != .projectName && normalizedSource != .budgetOverride
+        let shouldAnnotateConfidence = normalizedConfidence != .high
+        let isUnknown = displayName == "Unknown project"
+        guard shouldAnnotateSource || shouldAnnotateConfidence || isUnknown else { return nil }
+
+        var parts: [String] = []
+        if shouldAnnotateSource {
+            parts.append("source \(self.projectSourceLabel(normalizedSource))")
+        }
+        if shouldAnnotateConfidence {
+            parts.append("confidence \(self.projectConfidenceLabel(normalizedConfidence))")
+        }
+        if isUnknown, let fingerprint = self.projectIDFingerprint(projectID) {
+            parts.append("id \(fingerprint)")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private static func projectSourceLabel(_ source: UsageLedgerProjectNameSource) -> String {
+        switch source {
+        case .projectName: "project name"
+        case .projectID: "project id"
+        case .inferredFromPath: "path-derived"
+        case .inferredFromName: "name-derived"
+        case .budgetOverride: "budget override"
+        case .unknown: "unknown"
+        }
+    }
+
+    private static func projectConfidenceLabel(_ confidence: UsageLedgerProjectNameConfidence) -> String {
+        switch confidence {
+        case .high: "high"
+        case .medium: "medium"
+        case .low: "low"
+        case .none: "none"
+        }
+    }
+
+    private static func projectIDFingerprint(_ projectID: String?) -> String? {
+        guard let projectID = projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty else {
+            return nil
+        }
+
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in projectID.lowercased().utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(format: "%08llx", hash)
     }
 
     private static func clamped(_ value: Double) -> Double {

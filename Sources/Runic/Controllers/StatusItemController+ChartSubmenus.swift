@@ -147,7 +147,10 @@ extension StatusItemController {
                 let project = self.displayProjectName(
                     projectID: summary.projectID,
                     projectName: summary.projectName,
-                    confidence: summary.projectNameConfidence)
+                    confidence: summary.projectNameConfidence,
+                    source: summary.projectNameSource,
+                    provenance: summary.projectNameProvenance,
+                    includeAttribution: true)
                 let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 let modelName = UsageFormatter.modelDisplayName(summary.model)
@@ -176,7 +179,10 @@ extension StatusItemController {
                 let project = self.displayProjectName(
                     projectID: summary.projectID,
                     projectName: summary.projectName,
-                    confidence: summary.projectNameConfidence)
+                    confidence: summary.projectNameConfidence,
+                    source: summary.projectNameSource,
+                    provenance: summary.projectNameProvenance,
+                    includeAttribution: true)
                 let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 let modelsText = summary.modelsUsed.isEmpty
@@ -217,26 +223,106 @@ extension StatusItemController {
     func displayProjectName(
         projectID: String?,
         projectName: String?,
-        confidence: UsageLedgerProjectNameConfidence? = nil) -> String
+        confidence: UsageLedgerProjectNameConfidence? = nil,
+        source: UsageLedgerProjectNameSource? = nil,
+        provenance: String? = nil,
+        includeAttribution: Bool = false) -> String
     {
-        _ = confidence
         let trimmedProjectName = projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let displayName: String
         if let trimmedProjectName, !trimmedProjectName.isEmpty {
-            return trimmedProjectName
+            displayName = trimmedProjectName
+        } else if let projectID, !projectID.isEmpty {
+            if let budgetName = ProjectBudgetStore.getBudget(projectID: projectID)?.projectName?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !budgetName.isEmpty
+            {
+                displayName = budgetName
+            } else if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: projectID) {
+                displayName = fallback
+            } else {
+                displayName = "Unknown project"
+            }
+        } else {
+            displayName = "Unknown project"
         }
-        guard let projectID, !projectID.isEmpty else {
-            return "Unknown project"
+        guard includeAttribution else { return displayName }
+        guard let annotation = self.projectNameAnnotation(
+            displayName: displayName,
+            projectID: projectID,
+            confidence: confidence,
+            source: source,
+            provenance: provenance)
+        else {
+            return displayName
         }
-        if let budgetName = ProjectBudgetStore.getBudget(projectID: projectID)?.projectName?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-            !budgetName.isEmpty
+        return "\(displayName) [\(annotation)]"
+    }
+
+    private func projectNameAnnotation(
+        displayName: String,
+        projectID: String?,
+        confidence: UsageLedgerProjectNameConfidence?,
+        source: UsageLedgerProjectNameSource?,
+        provenance: String?) -> String?
+    {
+        let normalizedSource = source ?? .unknown
+        let normalizedConfidence = confidence ?? .none
+
+        let shouldAnnotateSource = normalizedSource != .projectName && normalizedSource != .budgetOverride
+        let shouldAnnotateConfidence = normalizedConfidence != .high
+        let isUnknown = displayName == "Unknown project"
+        guard shouldAnnotateSource || shouldAnnotateConfidence || isUnknown else { return nil }
+
+        var parts: [String] = []
+        if shouldAnnotateSource {
+            parts.append("source \(self.projectSourceLabel(normalizedSource))")
+        }
+        if shouldAnnotateConfidence {
+            parts.append("confidence \(self.projectConfidenceLabel(normalizedConfidence))")
+        }
+        if isUnknown, let fingerprint = self.projectIDFingerprint(projectID) {
+            parts.append("id \(fingerprint)")
+        }
+        if let provenance = provenance?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !provenance.isEmpty
         {
-            return budgetName
+            parts.append("via \(provenance)")
         }
-        if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: projectID) {
-            return fallback
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private func projectSourceLabel(_ source: UsageLedgerProjectNameSource) -> String {
+        switch source {
+        case .projectName: "project name"
+        case .projectID: "project id"
+        case .inferredFromPath: "path-derived"
+        case .inferredFromName: "name-derived"
+        case .budgetOverride: "budget override"
+        case .unknown: "unknown"
         }
-        return "Unknown project"
+    }
+
+    private func projectConfidenceLabel(_ confidence: UsageLedgerProjectNameConfidence) -> String {
+        switch confidence {
+        case .high: "high"
+        case .medium: "medium"
+        case .low: "low"
+        case .none: "none"
+        }
+    }
+
+    private func projectIDFingerprint(_ projectID: String?) -> String? {
+        guard let projectID = projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty else {
+            return nil
+        }
+
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in projectID.lowercased().utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(format: "%08llx", hash)
     }
 
     // MARK: - Private chart builders

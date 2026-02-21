@@ -361,7 +361,10 @@ extension StatusItemController {
             let project = self.displayProjectName(
                 projectID: topProject.projectID,
                 projectName: topProject.projectName,
-                confidence: topProject.projectNameConfidence)
+                confidence: topProject.projectNameConfidence,
+                source: topProject.projectNameSource,
+                provenance: topProject.projectNameProvenance,
+                includeAttribution: true)
             var line = "- \(project): \(UsageFormatter.tokenCountString(topProject.totals.totalTokens)) tokens · \(topProject.entryCount) req"
             if let cost = topProject.totals.costUSD {
                 line += " (\(UsageFormatter.usdString(cost)))"
@@ -382,7 +385,10 @@ extension StatusItemController {
                 let project = self.displayProjectName(
                     projectID: summary.projectID,
                     projectName: summary.projectName,
-                    confidence: summary.projectNameConfidence)
+                    confidence: summary.projectNameConfidence,
+                    source: summary.projectNameSource,
+                    provenance: summary.projectNameProvenance,
+                    includeAttribution: true)
                 let modelName = UsageFormatter.modelDisplayName(summary.model)
                 var line = "- \(project) - \(modelName): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens · \(summary.entryCount) req"
                 if let cost = summary.totals.costUSD {
@@ -405,7 +411,10 @@ extension StatusItemController {
                 let project = self.displayProjectName(
                     projectID: summary.projectID,
                     projectName: summary.projectName,
-                    confidence: summary.projectNameConfidence)
+                    confidence: summary.projectNameConfidence,
+                    source: summary.projectNameSource,
+                    provenance: summary.projectNameProvenance,
+                    includeAttribution: true)
                 var line = "- \(project): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens · \(summary.entryCount) req"
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
