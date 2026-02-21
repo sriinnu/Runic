@@ -3,17 +3,21 @@ import CompilerPluginSupport
 import Foundation
 import PackageDescription
 
-// Silo - Browser cookie storage and extraction library
-let siloPath = "../Packages/Silo"
-let siloDependency: Package.Dependency = FileManager.default.fileExists(atPath: siloPath)
-    ? .package(path: siloPath)
-    : .package(url: "https://github.com/sriinnu/Silo", from: "1.0.0")
+// Prefer vendored first-party packages in-repo. Fallback to sibling workspace, then remote.
+func localPackageDependency(paths: [String], remoteURL: String) -> Package.Dependency {
+    for path in paths where FileManager.default.fileExists(atPath: path) {
+        return .package(path: path)
+    }
+    return .package(url: remoteURL, from: "1.0.0")
+}
 
-// Helix - Command-line parsing framework
-let helixPath = "../Packages/Helix"
-let helixDependency: Package.Dependency = FileManager.default.fileExists(atPath: helixPath)
-    ? .package(path: helixPath)
-    : .package(url: "https://github.com/sriinnu/Helix", from: "1.0.0")
+let siloDependency = localPackageDependency(
+    paths: ["Packages/Silo", "../Packages/Silo"],
+    remoteURL: "https://github.com/sriinnu/Silo")
+
+let helixDependency = localPackageDependency(
+    paths: ["Packages/Helix", "../Packages/Helix"],
+    remoteURL: "https://github.com/sriinnu/Helix")
 
 let package = Package(
     name: "Runic",

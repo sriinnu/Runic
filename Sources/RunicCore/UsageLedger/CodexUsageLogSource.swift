@@ -27,6 +27,40 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         var output: Int
     }
 
+    private static let projectIDKeys = [
+        "project_id",
+        "projectId",
+        "workspace_id",
+        "workspaceId",
+        "workspace_slug",
+        "workspaceSlug",
+    ]
+
+    private static let projectNameKeys = [
+        "project_name",
+        "projectName",
+        "workspace_name",
+        "workspaceName",
+        "workspace_title",
+        "workspaceTitle",
+        "project_title",
+        "projectTitle",
+    ]
+
+    private static let projectPathKeys = [
+        "workspace_path",
+        "workspacePath",
+        "project_path",
+        "projectPath",
+        "repo_path",
+        "repoPath",
+        "root_path",
+        "rootPath",
+        "cwd",
+        "working_directory",
+        "workingDirectory",
+    ]
+
     private let environment: [String: String]
     private let fileManager: FileManager
     private let sessionsRoot: URL?
@@ -160,6 +194,8 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         entries: inout [UsageLedgerEntry]) throws
     {
         var currentModel: String?
+        var currentProjectID: String?
+        var currentProjectName: String?
         var previousTotals: CodexTotals?
 
         let maxLineBytes = 256 * 1024
@@ -203,6 +239,19 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                                   let model = info["model"] as? String
                         {
                             currentModel = model
+                        }
+
+                        let payloadProject = payload["project"] as? [String: Any]
+                        let contextProjectID = self.firstString(from: payload, keys: Self.projectIDKeys)
+                            ?? self.firstString(from: payloadProject, keys: ["id"] + Self.projectIDKeys)
+                            ?? self.firstString(from: payload, keys: Self.projectPathKeys)
+                        let contextProjectName = self.firstString(from: payload, keys: Self.projectNameKeys)
+                            ?? self.firstString(from: payloadProject, keys: ["name", "title"] + Self.projectNameKeys)
+                        if let contextProjectID {
+                            currentProjectID = contextProjectID
+                        }
+                        if let contextProjectName {
+                            currentProjectName = contextProjectName
                         }
                     }
                     return
@@ -256,24 +305,40 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 let infoProject = info["project"] as? [String: Any]
                 let payloadProject = payload?["project"] as? [String: Any]
                 let rootProject = obj["project"] as? [String: Any]
-                let projectID = self.firstString(from: info, keys: ["project_id", "projectId"])
-                    ?? self.firstString(from: payload, keys: ["project_id", "projectId"])
-                    ?? self.firstString(from: obj, keys: ["project_id", "projectId"])
-                    ?? self.firstString(from: infoProject, keys: ["id", "project_id", "projectId"])
-                    ?? self.firstString(from: payloadProject, keys: ["id", "project_id", "projectId"])
-                    ?? self.firstString(from: rootProject, keys: ["id", "project_id", "projectId"])
+                let workspacePath = self.firstString(from: info, keys: Self.projectPathKeys)
+                    ?? self.firstString(from: payload, keys: Self.projectPathKeys)
+                    ?? self.firstString(from: obj, keys: Self.projectPathKeys)
+                    ?? self.firstString(from: infoProject, keys: Self.projectPathKeys)
+                    ?? self.firstString(from: payloadProject, keys: Self.projectPathKeys)
+                    ?? self.firstString(from: rootProject, keys: Self.projectPathKeys)
+                let projectID = self.firstString(from: info, keys: Self.projectIDKeys)
+                    ?? self.firstString(from: payload, keys: Self.projectIDKeys)
+                    ?? self.firstString(from: obj, keys: Self.projectIDKeys)
+                    ?? self.firstString(from: infoProject, keys: ["id"] + Self.projectIDKeys)
+                    ?? self.firstString(from: payloadProject, keys: ["id"] + Self.projectIDKeys)
+                    ?? self.firstString(from: rootProject, keys: ["id"] + Self.projectIDKeys)
+                    ?? workspacePath
+                    ?? currentProjectID
                 let projectName = self.firstString(
                     from: info,
-                    keys: ["project_name", "projectName", "workspace_name", "workspaceName"])
+                    keys: Self.projectNameKeys)
                     ?? self.firstString(
                         from: payload,
-                        keys: ["project_name", "projectName", "workspace_name", "workspaceName"])
+                        keys: Self.projectNameKeys)
                     ?? self.firstString(
                         from: obj,
-                        keys: ["project_name", "projectName", "workspace_name", "workspaceName"])
-                    ?? self.firstString(from: infoProject, keys: ["name", "project_name", "projectName", "title"])
-                    ?? self.firstString(from: payloadProject, keys: ["name", "project_name", "projectName", "title"])
-                    ?? self.firstString(from: rootProject, keys: ["name", "project_name", "projectName", "title"])
+                        keys: Self.projectNameKeys)
+                    ?? self.firstString(from: infoProject, keys: ["name", "title"] + Self.projectNameKeys)
+                    ?? self.firstString(from: payloadProject, keys: ["name", "title"] + Self.projectNameKeys)
+                    ?? self.firstString(from: rootProject, keys: ["name", "title"] + Self.projectNameKeys)
+                    ?? currentProjectName
+
+                if let projectID {
+                    currentProjectID = projectID
+                }
+                if let projectName {
+                    currentProjectName = projectName
+                }
                 let requestID = self.firstString(
                     from: info,
                     keys: ["request_id", "requestId", "event_id", "eventId"])

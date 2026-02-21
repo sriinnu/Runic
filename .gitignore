@@ -25,6 +25,8 @@ Icon.iconset
 .runic.local.env
 .claude/
 .swiftpm/
+Packages/*/.build/
+Packages/*/.swiftpm/
 Runic.app
 
 # Environment and secrets

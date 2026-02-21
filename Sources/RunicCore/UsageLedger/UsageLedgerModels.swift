@@ -257,11 +257,8 @@ public struct UsageLedgerModelSummary: Sendable, Codable, Hashable {
         if let trimmedName, !trimmedName.isEmpty {
             return trimmedName
         }
-        if self.projectNameConfidence == .some(.low) || self.projectNameConfidence == .some(.none) {
-            return "Unknown project"
-        }
-        if let projectID = self.projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty {
-            return projectID
+        if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: self.projectID) {
+            return fallback
         }
         return "Unknown project"
     }
@@ -308,11 +305,8 @@ public struct UsageLedgerProjectSummary: Sendable, Codable, Hashable {
         if let trimmedName, !trimmedName.isEmpty {
             return trimmedName
         }
-        if self.projectNameConfidence == .some(.low) || self.projectNameConfidence == .some(.none) {
-            return "Unknown project"
-        }
-        if let projectID = self.projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty {
-            return projectID
+        if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: self.projectID) {
+            return fallback
         }
         return "Unknown project"
     }

@@ -119,6 +119,19 @@ public enum UsageLedgerProjectIdentityResolver {
             provenance: provenance)
     }
 
+    public static func fallbackDisplayName(projectID: String?) -> String? {
+        if let tail = inferredPathTail(from: projectID) {
+            return tail
+        }
+        guard let normalized = normalizedIdentifier(projectID), !normalized.isEmpty else {
+            return nil
+        }
+        if normalized.contains("/") || normalized.contains("\\") {
+            return nil
+        }
+        return readableIdentifier(normalized)
+    }
+
     private static func normalizedIdentifier(_ value: String?) -> String? {
         let cleaned = normalizedDisplay(value)
         guard let cleaned, !cleaned.isEmpty else { return nil }

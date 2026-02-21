@@ -126,7 +126,6 @@ struct ProjectBudgetMenuView: View {
 
     private static func makeModel(from summaries: [UsageLedgerProjectSummary]) -> [ProjectUsage] {
         let budgets = ProjectBudgetStore.getAllBudgets()
-        let budgetMap = Dictionary(uniqueKeysWithValues: budgets.map { ($0.projectID, $0) })
 
         var result: [ProjectUsage] = []
 

@@ -2,13 +2,13 @@
 summary: "Runic CLI for fetching usage from the command line."
 read_when:
   - "You want to call Runic data from scripts or a terminal."
-  - "Adding or modifying Commander-based CLI commands."
+  - "Adding or modifying Helix-based CLI commands."
   - "Aligning menubar and CLI output/behavior."
 ---
 
 # Runic CLI
 
-A lightweight Commander-based CLI that mirrors the menubar app’s data paths (Codex web/RPC → PTY fallback; Claude web by default with CLI fallback and OAuth debug).
+A lightweight Helix-based CLI that mirrors the menubar app’s data paths (Codex web/RPC → PTY fallback; Claude web by default with CLI fallback and OAuth debug).
 Use it when you need usage numbers in scripts, CI, or dashboards without UI.
 
 ## Install
@@ -29,7 +29,7 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 ## Build
 - `./Scripts/package_app.sh` (or `./Scripts/compile_and_run.sh`) bundles `RunicCLI` into `Runic.app/Contents/Helpers/RunicCLI`.
 - Standalone: `swift build -c release --product RunicCLI` (binary at `./.build/release/RunicCLI`).
-- Dependencies: Swift 6.2+, Commander package (`https://github.com/steipete/Commander`).
+- Dependencies: Swift 6.2+, Helix package (`https://github.com/sriinnu/Helix`).
 
 ## Command
 - `runic` defaults to the `usage` command.

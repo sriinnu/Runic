@@ -219,6 +219,7 @@ extension StatusItemController {
         projectName: String?,
         confidence: UsageLedgerProjectNameConfidence? = nil) -> String
     {
+        _ = confidence
         let trimmedProjectName = projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmedProjectName, !trimmedProjectName.isEmpty {
             return trimmedProjectName
@@ -232,10 +233,10 @@ extension StatusItemController {
         {
             return budgetName
         }
-        if confidence == .some(.none) || confidence == .some(.low) {
-            return "Unknown project"
+        if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: projectID) {
+            return fallback
         }
-        return projectID
+        return "Unknown project"
     }
 
     // MARK: - Private chart builders

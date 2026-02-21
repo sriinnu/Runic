@@ -125,4 +125,46 @@ struct UsageLedgerProjectNameTests {
         #expect(summary?.projectNameSource == .inferredFromPath)
         #expect(summary?.displayProjectName == "Runic-App")
     }
+
+    @Test
+    func projectDisplayNameFallsBackToReadableIdentifier() {
+        let summary = UsageLedgerProjectSummary(
+            provider: .codex,
+            projectID: "runic-core",
+            projectName: nil,
+            projectNameConfidence: .low,
+            projectNameSource: .projectID,
+            projectNameProvenance: "entry.projectID",
+            entryCount: 1,
+            totals: UsageLedgerTotals(
+                inputTokens: 1,
+                outputTokens: 1,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: nil),
+            modelsUsed: [])
+
+        #expect(summary.displayProjectName == "runic-core")
+    }
+
+    @Test
+    func projectDisplayNameKeepsOpaqueIdentifiersHidden() {
+        let summary = UsageLedgerProjectSummary(
+            provider: .codex,
+            projectID: "8f189f6bb4e9fa93a9a4bf5cf97a0b4d",
+            projectName: nil,
+            projectNameConfidence: .low,
+            projectNameSource: .projectID,
+            projectNameProvenance: "entry.projectID",
+            entryCount: 1,
+            totals: UsageLedgerTotals(
+                inputTokens: 1,
+                outputTokens: 1,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: nil),
+            modelsUsed: [])
+
+        #expect(summary.displayProjectName == "Unknown project")
+    }
 }
