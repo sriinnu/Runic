@@ -1176,9 +1176,15 @@ extension UsageMenuCardView.Model {
         guard let summary else { return nil }
         let modelName = UsageFormatter.modelDisplayName(summary.model)
         let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
-        var parts = ["Top model: \(modelName)", "\(tokens) tokens"]
+        var parts = ["Top model: \(modelName)", "\(tokens) tokens", "\(summary.entryCount) req"]
         if let cost = summary.totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
+            if let per1K = UsageFormatter.usdPer1KTokensString(
+                costUSD: cost,
+                tokenCount: summary.totals.totalTokens)
+            {
+                parts.append(per1K)
+            }
         }
         return parts.joined(separator: " · ")
     }
@@ -1412,15 +1418,30 @@ extension UsageMenuCardView.Model {
             let tokens = UsageFormatter.tokenCountString(daily.totals.totalTokens)
             todayLine = "Today: \(tokens) tokens"
             var details: [String] = []
-            if let cost = daily.totals.costUSD {
-                details.append("Spend \(UsageFormatter.usdString(cost))")
+            let input = UsageFormatter.tokenCountString(daily.totals.inputTokens)
+            let output = UsageFormatter.tokenCountString(daily.totals.outputTokens)
+            var flowParts = ["In \(input)", "Out \(output)"]
+            if daily.totals.cacheReadTokens > 0 {
+                let cacheRead = UsageFormatter.tokenCountString(daily.totals.cacheReadTokens)
+                flowParts.append("Cache read \(cacheRead)")
             }
-            let cacheTotal = daily.totals.cacheCreationTokens + daily.totals.cacheReadTokens
-            if cacheTotal > 0 {
-                details.append("Cache \(UsageFormatter.tokenCountString(cacheTotal))")
+            if daily.totals.cacheCreationTokens > 0 {
+                let cacheWrite = UsageFormatter.tokenCountString(daily.totals.cacheCreationTokens)
+                flowParts.append("Cache write \(cacheWrite)")
+            }
+            details.append(flowParts.joined(separator: " · "))
+            if let cost = daily.totals.costUSD {
+                var spendParts = ["Spend \(UsageFormatter.usdString(cost))"]
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: daily.totals.totalTokens)
+                {
+                    spendParts.append(per1K)
+                }
+                details.append(spendParts.joined(separator: " · "))
             }
             if !details.isEmpty {
-                todayDetail = details.joined(separator: ", ")
+                todayDetail = details.joined(separator: "\n")
             }
         }
 
@@ -1428,7 +1449,7 @@ extension UsageMenuCardView.Model {
         var blockDetail: String?
         if let block, block.isActive {
             let tokens = UsageFormatter.tokenCountString(block.totals.totalTokens)
-            blockLine = "Active block: \(tokens) tokens"
+            blockLine = "Active block: \(tokens) tokens · \(block.entryCount) req"
             var details: [String] = []
             details.append("Ends \(UsageFormatter.resetCountdownDescription(from: block.end, now: input.now))")
             if let rate = block.tokensPerMinute {
@@ -1438,15 +1459,48 @@ extension UsageMenuCardView.Model {
             if let projected = block.projectedTotalTokens {
                 details.append("Proj \(UsageFormatter.tokenCountString(projected))")
             }
-            blockDetail = details.joined(separator: ", ")
+            let inputTokens = UsageFormatter.tokenCountString(block.totals.inputTokens)
+            let outputTokens = UsageFormatter.tokenCountString(block.totals.outputTokens)
+            details.append("In \(inputTokens) · Out \(outputTokens)")
+            if let cost = block.totals.costUSD {
+                var spendParts = ["Spend \(UsageFormatter.usdString(cost))"]
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: block.totals.totalTokens)
+                {
+                    spendParts.append(per1K)
+                }
+                if let perRequest = UsageFormatter.usdPerRequestString(
+                    costUSD: cost,
+                    requestCount: block.entryCount)
+                {
+                    spendParts.append(perRequest)
+                }
+                if let burnPerHour = UsageFormatter.usdPerHourFromTokensString(
+                    costUSD: cost,
+                    tokenCount: block.totals.totalTokens,
+                    tokensPerMinute: block.tokensPerMinute)
+                {
+                    spendParts.append("Burn \(burnPerHour)")
+                }
+                details.append(spendParts.joined(separator: " · "))
+            }
+            blockDetail = details.joined(separator: "\n")
         }
 
         var modelLine: String?
         if let topModel {
             let tokens = UsageFormatter.tokenCountString(topModel.totals.totalTokens)
-            var parts = ["Top model: \(topModel.model) · \(tokens) tokens"]
+            let modelName = UsageFormatter.modelDisplayName(topModel.model)
+            var parts = ["Top model: \(modelName) · \(tokens) tokens · \(topModel.entryCount) req"]
             if let cost = topModel.totals.costUSD {
                 parts.append(UsageFormatter.usdString(cost))
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: topModel.totals.totalTokens)
+                {
+                    parts.append(per1K)
+                }
             }
             modelLine = parts.joined(separator: " · ")
         }
@@ -1455,9 +1509,15 @@ extension UsageMenuCardView.Model {
         if let topProject {
             let name = topProject.displayProjectName
             let tokens = UsageFormatter.tokenCountString(topProject.totals.totalTokens)
-            var parts = ["Top project: \(name) · \(tokens) tokens"]
+            var parts = ["Top project: \(name) · \(tokens) tokens · \(topProject.entryCount) req"]
             if let cost = topProject.totals.costUSD {
                 parts.append(UsageFormatter.usdString(cost))
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: topProject.totals.totalTokens)
+                {
+                    parts.append(per1K)
+                }
             }
             projectLine = parts.joined(separator: " · ")
         }

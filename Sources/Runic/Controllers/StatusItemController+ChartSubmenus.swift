@@ -50,13 +50,18 @@ extension StatusItemController {
     }
 
     func makeInsightsSubmenu(provider: UsageProvider) -> NSMenu? {
+        let daily = self.store.ledgerDailySummary(for: provider)
+        let activeBlock = self.store.ledgerActiveBlock(for: provider)
         let modelBreakdown = self.store.ledgerModelBreakdown(for: provider)
             .filter { $0.provider == provider }
         let projectBreakdown = self.store.ledgerProjectBreakdown(for: provider)
             .filter { $0.provider == provider }
         let reliability = self.store.ledgerReliabilityScore(for: provider)
         let routing = self.store.ledgerRoutingRecommendation(for: provider)
-        guard !modelBreakdown.isEmpty || !projectBreakdown.isEmpty || reliability != nil || routing != nil else { return nil }
+        let hasActiveBlock = activeBlock?.isActive == true
+        guard daily != nil || hasActiveBlock || !modelBreakdown.isEmpty || !projectBreakdown.isEmpty || reliability != nil || routing != nil else {
+            return nil
+        }
 
         let submenu = NSMenu()
         submenu.autoenablesItems = false
@@ -67,6 +72,49 @@ extension StatusItemController {
         let titleItem = NSMenuItem(title: "Local insights (today)", action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         submenu.addItem(titleItem)
+
+        if let daily {
+            let totalTokens = UsageFormatter.tokenCountString(daily.totals.totalTokens)
+            let inputTokens = UsageFormatter.tokenCountString(daily.totals.inputTokens)
+            let outputTokens = UsageFormatter.tokenCountString(daily.totals.outputTokens)
+            var line = "Today: \(totalTokens) tokens · in \(inputTokens) · out \(outputTokens)"
+            if let cost = daily.totals.costUSD {
+                line += " · \(UsageFormatter.usdString(cost))"
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: daily.totals.totalTokens)
+                {
+                    line += " · \(per1K)"
+                }
+            }
+            let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            submenu.addItem(item)
+        }
+
+        if let activeBlock, activeBlock.isActive {
+            let tokens = UsageFormatter.tokenCountString(activeBlock.totals.totalTokens)
+            var line = "Block: \(tokens) tokens · \(activeBlock.entryCount) req"
+            if let cost = activeBlock.totals.costUSD {
+                line += " · \(UsageFormatter.usdString(cost))"
+                if let perRequest = UsageFormatter.usdPerRequestString(
+                    costUSD: cost,
+                    requestCount: activeBlock.entryCount)
+                {
+                    line += " · \(perRequest)"
+                }
+            }
+            if let burn = UsageFormatter.usdPerHourFromTokensString(
+                costUSD: activeBlock.totals.costUSD,
+                tokenCount: activeBlock.totals.totalTokens,
+                tokensPerMinute: activeBlock.tokensPerMinute)
+            {
+                line += " · burn \(burn)"
+            }
+            let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            submenu.addItem(item)
+        }
 
         if let reliability {
             let item = NSMenuItem(
@@ -102,8 +150,15 @@ extension StatusItemController {
                     confidence: summary.projectNameConfidence)
                 let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
-                var title = "\(project) · \(summary.model): \(tokens) tokens"
+                let modelName = UsageFormatter.modelDisplayName(summary.model)
+                var title = "\(project) · \(modelName): \(tokens) tokens · \(summary.entryCount) req"
                 if let costText { title += " · \(costText)" }
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: summary.totals.costUSD,
+                    tokenCount: summary.totals.totalTokens)
+                {
+                    title += " · \(per1K)"
+                }
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
                 item.isEnabled = false
                 submenu.addItem(item)
@@ -129,8 +184,14 @@ extension StatusItemController {
                     : (summary.modelsUsed.count <= 3
                         ? summary.modelsUsed.joined(separator: ", ")
                         : "\(summary.modelsUsed.count) models")
-                var title = "\(project): \(tokens) tokens"
+                var title = "\(project): \(tokens) tokens · \(summary.entryCount) req"
                 if let costText { title += " · \(costText)" }
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: summary.totals.costUSD,
+                    tokenCount: summary.totals.totalTokens)
+                {
+                    title += " · \(per1K)"
+                }
                 if let modelsText { title += " · \(modelsText)" }
                 let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
                 item.isEnabled = false
