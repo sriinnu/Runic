@@ -149,13 +149,26 @@ if [[ "${DEBUG_LLDB}" == "1" && -n "${RELEASE_ARCHES}" ]]; then
 fi
 HOST_ARCH="$(uname -m)"
 ARCHES_VALUE="${HOST_ARCH}"
+DEV_BUILD_ROOT="${ROOT_DIR}/builds/dev"
+DEV_BUILD_LABEL="${RUNIC_DEV_BUILD_LABEL:-dev-current}"
 if [[ -n "${RELEASE_ARCHES}" ]]; then
   ARCHES_VALUE="${RELEASE_ARCHES}"
 fi
 if [[ "${DEBUG_LLDB}" == "1" ]]; then
-  run_step "package app" env CODEXBAR_ALLOW_LLDB=1 ARCHES="${ARCHES_VALUE}" "${ROOT_DIR}/Scripts/package_app.sh" debug
+  run_step "package app" env \
+    CODEXBAR_ALLOW_LLDB=1 \
+    RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
+    RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
+    RUNIC_STABLE_BUILD_DIR=1 \
+    ARCHES="${ARCHES_VALUE}" \
+    "${ROOT_DIR}/Scripts/package_app.sh" debug
 else
-  run_step "package app" env ARCHES="${ARCHES_VALUE}" "${ROOT_DIR}/Scripts/package_app.sh"
+  run_step "package app" env \
+    RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
+    RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
+    RUNIC_STABLE_BUILD_DIR=1 \
+    ARCHES="${ARCHES_VALUE}" \
+    "${ROOT_DIR}/Scripts/package_app.sh"
 fi
 
 # 4) Launch the packaged app.

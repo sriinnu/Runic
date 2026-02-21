@@ -22,9 +22,11 @@ done
 source "$ROOT/version.env"
 
 BUILD_ROOT="${RUNIC_BUILD_ROOT:-$ROOT/builds/versions}"
-BUILD_LABEL="athena-runic-${MARKETING_VERSION}-${BUILD_NUMBER}"
+DEFAULT_BUILD_LABEL="athena-runic-${MARKETING_VERSION}-${BUILD_NUMBER}"
+BUILD_LABEL="${RUNIC_BUILD_LABEL:-$DEFAULT_BUILD_LABEL}"
+STABLE_BUILD_DIR="${RUNIC_STABLE_BUILD_DIR:-0}"
 BUILD_DIR="${BUILD_ROOT}/${BUILD_LABEL}"
-if [[ -d "$BUILD_DIR" ]]; then
+if [[ "$STABLE_BUILD_DIR" != "1" && -d "$BUILD_DIR" ]]; then
   suffix=1
   while [[ -d "${BUILD_DIR}-${suffix}" ]]; do
     suffix=$((suffix + 1))
