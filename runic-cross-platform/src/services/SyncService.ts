@@ -6,6 +6,8 @@
 
 import { createProviderClient, ApiError } from './ApiClient';
 import { cacheData, getCachedData } from '../utils/storage';
+import { retryWithBackoff, RetryStrategy } from '../utils/retry';
+import { ErrorMessageBuilder } from '../utils/ErrorMessages';
 import type { Provider, UsageStats, ProviderBilling } from '../types';
 
 /**
@@ -41,7 +43,7 @@ class SyncService {
   private syncQueue: Set<string> = new Set();
 
   /**
-   * Synchronizes data for a single provider.
+   * Synchronizes data for a single provider with automatic retry.
    *
    * @param provider - Provider configuration
    * @param options - Sync options
@@ -78,7 +80,18 @@ class SyncService {
     this.syncQueue.add(provider.id);
 
     try {
-      const result = await this.fetchProviderData(provider);
+      // Fetch data with automatic retry
+      const result = await retryWithBackoff(
+        () => this.fetchProviderData(provider),
+        {
+          ...RetryStrategy.default(),
+          onRetry: (attempt, delay) => {
+            console.log(
+              `[Sync] Retrying ${provider.id} (attempt ${attempt}) after ${delay}ms`
+            );
+          },
+        }
+      );
 
       // Cache the result
       await cacheData(`sync_result_${provider.id}`, result, cacheDuration);
@@ -229,22 +242,28 @@ class SyncService {
   }
 
   /**
-   * Handles sync errors and creates error result.
+   * Handles sync errors and creates error result with actionable guidance.
    *
    * @param providerId - Provider identifier
    * @param error - Error object
    * @returns Sync result with error information
    */
   private handleSyncError(providerId: string, error: unknown): SyncResult {
-    let errorMessage = 'Unknown error occurred';
+    let errorMessage: string;
+    let fullErrorDetails: string | undefined;
 
     if (error instanceof ApiError) {
-      errorMessage = error.message;
+      // Use compact description for sync result, but log full details
+      errorMessage = error.compactDescription;
+      fullErrorDetails = error.fullDescription;
+      console.error(`Sync failed for ${providerId}:`, fullErrorDetails);
     } else if (error instanceof Error) {
       errorMessage = error.message;
+      console.error(`Sync failed for ${providerId}:`, error.message);
+    } else {
+      errorMessage = 'Unknown error occurred';
+      console.error(`Sync failed for ${providerId}:`, error);
     }
-
-    console.error(`Sync failed for ${providerId}:`, errorMessage);
 
     return {
       providerId,

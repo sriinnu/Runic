@@ -46,14 +46,18 @@ enum RunicCLI {
         let insightsSignature = CommandSignature(
             options: [
                 OptionDefinition(label: "provider", names: [.long("provider")], help: "Provider to analyze (claude, codex, or all)"),
-                OptionDefinition(label: "view", names: [.long("view")], help: "View: daily | session | blocks | models | projects"),
+                OptionDefinition(label: "view", names: [.long("view")], help: "View: daily | session | blocks | models | projects | comparative | efficiency"),
                 OptionDefinition(label: "project", names: [.long("project")], help: "Filter to a specific project"),
                 OptionDefinition(label: "timezone", names: [.long("timezone")], help: "Timezone identifier (defaults to local)"),
+                OptionDefinition(label: "granularity", names: [.long("granularity")], help: "Time granularity: hourly (for daily view)"),
+                OptionDefinition(label: "gitDirectory", names: [.long("git-directory")], help: "Path to .git directory (defaults to current directory)"),
             ],
             flags: [
                 FlagDefinition(label: "json", names: [.long("json")], help: "Output JSON format"),
                 FlagDefinition(label: "pretty", names: [.long("pretty")], help: "Pretty-print output"),
                 FlagDefinition(label: "noColor", names: [.long("no-color")], help: "Disable ANSI colors"),
+                FlagDefinition(label: "budget", names: [.long("budget")], help: "Include budget tracking information"),
+                FlagDefinition(label: "withCommits", names: [.long("with-commits")], help: "Link usage entries to git commits"),
             ])
 
         let usageDescriptor = CommandDescriptor(
@@ -215,8 +219,12 @@ enum RunicCLI {
         let viewArg = invocation.parsedValues.options["view"]?.first?.lowercased() ?? "daily"
         let projectFilter = invocation.parsedValues.options["project"]?.first
         let timezoneArg = invocation.parsedValues.options["timezone"]?.first
+        let granularityArg = invocation.parsedValues.options["granularity"]?.first?.lowercased()
+        let gitDirectoryArg = invocation.parsedValues.options["gitDirectory"]?.first
         let isJson = invocation.parsedValues.flags.contains("json")
         let isPretty = invocation.parsedValues.flags.contains("pretty")
+        let includeBudget = invocation.parsedValues.flags.contains("budget")
+        let withCommits = invocation.parsedValues.flags.contains("withCommits")
 
         let timeZone = timezoneArg.flatMap(TimeZone.init(identifier:)) ?? .current
         let providers = Self.resolveInsightsProviders(providerArg)
@@ -251,10 +259,23 @@ enum RunicCLI {
             entries = entries.filter { $0.projectID == projectFilter }
         }
 
+        // Link commits if requested
+        if withCommits {
+            let gitDirectory = gitDirectoryArg.map { URL(fileURLWithPath: $0) }
+            let entriesWithCommits = GitHubIntegration.linkCommitsToUsage(entries: entries, gitDirectory: gitDirectory)
+            Self.renderInsightsWithCommits(entriesWithCommits, isJson: isJson, isPretty: isPretty)
+            return
+        }
+
         switch viewArg {
         case "daily":
-            let summaries = UsageLedgerAggregator.dailySummaries(entries: entries, timeZone: timeZone)
-            Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            if let granularity = granularityArg, granularity == "hourly" {
+                let summaries = UsageLedgerAggregator.hourlySummaries(entries: entries, timeZone: timeZone)
+                Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            } else {
+                let summaries = UsageLedgerAggregator.dailySummaries(entries: entries, timeZone: timeZone)
+                Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            }
         case "session":
             let summaries = UsageLedgerAggregator.sessionSummaries(entries: entries)
             Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
@@ -266,7 +287,18 @@ enum RunicCLI {
             Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
         case "projects":
             let summaries = UsageLedgerAggregator.projectSummaries(entries: entries)
-            Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            if includeBudget {
+                let budgetData = Self.enrichProjectsWithBudget(summaries)
+                Self.renderInsightsOutput(budgetData, isJson: isJson, isPretty: isPretty)
+            } else {
+                Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            }
+        case "comparative":
+            let comparisons = Self.modelCostComparison(entries: entries)
+            Self.renderInsightsOutput(comparisons, isJson: isJson, isPretty: isPretty)
+        case "efficiency":
+            let efficiencies = Self.modelEfficiencyMetrics(entries: entries)
+            Self.renderInsightsOutput(efficiencies, isJson: isJson, isPretty: isPretty)
         default:
             Self.exit(code: 1, message: "Unknown insights view: \(viewArg)")
         }
@@ -319,6 +351,156 @@ enum RunicCLI {
     private static func printError(_ message: String) {
         if let data = (message + "\n").data(using: .utf8) {
             FileHandle.standardError.write(data)
+        }
+    }
+
+    // MARK: - Budget Tracking
+
+    private static func enrichProjectsWithBudget(_ summaries: [UsageLedgerProjectSummary]) -> [ProjectBudgetSummary] {
+        let budgetsData = ProjectBudgetStore.load()
+        let now = Date()
+        let calendar = Calendar.current
+        let currentMonthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))!
+
+        return summaries.map { summary in
+            guard let projectID = summary.projectID,
+                  let budget = budgetsData.budgets[projectID],
+                  budget.enabled else {
+                return ProjectBudgetSummary(
+                    provider: summary.provider,
+                    projectID: summary.projectID,
+                    entryCount: summary.entryCount,
+                    totals: summary.totals,
+                    modelsUsed: summary.modelsUsed,
+                    budgetInfo: nil)
+            }
+
+            let spent = summary.totals.costUSD ?? 0.0
+            let limit = budget.monthlyLimit
+            let percentage = limit > 0 ? (spent / limit) * 100.0 : 0.0
+            let status: BudgetStatus = {
+                if percentage >= 100.0 { return .critical }
+                if percentage >= budget.alertThreshold * 100.0 { return .warning }
+                return .ok
+            }()
+
+            let budgetInfo = BudgetInfo(
+                spent: spent,
+                limit: limit,
+                percentage: percentage,
+                status: status,
+                monthStart: currentMonthStart)
+
+            return ProjectBudgetSummary(
+                provider: summary.provider,
+                projectID: summary.projectID,
+                entryCount: summary.entryCount,
+                totals: summary.totals,
+                modelsUsed: summary.modelsUsed,
+                budgetInfo: budgetInfo)
+        }
+    }
+
+    // MARK: - Model Comparison
+
+    private static func modelCostComparison(entries: [UsageLedgerEntry]) -> [ModelCostComparison] {
+        var modelStats: [String: ModelStatsAccumulator] = [:]
+
+        for entry in entries {
+            guard let model = entry.model, !model.isEmpty,
+                  let cost = entry.costUSD, cost > 0 else { continue }
+
+            let totalTokens = entry.totalTokens
+            guard totalTokens > 0 else { continue }
+
+            modelStats[model, default: ModelStatsAccumulator()].add(
+                cost: cost,
+                tokens: totalTokens)
+        }
+
+        let comparisons = modelStats.map { model, stats in
+            ModelCostComparison(
+                model: model,
+                totalCost: stats.totalCost,
+                totalTokens: stats.totalTokens,
+                costPerToken: stats.totalCost / Double(stats.totalTokens),
+                requestCount: stats.requestCount)
+        }
+        .sorted { $0.costPerToken > $1.costPerToken }
+
+        // Add rankings
+        return comparisons.enumerated().map { index, comparison in
+            var ranked = comparison
+            ranked.rank = index + 1
+            return ranked
+        }
+    }
+
+    // MARK: - Efficiency Metrics
+
+    private static func modelEfficiencyMetrics(entries: [UsageLedgerEntry]) -> [ModelEfficiencyMetrics] {
+        var modelStats: [String: EfficiencyStatsAccumulator] = [:]
+
+        for entry in entries {
+            guard let model = entry.model, !model.isEmpty else { continue }
+            modelStats[model, default: EfficiencyStatsAccumulator()].add(entry)
+        }
+
+        return modelStats.map { model, stats in
+            let tokensPerRequest = stats.requestCount > 0
+                ? Double(stats.totalTokens) / Double(stats.requestCount)
+                : 0.0
+            let costPerRequest = stats.requestCount > 0 && stats.hasCost
+                ? stats.totalCost / Double(stats.requestCount)
+                : nil
+            let cacheHitRate = stats.totalCacheableTokens > 0
+                ? (Double(stats.cacheReadTokens) / Double(stats.totalCacheableTokens)) * 100.0
+                : 0.0
+
+            return ModelEfficiencyMetrics(
+                model: model,
+                requestCount: stats.requestCount,
+                tokensPerRequest: tokensPerRequest,
+                costPerRequest: costPerRequest,
+                cacheHitRate: cacheHitRate,
+                totalCost: stats.hasCost ? stats.totalCost : nil)
+        }
+        .sorted { $0.requestCount > $1.requestCount }
+    }
+
+    private static func renderInsightsWithCommits(_ entriesWithCommits: [UsageWithCommit], isJson: Bool, isPretty: Bool) {
+        if isJson {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            if isPretty {
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            }
+            if let data = try? encoder.encode(entriesWithCommits),
+               let text = String(data: data, encoding: .utf8)
+            {
+                print(text)
+            } else {
+                print("{}")
+            }
+            return
+        }
+
+        // Text output
+        for item in entriesWithCommits {
+            let entry = item.entry
+            let timestamp = ISO8601DateFormatter().string(from: entry.timestamp)
+            let provider = entry.provider.rawValue
+            let tokens = entry.totalTokens
+            let costText = entry.costUSD.map { String(format: "$%.4f", $0) } ?? "n/a"
+            var line = "\(timestamp) - \(provider) - \(tokens) tokens - \(costText)"
+
+            if let commit = item.commit {
+                line += " - [\(commit.shortSha)] \(commit.message)"
+            } else {
+                line += " - [no commit]"
+            }
+
+            print(line)
         }
     }
 
@@ -381,6 +563,49 @@ enum RunicCLI {
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
                 let models = summary.modelsUsed.isEmpty ? "no models" : summary.modelsUsed.joined(separator: ", ")
                 print("\(project) - \(summary.provider.rawValue) - \(summary.totals.totalTokens) tokens - \(costText) - \(models)")
+            }
+            return
+        }
+
+        if let summaries = payload as? [UsageLedgerHourlySummary] {
+            for summary in summaries {
+                let project = summary.projectID ?? "all"
+                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
+                print("\(summary.hourKey) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText) - \(summary.requestCount) requests")
+            }
+            return
+        }
+
+        if let summaries = payload as? [ProjectBudgetSummary] {
+            for summary in summaries {
+                let project = summary.projectID ?? "unknown"
+                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
+                let models = summary.modelsUsed.isEmpty ? "no models" : summary.modelsUsed.joined(separator: ", ")
+                var line = "\(project) - \(summary.provider.rawValue) - \(summary.totals.totalTokens) tokens - \(costText) - \(models)"
+                if let budget = summary.budgetInfo {
+                    line += " - Budget: \(String(format: "$%.2f", budget.spent))/\(String(format: "$%.2f", budget.limit)) (\(String(format: "%.1f", budget.percentage))%) [\(budget.status.rawValue)]"
+                }
+                print(line)
+            }
+            return
+        }
+
+        if let comparisons = payload as? [ModelCostComparison] {
+            for comparison in comparisons {
+                let costPerToken = String(format: "$%.6f", comparison.costPerToken)
+                let totalCost = String(format: "$%.2f", comparison.totalCost)
+                print("#\(comparison.rank ?? 0) \(comparison.model) - \(costPerToken)/token - Total: \(totalCost) - Tokens: \(comparison.totalTokens) - Requests: \(comparison.requestCount)")
+            }
+            return
+        }
+
+        if let metrics = payload as? [ModelEfficiencyMetrics] {
+            for metric in metrics {
+                let tokensPerReq = String(format: "%.0f", metric.tokensPerRequest)
+                let costPerReq = metric.costPerRequest.map { String(format: "$%.4f", $0) } ?? "n/a"
+                let cacheHit = String(format: "%.1f%%", metric.cacheHitRate)
+                let totalCost = metric.totalCost.map { String(format: "$%.2f", $0) } ?? "n/a"
+                print("\(metric.model) - \(metric.requestCount) reqs - \(tokensPerReq) tok/req - \(costPerReq)/req - Cache: \(cacheHit) - Total: \(totalCost)")
             }
             return
         }
@@ -559,13 +784,26 @@ enum RunicCLI {
         if command == "insights" || command == nil {
             print("insights - Analyze local usage logs")
             print("  Options:")
-            print("    --provider PROVIDER    Provider to analyze (claude, codex, all)")
-            print("    --view VIEW            daily | session | blocks | models | projects")
-            print("    --project PROJECT      Filter to a specific project")
-            print("    --timezone TZ          Timezone identifier (defaults to local)")
-            print("    --json                 Output JSON format")
-            print("    --pretty               Pretty-print output")
-            print("    --no-color             Disable ANSI colors")
+            print("    --provider PROVIDER      Provider to analyze (claude, codex, all)")
+            print("    --view VIEW              daily | session | blocks | models | projects | comparative | efficiency")
+            print("    --project PROJECT        Filter to a specific project")
+            print("    --timezone TZ            Timezone identifier (defaults to local)")
+            print("    --granularity GRAN       Time granularity: hourly (for daily view)")
+            print("    --git-directory PATH     Path to .git directory (defaults to current directory)")
+            print("    --json                   Output JSON format")
+            print("    --pretty                 Pretty-print output")
+            print("    --no-color               Disable ANSI colors")
+            print("    --budget                 Include budget tracking (for projects view)")
+            print("    --with-commits           Link usage entries to git commits (5 minute window)")
+            print("")
+            print("  Views:")
+            print("    daily                    Daily usage summaries")
+            print("    session                  Per-session usage summaries")
+            print("    blocks                   Activity block summaries")
+            print("    models                   Per-model usage summaries")
+            print("    projects                 Per-project usage summaries")
+            print("    comparative              Model cost-per-token comparison with rankings")
+            print("    efficiency               Efficiency metrics (tokens/request, cost/request, cache hit rate)")
         }
         if command != nil && command != "usage" && command != "cost" && command != "insights" {
             print("Unknown command: \(command ?? "")")
@@ -615,4 +853,87 @@ struct InsightsCommand {
     var view: String = "daily"
     var project: String? = nil
     var timezone: String? = nil
+    var granularity: String? = nil
+    var gitDirectory: String? = nil
+    var budget: Bool = false
+    var withCommits: Bool = false
+}
+
+// MARK: - Budget Data Models
+
+enum BudgetStatus: String, Codable {
+    case ok
+    case warning
+    case critical
+}
+
+struct BudgetInfo: Codable {
+    let spent: Double
+    let limit: Double
+    let percentage: Double
+    let status: BudgetStatus
+    let monthStart: Date
+}
+
+struct ProjectBudgetSummary: Codable {
+    let provider: UsageProvider
+    let projectID: String?
+    let entryCount: Int
+    let totals: UsageLedgerTotals
+    let modelsUsed: [String]
+    let budgetInfo: BudgetInfo?
+}
+
+// MARK: - Model Comparison Data Models
+
+struct ModelCostComparison: Codable {
+    let model: String
+    let totalCost: Double
+    let totalTokens: Int
+    let costPerToken: Double
+    let requestCount: Int
+    var rank: Int?
+}
+
+struct ModelStatsAccumulator {
+    var totalCost: Double = 0.0
+    var totalTokens: Int = 0
+    var requestCount: Int = 0
+
+    mutating func add(cost: Double, tokens: Int) {
+        self.totalCost += cost
+        self.totalTokens += tokens
+        self.requestCount += 1
+    }
+}
+
+// MARK: - Efficiency Data Models
+
+struct ModelEfficiencyMetrics: Codable {
+    let model: String
+    let requestCount: Int
+    let tokensPerRequest: Double
+    let costPerRequest: Double?
+    let cacheHitRate: Double
+    let totalCost: Double?
+}
+
+struct EfficiencyStatsAccumulator {
+    var requestCount: Int = 0
+    var totalTokens: Int = 0
+    var totalCost: Double = 0.0
+    var hasCost: Bool = false
+    var cacheReadTokens: Int = 0
+    var totalCacheableTokens: Int = 0
+
+    mutating func add(_ entry: UsageLedgerEntry) {
+        self.requestCount += 1
+        self.totalTokens += entry.totalTokens
+        if let cost = entry.costUSD {
+            self.totalCost += cost
+            self.hasCost = true
+        }
+        self.cacheReadTokens += entry.cacheReadTokens
+        self.totalCacheableTokens += entry.cacheCreationTokens + entry.cacheReadTokens
+    }
 }

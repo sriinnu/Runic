@@ -28,76 +28,76 @@ struct AboutPane: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            if let image = NSApplication.shared.applicationIconImage {
-                Button(action: self.openProjectHome) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .frame(width: 92, height: 92)
-                        .cornerRadius(16)
-                        .scaleEffect(self.iconHover ? 1.05 : 1.0)
-                        .shadow(color: self.iconHover ? .accentColor.opacity(0.25) : .clear, radius: 6)
-                }
-                .buttonStyle(.plain)
-                .onHover { hovering in
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
-                        self.iconHover = hovering
+        PreferencesPane(showsIndicators: false) {
+            VStack(spacing: RunicSpacing.sm) {
+                if let image = NSApplication.shared.applicationIconImage {
+                    Button(action: self.openProjectHome) {
+                        Image(nsImage: image)
+                            .resizable()
+                            .frame(width: 92, height: 92)
+                            .cornerRadius(RunicCornerRadius.xl)
+                            .scaleEffect(self.iconHover ? 1.05 : 1.0)
+                            .shadow(color: self.iconHover ? .accentColor.opacity(0.25) : .clear, radius: 6)
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovering in
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                            self.iconHover = hovering
+                        }
                     }
                 }
-            }
 
-            VStack(spacing: 2) {
-                Text("Runic")
-                    .font(.title3).bold()
-                Text("Version \(self.versionString)")
-                    .foregroundStyle(.secondary)
-                if let buildTimestamp {
-                    Text("Built \(buildTimestamp)")
+                VStack(spacing: RunicSpacing.xxs) {
+                    Text("Runic")
+                        .font(.title3).bold()
+                    Text("Version \(self.versionString)")
+                        .foregroundStyle(.secondary)
+                    if let buildTimestamp {
+                        Text("Built \(buildTimestamp)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("May your tokens never run out—keep agent limits in view.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                Text("May your tokens never run out—keep agent limits in view.")
+
+                VStack(alignment: .center, spacing: RunicSpacing.xs) {
+                    AboutLinkRow(
+                        icon: "chevron.left.slash.chevron.right",
+                        title: "GitHub",
+                        url: "https://github.com/sriinnu/Runic")
+                    AboutLinkRow(icon: "globe", title: "Website", url: "https://www.srinivas.dev")
+                    AboutLinkRow(icon: "bird", title: "Twitter", url: "https://x.com/sriinnu")
+                    AboutLinkRow(icon: "envelope", title: "Email", url: "mailto:hello@srinivas.dev")
+                }
+                .padding(.top, RunicSpacing.xs)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
+
+                PreferencesDivider()
+
+                if self.updater.isAvailable {
+                    VStack(spacing: RunicSpacing.sm) {
+                        Toggle("Check for updates automatically", isOn: self.$autoUpdateEnabled)
+                            .toggleStyle(.checkbox)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        Button("Check for Updates…") { self.updater.checkForUpdates(nil) }
+                    }
+                } else {
+                    Text(self.updater.unavailableReason ?? "Updates unavailable in this build.")
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("© 2025 Srinivas Pendela. MIT License.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .padding(.top, RunicSpacing.xxs)
+
+                Spacer(minLength: 0)
             }
-
-            VStack(alignment: .center, spacing: 10) {
-                AboutLinkRow(
-                    icon: "chevron.left.slash.chevron.right",
-                    title: "GitHub",
-                    url: "https://github.com/sriinnu/Runic")
-                AboutLinkRow(icon: "globe", title: "Website", url: "https://www.srinivas.dev")
-                AboutLinkRow(icon: "bird", title: "Twitter", url: "https://x.com/sriinnu")
-                AboutLinkRow(icon: "envelope", title: "Email", url: "mailto:hello@srinivas.dev")
-            }
-            .padding(.top, 8)
-            .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
-
-            PreferencesDivider()
-
-            if self.updater.isAvailable {
-                VStack(spacing: 10) {
-                    Toggle("Check for updates automatically", isOn: self.$autoUpdateEnabled)
-                        .toggleStyle(.checkbox)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    Button("Check for Updates…") { self.updater.checkForUpdates(nil) }
-                }
-            } else {
-                Text(self.updater.unavailableReason ?? "Updates unavailable in this build.")
-                    .foregroundStyle(.secondary)
-            }
-
-            Text("© 2025 Srinivas Pendela. MIT License.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-        .padding(.vertical, PreferencesLayoutMetrics.paneVertical)
         .onAppear {
             guard !self.didLoadUpdaterState else { return }
             // Align Sparkle's flag with the persisted preference on first load.

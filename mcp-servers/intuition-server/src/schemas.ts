@@ -8,7 +8,7 @@ import { z } from "zod";
 /**
  * Task type enumeration for model recommendations
  */
-export const TaskType = z.enum(["coding", "chat", "analysis", "documentation", "testing"]);
+export const TaskType = z.enum(["coding", "chat", "analysis", "documentation", "testing", "writing", "general"]);
 export type TaskType = z.infer<typeof TaskType>;
 
 /**
@@ -95,3 +95,33 @@ export const ProviderUsageSchema = z.object({
 });
 
 export type ProviderUsage = z.infer<typeof ProviderUsageSchema>;
+
+/**
+ * Compare model costs schema
+ */
+export const CompareModelCostsSchema = z.object({
+  models: z.array(z.string()).min(2),
+  taskType: z.enum(["coding", "writing", "analysis", "general"]),
+  historicalUsage: z.array(z.object({
+    model: z.string(),
+    inputTokens: z.number().int().nonnegative(),
+    outputTokens: z.number().int().nonnegative(),
+    cost: z.number().nonnegative(),
+  })).optional(),
+});
+
+export type CompareModelCosts = z.infer<typeof CompareModelCostsSchema>;
+
+/**
+ * Detect usage anomaly schema
+ */
+export const DetectUsageAnomalySchema = z.object({
+  hourlyUsage: z.array(z.object({
+    hour: z.string(),
+    tokens: z.number().int().nonnegative(),
+    cost: z.number().nonnegative(),
+  })).min(3),
+  threshold: z.number().positive().default(2.5),
+});
+
+export type DetectUsageAnomaly = z.infer<typeof DetectUsageAnomalySchema>;

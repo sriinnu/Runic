@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks';
 import { useAppStore } from '../stores';
+import type { Theme } from '../theme';
 import type { ThemeMode } from '../types';
 
 /**
@@ -27,6 +28,7 @@ import type { ThemeMode } from '../types';
 export function SettingsScreen() {
   const theme = useTheme();
   const { settings, updateSettings, setThemeMode, resetSettings } = useAppStore();
+  const styles = createStyles(theme);
 
   // Theme setting handlers
   const handleThemeChange = useCallback(
@@ -152,6 +154,9 @@ export function SettingsScreen() {
                 false: theme.colors.surfaceVariant,
               }}
               thumbColor={theme.colors.surface}
+              accessibilityLabel={`Enable notifications ${settings.notifications.enabled ? 'on' : 'off'}`}
+              accessibilityRole="switch"
+              accessibilityHint="Toggles push notifications for alerts and updates"
             />
           </SettingsRow>
 
@@ -168,6 +173,10 @@ export function SettingsScreen() {
                 false: theme.colors.surfaceVariant,
               }}
               thumbColor={theme.colors.surface}
+              accessibilityLabel={`Quota warnings ${settings.notifications.quotaWarnings ? 'on' : 'off'}`}
+              accessibilityRole="switch"
+              accessibilityState={{ disabled: !settings.notifications.enabled }}
+              accessibilityHint="Alert when quota reaches threshold"
             />
           </SettingsRow>
 
@@ -218,6 +227,9 @@ export function SettingsScreen() {
                 false: theme.colors.surfaceVariant,
               }}
               thumbColor={theme.colors.surface}
+              accessibilityLabel={`Auto sync ${settings.sync.autoSync ? 'on' : 'off'}`}
+              accessibilityRole="switch"
+              accessibilityHint="Automatically syncs provider data in the background"
             />
           </SettingsRow>
 
@@ -334,6 +346,7 @@ function SettingsSection({
   children: React.ReactNode;
 }) {
   const theme = useTheme();
+  const styles = createStyles(theme);
 
   return (
     <View style={styles.section}>
@@ -372,6 +385,7 @@ function SettingsRow({
   children: React.ReactNode;
 }) {
   const theme = useTheme();
+  const styles = createStyles(theme);
 
   return (
     <View style={styles.settingsRow}>
@@ -415,6 +429,7 @@ function ThemeButton({
   onPress: () => void;
 }) {
   const theme = useTheme();
+  const styles = createStyles(theme);
 
   return (
     <TouchableOpacity
@@ -445,65 +460,68 @@ function ThemeButton({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: 16,
-    paddingTop: 48,
-  },
-  title: {},
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  sectionContent: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
-  },
-  settingsRowText: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingsLabel: {},
-  settingsDescription: {
-    marginTop: 2,
-  },
-  themeOptions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  themeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  themeButtonText: {},
-  resetButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  resetButtonText: {},
-});
+// Create styles with theme
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      padding: theme.spacing.md,
+      paddingTop: theme.spacing.xxl,
+    },
+    title: {},
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: theme.spacing.md,
+    },
+    section: {
+      marginBottom: theme.spacing.lg,
+    },
+    sectionTitle: {
+      marginBottom: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.xs,
+    },
+    sectionContent: {
+      borderRadius: theme.borderRadius.md,
+      overflow: 'hidden',
+    },
+    settingsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: theme.spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.outlineVariant,
+    },
+    settingsRowText: {
+      flex: 1,
+      marginRight: theme.spacing.md,
+    },
+    settingsLabel: {},
+    settingsDescription: {
+      marginTop: theme.spacing.xs,
+    },
+    themeOptions: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+    },
+    themeButton: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.lg,
+    },
+    themeButtonText: {},
+    resetButton: {
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+      marginTop: theme.spacing.md,
+    },
+    resetButtonText: {},
+  });
+}
 
 export default SettingsScreen;

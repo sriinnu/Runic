@@ -32,8 +32,8 @@ struct AdvancedPane: View {
                 if let badgeText = self.store.autoRefreshDisableBadgeText() {
                     Text(badgeText)
                         .font(.caption2.weight(.medium))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, RunicSpacing.xs)
+                        .padding(.vertical, RunicSpacing.xxs)
                         .background(Color(nsColor: .controlBackgroundColor))
                         .clipShape(Capsule())
                         .foregroundStyle(.secondary)
@@ -51,7 +51,7 @@ struct AdvancedPane: View {
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoDisableRefreshWhenIdleEnabled) {
                         Text("Switch to Manual when idle")
                             .font(.body)
@@ -74,7 +74,7 @@ struct AdvancedPane: View {
                     .opacity(self.settings.autoDisableRefreshWhenIdleEnabled ? 1 : 0.5)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoDisableRefreshOnSleepEnabled) {
                         Text("Switch to Manual on sleep/lock")
                             .font(.body)
@@ -87,7 +87,7 @@ struct AdvancedPane: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoRefreshWarningEnabled) {
                         Text("Warn after repeated auto-refreshes")
                             .font(.body)
@@ -110,7 +110,7 @@ struct AdvancedPane: View {
                     .opacity(self.settings.autoRefreshWarningEnabled ? 1 : 0.5)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoSuspendInactiveProvidersEnabled) {
                         Text("Skip inactive providers")
                             .font(.body)
@@ -146,83 +146,11 @@ struct AdvancedPane: View {
             PreferencesDivider()
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Display")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                PreferenceToggleRow(
-                    title: "Show usage as used",
-                    subtitle: "Progress bars fill as you consume quota (instead of showing remaining).",
-                    binding: self.$settings.usageBarsShowUsed)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Usage metrics")
-                        .font(.body)
-                    Picker("", selection: self.$settings.usageMetricDisplayMode) {
-                        ForEach(UsageMetricDisplayMode.allCases) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    Text("Pick bars, percent, or both in the menu card.")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                PreferenceToggleRow(
-                    title: "Show credits + extra usage",
-                    subtitle: "Show Codex Credits and Claude Extra usage sections in the menu.",
-                    binding: self.$settings.showOptionalCreditsAndExtraUsage)
-                PreferenceToggleRow(
-                    title: "Merge Icons",
-                    subtitle: "Use a single menu bar icon with a provider switcher.",
-                    binding: self.$settings.mergeIcons)
-                PreferenceToggleRow(
-                    title: "Switcher shows icons",
-                    subtitle: "Show provider icons in the switcher (otherwise show a weekly progress line).",
-                    binding: self.$settings.switcherShowsIcons)
-                    .disabled(!self.settings.mergeIcons)
-                    .opacity(self.settings.mergeIcons ? 1 : 0.5)
-                PreferenceToggleRow(
-                    title: "Menu bar shows percent",
-                    subtitle: "Replace critter bars with provider branding icons and a percentage.",
-                    binding: self.$settings.menuBarShowsBrandIconWithPercent)
-                PreferenceToggleRow(
-                    title: "Surprise me",
-                    subtitle: "Check if you like your agents having some fun up there.",
-                    binding: self.$settings.randomBlinkEnabled)
-            }
-
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Insights")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                PreferenceStepperRow(
-                    title: "Menu list size",
-                    subtitle: "Limits insight rows shown in the menu before “More…”.",
-                    step: 1,
-                    range: 2...8,
-                    valueLabel: { "\($0) items" },
-                    value: self.$settings.insightsMenuMaxItems)
-                PreferenceStepperRow(
-                    title: "Report window",
-                    subtitle: "Used when opening the Insights report.",
-                    step: 1,
-                    range: 1...30,
-                    valueLabel: { "Last \($0) days" },
-                    value: self.$settings.insightsReportDays)
-            }
-
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Keyboard shortcut")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
-                HStack(alignment: .center, spacing: 12) {
+                HStack(alignment: .center, spacing: RunicSpacing.sm) {
                     Text("Open menu")
                         .font(.body)
                     Spacer()
@@ -236,7 +164,7 @@ struct AdvancedPane: View {
             PreferencesDivider()
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                HStack(spacing: 12) {
+                HStack(spacing: RunicSpacing.sm) {
                     Button {
                         Task { await self.installCLI() }
                     } label: {

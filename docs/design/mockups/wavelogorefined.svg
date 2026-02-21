@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 52" fill="none">
+  <!-- OPTION B: Wave Logo Refined -->
+  <!-- Enhanced version of current design with improvements -->
+  <!-- Optimized for 42×26pt menubar rendering (84×52px @2x) -->
+
+  <!-- Background for demonstration (remove in production) -->
+  <rect x="0" y="0" width="84" height="52" fill="#F0F0F0" opacity="0.3"/>
+
+  <!-- Wave/knot session window (thicker, more prominent) -->
+  <path d="M 14 26
+           C 14 16 26 16 36 26
+           C 46 36 58 36 58 26
+           C 58 16 46 16 36 26
+           C 26 36 14 36 14 26"
+        stroke="#14B8A6"
+        stroke-width="10"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"/>
+
+  <!-- Telemetry knot (center accent) - slightly larger -->
+  <circle cx="36" cy="26" r="10" fill="#2DD4BF"/>
+
+  <!-- Usage bars (wider and taller for better visibility) -->
+  <!-- Increased from 8px to 10px width -->
+  <g fill="#0F766E">
+    <!-- Bar 1: Session usage (70% of max height) -->
+    <rect x="28" y="21" width="5" height="14" rx="2.5">
+      <title>Session: 70%</title>
+    </rect>
+
+    <!-- Bar 2: Weekly usage (85% of max height) -->
+    <rect x="34.5" y="19" width="5" height="18" rx="2.5">
+      <title>Weekly: 85%</title>
+    </rect>
+
+    <!-- Bar 3: Credits remaining (55% of max height) -->
+    <rect x="41" y="23" width="5" height="12" rx="2.5">
+      <title>Credits: 55%</title>
+    </rect>
+  </g>
+
+  <!-- Annotations for demonstration (remove in production) -->
+  <g opacity="0.4">
+    <text x="2" y="12" font-family="system-ui" font-size="8" fill="#666">Wave Path</text>
+    <text x="2" y="48" font-family="system-ui" font-size="8" fill="#666">Usage Bars (10px wide)</text>
+  </g>
+</svg>

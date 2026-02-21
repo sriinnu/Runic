@@ -2,6 +2,23 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+enum MenuContentMetrics {
+    /// Horizontal padding for menu content
+    static let horizontalPadding: CGFloat = RunicSpacing.sm  // 12
+
+    /// Vertical padding for menu content
+    static let verticalPadding: CGFloat = RunicSpacing.xs  // 8
+
+    /// Spacing between menu sections
+    static let sectionSpacing: CGFloat = RunicSpacing.xs  // 8
+
+    /// Spacing between menu entries
+    static let entrySpacing: CGFloat = RunicSpacing.xxs  // 4
+
+    /// Minimum menu width
+    static let minWidth: CGFloat = 260
+}
+
 @MainActor
 struct MenuContent: View {
     @Bindable var store: UsageStore
@@ -19,21 +36,22 @@ struct MenuContent: View {
             account: self.account,
             updateReady: self.updater.updateStatus.isUpdateReady)
 
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: MenuContentMetrics.sectionSpacing) {
             ForEach(Array(descriptor.sections.enumerated()), id: \.offset) { index, section in
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: MenuContentMetrics.entrySpacing) {
                     ForEach(Array(section.entries.enumerated()), id: \.offset) { _, entry in
                         self.row(for: entry)
                     }
                 }
                 if index < descriptor.sections.count - 1 {
                     Divider()
+                        .padding(.vertical, RunicSpacing.xxs)
                 }
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .frame(minWidth: 260, alignment: .leading)
+        .padding(.horizontal, MenuContentMetrics.horizontalPadding)
+        .padding(.vertical, MenuContentMetrics.verticalPadding)
+        .frame(minWidth: MenuContentMetrics.minWidth, alignment: .leading)
     }
 
     @ViewBuilder
@@ -67,6 +85,7 @@ struct MenuContent: View {
             .buttonStyle(.plain)
         case .divider:
             Divider()
+                .padding(.vertical, RunicSpacing.xxs)
         }
     }
 

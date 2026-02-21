@@ -67,6 +67,94 @@ enum UsageMetricDisplayMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum ChartStyle: String, CaseIterable, Identifiable {
+    case line
+    case area
+    case bar
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .line: return "Line"
+        case .area: return "Area"
+        case .bar: return "Bar"
+        }
+    }
+}
+
+enum NumberFormat: String, CaseIterable, Identifiable {
+    case abbreviated
+    case full
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .abbreviated: return "Abbreviated"
+        case .full: return "Full"
+        }
+    }
+}
+
+enum DateFormat: String, CaseIterable, Identifiable {
+    case relative
+    case absolute
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .relative: return "Relative"
+        case .absolute: return "Absolute"
+        }
+    }
+}
+
+enum Theme: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+}
+
+enum ProviderSwitcherLayout: String, CaseIterable, Identifiable {
+    case top
+    case sidebar
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .top: return "Top"
+        case .sidebar: return "Sidebar"
+        }
+    }
+}
+
+enum ProviderSwitcherIconSize: String, CaseIterable, Identifiable {
+    case small
+    case medium
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .small: return "Small"
+        case .medium: return "Medium"
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class SettingsStore {
@@ -157,6 +245,22 @@ final class SettingsStore {
         }
     }
 
+    var chartStyle: ChartStyle {
+        didSet { self.userDefaults.set(self.chartStyle.rawValue, forKey: "chartStyle") }
+    }
+
+    var numberFormat: NumberFormat {
+        didSet { self.userDefaults.set(self.numberFormat.rawValue, forKey: "numberFormat") }
+    }
+
+    var dateFormat: DateFormat {
+        didSet { self.userDefaults.set(self.dateFormat.rawValue, forKey: "dateFormat") }
+    }
+
+    var theme: Theme {
+        didSet { self.userDefaults.set(self.theme.rawValue, forKey: "theme") }
+    }
+
     /// Optional: use provider branding icons with a percentage in the menu bar.
     var menuBarShowsBrandIconWithPercent: Bool {
         didSet {
@@ -236,6 +340,25 @@ final class SettingsStore {
     /// Optional: show provider icons in the in-menu switcher.
     var switcherShowsIcons: Bool {
         didSet { self.userDefaults.set(self.switcherShowsIcons, forKey: "switcherShowsIcons") }
+    }
+
+    /// Optional: position the provider switcher either on top or in a left sidebar.
+    var providerSwitcherLayout: ProviderSwitcherLayout {
+        didSet {
+            self.userDefaults.set(self.providerSwitcherLayout.rawValue, forKey: "providerSwitcherLayout")
+        }
+    }
+
+    /// Optional: size of provider icons in the switcher.
+    var providerSwitcherIconSize: ProviderSwitcherIconSize {
+        didSet {
+            self.userDefaults.set(self.providerSwitcherIconSize.rawValue, forKey: "providerSwitcherIconSize")
+        }
+    }
+
+    /// Show the built-in providers pane as a sidebar (true) or flat list (false).
+    var providersPaneSidebar: Bool {
+        didSet { self.userDefaults.set(self.providersPaneSidebar, forKey: "providersPaneSidebar") }
     }
 
     /// z.ai API token (stored in Keychain).
@@ -330,6 +453,11 @@ final class SettingsStore {
         _ = self.statusChecksEnabled
         _ = self.sessionQuotaNotificationsEnabled
         _ = self.usageBarsShowUsed
+        _ = self.usageMetricDisplayMode
+        _ = self.chartStyle
+        _ = self.numberFormat
+        _ = self.dateFormat
+        _ = self.theme
         _ = self.menuBarShowsBrandIconWithPercent
         _ = self.menuBarVibrantIconEnabled
         _ = self.costUsageEnabled
@@ -343,6 +471,8 @@ final class SettingsStore {
         _ = self.claudeUsageDataSource
         _ = self.mergeIcons
         _ = self.switcherShowsIcons
+        _ = self.providerSwitcherLayout
+        _ = self.providerSwitcherIconSize
         _ = self.zaiAPIToken
         _ = self.minimaxAPIToken
         _ = self.minimaxCookieHeader
@@ -435,6 +565,14 @@ final class SettingsStore {
         self.usageBarsShowUsed = userDefaults.object(forKey: "usageBarsShowUsed") as? Bool ?? false
         let metricDisplayRaw = userDefaults.string(forKey: "usageMetricDisplayMode")
         self.usageMetricDisplayMode = UsageMetricDisplayMode(rawValue: metricDisplayRaw ?? "") ?? .barsAndPercent
+        let chartStyleRaw = userDefaults.string(forKey: "chartStyle")
+        self.chartStyle = ChartStyle(rawValue: chartStyleRaw ?? "") ?? .line
+        let numberFormatRaw = userDefaults.string(forKey: "numberFormat")
+        self.numberFormat = NumberFormat(rawValue: numberFormatRaw ?? "") ?? .abbreviated
+        let dateFormatRaw = userDefaults.string(forKey: "dateFormat")
+        self.dateFormat = DateFormat(rawValue: dateFormatRaw ?? "") ?? .relative
+        let themeRaw = userDefaults.string(forKey: "theme")
+        self.theme = Theme(rawValue: themeRaw ?? "") ?? .system
         self.menuBarShowsBrandIconWithPercent = userDefaults.object(
             forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
         self.menuBarVibrantIconEnabled = userDefaults.object(
@@ -460,6 +598,11 @@ final class SettingsStore {
         self.claudeUsageDataSourceRaw = claudeSourceRaw ?? ClaudeUsageDataSource.oauth.rawValue
         self.mergeIcons = userDefaults.object(forKey: "mergeIcons") as? Bool ?? true
         self.switcherShowsIcons = userDefaults.object(forKey: "switcherShowsIcons") as? Bool ?? true
+        let layoutRaw = userDefaults.string(forKey: "providerSwitcherLayout")
+        self.providerSwitcherLayout = ProviderSwitcherLayout(rawValue: layoutRaw ?? "") ?? .sidebar
+        let iconSizeRaw = userDefaults.string(forKey: "providerSwitcherIconSize")
+        self.providerSwitcherIconSize = ProviderSwitcherIconSize(rawValue: iconSizeRaw ?? "") ?? .medium
+        self.providersPaneSidebar = userDefaults.object(forKey: "providersPaneSidebar") as? Bool ?? false
         self.zaiAPIToken = (try? zaiTokenStore.loadToken()) ?? ""
         self.minimaxAPIToken = (try? minimaxTokenStore.loadToken()) ?? ""
         self.minimaxCookieHeader = (try? minimaxCookieHeaderStore.loadHeader()) ?? ""

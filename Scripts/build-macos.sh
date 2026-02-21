@@ -335,12 +335,47 @@ create_app_bundle() {
         chmod +x "$app_bundle/Contents/MacOS/$APP_NAME"
     fi
 
+    # Copy Sparkle framework
+    log_info "Copying Sparkle framework..."
+    if [[ "$DRY_RUN" == false ]]; then
+        mkdir -p "$app_bundle/Contents/Frameworks"
+
+        # Find Sparkle framework in build directory
+        local sparkle_source=""
+        if [[ "$CONFIGURATION" == "release" ]]; then
+            sparkle_source=".build/arm64-apple-macosx/release/Sparkle.framework"
+        else
+            sparkle_source=".build/arm64-apple-macosx/debug/Sparkle.framework"
+        fi
+
+        if [[ -d "$sparkle_source" ]]; then
+            cp -R "$sparkle_source" "$app_bundle/Contents/Frameworks/"
+            log_success "Sparkle framework copied"
+
+            # Add rpath to binary
+            log_info "Adding framework rpath..."
+            install_name_tool -add_rpath @loader_path/../Frameworks "$app_bundle/Contents/MacOS/$APP_NAME" 2>&1 | grep -v "warning: changes being made" || true
+            log_success "Framework rpath added"
+        else
+            log_warning "Sparkle framework not found at $sparkle_source"
+        fi
+    fi
+
     # Copy icon if exists
     if [[ -f "Icon.icns" ]]; then
         if [[ "$DRY_RUN" == false ]]; then
             cp "Icon.icns" "$app_bundle/Contents/Resources/"
         fi
         log_info "Copied application icon"
+    fi
+
+    # Copy Resources (SVG icons, etc.)
+    if [[ -d "Sources/Runic/Resources" ]]; then
+        log_info "Copying Runic resources (SVG icons)..."
+        if [[ "$DRY_RUN" == false ]]; then
+            cp -R "Sources/Runic/Resources/"* "$app_bundle/Contents/Resources/"
+            log_success "Runic resources copied"
+        fi
     fi
 
     # Create Info.plist

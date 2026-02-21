@@ -358,3 +358,248 @@ analyticsRouter.get('/trends', async (req: Request, res: Response) => {
     return res.status(500).json(response);
   }
 });
+
+/**
+ * Budget information
+ */
+interface BudgetInfo {
+  projectID: string;
+  projectName: string;
+  limit: number;
+  actual: number;
+  usedPercent: number;
+  alertLevel: 'none' | 'warning' | 'critical';
+  period: string;
+}
+
+/**
+ * Budget analytics response
+ */
+interface BudgetAnalytics {
+  budgets: BudgetInfo[];
+  summary: {
+    totalBudget: number;
+    totalActual: number;
+    averageUsage: number;
+    projectsOverBudget: number;
+    projectsNearLimit: number;
+  };
+  alerts: {
+    projectID: string;
+    level: 'warning' | 'critical';
+    message: string;
+  }[];
+}
+
+/**
+ * GET /api/v1/analytics/budgets
+ *
+ * Retrieves budget analytics with actual costs and alerts
+ *
+ * Query parameters:
+ * - period: string - Budget period (default: 'monthly')
+ *
+ * @returns {ApiResponse<BudgetAnalytics>} Budget analytics with alerts
+ */
+analyticsRouter.get('/budgets', async (req: Request, res: Response) => {
+  try {
+    const period = (req.query.period as string) || 'monthly';
+
+    // In production, load from ProjectBudgetStore and UsageLedger
+    // const budgets = await ProjectBudgetStore.loadAll();
+    // const actualCosts = await UsageLedger.getCostsByProject();
+
+    // Mock budget data
+    const budgets: BudgetInfo[] = [
+      {
+        projectID: 'proj-123',
+        projectName: 'Runic API Server',
+        limit: 100.00,
+        actual: 48.70,
+        usedPercent: 48.7,
+        alertLevel: 'none',
+        period
+      },
+      {
+        projectID: 'proj-456',
+        projectName: 'Runic iOS App',
+        limit: 50.00,
+        actual: 42.30,
+        usedPercent: 84.6,
+        alertLevel: 'warning',
+        period
+      },
+      {
+        projectID: 'proj-789',
+        projectName: 'Documentation Generator',
+        limit: 20.00,
+        actual: 21.50,
+        usedPercent: 107.5,
+        alertLevel: 'critical',
+        period
+      }
+    ];
+
+    // Calculate summary
+    const totalBudget = budgets.reduce((sum, b) => sum + b.limit, 0);
+    const totalActual = budgets.reduce((sum, b) => sum + b.actual, 0);
+    const averageUsage = budgets.reduce((sum, b) => sum + b.usedPercent, 0) / budgets.length;
+    const projectsOverBudget = budgets.filter(b => b.usedPercent > 100).length;
+    const projectsNearLimit = budgets.filter(b => b.usedPercent > 80 && b.usedPercent <= 100).length;
+
+    // Generate alerts (>80% = warning, >100% = critical)
+    const alerts = budgets
+      .filter(b => b.usedPercent > 80)
+      .map(b => ({
+        projectID: b.projectID,
+        level: (b.usedPercent > 100 ? 'critical' : 'warning') as 'warning' | 'critical',
+        message: b.usedPercent > 100
+          ? `Project "${b.projectName}" is over budget by $${(b.actual - b.limit).toFixed(2)} (${b.usedPercent.toFixed(1)}%)`
+          : `Project "${b.projectName}" is approaching budget limit (${b.usedPercent.toFixed(1)}% used)`
+      }));
+
+    const analytics: BudgetAnalytics = {
+      budgets,
+      summary: {
+        totalBudget,
+        totalActual,
+        averageUsage,
+        projectsOverBudget,
+        projectsNearLimit
+      },
+      alerts
+    };
+
+    const response: ApiResponse<BudgetAnalytics> = {
+      data: analytics,
+      timestamp: new Date().toISOString(),
+      success: true
+    };
+
+    return res.json(response);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const response: ApiResponse<BudgetAnalytics | null> = {
+      data: null,
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: {
+        message: errorMessage,
+        code: 'BUDGET_ANALYTICS_ERROR'
+      }
+    };
+    return res.status(500).json(response);
+  }
+});
+
+/**
+ * Heatmap data point
+ */
+interface HeatmapDataPoint {
+  timestamp: string;
+  tokens: number;
+  intensity: number; // 0-100 scale for visualization
+}
+
+/**
+ * Heatmap response
+ */
+interface HeatmapData {
+  period: {
+    startDate: string;
+    endDate: string;
+    granularity: string;
+  };
+  heatmap: HeatmapDataPoint[];
+  statistics: {
+    maxTokens: number;
+    minTokens: number;
+    avgTokens: number;
+    maxIntensity: number;
+  };
+}
+
+/**
+ * GET /api/v1/analytics/heatmap
+ *
+ * Retrieves usage heatmap data for visualization
+ *
+ * Query parameters:
+ * - startDate: string - ISO 8601 start date (default: 7 days ago)
+ * - endDate: string - ISO 8601 end date (default: now)
+ * - granularity: 'hour' | 'day' - Data granularity (default: 'hour')
+ *
+ * @returns {ApiResponse<HeatmapData>} Heatmap data
+ */
+analyticsRouter.get('/heatmap', async (req: Request, res: Response) => {
+  try {
+    const startDate = req.query.startDate as string || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const endDate = req.query.endDate as string || new Date().toISOString();
+    const granularity = (req.query.granularity as string) || 'hour';
+
+    // In production, use UsageLedgerAggregator.hourlySummaries()
+    // const hourlySummaries = await UsageLedgerAggregator.hourlySummaries(startDate, endDate);
+
+    // Mock heatmap data
+    const heatmap: HeatmapDataPoint[] = [];
+    const hoursInRange = granularity === 'hour' ? 24 * 7 : 7; // 7 days of hours or days
+    const timeInterval = granularity === 'hour' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
+    const startTime = new Date(startDate).getTime();
+
+    for (let i = 0; i < hoursInRange; i++) {
+      const timestamp = new Date(startTime + i * timeInterval);
+      const tokens = Math.floor(5000 + Math.random() * 20000);
+
+      heatmap.push({
+        timestamp: timestamp.toISOString(),
+        tokens,
+        intensity: 0 // Will be calculated below
+      });
+    }
+
+    // Calculate intensity (0-100 scale based on max usage)
+    const maxTokens = Math.max(...heatmap.map(h => h.tokens));
+    const minTokens = Math.min(...heatmap.map(h => h.tokens));
+    const avgTokens = heatmap.reduce((sum, h) => sum + h.tokens, 0) / heatmap.length;
+
+    heatmap.forEach(h => {
+      h.intensity = maxTokens > 0 ? Math.round((h.tokens / maxTokens) * 100) : 0;
+    });
+
+    const heatmapData: HeatmapData = {
+      period: {
+        startDate,
+        endDate,
+        granularity
+      },
+      heatmap,
+      statistics: {
+        maxTokens,
+        minTokens,
+        avgTokens: Math.round(avgTokens),
+        maxIntensity: 100
+      }
+    };
+
+    const response: ApiResponse<HeatmapData> = {
+      data: heatmapData,
+      timestamp: new Date().toISOString(),
+      success: true
+    };
+
+    return res.json(response);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const response: ApiResponse<HeatmapData | null> = {
+      data: null,
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: {
+        message: errorMessage,
+        code: 'HEATMAP_ANALYTICS_ERROR'
+      }
+    };
+    return res.status(500).json(response);
+  }
+});

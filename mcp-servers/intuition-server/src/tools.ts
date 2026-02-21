@@ -9,6 +9,8 @@ import {
   ModelRecommendationSchema,
   ResetUsagePredictionSchema,
   ProjectOptimizationSchema,
+  CompareModelCostsSchema,
+  DetectUsageAnomalySchema,
   type TaskType,
 } from "./schemas.js";
 
@@ -378,6 +380,15 @@ export class IntuitionTools {
       data.targetCostReduction
     );
 
+    // Generate actionable alerts
+    const alerts = this.generateActionableAlerts(
+      totalCost,
+      savingsPercent,
+      mostEfficient,
+      leastEfficient,
+      providerAnalysis
+    );
+
     const optimization = {
       projectId: data.projectId,
       analysisPeriod: `${data.days} days`,
@@ -407,6 +418,7 @@ export class IntuitionTools {
         percentage: savingsPercent.toFixed(1) + "%",
         achievableWith: `Migrating all usage to ${mostEfficient.provider}`,
       },
+      alerts,
       providerBreakdown: providerAnalysis,
       optimizationStrategies: strategies,
       recommendations: [
@@ -422,6 +434,267 @@ export class IntuitionTools {
         {
           type: "text",
           text: JSON.stringify(optimization, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Compare model costs across multiple models
+   * @param args - Model comparison parameters
+   * @returns Cost comparison with rankings and recommendations
+   */
+  async compareModelCosts(args: unknown) {
+    const data = CompareModelCostsSchema.parse(args);
+
+    // Build cost data for each model
+    const modelComparisons = data.models.map(model => {
+      const pricing = MODEL_PRICING[model];
+
+      if (!pricing) {
+        return {
+          model,
+          error: "Pricing data not available",
+          costPerToken: null,
+          costRatio: null,
+          recommendation: "Unable to evaluate - no pricing data",
+          savings: null,
+        };
+      }
+
+      // Calculate average cost per token
+      const avgCostPerToken = (pricing.inputCost + pricing.outputCost) / 2;
+
+      // Calculate historical average if provided
+      let historicalCostPerToken: number | null = null;
+      if (data.historicalUsage) {
+        const modelUsage = data.historicalUsage.filter(u => u.model === model);
+        if (modelUsage.length > 0) {
+          const totalTokens = modelUsage.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0);
+          const totalCost = modelUsage.reduce((sum, u) => sum + u.cost, 0);
+          historicalCostPerToken = totalTokens > 0 ? totalCost / totalTokens : null;
+        }
+      }
+
+      // Get task suitability
+      const suitability = this.getTaskSuitability(model, data.taskType);
+
+      return {
+        model,
+        pricing: {
+          inputCostPer1M: (pricing.inputCost * 1000).toFixed(2),
+          outputCostPer1M: (pricing.outputCost * 1000).toFixed(2),
+          avgCostPerToken: avgCostPerToken.toFixed(8),
+          contextWindow: pricing.contextWindow,
+        },
+        historicalCostPerToken: historicalCostPerToken ? historicalCostPerToken.toFixed(8) : null,
+        taskSuitability: suitability,
+        suitabilityRating: suitability >= 0.8 ? "high" : suitability >= 0.6 ? "medium" : "low",
+        costPerToken: avgCostPerToken,
+      };
+    });
+
+    // Filter out models with errors
+    const validModels = modelComparisons.filter(m => m.costPerToken !== null);
+
+    if (validModels.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: "No valid models with pricing data found",
+              models: data.models,
+            }),
+          },
+        ],
+      };
+    }
+
+    // Sort by cost (ascending)
+    const sortedByCost = [...validModels].sort((a, b) =>
+      (a.costPerToken || Infinity) - (b.costPerToken || Infinity)
+    );
+
+    const cheapest = sortedByCost[0];
+    const mostExpensive = sortedByCost[sortedByCost.length - 1];
+
+    // Calculate cost ratios and savings relative to cheapest
+    const modelsWithMetrics = sortedByCost.map(m => {
+      const costRatio = (m.costPerToken || 0) / (cheapest.costPerToken || 1);
+      const savings = ((m.costPerToken || 0) - (cheapest.costPerToken || 0));
+
+      // Generate recommendation
+      let recommendation = "";
+      if (m.model === cheapest.model) {
+        recommendation = `Most cost-effective option for ${data.taskType}`;
+      } else if (m.suitabilityRating === "high" && costRatio <= 1.5) {
+        recommendation = `Good balance of capability and cost for ${data.taskType}`;
+      } else if (costRatio > 3) {
+        recommendation = `${costRatio.toFixed(1)}x more expensive - only use for critical tasks`;
+      } else {
+        recommendation = `${costRatio.toFixed(1)}x more expensive than cheapest option`;
+      }
+
+      return {
+        model: m.model,
+        pricing: m.pricing,
+        historicalCostPerToken: m.historicalCostPerToken,
+        taskSuitability: m.suitabilityRating,
+        costPerToken: (m.costPerToken || 0).toFixed(8),
+        costRatio: costRatio.toFixed(2) + "x",
+        costDifferencePer1MTokens: (savings * 1000000).toFixed(2),
+        recommendation,
+      };
+    });
+
+    const comparison = {
+      taskType: data.taskType,
+      modelsCompared: data.models.length,
+      cheapest: {
+        model: cheapest.model,
+        costPerToken: (cheapest.costPerToken || 0).toFixed(8),
+        suitability: cheapest.suitabilityRating,
+      },
+      mostExpensive: {
+        model: mostExpensive.model,
+        costPerToken: (mostExpensive.costPerToken || 0).toFixed(8),
+        suitability: mostExpensive.suitabilityRating,
+      },
+      costRange: {
+        min: (cheapest.costPerToken || 0).toFixed(8),
+        max: (mostExpensive.costPerToken || 0).toFixed(8),
+        spread: ((mostExpensive.costPerToken || 0) / (cheapest.costPerToken || 1)).toFixed(2) + "x",
+      },
+      models: modelsWithMetrics,
+      overallRecommendation: this.generateComparisonRecommendation(
+        modelsWithMetrics,
+        data.taskType,
+        cheapest
+      ),
+    };
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(comparison, null, 2),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Detect usage anomalies using statistical analysis
+   * @param args - Hourly usage data and threshold
+   * @returns Anomaly detection results with severity and recommendations
+   */
+  async detectUsageAnomaly(args: unknown) {
+    const data = DetectUsageAnomalySchema.parse(args);
+
+    // Extract token and cost arrays
+    const tokens = data.hourlyUsage.map(h => h.tokens);
+    const costs = data.hourlyUsage.map(h => h.cost);
+
+    // Calculate statistics
+    const tokenMean = ss.mean(tokens);
+    const tokenStdDev = ss.standardDeviation(tokens);
+    const costMean = ss.mean(costs);
+    const costStdDev = ss.standardDeviation(costs);
+
+    // Detect anomalies using Z-score
+    const anomalies: Array<{
+      hour: string;
+      tokens: number;
+      cost: number;
+      tokenZScore: number;
+      costZScore: number;
+      severity: string;
+      message: string;
+    }> = [];
+
+    data.hourlyUsage.forEach(hourData => {
+      const tokenZScore = Math.abs((hourData.tokens - tokenMean) / tokenStdDev);
+      const costZScore = Math.abs((hourData.cost - costMean) / costStdDev);
+
+      // Check if either metric exceeds threshold
+      if (tokenZScore > data.threshold || costZScore > data.threshold) {
+        let severity = "low";
+        let message = "";
+
+        if (tokenZScore > 3 || costZScore > 3) {
+          severity = "critical";
+          message = "Extreme anomaly detected - immediate investigation required";
+        } else if (tokenZScore > 2.5 || costZScore > 2.5) {
+          severity = "high";
+          message = "Significant anomaly detected - review usage patterns";
+        } else if (tokenZScore > 2 || costZScore > 2) {
+          severity = "medium";
+          message = "Notable deviation from normal usage";
+        } else {
+          severity = "low";
+          message = "Minor deviation detected";
+        }
+
+        // Add context to message
+        if (hourData.tokens > tokenMean) {
+          message += ` - tokens ${((hourData.tokens / tokenMean - 1) * 100).toFixed(0)}% above average`;
+        } else {
+          message += ` - tokens ${((1 - hourData.tokens / tokenMean) * 100).toFixed(0)}% below average`;
+        }
+
+        anomalies.push({
+          hour: hourData.hour,
+          tokens: hourData.tokens,
+          cost: hourData.cost,
+          tokenZScore: Math.round(tokenZScore * 100) / 100,
+          costZScore: Math.round(costZScore * 100) / 100,
+          severity,
+          message,
+        });
+      }
+    });
+
+    // Sort anomalies by severity
+    const severityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    anomalies.sort((a, b) =>
+      severityOrder[a.severity as keyof typeof severityOrder] -
+      severityOrder[b.severity as keyof typeof severityOrder]
+    );
+
+    // Generate recommendations
+    const recommendations = this.generateAnomalyRecommendations(anomalies, tokenMean, costMean);
+
+    const analysis = {
+      period: {
+        hours: data.hourlyUsage.length,
+        from: data.hourlyUsage[0].hour,
+        to: data.hourlyUsage[data.hourlyUsage.length - 1].hour,
+      },
+      baseline: {
+        avgTokensPerHour: Math.round(tokenMean),
+        avgCostPerHour: costMean.toFixed(4),
+        tokenStdDev: Math.round(tokenStdDev),
+        costStdDev: costStdDev.toFixed(4),
+      },
+      threshold: {
+        value: data.threshold,
+        description: `${data.threshold} standard deviations from mean`,
+      },
+      anomalyCount: anomalies.length,
+      anomaliesDetected: anomalies.length > 0,
+      anomalies,
+      recommendations,
+      summary: anomalies.length === 0
+        ? "No significant anomalies detected - usage patterns are stable"
+        : `${anomalies.length} anomal${anomalies.length === 1 ? 'y' : 'ies'} detected - review recommended`,
+    };
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(analysis, null, 2),
         },
       ],
     };
@@ -483,12 +756,24 @@ export class IntuitionTools {
    */
   private getTaskSuitability(model: string, taskType: TaskType): number {
     const suitabilityMap: Record<string, Record<string, number>> = {
-      "claude-3-opus-20240229": { coding: 1.0, chat: 0.9, analysis: 1.0, documentation: 0.9, testing: 0.8 },
-      "claude-3-sonnet-20240229": { coding: 0.85, chat: 0.9, analysis: 0.85, documentation: 0.9, testing: 0.8 },
-      "claude-3-haiku-20240307": { coding: 0.6, chat: 0.8, analysis: 0.6, documentation: 0.7, testing: 0.7 },
-      "gpt-4-turbo": { coding: 0.95, chat: 0.85, analysis: 0.95, documentation: 0.85, testing: 0.9 },
-      "gpt-4": { coding: 0.9, chat: 0.8, analysis: 0.9, documentation: 0.8, testing: 0.85 },
-      "gpt-3.5-turbo": { coding: 0.6, chat: 0.8, analysis: 0.6, documentation: 0.7, testing: 0.65 },
+      "claude-3-opus-20240229": {
+        coding: 1.0, chat: 0.9, analysis: 1.0, documentation: 0.9, testing: 0.8, writing: 0.95, general: 0.9
+      },
+      "claude-3-sonnet-20240229": {
+        coding: 0.85, chat: 0.9, analysis: 0.85, documentation: 0.9, testing: 0.8, writing: 0.9, general: 0.85
+      },
+      "claude-3-haiku-20240307": {
+        coding: 0.6, chat: 0.8, analysis: 0.6, documentation: 0.7, testing: 0.7, writing: 0.75, general: 0.7
+      },
+      "gpt-4-turbo": {
+        coding: 0.95, chat: 0.85, analysis: 0.95, documentation: 0.85, testing: 0.9, writing: 0.9, general: 0.85
+      },
+      "gpt-4": {
+        coding: 0.9, chat: 0.8, analysis: 0.9, documentation: 0.8, testing: 0.85, writing: 0.85, general: 0.8
+      },
+      "gpt-3.5-turbo": {
+        coding: 0.6, chat: 0.8, analysis: 0.6, documentation: 0.7, testing: 0.65, writing: 0.75, general: 0.7
+      },
     };
 
     return suitabilityMap[model]?.[taskType] || 0.5;
@@ -598,5 +883,173 @@ export class IntuitionTools {
     }
 
     return strategies;
+  }
+
+  /**
+   * Generate actionable alerts for project optimization
+   * @private
+   */
+  private generateActionableAlerts(
+    totalCost: number,
+    savingsPercent: number,
+    mostEfficient: any,
+    leastEfficient: any,
+    providerAnalysis: any[]
+  ): Array<{ level: string; message: string; action: string }> {
+    const alerts = [];
+
+    // High cost alert
+    if (totalCost > 100) {
+      alerts.push({
+        level: "warning",
+        message: `Total cost of $${totalCost.toFixed(2)} is high`,
+        action: "Review usage patterns and consider cost reduction strategies",
+      });
+    }
+
+    // High savings potential alert
+    if (savingsPercent > 30) {
+      alerts.push({
+        level: "critical",
+        message: `${savingsPercent.toFixed(0)}% potential cost savings identified`,
+        action: `Switch to ${mostEfficient.provider} for immediate cost reduction`,
+      });
+    } else if (savingsPercent > 15) {
+      alerts.push({
+        level: "warning",
+        message: `${savingsPercent.toFixed(0)}% potential cost savings available`,
+        action: "Consider gradual migration to more efficient providers",
+      });
+    }
+
+    // Efficiency gap alert
+    const efficiencyGap = parseFloat(leastEfficient.costPerToken) / parseFloat(mostEfficient.costPerToken);
+    if (efficiencyGap > 5) {
+      alerts.push({
+        level: "critical",
+        message: `${efficiencyGap.toFixed(1)}x efficiency gap between providers`,
+        action: `Prioritize migrating from ${leastEfficient.provider} to ${mostEfficient.provider}`,
+      });
+    }
+
+    // Poor efficiency alerts
+    providerAnalysis.forEach(p => {
+      if (p.efficiency === "poor" && parseFloat(p.costShare.replace("%", "")) > 20) {
+        alerts.push({
+          level: "warning",
+          message: `${p.provider} has poor efficiency and represents ${p.costShare} of costs`,
+          action: `Reduce usage of ${p.provider} or switch to more efficient alternatives`,
+        });
+      }
+    });
+
+    // Info alert if everything is good
+    if (alerts.length === 0) {
+      alerts.push({
+        level: "info",
+        message: "Cost distribution is reasonably efficient",
+        action: "Continue monitoring for optimization opportunities",
+      });
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Generate comparison recommendation
+   * @private
+   */
+  private generateComparisonRecommendation(
+    models: any[],
+    taskType: string,
+    cheapest: any
+  ): string {
+    const recommendations = [];
+
+    recommendations.push(
+      `For ${taskType} tasks, ${cheapest.model} offers the best cost efficiency at ${cheapest.costPerToken} per token.`
+    );
+
+    // Find high suitability models
+    const highSuitability = models.filter(m => m.taskSuitability === "high");
+    if (highSuitability.length > 0 && highSuitability[0].model !== cheapest.model) {
+      const bestSuitable = highSuitability[0];
+      recommendations.push(
+        `For optimal ${taskType} performance, consider ${bestSuitable.model} (${bestSuitable.taskSuitability} suitability).`
+      );
+    }
+
+    // Warn about expensive models
+    const expensive = models.filter(m => parseFloat(m.costRatio.replace("x", "")) > 3);
+    if (expensive.length > 0) {
+      recommendations.push(
+        `Avoid ${expensive.map(m => m.model).join(", ")} for routine tasks - they are 3x+ more expensive.`
+      );
+    }
+
+    return recommendations.join(" ");
+  }
+
+  /**
+   * Generate anomaly recommendations
+   * @private
+   */
+  private generateAnomalyRecommendations(
+    anomalies: any[],
+    tokenMean: number,
+    costMean: number
+  ): string[] {
+    const recommendations = [];
+
+    if (anomalies.length === 0) {
+      return ["Usage patterns are stable - no immediate action required"];
+    }
+
+    // Check for critical anomalies
+    const critical = anomalies.filter(a => a.severity === "critical");
+    if (critical.length > 0) {
+      recommendations.push(
+        `URGENT: ${critical.length} critical anomal${critical.length === 1 ? 'y' : 'ies'} detected - investigate immediately`
+      );
+      recommendations.push(
+        "Check for runaway processes, API misuse, or security incidents"
+      );
+    }
+
+    // Check for high anomalies
+    const high = anomalies.filter(a => a.severity === "high");
+    if (high.length > 0) {
+      recommendations.push(
+        `${high.length} significant anomal${high.length === 1 ? 'y' : 'ies'} detected - review usage patterns`
+      );
+    }
+
+    // Check for patterns
+    if (anomalies.length > 3) {
+      recommendations.push(
+        "Multiple anomalies detected - consider adjusting detection threshold or reviewing baseline usage"
+      );
+    }
+
+    // Specific recommendations
+    const highUsageAnomalies = anomalies.filter(a => a.tokens > tokenMean * 1.5);
+    if (highUsageAnomalies.length > 0) {
+      recommendations.push(
+        `High token usage detected during: ${highUsageAnomalies.map(a => a.hour).join(", ")}`
+      );
+    }
+
+    const highCostAnomalies = anomalies.filter(a => a.cost > costMean * 1.5);
+    if (highCostAnomalies.length > 0) {
+      recommendations.push(
+        "Review expensive operations during peak anomaly periods"
+      );
+    }
+
+    recommendations.push(
+      "Set up alerts for anomalies to catch issues in real-time"
+    );
+
+    return recommendations;
   }
 }

@@ -9,14 +9,15 @@
  * - Model-specific cost prediction and forecasting
  * - Intelligent model recommendations based on task type
  * - Reset usage prediction with velocity tracking
- * - Project-based cost optimization
+ * - Project-based cost optimization with actionable alerts
+ * - Model cost comparison and ranking
+ * - Usage anomaly detection with Z-score analysis
  * - Usage pattern prediction and forecasting
  * - Smart provider recommendations
  * - Cost optimization suggestions
- * - Anomaly detection in usage behavior
  * - Proactive limit warning predictions
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -52,7 +53,7 @@ class IntuitionServer {
     this.server = new Server(
       {
         name: "runic-intuition-server",
-        version: "2.0.0",
+        version: "2.1.0",
       },
       {
         capabilities: {
@@ -185,7 +186,7 @@ class IntuitionServer {
           description:
             "Analyze and optimize costs for a specific project. Compares provider/model efficiency, " +
             "calculates potential savings, and recommends optimization strategies. Provides detailed " +
-            "cost breakdown and actionable migration paths.",
+            "cost breakdown and actionable alerts and migration paths.",
           inputSchema: {
             type: "object",
             properties: {
@@ -219,6 +220,76 @@ class IntuitionServer {
               },
             },
             required: ["projectId", "providers"],
+          },
+        },
+        {
+          name: "compare_model_costs",
+          description:
+            "Compare costs across multiple AI models. Calculates cost per token for each model, " +
+            "ranks by cost efficiency, provides cost ratios, and generates recommendations based on " +
+            "task type suitability. Includes potential savings analysis.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              models: {
+                type: "array",
+                items: { type: "string" },
+                description: "List of model names to compare (min 2)",
+                minItems: 2,
+              },
+              taskType: {
+                type: "string",
+                enum: ["coding", "writing", "analysis", "general"],
+                description: "Type of task for suitability scoring",
+              },
+              historicalUsage: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    model: { type: "string" },
+                    inputTokens: { type: "number" },
+                    outputTokens: { type: "number" },
+                    cost: { type: "number" },
+                  },
+                  required: ["model", "inputTokens", "outputTokens", "cost"],
+                },
+                description: "Historical usage data for more accurate cost calculations",
+              },
+            },
+            required: ["models", "taskType"],
+          },
+        },
+        {
+          name: "detect_usage_anomaly",
+          description:
+            "Detect unusual usage patterns using Z-score statistical analysis. Identifies spikes " +
+            "and anomalies in hourly token usage and costs. Returns anomalies with severity levels " +
+            "(critical/high/medium/low) and actionable recommendations.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              hourlyUsage: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    hour: { type: "string", description: "Hour timestamp (ISO 8601 or custom)" },
+                    tokens: { type: "number", description: "Total tokens used in this hour" },
+                    cost: { type: "number", description: "Total cost in this hour (USD)" },
+                  },
+                  required: ["hour", "tokens", "cost"],
+                },
+                description: "Hourly usage data for anomaly detection (min 3 hours)",
+                minItems: 3,
+              },
+              threshold: {
+                type: "number",
+                description: "Detection threshold in standard deviations (default: 2.5)",
+                default: 2.5,
+              },
+            },
+            required: ["hourlyUsage"],
           },
         },
 
@@ -367,6 +438,10 @@ class IntuitionServer {
             return await this.tools.predictResetUsage(args);
           case "optimize_by_project":
             return await this.tools.optimizeByProject(args);
+          case "compare_model_costs":
+            return await this.tools.compareModelCosts(args);
+          case "detect_usage_anomaly":
+            return await this.tools.detectUsageAnomaly(args);
 
           // Legacy tools
           case "predict_usage_limit":
@@ -660,7 +735,7 @@ class IntuitionServer {
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error("Runic Intuition Server v2.0.0 running on stdio");
+    console.error("Runic Intuition Server v2.1.0 running on stdio");
   }
 }
 

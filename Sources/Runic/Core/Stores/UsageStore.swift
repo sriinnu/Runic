@@ -56,6 +56,8 @@ extension UsageStore {
         _ = self.tokenSnapshots
         _ = self.tokenErrors
         _ = self.tokenRefreshInFlight
+        _ = self.customProviderSnapshots
+        _ = self.customProviderErrors
         _ = self.ledgerDailySummaries
         _ = self.ledgerActiveBlocks
         _ = self.ledgerTopModels
@@ -107,7 +109,6 @@ extension UsageStore {
             _ = self.settings.claudeWebExtrasEnabled
             _ = self.settings.claudeUsageDataSource
             _ = self.settings.mergeIcons
-            _ = self.settings.selectedMenuProvider
             _ = self.settings.debugLoadingPattern
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
@@ -204,8 +205,8 @@ enum RefreshTrigger: String {
 
     var isAuto: Bool {
         switch self {
-        case .manual, .settingsChange, .login: false
-        case .menuOpen, .autoTimer, .resume, .startup: true
+        case .manual, .login: false
+        case .menuOpen, .autoTimer, .settingsChange, .resume, .startup: true
         }
     }
 
@@ -306,6 +307,9 @@ final class UsageStore {
     private(set) var lastSourceLabels: [UsageProvider: String] = [:]
     private(set) var lastFetchAttempts: [UsageProvider: [ProviderFetchAttempt]] = [:]
     private(set) var tokenSnapshots: [UsageProvider: CostUsageTokenSnapshot] = [:]
+    // Custom provider snapshots
+    private(set) var customProviderSnapshots: [String: CustomProviderSnapshot] = [:]
+    private(set) var customProviderErrors: [String: String] = [:]
     private(set) var tokenErrors: [UsageProvider: String] = [:]
     private(set) var tokenRefreshInFlight: Set<UsageProvider> = []
     private(set) var ledgerDailySummaries: [UsageProvider: UsageLedgerDailySummary] = [:]
@@ -380,6 +384,7 @@ final class UsageStore {
     @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
     @ObservationIgnored private let ledgerRefreshTTL: TimeInterval = 90
     @ObservationIgnored private let ledgerMaxAgeDays: Int = 3
+    @ObservationIgnored nonisolated(unsafe) private let performanceStorage: PerformanceStorageImpl?
 
     init(
         fetcher: UsageFetcher,
@@ -397,6 +402,9 @@ final class UsageStore {
         self.sessionQuotaNotifier = sessionQuotaNotifier
         self.providerMetadata = registry.metadata
         self.lastRefreshFrequency = settings.refreshFrequency
+
+        // Initialize performance tracking (optional, gracefully fails if unavailable)
+        self.performanceStorage = try? PerformanceStorageImpl()
         self.lastAutoRefreshWarningEnabled = settings.autoRefreshWarningEnabled
         self.lastAutoRefreshWarningThreshold = settings.autoRefreshWarningThreshold
         self
@@ -642,6 +650,7 @@ final class UsageStore {
         self.ledgerProjectBreakdowns[provider] ?? []
     }
 
+
     func ledgerError(for provider: UsageProvider) -> String? {
         self.ledgerErrors[provider]
     }
@@ -694,7 +703,76 @@ final class UsageStore {
         }
 
         self.scheduleLedgerRefresh(force: forceTokenUsage, inactiveProviders: inactiveProviders)
+
+        // Refresh custom providers
+        await self.refreshCustomProviders()
+
         self.persistWidgetSnapshot(reason: "refresh")
+    }
+
+    /// Refresh all enabled custom providers
+    func refreshCustomProviders() async {
+        let providers = CustomProviderStore.getEnabledProviders()
+        await withTaskGroup(of: Void.self) { group in
+            for provider in providers {
+                group.addTask {
+                    await self.refreshCustomProvider(id: provider.id)
+                }
+            }
+        }
+    }
+
+    /// Refresh a single custom provider
+    func refreshCustomProvider(id: String) async {
+        guard let config = CustomProviderStore.getProvider(id: id), config.enabled else {
+            return
+        }
+
+        let fetcher = GenericProviderFetcher(config: config)
+        let startTime = Date()
+        let requestID = UUID().uuidString
+
+        do {
+            let usageData = try await fetcher.fetchUsage()
+            let endTime = Date()
+
+            // Track successful latency
+            await self.trackLatency(
+                provider: .codex,  // TODO: Add custom provider tracking
+                requestID: requestID,
+                startTime: startTime,
+                endTime: endTime,
+                success: true
+            )
+
+            let snapshot = CustomProviderSnapshot.from(usageData: usageData.toCustomUsageData(), config: config)
+            await MainActor.run {
+                self.customProviderSnapshots[id] = snapshot
+                self.customProviderErrors.removeValue(forKey: id)
+            }
+        } catch {
+            let endTime = Date()
+
+            // Track failed latency and error
+            await self.trackLatency(
+                provider: .codex,  // TODO: Add custom provider tracking
+                requestID: requestID,
+                startTime: startTime,
+                endTime: endTime,
+                success: false
+            )
+            await self.trackError(provider: .codex, error: error)  // TODO: Add custom provider tracking
+
+            await MainActor.run {
+                self.customProviderErrors[id] = error.localizedDescription
+            }
+        }
+    }
+
+    /// Clear a custom provider snapshot
+    func clearCustomProviderSnapshot(id: String) {
+        self.customProviderSnapshots.removeValue(forKey: id)
+        self.customProviderErrors.removeValue(forKey: id)
     }
 
     /// For demo/testing: drop the snapshot so the loading animation plays, then restore the last snapshot.
@@ -2123,5 +2201,90 @@ extension UsageStore {
                 self.tokenErrors[provider] = nil
             }
         }
+    }
+
+    // MARK: - Performance Tracking
+
+    /// Track API call latency for performance monitoring
+    private nonisolated func trackLatency(
+        provider: UsageProvider,
+        requestID: String,
+        startTime: Date,
+        endTime: Date,
+        success: Bool
+    ) async {
+        guard let storage = self.performanceStorage else { return }
+
+        let metric = LatencyMetric(
+            id: UUID().uuidString,
+            requestID: requestID,
+            provider: provider,
+            model: nil,
+            startTime: startTime,
+            endTime: endTime,
+            durationMs: Int(endTime.timeIntervalSince(startTime) * 1000),
+            success: success,
+            createdAt: Date()
+        )
+
+        try? await storage.save(latency: metric)
+    }
+
+    /// Track API errors for performance monitoring
+    private nonisolated func trackError(provider: UsageProvider, error: Error) async {
+        guard let storage = self.performanceStorage else { return }
+
+        let errorType = self.classifyError(error)
+        let errorEvent = ErrorEvent(
+            id: UUID().uuidString,
+            provider: provider,
+            errorType: errorType,
+            errorMessage: error.localizedDescription,
+            retryCount: 0,
+            timestamp: Date()
+        )
+
+        try? await storage.save(error: errorEvent)
+    }
+
+    /// Classify errors for performance tracking
+    private nonisolated func classifyError(_ error: Error) -> ErrorType {
+        let message = error.localizedDescription.lowercased()
+
+        // Timeout errors
+        if message.contains("timed out") || message.contains("timeout") {
+            return .timeout
+        }
+
+        // Quota/rate limit errors
+        if message.contains("quota") || message.contains("rate limit") || message.contains("429") {
+            return .quota
+        }
+
+        // Authentication errors
+        if message.contains("auth") || message.contains("unauthorized") ||
+            message.contains("401") || message.contains("403")
+        {
+            return .auth
+        }
+
+        // Network errors
+        if message.contains("network") || message.contains("connection") ||
+            message.contains("offline") || message.contains("no internet")
+        {
+            return .network
+        }
+
+        // Parsing errors
+        if message.contains("json") || message.contains("decode") || message.contains("parse") {
+            return .parsing
+        }
+
+        // API errors
+        if message.contains("api") || message.contains("server") {
+            return .apiError
+        }
+
+        return .unknown
     }
 }

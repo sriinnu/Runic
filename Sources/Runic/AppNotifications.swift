@@ -6,11 +6,11 @@ import Foundation
 final class AppNotifications {
     static let shared = AppNotifications()
 
-    private let centerProvider: @Sendable () -> UNUserNotificationCenter
+    private let centerProvider: @Sendable () -> UNUserNotificationCenter?
     private let logger = RunicLog.logger("notifications")
     private var authorizationTask: Task<Bool, Never>?
 
-    init(centerProvider: @escaping @Sendable () -> UNUserNotificationCenter = { UNUserNotificationCenter.current() }) {
+    init(centerProvider: @escaping @Sendable () -> UNUserNotificationCenter? = { AppNotifications.safeCurrentCenter() }) {
         self.centerProvider = centerProvider
     }
 
@@ -21,7 +21,10 @@ final class AppNotifications {
 
     func post(idPrefix: String, title: String, body: String, badge: NSNumber? = nil) {
         guard !Self.isRunningUnderTests else { return }
-        let center = self.centerProvider()
+        guard let center = self.centerProvider() else {
+            self.logger.debug("notification center unavailable; skipping post", metadata: ["prefix": idPrefix])
+            return
+        }
         let logger = self.logger
 
         Task { @MainActor in
@@ -54,6 +57,14 @@ final class AppNotifications {
 
     // MARK: - Private
 
+    /// Safely obtain the current UNUserNotificationCenter, returning nil when the
+    /// bundle proxy is not available (e.g. when running a bare executable outside
+    /// a proper .app bundle).
+    nonisolated private static func safeCurrentCenter() -> UNUserNotificationCenter? {
+        guard Bundle.main.bundleIdentifier != nil else { return nil }
+        return UNUserNotificationCenter.current()
+    }
+
     private func ensureAuthorizationTask() -> Task<Bool, Never> {
         if let authorizationTask { return authorizationTask }
         let task = Task { @MainActor in
@@ -77,7 +88,7 @@ final class AppNotifications {
             }
         }
 
-        let center = self.centerProvider()
+        guard let center = self.centerProvider() else { return false }
         return await withCheckedContinuation { continuation in
             center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
                 continuation.resume(returning: granted)
@@ -86,7 +97,7 @@ final class AppNotifications {
     }
 
     private func notificationAuthorizationStatus() async -> UNAuthorizationStatus? {
-        let center = self.centerProvider()
+        guard let center = self.centerProvider() else { return nil }
         return await withCheckedContinuation { continuation in
             center.getNotificationSettings { settings in
                 continuation.resume(returning: settings.authorizationStatus)

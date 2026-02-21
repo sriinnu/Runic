@@ -184,7 +184,7 @@ func conflictResolutionExample() async {
 
 // MARK: - Observer Pattern Example
 
-class SyncProgressObserver: SyncObserver {
+final class SyncProgressObserver: SyncObserver {
     func syncDidStart() {
         print("🔄 Sync started")
     }

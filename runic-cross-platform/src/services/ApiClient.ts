@@ -7,17 +7,54 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 import type { ProviderId, Provider } from '../types';
 
+import { ErrorMessage, ErrorMessageBuilder } from '../utils/ErrorMessages';
+import { ErrorCode } from '../utils/ErrorCodes';
+
 /**
- * API error with additional context
+ * API error with additional context and structured error message
  */
 export class ApiError extends Error {
+  public readonly errorMessage: ErrorMessage;
+
   constructor(
     message: string,
     public statusCode?: number,
-    public providerId?: ProviderId
+    public providerId?: ProviderId,
+    errorMessage?: ErrorMessage
   ) {
     super(message);
     this.name = 'ApiError';
+
+    // Create structured error message if not provided
+    if (errorMessage) {
+      this.errorMessage = errorMessage;
+    } else if (statusCode) {
+      this.errorMessage = ErrorMessageBuilder.apiError({
+        provider: providerId || 'API',
+        statusCode,
+        details: message,
+      });
+    } else {
+      this.errorMessage = ErrorMessageBuilder.networkError({
+        provider: providerId,
+        reason: message,
+      });
+    }
+  }
+
+  /** Get compact error description for UI display */
+  get compactDescription(): string {
+    return this.errorMessage.reason;
+  }
+
+  /** Get full error description with steps */
+  get fullDescription(): string {
+    return `${this.errorMessage.title}\n${this.errorMessage.reason}\n\nNext Steps:\n${this.errorMessage.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nError Code: ${this.errorMessage.code}`;
+  }
+
+  /** Check if error is retryable */
+  get isRetryable(): boolean {
+    return this.errorMessage.retryable;
   }
 }
 
@@ -106,39 +143,91 @@ class ApiClient {
     if (error.response) {
       // Server responded with error status
       const status = error.response.status;
-      const message = this.getErrorMessage(status);
-      return new ApiError(message, status, this.providerId);
+      const errorMessage = this.getErrorMessage(status);
+      return new ApiError(
+        errorMessage.reason,
+        status,
+        this.providerId,
+        errorMessage
+      );
     } else if (error.request) {
       // Request made but no response received
-      return new ApiError('No response from server', undefined, this.providerId);
+      const networkError = ErrorMessageBuilder.networkError({
+        provider: this.providerId,
+        reason: 'No response received from server',
+      });
+      return new ApiError(
+        networkError.reason,
+        undefined,
+        this.providerId,
+        networkError
+      );
     } else {
       // Error in request configuration
-      return new ApiError(error.message, undefined, this.providerId);
+      const configError = ErrorMessageBuilder.genericError({
+        title: 'Request configuration error',
+        reason: error.message,
+        steps: [
+          'Check your API endpoint configuration',
+          'Verify request parameters are correct',
+          'Contact support if issue persists',
+        ],
+        code: ErrorCode.API_005,
+        retryable: false,
+        provider: this.providerId,
+      });
+      return new ApiError(
+        configError.reason,
+        undefined,
+        this.providerId,
+        configError
+      );
     }
   }
 
   /**
-   * Gets a user-friendly error message based on HTTP status code.
+   * Gets a structured error message based on HTTP status code.
    *
    * @param status - HTTP status code
-   * @returns Error message
+   * @returns Structured error message
    */
-  private getErrorMessage(status: number): string {
+  private getErrorMessage(status: number): ErrorMessage {
+    const provider = this.providerId || 'API';
+
     switch (status) {
       case 401:
-        return 'Invalid API token or unauthorized';
+        return ErrorMessageBuilder.authenticationError({
+          provider,
+          reason: 'Invalid API token or unauthorized',
+          expired: false,
+        });
       case 403:
-        return 'Access forbidden';
+        return ErrorMessageBuilder.authenticationError({
+          provider,
+          reason: 'Access forbidden - insufficient permissions',
+          expired: false,
+        });
       case 404:
-        return 'Resource not found';
+        return ErrorMessageBuilder.apiError({
+          provider,
+          statusCode: 404,
+        });
       case 429:
-        return 'Rate limit exceeded';
+        return ErrorMessageBuilder.rateLimitError({ provider });
       case 500:
-        return 'Internal server error';
+      case 502:
       case 503:
-        return 'Service unavailable';
+      case 504:
+        return ErrorMessageBuilder.apiError({
+          provider,
+          statusCode: status,
+        });
       default:
-        return `Request failed with status ${status}`;
+        return ErrorMessageBuilder.apiError({
+          provider,
+          statusCode: status,
+          details: `Request failed with status ${status}`,
+        });
     }
   }
 

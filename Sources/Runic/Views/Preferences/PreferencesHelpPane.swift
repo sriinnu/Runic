@@ -16,7 +16,7 @@ struct HelpPane: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Auto-refresh cadence and safety rules live in Advanced.")
+                Text("Auto-refresh cadence and safety rules live in Performance > Refresh & Safety.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

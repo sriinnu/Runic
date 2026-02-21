@@ -4,11 +4,11 @@ import SwiftUI
 enum PreferencesLayoutMetrics {
     static let outerHorizontal: CGFloat = 0
     static let outerVertical: CGFloat = 0
-    static let paneHorizontal: CGFloat = 35
-    static let paneVertical: CGFloat = 25
+    static let paneHorizontal: CGFloat = 36
+    static let paneVertical: CGFloat = 24
     static let paneSpacing: CGFloat = 24
     static let sectionSpacing: CGFloat = 20
-    static let sectionHeaderSpacing: CGFloat = 18
+    static let sectionHeaderSpacing: CGFloat = 16
 }
 
 @MainActor
@@ -67,12 +67,15 @@ struct PreferenceToggleRow: View {
     @Binding var binding: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5.4) {
-            Toggle(isOn: self.$binding) {
-                Text(self.title)
-                    .font(.body)
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            HStack(alignment: .center, spacing: RunicSpacing.xs) {
+                Toggle(isOn: self.$binding) {
+                    Text(self.title)
+                        .font(.body)
+                }
+                .toggleStyle(.checkbox)
+                .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
             }
-            .toggleStyle(.checkbox)
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
@@ -94,8 +97,8 @@ struct PreferenceStepperRow: View {
     @Binding var value: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5.4) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            HStack(spacing: RunicSpacing.sm) {
                 Text(self.title)
                     .font(.body)
                 Spacer()
@@ -121,7 +124,7 @@ struct PreferenceStepperRow: View {
 struct PreferencesDivider: View {
     var body: some View {
         Divider()
-            .padding(.vertical, 4)
+            .padding(.vertical, RunicSpacing.xxs)
     }
 }
 
@@ -134,7 +137,7 @@ private struct PreferenceStepperControl: View {
     let onIncrement: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: RunicSpacing.xs) {
             Button(action: self.onDecrement) {
                 Image(systemName: "minus")
             }
@@ -145,10 +148,10 @@ private struct PreferenceStepperControl: View {
             Text(self.valueLabel)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .padding(.horizontal, RunicSpacing.sm)
+                .padding(.vertical, RunicSpacing.xxs)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
                         .fill(Color(nsColor: .controlBackgroundColor)))
 
             Button(action: self.onIncrement) {
@@ -211,13 +214,13 @@ struct AboutLinkRow: View {
         Button {
             if let url = URL(string: self.url) { NSWorkspace.shared.open(url) }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: RunicSpacing.xs) {
                 Image(systemName: self.icon)
                 Text(self.title)
                     .underline(self.hovering, color: .accentColor)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 4)
+            .padding(.vertical, RunicSpacing.xxs)
             .foregroundColor(.accentColor)
         }
         .buttonStyle(.plain)

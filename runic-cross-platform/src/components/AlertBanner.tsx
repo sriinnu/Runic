@@ -13,6 +13,7 @@ import {
   Animated,
 } from 'react-native';
 import { useTheme } from '../hooks';
+import type { Theme } from '../theme';
 import type { Alert, AlertSeverity } from '../types';
 
 /**
@@ -42,6 +43,7 @@ interface AlertBannerProps {
  */
 export function AlertBanner({ alert, onDismiss }: AlertBannerProps) {
   const theme = useTheme();
+  const styles = createStyles(theme);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   // Fade in on mount
@@ -78,9 +80,17 @@ export function AlertBanner({ alert, onDismiss }: AlertBannerProps) {
         },
         theme.elevation.level1,
       ]}
+      accessible={true}
+      accessibilityRole="alert"
+      accessibilityLabel={`${alert.severity} alert: ${alert.message}`}
+      accessibilityLiveRegion="polite"
     >
       {/* Icon */}
-      <View style={[styles.iconContainer, { backgroundColor: colors.icon }]}>
+      <View
+        style={[styles.iconContainer, { backgroundColor: colors.icon }]}
+        accessible={false}
+        importantForAccessibility="no"
+      >
         <Text style={styles.iconText}>{getSeverityIcon(alert.severity)}</Text>
       </View>
 
@@ -92,6 +102,7 @@ export function AlertBanner({ alert, onDismiss }: AlertBannerProps) {
             theme.typography.bodyMedium,
             { color: colors.text },
           ]}
+          accessible={false}
         >
           {alert.message}
         </Text>
@@ -102,6 +113,10 @@ export function AlertBanner({ alert, onDismiss }: AlertBannerProps) {
             style={styles.actionButton}
             onPress={alert.onAction}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={alert.actionText}
+            accessibilityHint={`Performs action: ${alert.actionText}`}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text
               style={[
@@ -109,6 +124,7 @@ export function AlertBanner({ alert, onDismiss }: AlertBannerProps) {
                 theme.typography.labelMedium,
                 { color: theme.colors.primary },
               ]}
+              accessible={false}
             >
               {alert.actionText}
             </Text>
@@ -121,8 +137,13 @@ export function AlertBanner({ alert, onDismiss }: AlertBannerProps) {
         style={styles.dismissButton}
         onPress={handleDismiss}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss alert"
+        accessibilityHint="Closes this alert notification"
       >
-        <Text style={[styles.dismissText, { color: colors.text }]}>✕</Text>
+        <Text style={[styles.dismissText, { color: colors.text }]} accessible={false}>
+          ✕
+        </Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -182,49 +203,52 @@ function getSeverityColors(severity: AlertSeverity, themeColors: any) {
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    marginHorizontal: 16,
-    marginVertical: 8,
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  iconText: {
-    fontSize: 16,
-  },
-  content: {
-    flex: 1,
-  },
-  message: {
-    marginBottom: 4,
-  },
-  actionButton: {
-    marginTop: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-  },
-  actionText: {
-    textTransform: 'uppercase',
-  },
-  dismissButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  dismissText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});
+// Create styles with theme
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.sm,
+      borderLeftWidth: theme.spacing.xs,
+      marginHorizontal: theme.spacing.md,
+      marginVertical: theme.spacing.sm,
+    },
+    iconContainer: {
+      width: theme.spacing.xl,
+      height: theme.spacing.xl,
+      borderRadius: theme.spacing.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: theme.spacing.md,
+    },
+    iconText: {
+      fontSize: 16,
+    },
+    content: {
+      flex: 1,
+    },
+    message: {
+      marginBottom: theme.spacing.xs,
+    },
+    actionButton: {
+      marginTop: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      alignSelf: 'flex-start',
+    },
+    actionText: {
+      textTransform: 'uppercase',
+    },
+    dismissButton: {
+      padding: theme.spacing.xs,
+      marginLeft: theme.spacing.sm,
+    },
+    dismissText: {
+      fontSize: 18,
+      fontWeight: '600',
+    },
+  });
+}
 
 export default AlertBanner;

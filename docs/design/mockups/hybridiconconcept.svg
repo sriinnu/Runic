@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 48" fill="none">
+  <!-- OPTION C: Hybrid - Infinity Outline + Usage Bar + Provider Badge -->
+  <!-- Optimized for 40×24pt menubar rendering (80×48px @2x) -->
+
+  <!-- Background for demonstration (remove in production) -->
+  <rect x="0" y="0" width="80" height="48" fill="#F0F0F0" opacity="0.3"/>
+
+  <!-- Infinity outline (thinner stroke, serves as frame) -->
+  <path d="M 12,24
+           C 12,14 20,10 28,14
+           C 36,18 36,24 40,24
+           C 44,24 44,18 52,14
+           C 60,10 68,14 68,24
+           C 68,34 60,38 52,34
+           C 44,30 44,24 40,24
+           C 36,24 36,30 28,34
+           C 20,38 12,34 12,24 Z"
+        stroke="#14B8A6"
+        stroke-width="6"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        opacity="0.4"/>
+
+  <!-- Center usage bar (consolidated metric) -->
+  <g id="usage-bar">
+    <!-- Bar background (container) -->
+    <rect x="32" y="16" width="16" height="16" rx="3" fill="#14B8A6" opacity="0.15"/>
+
+    <!-- Bar fill (shows 65% usage from bottom) -->
+    <rect x="32" y="26.4" width="16" height="9.6" rx="3" fill="#14B8A6">
+      <title>Usage: 65%</title>
+    </rect>
+
+    <!-- Gradient overlay for depth -->
+    <defs>
+      <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:#2DD4BF;stop-opacity:0.3"/>
+        <stop offset="100%" style="stop-color:#0F766E;stop-opacity:0.1"/>
+      </linearGradient>
+    </defs>
+    <rect x="32" y="26.4" width="16" height="9.6" rx="3" fill="url(#barGradient)"/>
+  </g>
+
+  <!-- Provider badge (top-right corner) -->
+  <g id="provider-badge" transform="translate(62, 6)">
+    <!-- Badge background circle -->
+    <circle cx="6" cy="6" r="7" fill="#FFFFFF" stroke="#14B8A6" stroke-width="1.5"/>
+
+    <!-- Claude icon example: vertical slits -->
+    <rect x="4" y="4" width="1.5" height="4" fill="#14B8A6"/>
+    <rect x="6.5" y="4" width="1.5" height="4" fill="#14B8A6"/>
+  </g>
+
+  <!-- Annotations for demonstration (remove in production) -->
+  <g opacity="0.4">
+    <text x="2" y="10" font-family="system-ui" font-size="7" fill="#666">Infinity Outline</text>
+    <text x="25" y="42" font-family="system-ui" font-size="7" fill="#666">Center Bar</text>
+    <text x="52" y="24" font-family="system-ui" font-size="7" fill="#666">Provider</text>
+    <text x="56" y="30" font-family="system-ui" font-size="7" fill="#666">Badge</text>
+  </g>
+</svg>

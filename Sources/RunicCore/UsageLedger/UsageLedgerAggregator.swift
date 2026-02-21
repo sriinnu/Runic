@@ -30,6 +30,12 @@ public enum UsageLedgerAggregator {
         let projectID: String?
     }
 
+    private struct HourlyKey: Hashable {
+        let provider: UsageProvider
+        let projectID: String?
+        let hourStart: Date
+    }
+
     public static func dailySummaries(
         entries: [UsageLedgerEntry],
         timeZone: TimeZone,
@@ -227,6 +233,56 @@ public enum UsageLedgerAggregator {
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    private static func hourKeyString(from date: Date, timeZone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendarFor(timeZone)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:00:00"
+        return formatter.string(from: date)
+    }
+
+    public static func hourlySummaries(
+        entries: [UsageLedgerEntry],
+        timeZone: TimeZone,
+        groupByProject: Bool = true) -> [UsageLedgerHourlySummary]
+    {
+        let calendar = calendarFor(timeZone)
+        var buckets: [HourlyKey: AggregateAccumulator] = [:]
+
+        for entry in entries {
+            // Get the start of the hour for this entry
+            let components = calendar.dateComponents([.year, .month, .day, .hour], from: entry.timestamp)
+            guard let hourStart = calendar.date(from: components) else { continue }
+
+            let key = HourlyKey(
+                provider: entry.provider,
+                projectID: groupByProject ? entry.projectID : nil,
+                hourStart: hourStart)
+            buckets[key, default: AggregateAccumulator()].consume(entry)
+        }
+
+        return buckets.map { key, acc in
+            let hourKey = hourKeyString(from: key.hourStart, timeZone: timeZone)
+            return UsageLedgerHourlySummary(
+                provider: key.provider,
+                projectID: key.projectID,
+                hourStart: key.hourStart,
+                hourKey: hourKey,
+                totals: acc.totals,
+                requestCount: acc.entryCount)
+        }
+        .sorted { lhs, rhs in
+            if lhs.hourStart != rhs.hourStart {
+                return lhs.hourStart < rhs.hourStart
+            }
+            if lhs.provider != rhs.provider {
+                return lhs.provider.rawValue < rhs.provider.rawValue
+            }
+            return (lhs.projectID ?? "") < (rhs.projectID ?? "")
+        }
     }
 }
 

@@ -54,7 +54,7 @@ enum IconRenderer {
     private static let outputScale: CGFloat = 2
     private static let canvasPx = Int(outputSize.width * outputScale)
     
-    // Wave logo base template - loaded lazily from Resources
+    // Infinity symbol base template - loaded lazily from Resources
     private static let waveLogoTemplate: NSImage? = {
         guard let url = Bundle.main.url(forResource: "RunicMenubarIcon", withExtension: "svg"),
               let image = NSImage(contentsOf: url) else {
@@ -534,7 +534,7 @@ enum IconRenderer {
         ctx.fill(rect)
         ctx.restoreGState()
 
-        // Usage fill: left-to-right reveal within the wave shape.
+        // Usage fill: left-to-right reveal within the infinity symbol.
         guard clamped > 0 else { return }
         ctx.saveGState()
         waveLogo.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1.0)

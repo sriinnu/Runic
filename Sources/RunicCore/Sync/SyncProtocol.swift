@@ -91,7 +91,7 @@ public protocol SyncConflictResolverProtocol: Sendable {
         local: SyncableRecord,
         remote: SyncableRecord,
         strategy: ConflictResolutionStrategy
-    ) -> SyncableRecord
+    ) async -> SyncableRecord
 }
 
 // MARK: - Sync Observer Protocol

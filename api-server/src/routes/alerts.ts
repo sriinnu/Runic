@@ -357,3 +357,129 @@ alertsRouter.get('/:alertID', async (req: Request, res: Response) => {
     return res.status(500).json(response);
   }
 });
+
+/**
+ * Alert evaluation result
+ */
+interface AlertEvaluation {
+  alerts: UsageAlert[];
+  triggered: number;
+  evaluated: number;
+  timestamp: string;
+  summary: {
+    critical: number;
+    warning: number;
+    info: number;
+  };
+}
+
+/**
+ * POST /api/v1/alerts/evaluate
+ *
+ * Evaluates all alert rules against current usage data
+ *
+ * Request body:
+ * - broadcastWebSocket: boolean - Whether to broadcast alerts via WebSocket (default: true)
+ * - triggerWebhooks: boolean - Whether to trigger webhooks (default: true)
+ *
+ * @returns {ApiResponse<AlertEvaluation>} Evaluation results
+ */
+alertsRouter.post('/evaluate', async (req: Request, res: Response) => {
+  try {
+    const {
+      broadcastWebSocket = true,
+      triggerWebhooks = true
+    } = req.body;
+
+    // In production:
+    // 1. Load alert rules from AlertRuleStore
+    // 2. Check current usage from UsageStore
+    // 3. Check budgets from ProjectBudgetStore
+    // 4. Check velocity/anomalies from UsageLedgerAggregator
+    // 5. Generate alerts based on rule conditions
+
+    const triggeredAlerts: UsageAlert[] = [];
+
+    // Mock: Check budget thresholds
+    const budgetAlerts = [
+      {
+        id: 'alert-budget-001',
+        provider: 'anthropic',
+        severity: AlertSeverity.Warning,
+        title: 'Budget Threshold Exceeded',
+        message: 'Project "Runic iOS App" has exceeded 80% of monthly budget',
+        threshold: 80,
+        currentUsage: 84.6,
+        recommendation: 'Review project costs and consider increasing budget or optimizing usage',
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    // Mock: Check velocity anomalies
+    const velocityAlerts = [
+      {
+        id: 'alert-velocity-001',
+        provider: 'openai',
+        severity: AlertSeverity.Critical,
+        title: 'Unusual Usage Spike Detected',
+        message: 'Token usage has increased by 250% compared to average hourly usage',
+        threshold: 200,
+        currentUsage: 250,
+        estimatedTimeToLimit: 3600,
+        recommendation: 'Investigate recent API calls and check for runaway processes',
+        createdAt: new Date().toISOString()
+      }
+    ];
+
+    triggeredAlerts.push(...budgetAlerts, ...velocityAlerts);
+
+    // Count by severity
+    const criticalCount = triggeredAlerts.filter(a => a.severity === AlertSeverity.Critical).length;
+    const warningCount = triggeredAlerts.filter(a => a.severity === AlertSeverity.Warning).length;
+    const infoCount = triggeredAlerts.filter(a => a.severity === AlertSeverity.Info).length;
+
+    // Broadcast via WebSocket if enabled
+    if (broadcastWebSocket) {
+      // In production: wsManager.broadcastAlert(alert)
+      console.log(`Would broadcast ${triggeredAlerts.length} alerts via WebSocket`);
+    }
+
+    // Trigger webhooks if enabled
+    if (triggerWebhooks) {
+      // In production: deliverWebhooks(triggeredAlerts, webhookRules)
+      console.log(`Would trigger webhooks for ${triggeredAlerts.length} alerts`);
+    }
+
+    const evaluation: AlertEvaluation = {
+      alerts: triggeredAlerts,
+      triggered: triggeredAlerts.length,
+      evaluated: 5, // Mock: evaluated 5 rules
+      timestamp: new Date().toISOString(),
+      summary: {
+        critical: criticalCount,
+        warning: warningCount,
+        info: infoCount
+      }
+    };
+
+    const response: ApiResponse<AlertEvaluation> = {
+      data: evaluation,
+      timestamp: new Date().toISOString(),
+      success: true
+    };
+
+    return res.json(response);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const response: ApiResponse<AlertEvaluation | null> = {
+      data: null,
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: {
+        message: errorMessage,
+        code: 'ALERT_EVALUATION_ERROR'
+      }
+    };
+    return res.status(500).json(response);
+  }
+});

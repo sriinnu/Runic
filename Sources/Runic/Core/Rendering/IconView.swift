@@ -33,14 +33,14 @@ struct IconView: View {
                     .renderingMode(.original)
                     .interpolation(.none)
                     .frame(width: 20, height: 18, alignment: .center)
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, RunicSpacing.xxxs)
             } else if self.showLoadingAnimation {
                 // Loading: animate bars with the current pattern until data arrives.
                 Image(nsImage: self.loadingImage)
                     .renderingMode(.original)
                     .interpolation(.none)
                     .frame(width: 20, height: 18, alignment: .center)
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, RunicSpacing.xxxs)
                     .onChange(of: self.displayLink.tick) { _, _ in
                         self.phase += 0.09 // half-speed animation
                         if self.debugCycle {
@@ -63,7 +63,7 @@ struct IconView: View {
                     .renderingMode(.original)
                     .interpolation(.none)
                     .frame(width: 20, height: 18, alignment: .center)
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, RunicSpacing.xxxs)
             }
         }
         .onChange(of: self.isLoading, initial: true) { _, isLoading in

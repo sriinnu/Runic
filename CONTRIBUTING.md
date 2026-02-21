@@ -108,7 +108,10 @@ git remote add upstream https://github.com/sriinnu/Runic.git
 ### Building Components
 
 ```bash
-# Swift (macOS/iOS/CLI)
+# macOS app (complete build with frameworks)
+./Scripts/build-macos.sh --skip-tests
+
+# Swift CLI tool only
 swift build
 
 # API Server

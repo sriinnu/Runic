@@ -11,17 +11,274 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHmac } from 'crypto';
 import {
-  WebSocketMessageType
+  WebSocketMessageType,
+  AlertSeverity
 } from '../types/index.js';
 import type {
   WebhookConfig,
   ApiResponse,
-  PaginatedResponse
+  PaginatedResponse,
+  UsageAlert
 } from '../types/index.js';
 
 export const webhooksRouter = Router();
+
+/**
+ * Webhook payload types
+ */
+type WebhookType = 'slack' | 'discord' | 'generic';
+
+/**
+ * Slack message block format
+ */
+interface SlackPayload {
+  text: string;
+  attachments?: {
+    color: string;
+    blocks: any[];
+    fallback: string;
+  }[];
+}
+
+/**
+ * Discord embed format
+ */
+interface DiscordPayload {
+  content: string;
+  embeds?: {
+    title: string;
+    description: string;
+    color: number;
+    fields: { name: string; value: string; inline?: boolean }[];
+    timestamp: string;
+  }[];
+}
+
+/**
+ * Generic webhook payload
+ */
+interface GenericPayload {
+  event: string;
+  timestamp: string;
+  data: any;
+}
+
+/**
+ * Formats a webhook payload based on the webhook type
+ *
+ * @param alert - Usage alert to format
+ * @param type - Webhook type (slack, discord, or generic)
+ * @returns Formatted payload
+ */
+function formatWebhookPayload(alert: UsageAlert, type: WebhookType): SlackPayload | DiscordPayload | GenericPayload {
+  if (type === 'slack') {
+    // Slack blocks format with color attachments
+    const color = alert.severity === AlertSeverity.Critical ? '#dc2626' :
+                  alert.severity === AlertSeverity.Warning ? '#f59e0b' :
+                  alert.severity === AlertSeverity.Info ? '#3b82f6' : '#6b7280';
+
+    const slackPayload: SlackPayload = {
+      text: `Alert: ${alert.title}`,
+      attachments: [{
+        color,
+        fallback: alert.message,
+        blocks: [
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: alert.title,
+              emoji: true
+            }
+          },
+          {
+            type: 'section',
+            fields: [
+              {
+                type: 'mrkdwn',
+                text: `*Provider:*\n${alert.provider}`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Severity:*\n${alert.severity}`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Usage:*\n${alert.currentUsage.toFixed(1)}%`
+              },
+              {
+                type: 'mrkdwn',
+                text: `*Threshold:*\n${alert.threshold}%`
+              }
+            ]
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*Message:*\n${alert.message}`
+            }
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*Recommendation:*\n${alert.recommendation}`
+            }
+          }
+        ]
+      }]
+    };
+
+    return slackPayload;
+  }
+
+  if (type === 'discord') {
+    // Discord embed format with color
+    const color = alert.severity === AlertSeverity.Critical ? 0xdc2626 :
+                  alert.severity === AlertSeverity.Warning ? 0xf59e0b :
+                  alert.severity === AlertSeverity.Info ? 0x3b82f6 : 0x6b7280;
+
+    const discordPayload: DiscordPayload = {
+      content: `**Alert: ${alert.title}**`,
+      embeds: [{
+        title: alert.title,
+        description: alert.message,
+        color,
+        fields: [
+          {
+            name: 'Provider',
+            value: alert.provider,
+            inline: true
+          },
+          {
+            name: 'Severity',
+            value: alert.severity,
+            inline: true
+          },
+          {
+            name: 'Usage',
+            value: `${alert.currentUsage.toFixed(1)}%`,
+            inline: true
+          },
+          {
+            name: 'Threshold',
+            value: `${alert.threshold}%`,
+            inline: true
+          },
+          {
+            name: 'Recommendation',
+            value: alert.recommendation,
+            inline: false
+          }
+        ],
+        timestamp: alert.createdAt
+      }]
+    };
+
+    return discordPayload;
+  }
+
+  // Generic JSON format
+  const genericPayload: GenericPayload = {
+    event: 'alert.created',
+    timestamp: alert.createdAt,
+    data: alert
+  };
+
+  return genericPayload;
+}
+
+/**
+ * Delivers webhooks to configured URLs with retry logic
+ *
+ * @param alerts - Alerts to deliver
+ * @param webhooks - Webhook configurations
+ * @returns Delivery results
+ */
+async function deliverWebhooks(alerts: UsageAlert[], webhooks: WebhookConfig[]): Promise<{
+  delivered: number;
+  failed: number;
+  results: { webhookID: string; success: boolean; error?: string }[];
+}> {
+  const results: { webhookID: string; success: boolean; error?: string }[] = [];
+  let delivered = 0;
+  let failed = 0;
+
+  // Filter webhooks that should receive alert events
+  const alertWebhooks = webhooks.filter(w =>
+    w.enabled && w.events.includes(WebSocketMessageType.AlertCreated)
+  );
+
+  for (const webhook of alertWebhooks) {
+    for (const alert of alerts) {
+      // Determine webhook type from URL
+      let webhookType: WebhookType = 'generic';
+      if (webhook.url.includes('slack.com')) {
+        webhookType = 'slack';
+      } else if (webhook.url.includes('discord.com')) {
+        webhookType = 'discord';
+      }
+
+      // Format payload
+      const payload = formatWebhookPayload(alert, webhookType);
+
+      // Generate signature
+      const timestamp = Date.now().toString();
+      const signatureData = `${timestamp}.${JSON.stringify(payload)}`;
+      const signature = createHmac('sha256', webhook.secret)
+        .update(signatureData)
+        .digest('hex');
+
+      // Attempt delivery with retry (3 attempts)
+      let success = false;
+      let lastError: string | undefined;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(webhook.url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Runic-Signature': `t=${timestamp},v1=${signature}`,
+              'X-Runic-Event': 'alert.created'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (response.ok) {
+            success = true;
+            delivered++;
+            break;
+          } else {
+            lastError = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } catch (error) {
+          lastError = error instanceof Error ? error.message : 'Unknown error';
+        }
+
+        // Wait before retry (exponential backoff)
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        }
+      }
+
+      if (!success) {
+        failed++;
+      }
+
+      results.push({
+        webhookID: webhook.id,
+        success,
+        error: success ? undefined : lastError
+      });
+    }
+  }
+
+  return { delivered, failed, results };
+}
 
 /**
  * Webhook delivery log entry
@@ -429,6 +686,85 @@ webhooksRouter.get('/:webhookID/deliveries', async (req: Request, res: Response)
       error: {
         message: errorMessage,
         code: 'DELIVERIES_FETCH_ERROR'
+      }
+    };
+    return res.status(500).json(response);
+  }
+});
+
+/**
+ * POST /api/v1/webhooks/test
+ *
+ * Tests webhook delivery with a sample payload
+ *
+ * Request body:
+ * - webhookID: string - Webhook to test (required)
+ *
+ * @returns {ApiResponse<any>} Test delivery result
+ */
+webhooksRouter.post('/test', async (req: Request, res: Response) => {
+  try {
+    const { webhookID } = req.body;
+
+    if (!webhookID) {
+      const response: ApiResponse<null> = {
+        data: null,
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: {
+          message: 'Missing required field: webhookID',
+          code: 'VALIDATION_ERROR'
+        }
+      };
+      return res.status(400).json(response);
+    }
+
+    const webhook = mockWebhooks[webhookID];
+    if (!webhook) {
+      const response: ApiResponse<null> = {
+        data: null,
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: {
+          message: `Webhook '${webhookID}' not found`,
+          code: 'WEBHOOK_NOT_FOUND'
+        }
+      };
+      return res.status(404).json(response);
+    }
+
+    // Create test alert
+    const testAlert: UsageAlert = {
+      id: 'test-alert-001',
+      provider: 'anthropic',
+      severity: AlertSeverity.Info,
+      title: 'Test Alert',
+      message: 'This is a test alert from Runic API',
+      threshold: 50,
+      currentUsage: 25.0,
+      recommendation: 'This is a test - no action required',
+      createdAt: new Date().toISOString()
+    };
+
+    // Deliver to webhook
+    const result = await deliverWebhooks([testAlert], [webhook]);
+
+    const response: ApiResponse<typeof result> = {
+      data: result,
+      timestamp: new Date().toISOString(),
+      success: true
+    };
+
+    return res.json(response);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const response: ApiResponse<null> = {
+      data: null,
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: {
+        message: errorMessage,
+        code: 'WEBHOOK_TEST_ERROR'
       }
     };
     return res.status(500).json(response);

@@ -7,6 +7,11 @@
 import { create } from 'zustand';
 import { syncService, SyncResult } from '../services/SyncService';
 import { storeData, getData, STORAGE_KEYS } from '../utils/storage';
+import {
+  createConcurrencyLimit,
+  debounce,
+  RequestOptimizationConfig,
+} from '../utils/requestOptimizer';
 import type { Provider, ProviderId, ProviderConfig } from '../types';
 
 /**
@@ -77,9 +82,15 @@ interface ProviderActions {
 //   },
 // });
 
+// Performance: Create concurrency limiter for API requests (max 3 concurrent)
+const concurrencyLimit = createConcurrencyLimit(
+  RequestOptimizationConfig.MAX_CONCURRENT_REQUESTS
+);
+
 /**
  * Provider store with Zustand.
  * Manages all provider-related state and operations.
+ * Performance optimized with request debouncing and concurrency control.
  */
 export const useProviderStore = create<ProviderState & ProviderActions>(
   (set, get) => ({
@@ -239,6 +250,7 @@ export const useProviderStore = create<ProviderState & ProviderActions>(
 
     /**
      * Syncs all enabled providers.
+     * Performance optimized with concurrency limiting (max 3 concurrent requests).
      */
     syncAllProviders: async (force = false) => {
       const providers = get().getEnabledProviders();
@@ -247,13 +259,16 @@ export const useProviderStore = create<ProviderState & ProviderActions>(
         return [];
       }
 
+      // Performance: Use concurrency limiter to prevent API spam
+      const syncPromises = providers.map((provider) =>
+        concurrencyLimit(() => get().syncProvider(provider.id, force))
+      );
+
       set({ isLoading: true });
 
       try {
-        const results = await Promise.all(
-          providers.map((p) => get().syncProvider(p.id, force))
-        );
-
+        // Performance: Execute with concurrency limit (max 3 concurrent)
+        const results = await Promise.all(syncPromises);
         return results;
       } finally {
         set({ isLoading: false, lastSyncTime: Date.now() });

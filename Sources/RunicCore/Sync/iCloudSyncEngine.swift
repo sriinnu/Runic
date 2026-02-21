@@ -50,7 +50,7 @@ public actor iCloudSyncEngine: SyncEngine {
     ///   - deviceID: Unique identifier for this device
     public init(
         containerIdentifier: String? = nil,
-        deviceID: String = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        deviceID: String? = nil
     ) {
         if let identifier = containerIdentifier {
             self.container = CKContainer(identifier: identifier)
@@ -60,12 +60,24 @@ public actor iCloudSyncEngine: SyncEngine {
 
         self.database = container.privateCloudDatabase
         self.conflictResolver = SyncConflictResolver()
-        self.deviceID = deviceID
+        self.deviceID = deviceID ?? Self.getDeviceIdentifier()
 
         // Register default merge handlers
         Task {
             await conflictResolver.registerDefaultMergeHandlers()
         }
+    }
+
+    /// Gets a persistent device identifier for this machine
+    private static func getDeviceIdentifier() -> String {
+        let key = "com.runic.device.identifier"
+        if let stored = UserDefaults.standard.string(forKey: key) {
+            return stored
+        }
+
+        let newID = UUID().uuidString
+        UserDefaults.standard.set(newID, forKey: key)
+        return newID
     }
 
     // MARK: - SyncEngine Protocol Implementation
@@ -84,7 +96,7 @@ public actor iCloudSyncEngine: SyncEngine {
         var pushedCount = 0
         var fetchedCount = 0
         var conflictsResolved = 0
-        var warnings: [String] = []
+        let warnings: [String] = []
 
         if !pendingQueue.isEmpty {
             if case .success(let count) = await processPendingQueue(options: options) {
@@ -100,9 +112,10 @@ public actor iCloudSyncEngine: SyncEngine {
             fetchedCount = records.count
             for record in records {
                 if let conflict = await detectConflict(record) {
-                    await applyResolvedRecord(conflictResolver.resolve(
+                    let resolved = await conflictResolver.resolve(
                         local: conflict.local, remote: conflict.remote,
-                        strategy: options.conflictStrategy))
+                        strategy: options.conflictStrategy)
+                    await applyResolvedRecord(resolved)
                     conflictsResolved += 1
                 }
             }
@@ -126,7 +139,12 @@ public actor iCloudSyncEngine: SyncEngine {
                 deleting: []
             )
 
-            recordIDs = savedRecords.map { $0.recordID.recordName }
+            recordIDs = savedRecords.compactMap { (recordID, result) -> String? in
+                if case .success(let record) = result {
+                    return record.recordID.recordName
+                }
+                return nil
+            }
 
             return .success(recordIDs)
         } catch let error as CKError {
@@ -174,7 +192,13 @@ public actor iCloudSyncEngine: SyncEngine {
                 deleting: ckRecordIDs
             )
 
-            return .success(deletedIDs.map { $0.recordName })
+            let deletedNames = deletedIDs.compactMap { (recordID, result) -> String? in
+                if case .success = result {
+                    return recordID.recordName
+                }
+                return nil
+            }
+            return .success(deletedNames)
         } catch let error as CKError {
             return .failure(.cloudKitError(error))
         } catch {
@@ -307,27 +331,3 @@ private struct ConflictPair {
     let remote: SyncableRecord
 }
 
-// MARK: - UIKit Compatibility Shim
-
-#if canImport(UIKit)
-import UIKit
-#elseif canImport(AppKit)
-import AppKit
-
-/// macOS compatibility shim for UIDevice
-private struct UIDevice {
-    static let current = UIDevice()
-
-    var identifierForVendor: UUID? {
-        // On macOS, use a persistent identifier
-        let key = "com.runic.device.identifier"
-        if let stored = UserDefaults.standard.string(forKey: key) {
-            return UUID(uuidString: stored)
-        }
-
-        let newID = UUID()
-        UserDefaults.standard.set(newID.uuidString, forKey: key)
-        return newID
-    }
-}
-#endif

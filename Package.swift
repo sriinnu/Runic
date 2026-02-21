@@ -37,9 +37,10 @@ let package = Package(
                     .product(name: "Logging", package: "swift-log"),
                     .product(name: "Silo", package: "Silo"),
                 ],
-                exclude: [
-                    "Sync",
-                ],
+                // Sync directory now enabled for iCloud CloudKit synchronization
+                // exclude: [
+                //     "Sync",
+                // ],
                 swiftSettings: [
                     .enableUpcomingFeature("StrictConcurrency"),
                 ]),
@@ -93,8 +94,8 @@ let package = Package(
                     "RunicCore",
                 ],
                 path: "Sources/Runic",
-                exclude: [
-                    "Resources",
+                resources: [
+                    .copy("Resources"),
                 ],
                 swiftSettings: [
                     // Opt into Swift 6 strict concurrency (approachable migration path).

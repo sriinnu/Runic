@@ -202,7 +202,7 @@ Forecast usage at next reset time with velocity tracking and status assessment.
 
 ### 4. `optimize_by_project`
 
-Analyze and optimize costs for a specific project with savings projections.
+Analyze and optimize costs for a specific project with savings projections and actionable alerts.
 
 **Parameters:**
 - `projectId` (string, required): Project identifier
@@ -267,6 +267,18 @@ Analyze and optimize costs for a specific project with savings projections.
     "percentage": "38.9%",
     "achievableWith": "Migrating all usage to openai"
   },
+  "alerts": [
+    {
+      "level": "critical",
+      "message": "39% potential cost savings identified",
+      "action": "Switch to openai for immediate cost reduction"
+    },
+    {
+      "level": "warning",
+      "message": "2.4x efficiency gap between providers",
+      "action": "Prioritize migrating from claude to openai"
+    }
+  ],
   "providerBreakdown": [...],
   "optimizationStrategies": [
     {
@@ -285,6 +297,157 @@ Analyze and optimize costs for a specific project with savings projections.
     "Monitor usage patterns to identify opportunities for model switching",
     "Significant savings possible - prioritize optimization"
   ]
+}
+```
+
+---
+
+### 5. `compare_model_costs`
+
+Compare costs across multiple AI models and rank by cost efficiency.
+
+**Parameters:**
+- `models` (array, required): List of model names to compare (minimum 2)
+- `taskType` (enum, required): `coding` | `writing` | `analysis` | `general`
+- `historicalUsage` (array, optional): Historical usage data for accuracy
+  - `model` (string): Model name
+  - `inputTokens` (number): Input tokens used
+  - `outputTokens` (number): Output tokens used
+  - `cost` (number): Cost in USD
+
+**Example:**
+```json
+{
+  "models": [
+    "claude-3-opus-20240229",
+    "claude-3-sonnet-20240229",
+    "claude-3-haiku-20240307",
+    "gpt-4-turbo"
+  ],
+  "taskType": "coding",
+  "historicalUsage": [
+    {
+      "model": "claude-3-opus-20240229",
+      "inputTokens": 10000,
+      "outputTokens": 5000,
+      "cost": 0.525
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "taskType": "coding",
+  "modelsCompared": 4,
+  "cheapest": {
+    "model": "claude-3-haiku-20240307",
+    "costPerToken": "0.00075000",
+    "suitability": "medium"
+  },
+  "mostExpensive": {
+    "model": "claude-3-opus-20240229",
+    "costPerToken": "0.04500000",
+    "suitability": "high"
+  },
+  "costRange": {
+    "min": "0.00075000",
+    "max": "0.04500000",
+    "spread": "60.00x"
+  },
+  "models": [
+    {
+      "model": "claude-3-haiku-20240307",
+      "pricing": {
+        "inputCostPer1M": "0.25",
+        "outputCostPer1M": "1.25",
+        "avgCostPerToken": "0.00075000",
+        "contextWindow": 200000
+      },
+      "historicalCostPerToken": null,
+      "taskSuitability": "medium",
+      "costPerToken": "0.00075000",
+      "costRatio": "1.00x",
+      "costDifferencePer1MTokens": "0.00",
+      "recommendation": "Most cost-effective option for coding"
+    },
+    {
+      "model": "claude-3-sonnet-20240229",
+      "costPerToken": "0.00900000",
+      "costRatio": "12.00x",
+      "recommendation": "Good balance of capability and cost for coding"
+    }
+  ],
+  "overallRecommendation": "For coding tasks, claude-3-haiku-20240307 offers the best cost efficiency. For optimal performance, consider claude-3-sonnet-20240229 (high suitability)."
+}
+```
+
+---
+
+### 6. `detect_usage_anomaly`
+
+Detect unusual usage patterns using Z-score statistical analysis.
+
+**Parameters:**
+- `hourlyUsage` (array, required): Hourly usage data (minimum 3 hours)
+  - `hour` (string): Hour timestamp (ISO 8601 or custom format)
+  - `tokens` (number): Total tokens used in this hour
+  - `cost` (number): Total cost in this hour (USD)
+- `threshold` (number, optional): Detection threshold in standard deviations (default: 2.5)
+
+**Example:**
+```json
+{
+  "hourlyUsage": [
+    { "hour": "2024-01-01T00:00:00Z", "tokens": 10000, "cost": 0.05 },
+    { "hour": "2024-01-01T01:00:00Z", "tokens": 10200, "cost": 0.051 },
+    { "hour": "2024-01-01T02:00:00Z", "tokens": 10100, "cost": 0.0505 },
+    { "hour": "2024-01-01T03:00:00Z", "tokens": 80000, "cost": 0.40 },
+    { "hour": "2024-01-01T04:00:00Z", "tokens": 10050, "cost": 0.05025 }
+  ],
+  "threshold": 2.5
+}
+```
+
+**Response:**
+```json
+{
+  "period": {
+    "hours": 5,
+    "from": "2024-01-01T00:00:00Z",
+    "to": "2024-01-01T04:00:00Z"
+  },
+  "baseline": {
+    "avgTokensPerHour": 24070,
+    "avgCostPerHour": "0.1203",
+    "tokenStdDev": 28267,
+    "costStdDev": "0.1413"
+  },
+  "threshold": {
+    "value": 2.5,
+    "description": "2.5 standard deviations from mean"
+  },
+  "anomalyCount": 1,
+  "anomaliesDetected": true,
+  "anomalies": [
+    {
+      "hour": "2024-01-01T03:00:00Z",
+      "tokens": 80000,
+      "cost": 0.40,
+      "tokenZScore": 2.65,
+      "costZScore": 2.65,
+      "severity": "high",
+      "message": "Significant anomaly detected - review usage patterns - tokens 325% above average"
+    }
+  ],
+  "recommendations": [
+    "1 significant anomaly detected - review usage patterns",
+    "High token usage detected during: 2024-01-01T03:00:00Z",
+    "Review expensive operations during peak anomaly periods",
+    "Set up alerts for anomalies to catch issues in real-time"
+  ],
+  "summary": "1 anomaly detected - review recommended"
 }
 ```
 
@@ -334,6 +497,14 @@ npm start
 ```
 
 ## Version History
+
+### v2.1.0 (2026-01-31)
+- **NEW:** Added `compare_model_costs` tool for cost comparison and ranking
+- **NEW:** Added `detect_usage_anomaly` tool with Z-score statistical analysis
+- **ENHANCED:** Updated `optimize_by_project` to include actionable alerts
+- Added support for `writing` and `general` task types
+- Improved anomaly detection with severity levels (critical/high/medium/low)
+- Added comprehensive test suite
 
 ### v2.0.0 (2026-01-31)
 - Added model-specific cost prediction

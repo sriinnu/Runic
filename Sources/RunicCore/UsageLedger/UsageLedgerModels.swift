@@ -95,6 +95,31 @@ public struct UsageLedgerTotals: Sendable, Codable, Hashable {
     }
 }
 
+public struct UsageLedgerHourlySummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let projectID: String?
+    public let hourStart: Date
+    public let hourKey: String // "2026-01-31T14:00:00"
+    public let totals: UsageLedgerTotals
+    public let requestCount: Int
+
+    public init(
+        provider: UsageProvider,
+        projectID: String?,
+        hourStart: Date,
+        hourKey: String,
+        totals: UsageLedgerTotals,
+        requestCount: Int)
+    {
+        self.provider = provider
+        self.projectID = projectID
+        self.hourStart = hourStart
+        self.hourKey = hourKey
+        self.totals = totals
+        self.requestCount = requestCount
+    }
+}
+
 public struct UsageLedgerDailySummary: Sendable, Codable, Hashable {
     public let provider: UsageProvider
     public let projectID: String?

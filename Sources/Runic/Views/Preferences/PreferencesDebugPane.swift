@@ -93,7 +93,7 @@ struct DebugPane: View {
                 .pickerStyle(.segmented)
                 .frame(width: 240)
 
-                HStack(spacing: 12) {
+                HStack(spacing: RunicSpacing.sm) {
                     Button { self.loadLog(self.currentLogProvider) } label: {
                         Label("Fetch log", systemImage: "arrow.clockwise")
                     }
@@ -131,11 +131,11 @@ struct DebugPane: View {
                             .font(.system(.footnote, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
+                            .padding(RunicSpacing.xs)
                     }
                     .frame(minHeight: 160, maxHeight: 220)
                     .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
+                    .cornerRadius(RunicCornerRadius.sm)
 
                     if self.isLoadingLog {
                         ProgressView()
@@ -163,18 +163,18 @@ struct DebugPane: View {
                         .font(.system(.footnote, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(8)
+                        .padding(RunicSpacing.xs)
                 }
                 .frame(minHeight: 120, maxHeight: 220)
                 .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(6)
+                .cornerRadius(RunicCornerRadius.sm)
             }
 
             SettingsSection(
                 title: "OpenAI web access",
                 caption: "Cookie import + WebKit scrape logs from the last “Access OpenAI via web” attempt.")
             {
-                HStack(spacing: 12) {
+                HStack(spacing: RunicSpacing.sm) {
                     Button { self.copyToPasteboard(self.store.openAIDashboardCookieImportDebugLog ?? "") } label: {
                         Label("Copy", systemImage: "doc.on.doc")
                     }
@@ -184,15 +184,15 @@ struct DebugPane: View {
                 ScrollView {
                     Text(self.store.openAIDashboardCookieImportDebugLog?.isEmpty == false
                         ? (self.store.openAIDashboardCookieImportDebugLog ?? "")
-                        : "No log yet. Enable “Access OpenAI via web” in General to run an import.")
+                        : "No log yet. Enable \"Access OpenAI via web\" in General to run an import.")
                         .font(.system(.footnote, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(8)
+                        .padding(RunicSpacing.xs)
                 }
                 .frame(minHeight: 120, maxHeight: 180)
                 .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(6)
+                .cornerRadius(RunicCornerRadius.sm)
             }
 
             SettingsSection(
@@ -202,7 +202,7 @@ struct DebugPane: View {
                 let isTokenRefreshActive = self.store.isTokenRefreshInFlight(for: .codex)
                     || self.store.isTokenRefreshInFlight(for: .claude)
 
-                HStack(spacing: 12) {
+                HStack(spacing: RunicSpacing.sm) {
                     Button {
                         Task { await self.clearCostCache() }
                     } label: {
@@ -229,7 +229,7 @@ struct DebugPane: View {
                 .pickerStyle(.segmented)
                 .frame(width: 240)
 
-                HStack(spacing: 12) {
+                HStack(spacing: RunicSpacing.sm) {
                     Button {
                         self.postSessionNotification(.depleted, provider: self.currentLogProvider)
                     } label: {
@@ -263,7 +263,7 @@ struct DebugPane: View {
                 TextField("Simulated error text", text: self.$simulatedErrorText, axis: .vertical)
                     .lineLimit(4)
 
-                HStack(spacing: 12) {
+                HStack(spacing: RunicSpacing.sm) {
                     Button {
                         self.store._setErrorForTesting(
                             self.simulatedErrorText,
@@ -282,7 +282,7 @@ struct DebugPane: View {
                 }
 
                 let supportsTokenError = self.currentErrorProvider == .codex || self.currentErrorProvider == .claude
-                HStack(spacing: 12) {
+                HStack(spacing: RunicSpacing.sm) {
                     Button {
                         self.store._setTokenErrorForTesting(
                             self.simulatedErrorText,
@@ -311,7 +311,7 @@ struct DebugPane: View {
                 self.binaryRow(title: "Codex binary", value: self.store.pathDebugInfo.codexBinary)
                 self.binaryRow(title: "Claude binary", value: self.store.pathDebugInfo.claudeBinary)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Effective PATH")
                         .font(.callout.weight(.semibold))
                     ScrollView {
@@ -321,15 +321,15 @@ struct DebugPane: View {
                             .font(.system(.footnote, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(6)
+                            .padding(RunicSpacing.xs)
                     }
                     .frame(minHeight: 60, maxHeight: 110)
                     .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(6)
+                    .cornerRadius(RunicCornerRadius.sm)
                 }
 
                 if let loginPATH = self.store.pathDebugInfo.loginShellPATH {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Login shell PATH (startup capture)")
                             .font(.callout.weight(.semibold))
                         ScrollView {
@@ -337,11 +337,11 @@ struct DebugPane: View {
                                 .font(.system(.footnote, design: .monospaced))
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(6)
+                                .padding(RunicSpacing.xs)
                         }
                         .frame(minHeight: 60, maxHeight: 110)
                         .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(6)
+                        .cornerRadius(RunicCornerRadius.sm)
                     }
                 }
             }
@@ -403,7 +403,7 @@ struct DebugPane: View {
     }
 
     private func binaryRow(title: String, value: String?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text(title)
                 .font(.callout.weight(.semibold))
             Text(value ?? "Not found")

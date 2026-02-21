@@ -27,6 +27,26 @@ enum ProviderBrandIcon {
         return tinted
     }
 
+    static func templateImage(for provider: UsageProvider, size: CGFloat = 16) -> NSImage? {
+        let cacheSize = Int(size.rounded())
+        let key = "\(provider.rawValue)-\(cacheSize)-template" as NSString
+        if let cached = self.cache.object(forKey: key) {
+            return cached
+        }
+
+        let baseName = ProviderDescriptorRegistry.descriptor(for: provider).branding.iconResourceName
+        guard let url = Bundle.main.url(forResource: baseName, withExtension: "svg"),
+              let image = NSImage(contentsOf: url)
+        else {
+            return nil
+        }
+
+        image.size = NSSize(width: size, height: size)
+        image.isTemplate = true
+        self.cache.setObject(image, forKey: key)
+        return image
+    }
+
     private static func brandColor(for provider: UsageProvider) -> NSColor {
         let color = ProviderDescriptorRegistry.descriptor(for: provider).branding.color
         return NSColor(

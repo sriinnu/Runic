@@ -39,7 +39,7 @@ public actor SyncConflictResolver: SyncConflictResolverProtocol {
         local: SyncableRecord,
         remote: SyncableRecord,
         strategy: ConflictResolutionStrategy
-    ) -> SyncableRecord {
+    ) async -> SyncableRecord {
         // Validate that records are the same type
         guard local.recordID == remote.recordID else {
             return local // Fallback to local if IDs don't match

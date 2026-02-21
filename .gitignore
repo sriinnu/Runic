@@ -1,5 +1,7 @@
 # Xcode user/session
 xcuserdata/
+*.xcuserstate
+*.xcresult
 
 # Build products
 .build/
@@ -21,6 +23,9 @@ Icon.iconset
 # Misc
 .DS_Store
 .runic.local.env
+.claude/
+.swiftpm/
+Runic.app
 
 # Environment and secrets
 .env
@@ -88,3 +93,45 @@ RuniciOS/build/
 RuniciOS/Pods/
 RuniciOS/*.xcworkspace
 !RuniciOS/*.xcworkspace/contents.xcworkspacedata
+
+# Local working notes and one-off scripts (do not commit)
+/BUILD.md
+/BUILDING-FIXES.md
+/DISTRIBUTION_GUIDE.md
+/FIXES_COMPLETED.md
+/KEYCHAIN_FIX_FINAL.md
+/KEYCHAIN_FIX_INDEX.md
+/KEYCHAIN_FIX_QUICK_REF.md
+/KEYCHAIN_POPUP_FIX_SUMMARY.md
+/KEYCHAIN_PROMPT_FIX_SUMMARY.md
+/LOADING_STATES_IMPLEMENTATION.md
+/MENUBAR_APP_FIX.md
+/MIGRATION-GUIDE.md
+/PROGRESS_BAR_IMPROVEMENTS_SUMMARY.md
+/QUICK-BUILD-GUIDE.md
+/RELEASE_CHECKLIST.md
+/SECURITY_VERIFICATION_REPORT.md
+/SESSION_FIXES_SUMMARY.md
+/build_app.sh
+/cleanup-keychain.sh
+/make_app.sh
+/test_insights.sh
+/verify-keychain-fix.sh
+
+# Local backup/disabled source files
+*.swift.disabled
+
+# API server local notes and ad-hoc test scripts (keep source code tracked)
+/api-server/CHANGELOG_ENDPOINTS.md
+/api-server/IMPLEMENTATION_SUMMARY.md
+/api-server/NEW_ENDPOINTS.md
+/api-server/test-endpoints.sh
+
+# MCP local release/testing artifacts
+/mcp-servers/intuition-server/CHANGELOG_v2.1.0.md
+/mcp-servers/intuition-server/test_new_tools.mjs
+
+# Local packaging experiment artifacts
+/Scripts/README-FRAMEWORKS.md
+/Scripts/copy-frameworks.sh
+/Scripts/notarize.sh

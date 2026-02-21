@@ -11,7 +11,7 @@ struct RunicApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var settings: SettingsStore
     @State private var store: UsageStore
-    private let preferencesSelection: PreferencesSelection
+    @State private var preferencesSelection: PreferencesSelection
     private let account: AccountInfo
 
     init() {
@@ -27,9 +27,9 @@ struct RunicApp: App {
         let fetcher = UsageFetcher()
         let account = fetcher.loadAccountInfo()
         let store = UsageStore(fetcher: fetcher, settings: settings)
-        self.preferencesSelection = preferencesSelection
         _settings = State(wrappedValue: settings)
         _store = State(wrappedValue: store)
+        _preferencesSelection = State(wrappedValue: preferencesSelection)
         self.account = account
         self.appDelegate.configure(
             store: store,
@@ -55,8 +55,7 @@ struct RunicApp: App {
                 updater: self.appDelegate.updaterController,
                 selection: self.preferencesSelection)
         }
-        .defaultSize(width: PreferencesTab.windowWidth, height: PreferencesTab.general.preferredHeight)
-        .windowResizability(.contentSize)
+        .defaultSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
     }
 
     private func openSettings(tab: PreferencesTab) {

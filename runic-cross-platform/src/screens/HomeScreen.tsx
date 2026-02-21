@@ -9,23 +9,30 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   RefreshControl,
   TouchableOpacity,
+  ListRenderItemInfo,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../hooks';
 import { useProviderStore, useAppStore } from '../stores';
-import { ProviderCard, AlertBanner, LoadingSpinner } from '../components';
+import { ProviderCard, AlertBanner, LoadingSpinner, SkeletonCard } from '../components';
 import { formatCurrency } from '../utils/formatters';
 import type { RootStackParamList } from '../types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+// Performance: Constant item height for FlatList optimization
+const PROVIDER_CARD_HEIGHT = 220;
+const PROVIDER_CARD_MARGIN = 16;
+const ITEM_HEIGHT = PROVIDER_CARD_HEIGHT + PROVIDER_CARD_MARGIN;
+
 /**
  * Home screen component displaying dashboard with provider cards.
  * Shows aggregated usage statistics and quick actions.
+ * Performance optimized with FlatList virtualization.
  *
  * @example
  * <HomeScreen />
@@ -95,6 +102,77 @@ export function HomeScreen() {
     [navigation]
   );
 
+  // Performance: FlatList render item (memoized)
+  const renderProviderCard = useCallback(
+    ({ item }: ListRenderItemInfo<typeof enabledProviders[number]>) => (
+      <ProviderCard
+        key={item.id}
+        provider={item}
+        onPress={() => handleProviderPress(item.id)}
+        style={styles.providerCard}
+        isRefreshing={refreshing}
+      />
+    ),
+    [handleProviderPress, refreshing]
+  );
+
+  // Performance: FlatList key extractor
+  const keyExtractor = useCallback(
+    (item: typeof enabledProviders[number]) => item.id,
+    []
+  );
+
+  // Performance: FlatList getItemLayout for instant scrolling
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: ITEM_HEIGHT,
+      offset: ITEM_HEIGHT * index,
+      index,
+    }),
+    []
+  );
+
+  // Performance: Empty list component
+  const renderEmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Text
+        style={[
+          styles.emptyTitle,
+          theme.typography.titleLarge,
+          { color: theme.colors.onSurface },
+        ]}
+      >
+        No Providers Added
+      </Text>
+      <Text
+        style={[
+          styles.emptyText,
+          theme.typography.bodyMedium,
+          { color: theme.colors.onSurfaceVariant },
+        ]}
+      >
+        Add a provider to start tracking usage
+      </Text>
+      <TouchableOpacity
+        style={[
+          styles.addButton,
+          { backgroundColor: theme.colors.primary },
+        ]}
+        onPress={() => navigation.navigate('Settings')}
+      >
+        <Text
+          style={[
+            styles.addButtonText,
+            theme.typography.labelLarge,
+            { color: theme.colors.onPrimary },
+          ]}
+        >
+          Go to Settings
+        </Text>
+      </TouchableOpacity>
+    </View>
+  ), [theme, navigation]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
@@ -141,81 +219,51 @@ export function HomeScreen() {
         />
       ))}
 
-      {/* Provider list */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
-        }
-      >
-        {isLoading && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <LoadingSpinner size={48} />
-            <Text
-              style={[
-                styles.loadingText,
-                theme.typography.bodyMedium,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Loading providers...
-            </Text>
+      {/* Provider list - Performance optimized with FlatList */}
+      {isLoading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <LoadingSpinner size={48} />
+          <Text
+            style={[
+              styles.loadingText,
+              theme.typography.bodyMedium,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            Loading providers...
+          </Text>
+          {/* Show skeleton cards while loading */}
+          <View style={styles.skeletonContainer}>
+            {[1, 2, 3].map((i) => (
+              <SkeletonCard key={i} style={styles.providerCard} />
+            ))}
           </View>
-        ) : enabledProviders.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text
-              style={[
-                styles.emptyTitle,
-                theme.typography.titleLarge,
-                { color: theme.colors.onSurface },
-              ]}
-            >
-              No Providers Added
-            </Text>
-            <Text
-              style={[
-                styles.emptyText,
-                theme.typography.bodyMedium,
-                { color: theme.colors.onSurfaceVariant },
-              ]}
-            >
-              Add a provider to start tracking usage
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.addButton,
-                { backgroundColor: theme.colors.primary },
-              ]}
-              onPress={() => navigation.navigate('Settings')}
-            >
-              <Text
-                style={[
-                  styles.addButtonText,
-                  theme.typography.labelLarge,
-                  { color: theme.colors.onPrimary },
-                ]}
-              >
-                Go to Settings
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          enabledProviders.map((provider) => (
-            <ProviderCard
-              key={provider.id}
-              provider={provider}
-              onPress={() => handleProviderPress(provider.id)}
-              style={styles.providerCard}
+        </View>
+      ) : (
+        <FlatList
+          data={enabledProviders}
+          renderItem={renderProviderCard}
+          keyExtractor={keyExtractor}
+          getItemLayout={getItemLayout}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={theme.colors.primary}
+              colors={[theme.colors.primary]}
             />
-          ))
-        )}
-      </ScrollView>
+          }
+          ListEmptyComponent={renderEmptyComponent}
+          // Performance: Memory optimization
+          windowSize={5}
+          maxToRenderPerBatch={5}
+          initialNumToRender={8}
+          removeClippedSubviews={true}
+          // Performance: Update optimization
+          updateCellsBatchingPeriod={50}
+        />
+      )}
     </View>
   );
 }
@@ -292,6 +340,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
+    marginBottom: 24,
+  },
+  skeletonContainer: {
+    width: '100%',
+    paddingHorizontal: 16,
   },
   emptyContainer: {
     alignItems: 'center',

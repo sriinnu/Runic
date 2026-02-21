@@ -1,13 +1,14 @@
 {
   "name": "@runic/intuition-server",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "MCP server for predictive analytics and intelligent recommendations",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "node test_new_tools.mjs"
   },
   "keywords": ["mcp", "intuition", "prediction", "analytics", "runic"],
   "dependencies": {
