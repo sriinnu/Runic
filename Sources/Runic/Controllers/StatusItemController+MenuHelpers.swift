@@ -256,6 +256,8 @@ extension StatusItemController {
         let ledgerActiveBlock = self.store.ledgerActiveBlock(for: target)
         let ledgerTopModel = self.store.ledgerTopModel(for: target)
         let ledgerTopProject = self.store.ledgerTopProject(for: target)
+        let ledgerReliability = self.store.ledgerReliabilityScore(for: target)
+        let ledgerRouting = self.store.ledgerRoutingRecommendation(for: target)
         let ledgerError = self.store.ledgerError(for: target)
         let ledgerUpdatedAt = self.store.ledgerUpdatedAt(for: target)
         if target == .codex {
@@ -295,6 +297,8 @@ extension StatusItemController {
             ledgerActiveBlock: ledgerActiveBlock,
             ledgerTopModel: ledgerTopModel,
             ledgerTopProject: ledgerTopProject,
+            ledgerReliability: ledgerReliability,
+            ledgerRouting: ledgerRouting,
             ledgerError: ledgerError,
             ledgerUpdatedAt: ledgerUpdatedAt,
             account: self.account,

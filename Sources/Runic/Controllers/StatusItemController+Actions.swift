@@ -267,8 +267,28 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Today")
             lines.append("- Tokens: \(UsageFormatter.tokenCountString(daily.totals.totalTokens))")
+            lines.append("- Input tokens: \(UsageFormatter.tokenCountString(daily.totals.inputTokens))")
+            lines.append("- Output tokens: \(UsageFormatter.tokenCountString(daily.totals.outputTokens))")
+            let requestCount = modelBreakdown.reduce(0) { $0 + $1.entryCount }
+            if requestCount > 0 {
+                lines.append("- Requests: \(requestCount)")
+                let avgTokensPerRequest = Int((Double(daily.totals.totalTokens) / Double(requestCount)).rounded())
+                lines.append("- Avg tokens/request: \(UsageFormatter.tokenCountString(avgTokensPerRequest))")
+            }
             if let cost = daily.totals.costUSD {
                 lines.append("- Cost: \(UsageFormatter.usdString(cost))")
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: daily.totals.totalTokens)
+                {
+                    lines.append("- Cost per 1K tokens: \(per1K)")
+                }
+                if let perRequest = UsageFormatter.usdPerRequestString(
+                    costUSD: cost,
+                    requestCount: requestCount)
+                {
+                    lines.append("- Cost per request: \(perRequest)")
+                }
             }
             let cacheTotal = daily.totals.cacheCreationTokens + daily.totals.cacheReadTokens
             if cacheTotal > 0 {
@@ -283,6 +303,9 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Active block")
             lines.append("- Tokens: \(UsageFormatter.tokenCountString(block.totals.totalTokens))")
+            lines.append("- Requests: \(block.entryCount)")
+            lines.append("- Input tokens: \(UsageFormatter.tokenCountString(block.totals.inputTokens))")
+            lines.append("- Output tokens: \(UsageFormatter.tokenCountString(block.totals.outputTokens))")
             lines.append("- Ends: \(dateFormatter.string(from: block.end))")
             if let rate = block.tokensPerMinute {
                 let rateText = UsageFormatter.tokenCountString(Int(rate.rounded()))
@@ -291,14 +314,43 @@ extension StatusItemController {
             if let projected = block.projectedTotalTokens {
                 lines.append("- Projected: \(UsageFormatter.tokenCountString(projected))")
             }
+            if let cost = block.totals.costUSD {
+                lines.append("- Cost: \(UsageFormatter.usdString(cost))")
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: block.totals.totalTokens)
+                {
+                    lines.append("- Cost per 1K tokens: \(per1K)")
+                }
+                if let perRequest = UsageFormatter.usdPerRequestString(
+                    costUSD: cost,
+                    requestCount: block.entryCount)
+                {
+                    lines.append("- Cost per request: \(perRequest)")
+                }
+                if let burnPerHour = UsageFormatter.usdPerHourFromTokensString(
+                    costUSD: cost,
+                    tokenCount: block.totals.totalTokens,
+                    tokensPerMinute: block.tokensPerMinute)
+                {
+                    lines.append("- Estimated burn rate: \(burnPerHour)")
+                }
+            }
         }
 
         if let topModel {
             lines.append("")
             lines.append("## Top model")
-            var line = "- \(topModel.model): \(UsageFormatter.tokenCountString(topModel.totals.totalTokens)) tokens"
+            let modelName = UsageFormatter.modelDisplayName(topModel.model)
+            var line = "- \(modelName): \(UsageFormatter.tokenCountString(topModel.totals.totalTokens)) tokens · \(topModel.entryCount) req"
             if let cost = topModel.totals.costUSD {
                 line += " (\(UsageFormatter.usdString(cost)))"
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: topModel.totals.totalTokens)
+                {
+                    line += " · \(per1K)"
+                }
             }
             lines.append(line)
         }
@@ -306,10 +358,19 @@ extension StatusItemController {
         if let topProject {
             lines.append("")
             lines.append("## Top project")
-            let project = topProject.projectID ?? "Unknown project"
-            var line = "- \(project): \(UsageFormatter.tokenCountString(topProject.totals.totalTokens)) tokens"
+            let project = self.displayProjectName(
+                projectID: topProject.projectID,
+                projectName: topProject.projectName,
+                confidence: topProject.projectNameConfidence)
+            var line = "- \(project): \(UsageFormatter.tokenCountString(topProject.totals.totalTokens)) tokens · \(topProject.entryCount) req"
             if let cost = topProject.totals.costUSD {
                 line += " (\(UsageFormatter.usdString(cost)))"
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: cost,
+                    tokenCount: topProject.totals.totalTokens)
+                {
+                    line += " · \(per1K)"
+                }
             }
             lines.append(line)
         }
@@ -318,10 +379,20 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Models by project")
             for summary in modelBreakdown {
-                let project = summary.projectID ?? "Unknown project"
-                var line = "- \(project) - \(summary.model): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens"
+                let project = self.displayProjectName(
+                    projectID: summary.projectID,
+                    projectName: summary.projectName,
+                    confidence: summary.projectNameConfidence)
+                let modelName = UsageFormatter.modelDisplayName(summary.model)
+                var line = "- \(project) - \(modelName): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens · \(summary.entryCount) req"
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
+                }
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: summary.totals.costUSD,
+                    tokenCount: summary.totals.totalTokens)
+                {
+                    line += " · \(per1K)"
                 }
                 lines.append(line)
             }
@@ -331,16 +402,54 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Projects")
             for summary in projectBreakdown {
-                let project = summary.projectID ?? "Unknown project"
-                var line = "- \(project): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens"
+                let project = self.displayProjectName(
+                    projectID: summary.projectID,
+                    projectName: summary.projectName,
+                    confidence: summary.projectNameConfidence)
+                var line = "- \(project): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens · \(summary.entryCount) req"
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
+                }
+                if let per1K = UsageFormatter.usdPer1KTokensString(
+                    costUSD: summary.totals.costUSD,
+                    tokenCount: summary.totals.totalTokens)
+                {
+                    line += " · \(per1K)"
                 }
                 if !summary.modelsUsed.isEmpty {
                     line += " - models: \(summary.modelsUsed.joined(separator: ", "))"
                 }
                 lines.append(line)
             }
+        }
+
+        if let reliability = UsageLedgerInsightsAdvisor.reliabilityScore(
+            provider: provider,
+            daily: daily,
+            activeBlock: block,
+            modelBreakdown: modelBreakdown,
+            projectBreakdown: projectBreakdown,
+            providerError: self.store.error(for: provider),
+            ledgerError: loadError)
+        {
+            lines.append("")
+            lines.append("## Reliability")
+            lines.append("- Score: \(reliability.score)/100 (\(reliability.grade))")
+            lines.append("- Summary: \(reliability.summary)")
+            if let primary = reliability.primarySignal {
+                lines.append("- Signal: \(primary)")
+            }
+        }
+
+        if let routing = UsageLedgerInsightsAdvisor.routingRecommendation(modelBreakdown: modelBreakdown) {
+            lines.append("")
+            lines.append("## Routing advisor")
+            let from = UsageFormatter.modelDisplayName(routing.fromModel)
+            let to = UsageFormatter.modelDisplayName(routing.toModel)
+            lines.append("- Suggestion: Shift \(routing.shiftPercent)% of \(from) traffic to \(to)")
+            lines.append("- Estimated savings: \(UsageFormatter.usdString(routing.estimatedSavingsUSD))")
+            lines.append("- Confidence: \(Int((routing.confidence * 100).rounded()))%")
+            lines.append("- Rationale: \(routing.rationale)")
         }
 
         if let loadError {

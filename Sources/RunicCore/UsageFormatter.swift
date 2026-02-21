@@ -81,6 +81,48 @@ public enum UsageFormatter {
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "$%.2f", value)
     }
 
+    public static func usdRateString(_ value: Double) -> String {
+        let normalized = max(0, value)
+        if normalized >= 1 {
+            return String(format: "$%.2f", normalized)
+        }
+        if normalized >= 0.01 {
+            return String(format: "$%.3f", normalized)
+        }
+        return String(format: "$%.4f", normalized)
+    }
+
+    public static func usdPer1KTokensString(costUSD: Double?, tokenCount: Int) -> String? {
+        guard let costUSD, costUSD >= 0 else { return nil }
+        guard tokenCount > 0 else { return nil }
+        let rate = costUSD / (Double(tokenCount) / 1000.0)
+        guard rate.isFinite, rate >= 0 else { return nil }
+        return "\(usdRateString(rate))/1K"
+    }
+
+    public static func usdPerRequestString(costUSD: Double?, requestCount: Int) -> String? {
+        guard let costUSD, costUSD >= 0 else { return nil }
+        guard requestCount > 0 else { return nil }
+        let rate = costUSD / Double(requestCount)
+        guard rate.isFinite, rate >= 0 else { return nil }
+        return "\(usdRateString(rate))/req"
+    }
+
+    public static func usdPerHourFromTokensString(
+        costUSD: Double?,
+        tokenCount: Int,
+        tokensPerMinute: Double?) -> String?
+    {
+        guard let tokensPerMinute, tokensPerMinute > 0 else { return nil }
+        guard let costUSD, costUSD >= 0 else { return nil }
+        guard tokenCount > 0 else { return nil }
+        let per1KValue = costUSD / (Double(tokenCount) / 1000.0)
+        guard per1KValue.isFinite, per1KValue >= 0 else { return nil }
+        let hourly = per1KValue * (tokensPerMinute * 60.0 / 1000.0)
+        guard hourly.isFinite, hourly >= 0 else { return nil }
+        return "\(usdRateString(hourly))/hr"
+    }
+
     public static func currencyString(_ value: Double, currencyCode: String) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency

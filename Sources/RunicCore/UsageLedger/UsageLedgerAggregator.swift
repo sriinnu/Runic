@@ -21,13 +21,13 @@ public enum UsageLedgerAggregator {
 
     private struct ModelKey: Hashable {
         let provider: UsageProvider
-        let projectID: String?
+        let projectKey: String?
         let model: String
     }
 
     private struct ProjectKey: Hashable {
         let provider: UsageProvider
-        let projectID: String?
+        let projectKey: String?
     }
 
     private struct HourlyKey: Hashable {
@@ -173,17 +173,30 @@ public enum UsageLedgerAggregator {
 
         for entry in entries {
             guard let model = entry.model, !model.isEmpty else { continue }
+            let projectIdentity: UsageLedgerProjectIdentity? = if groupByProject {
+                UsageLedgerProjectIdentityResolver.resolve(
+                    provider: entry.provider,
+                    projectID: entry.projectID,
+                    projectName: entry.projectName)
+            } else {
+                nil
+            }
             let key = ModelKey(
                 provider: entry.provider,
-                projectID: groupByProject ? entry.projectID : nil,
+                projectKey: projectIdentity?.key,
                 model: model)
-            buckets[key, default: AggregateAccumulator()].consume(entry)
+            buckets[key, default: AggregateAccumulator()].consume(entry, identity: projectIdentity)
         }
 
         return buckets.map { key, acc in
             UsageLedgerModelSummary(
                 provider: key.provider,
-                projectID: key.projectID,
+                projectKey: key.projectKey,
+                projectID: acc.projectID,
+                projectName: acc.projectName,
+                projectNameConfidence: acc.projectNameConfidence,
+                projectNameSource: acc.projectNameSource,
+                projectNameProvenance: acc.projectNameProvenance,
                 model: key.model,
                 entryCount: acc.entryCount,
                 totals: acc.totals)
@@ -200,14 +213,23 @@ public enum UsageLedgerAggregator {
         var buckets: [ProjectKey: AggregateAccumulator] = [:]
 
         for entry in entries {
-            let key = ProjectKey(provider: entry.provider, projectID: entry.projectID)
-            buckets[key, default: AggregateAccumulator()].consume(entry)
+            let projectIdentity = UsageLedgerProjectIdentityResolver.resolve(
+                provider: entry.provider,
+                projectID: entry.projectID,
+                projectName: entry.projectName)
+            let key = ProjectKey(provider: entry.provider, projectKey: projectIdentity.key)
+            buckets[key, default: AggregateAccumulator()].consume(entry, identity: projectIdentity)
         }
 
         return buckets.map { key, acc in
             UsageLedgerProjectSummary(
                 provider: key.provider,
-                projectID: key.projectID,
+                projectKey: key.projectKey,
+                projectID: acc.projectID,
+                projectName: acc.projectName,
+                projectNameConfidence: acc.projectNameConfidence,
+                projectNameSource: acc.projectNameSource,
+                projectNameProvenance: acc.projectNameProvenance,
                 entryCount: acc.entryCount,
                 totals: acc.totals,
                 modelsUsed: acc.models)
@@ -216,7 +238,7 @@ public enum UsageLedgerAggregator {
             if lhs.totals.totalTokens != rhs.totals.totalTokens {
                 return lhs.totals.totalTokens > rhs.totals.totalTokens
             }
-            return (lhs.projectID ?? "") < (rhs.projectID ?? "")
+            return (lhs.projectKey ?? lhs.projectID ?? "") < (rhs.projectKey ?? rhs.projectID ?? "")
         }
     }
 
@@ -294,6 +316,12 @@ private struct AggregateAccumulator {
     private(set) var costSum: Double = 0
     private(set) var hasCost: Bool = false
     private(set) var entryCount: Int = 0
+    private(set) var projectKey: String?
+    private(set) var projectID: String?
+    private(set) var projectName: String?
+    private(set) var projectNameConfidence: UsageLedgerProjectNameConfidence = .none
+    private(set) var projectNameSource: UsageLedgerProjectNameSource = .unknown
+    private(set) var projectNameProvenance: String?
     private var modelSet: Set<String> = []
 
     init() {}
@@ -304,7 +332,7 @@ private struct AggregateAccumulator {
         }
     }
 
-    mutating func consume(_ entry: UsageLedgerEntry) {
+    mutating func consume(_ entry: UsageLedgerEntry, identity: UsageLedgerProjectIdentity? = nil) {
         self.entryCount += 1
         self.inputTokens += entry.inputTokens
         self.outputTokens += entry.outputTokens
@@ -314,6 +342,7 @@ private struct AggregateAccumulator {
             self.costSum += cost
             self.hasCost = true
         }
+        self.mergeProjectIdentity(from: identity, fallbackEntry: entry)
         if let model = entry.model, !model.isEmpty {
             self.modelSet.insert(model)
         }
@@ -330,6 +359,50 @@ private struct AggregateAccumulator {
 
     var models: [String] {
         self.modelSet.sorted()
+    }
+
+    private mutating func mergeProjectIdentity(from identity: UsageLedgerProjectIdentity?, fallbackEntry: UsageLedgerEntry) {
+        if let key = identity?.key, self.projectKey == nil {
+            self.projectKey = key
+        }
+
+        if self.projectID == nil {
+            let preferredID = identity?.projectID?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let preferredID, !preferredID.isEmpty {
+                self.projectID = preferredID
+            } else if let fallbackID = fallbackEntry.projectID?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !fallbackID.isEmpty
+            {
+                self.projectID = fallbackID
+            }
+        }
+
+        let fallbackName = fallbackEntry.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidateName = identity?.displayName ?? ((fallbackName?.isEmpty ?? true) ? nil : fallbackName)
+        let candidateConfidence = identity?.confidence ?? (candidateName == nil ? .none : .high)
+        let candidateSource = identity?.source ?? (candidateName == nil ? .unknown : .projectName)
+        let candidateProvenance = identity?.provenance
+
+        guard let candidateName, !candidateName.isEmpty else { return }
+        let shouldAdopt: Bool
+        if self.projectName == nil {
+            shouldAdopt = true
+        } else if candidateConfidence.rank > self.projectNameConfidence.rank {
+            shouldAdopt = true
+        } else if candidateConfidence.rank == self.projectNameConfidence.rank,
+                  candidateName.count > (self.projectName?.count ?? 0)
+        {
+            shouldAdopt = true
+        } else {
+            shouldAdopt = false
+        }
+
+        if shouldAdopt {
+            self.projectName = candidateName
+            self.projectNameConfidence = candidateConfidence
+            self.projectNameSource = candidateSource
+            self.projectNameProvenance = candidateProvenance
+        }
     }
 
     func tokensPerMinute(since start: Date, now: Date) -> Double? {

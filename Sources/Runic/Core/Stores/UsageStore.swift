@@ -659,6 +659,22 @@ final class UsageStore {
         self.ledgerUpdatedAt[provider]
     }
 
+    func ledgerReliabilityScore(for provider: UsageProvider) -> UsageLedgerReliabilityScore? {
+        UsageLedgerInsightsAdvisor.reliabilityScore(
+            provider: provider,
+            daily: self.ledgerDailySummary(for: provider),
+            activeBlock: self.ledgerActiveBlock(for: provider),
+            modelBreakdown: self.ledgerModelBreakdown(for: provider),
+            projectBreakdown: self.ledgerProjectBreakdown(for: provider),
+            providerError: self.error(for: provider),
+            ledgerError: self.ledgerError(for: provider))
+    }
+
+    func ledgerRoutingRecommendation(for provider: UsageProvider) -> UsageLedgerRoutingRecommendation? {
+        UsageLedgerInsightsAdvisor.routingRecommendation(
+            modelBreakdown: self.ledgerModelBreakdown(for: provider))
+    }
+
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
         guard !self.isRefreshing else { return }
         let now = Date()
@@ -1229,6 +1245,7 @@ final class UsageStore {
         }
 
         let todayEntries = entries.filter { calendar.isDate($0.timestamp, inSameDayAs: now) }
+        let budgetProjectNames = self.projectNameOverridesFromBudgets()
         let modelSummaries = UsageLedgerAggregator.modelSummaries(entries: todayEntries)
         var topModelsByProvider: [UsageProvider: UsageLedgerModelSummary] = [:]
         for summary in modelSummaries {
@@ -1238,6 +1255,7 @@ final class UsageStore {
         }
 
         let projectSummaries = UsageLedgerAggregator.projectSummaries(entries: todayEntries)
+            .map { self.resolvedProjectSummary($0, budgetProjectNames: budgetProjectNames) }
         var topProjectsByProvider: [UsageProvider: UsageLedgerProjectSummary] = [:]
         for summary in projectSummaries {
             if topProjectsByProvider[summary.provider] == nil {
@@ -1246,20 +1264,15 @@ final class UsageStore {
         }
 
         let modelBreakdowns = UsageLedgerAggregator.modelSummaries(entries: todayEntries, groupByProject: true)
+            .map { self.resolvedModelSummary($0, budgetProjectNames: budgetProjectNames) }
         var modelBreakdownsByProvider: [UsageProvider: [UsageLedgerModelSummary]] = [:]
         for summary in modelBreakdowns {
             modelBreakdownsByProvider[summary.provider, default: []].append(summary)
-        }
-        for provider in modelBreakdownsByProvider.keys {
-            modelBreakdownsByProvider[provider] = Array(modelBreakdownsByProvider[provider]!.prefix(6))
         }
 
         var projectBreakdownsByProvider: [UsageProvider: [UsageLedgerProjectSummary]] = [:]
         for summary in projectSummaries {
             projectBreakdownsByProvider[summary.provider, default: []].append(summary)
-        }
-        for provider in projectBreakdownsByProvider.keys {
-            projectBreakdownsByProvider[provider] = Array(projectBreakdownsByProvider[provider]!.prefix(6))
         }
 
         return LedgerRefreshResult(
@@ -1273,6 +1286,63 @@ final class UsageStore {
             lastActivityByProvider: lastActivityByProvider,
             updatedAt: now,
             providers: providers)
+    }
+
+    private func projectNameOverridesFromBudgets() -> [String: String] {
+        var namesByProjectID: [String: String] = [:]
+        for budget in ProjectBudgetStore.getAllBudgets() {
+            let trimmed = budget.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let trimmed, !trimmed.isEmpty {
+                namesByProjectID[budget.projectID] = trimmed
+            }
+        }
+        return namesByProjectID
+    }
+
+    private func resolvedProjectSummary(
+        _ summary: UsageLedgerProjectSummary,
+        budgetProjectNames: [String: String]) -> UsageLedgerProjectSummary
+    {
+        let budgetName = summary.projectID.flatMap { budgetProjectNames[$0] }
+        let identity = UsageLedgerProjectIdentityResolver.resolve(
+            provider: summary.provider,
+            projectID: summary.projectID,
+            projectName: summary.projectName,
+            budgetNameOverride: budgetName)
+        return UsageLedgerProjectSummary(
+            provider: summary.provider,
+            projectKey: summary.projectKey ?? identity.key,
+            projectID: identity.projectID ?? summary.projectID,
+            projectName: identity.displayName ?? summary.projectName,
+            projectNameConfidence: identity.confidence,
+            projectNameSource: identity.source,
+            projectNameProvenance: identity.provenance,
+            entryCount: summary.entryCount,
+            totals: summary.totals,
+            modelsUsed: summary.modelsUsed)
+    }
+
+    private func resolvedModelSummary(
+        _ summary: UsageLedgerModelSummary,
+        budgetProjectNames: [String: String]) -> UsageLedgerModelSummary
+    {
+        let budgetName = summary.projectID.flatMap { budgetProjectNames[$0] }
+        let identity = UsageLedgerProjectIdentityResolver.resolve(
+            provider: summary.provider,
+            projectID: summary.projectID,
+            projectName: summary.projectName,
+            budgetNameOverride: budgetName)
+        return UsageLedgerModelSummary(
+            provider: summary.provider,
+            projectKey: summary.projectKey ?? identity.key,
+            projectID: identity.projectID ?? summary.projectID,
+            projectName: identity.displayName ?? summary.projectName,
+            projectNameConfidence: identity.confidence,
+            projectNameSource: identity.source,
+            projectNameProvenance: identity.provenance,
+            model: summary.model,
+            entryCount: summary.entryCount,
+            totals: summary.totals)
     }
 
     private func refreshProvider(_ provider: UsageProvider, trigger _: RefreshTrigger) async {

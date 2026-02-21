@@ -13,6 +13,7 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
     public let timestamp: Date
     public let sessionID: String?
     public let projectID: String?
+    public let projectName: String?
     public let model: String?
     public let inputTokens: Int
     public let outputTokens: Int
@@ -29,6 +30,7 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
         timestamp: Date,
         sessionID: String?,
         projectID: String?,
+        projectName: String? = nil,
         model: String?,
         inputTokens: Int,
         outputTokens: Int,
@@ -44,6 +46,7 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
         self.timestamp = timestamp
         self.sessionID = sessionID
         self.projectID = projectID
+        self.projectName = projectName
         self.model = model
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
@@ -215,44 +218,102 @@ public struct UsageLedgerBlockSummary: Sendable, Codable, Hashable {
 
 public struct UsageLedgerModelSummary: Sendable, Codable, Hashable {
     public let provider: UsageProvider
+    public let projectKey: String?
     public let projectID: String?
+    public let projectName: String?
+    public let projectNameConfidence: UsageLedgerProjectNameConfidence?
+    public let projectNameSource: UsageLedgerProjectNameSource?
+    public let projectNameProvenance: String?
     public let model: String
     public let entryCount: Int
     public let totals: UsageLedgerTotals
 
     public init(
         provider: UsageProvider,
+        projectKey: String? = nil,
         projectID: String?,
+        projectName: String? = nil,
+        projectNameConfidence: UsageLedgerProjectNameConfidence? = nil,
+        projectNameSource: UsageLedgerProjectNameSource? = nil,
+        projectNameProvenance: String? = nil,
         model: String,
         entryCount: Int,
         totals: UsageLedgerTotals)
     {
         self.provider = provider
+        self.projectKey = projectKey
         self.projectID = projectID
+        self.projectName = projectName
+        self.projectNameConfidence = projectNameConfidence
+        self.projectNameSource = projectNameSource
+        self.projectNameProvenance = projectNameProvenance
         self.model = model
         self.entryCount = entryCount
         self.totals = totals
+    }
+
+    public var displayProjectName: String {
+        let trimmedName = self.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedName, !trimmedName.isEmpty {
+            return trimmedName
+        }
+        if self.projectNameConfidence == .some(.low) || self.projectNameConfidence == .some(.none) {
+            return "Unknown project"
+        }
+        if let projectID = self.projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty {
+            return projectID
+        }
+        return "Unknown project"
     }
 }
 
 public struct UsageLedgerProjectSummary: Sendable, Codable, Hashable {
     public let provider: UsageProvider
+    public let projectKey: String?
     public let projectID: String?
+    public let projectName: String?
+    public let projectNameConfidence: UsageLedgerProjectNameConfidence?
+    public let projectNameSource: UsageLedgerProjectNameSource?
+    public let projectNameProvenance: String?
     public let entryCount: Int
     public let totals: UsageLedgerTotals
     public let modelsUsed: [String]
 
     public init(
         provider: UsageProvider,
+        projectKey: String? = nil,
         projectID: String?,
+        projectName: String? = nil,
+        projectNameConfidence: UsageLedgerProjectNameConfidence? = nil,
+        projectNameSource: UsageLedgerProjectNameSource? = nil,
+        projectNameProvenance: String? = nil,
         entryCount: Int,
         totals: UsageLedgerTotals,
         modelsUsed: [String])
     {
         self.provider = provider
+        self.projectKey = projectKey
         self.projectID = projectID
+        self.projectName = projectName
+        self.projectNameConfidence = projectNameConfidence
+        self.projectNameSource = projectNameSource
+        self.projectNameProvenance = projectNameProvenance
         self.entryCount = entryCount
         self.totals = totals
         self.modelsUsed = modelsUsed
+    }
+
+    public var displayProjectName: String {
+        let trimmedName = self.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedName, !trimmedName.isEmpty {
+            return trimmedName
+        }
+        if self.projectNameConfidence == .some(.low) || self.projectNameConfidence == .some(.none) {
+            return "Unknown project"
+        }
+        if let projectID = self.projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty {
+            return projectID
+        }
+        return "Unknown project"
     }
 }

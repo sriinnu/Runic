@@ -77,6 +77,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private struct UsageFile {
         let url: URL
         let projectID: String?
+        let projectName: String?
         let sessionID: String?
     }
 
@@ -131,12 +132,13 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 guard let projectsIndex = pathComponents.lastIndex(of: "projects"),
                       projectsIndex + 2 < pathComponents.count
                 else {
-                    results.append(UsageFile(url: fileURL, projectID: nil, sessionID: nil))
+                    results.append(UsageFile(url: fileURL, projectID: nil, projectName: nil, sessionID: nil))
                     continue
                 }
                 let projectID = pathComponents[projectsIndex + 1]
+                let projectName = self.derivedProjectName(from: projectID)
                 let sessionID = pathComponents[projectsIndex + 2]
-                results.append(UsageFile(url: fileURL, projectID: projectID, sessionID: sessionID))
+                results.append(UsageFile(url: fileURL, projectID: projectID, projectName: projectName, sessionID: sessionID))
             }
         }
 
@@ -190,6 +192,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 timestamp: timestamp,
                 sessionID: sessionID,
                 projectID: file.projectID,
+                projectName: file.projectName,
                 model: payload.message.model,
                 inputTokens: input,
                 outputTokens: output,
@@ -234,6 +237,22 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         box.lock.lock()
         defer { box.lock.unlock() }
         return box.iso.date(from: value) ?? box.fractional.date(from: value)
+    }
+
+    private func derivedProjectName(from projectID: String) -> String? {
+        let trimmed = projectID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let decoded = trimmed.removingPercentEncoding ?? trimmed
+        let normalized = decoded.replacingOccurrences(of: "\\", with: "/")
+
+        if normalized.contains("/") {
+            let leaf = URL(fileURLWithPath: normalized).lastPathComponent
+            if !leaf.isEmpty {
+                return leaf
+            }
+        }
+        return normalized
     }
 
     private func expandTilde(path: String) -> URL {
