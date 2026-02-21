@@ -54,7 +54,9 @@ extension StatusItemController {
             .filter { $0.provider == provider }
         let projectBreakdown = self.store.ledgerProjectBreakdown(for: provider)
             .filter { $0.provider == provider }
-        guard !modelBreakdown.isEmpty || !projectBreakdown.isEmpty else { return nil }
+        let reliability = self.store.ledgerReliabilityScore(for: provider)
+        let routing = self.store.ledgerRoutingRecommendation(for: provider)
+        guard !modelBreakdown.isEmpty || !projectBreakdown.isEmpty || reliability != nil || routing != nil else { return nil }
 
         let submenu = NSMenu()
         submenu.autoenablesItems = false
@@ -66,6 +68,26 @@ extension StatusItemController {
         titleItem.isEnabled = false
         submenu.addItem(titleItem)
 
+        if let reliability {
+            let item = NSMenuItem(
+                title: "Reliability: \(reliability.score)/100 · \(reliability.grade)",
+                action: nil,
+                keyEquivalent: "")
+            item.isEnabled = false
+            submenu.addItem(item)
+        }
+        if let routing {
+            let from = UsageFormatter.modelDisplayName(routing.fromModel)
+            let to = UsageFormatter.modelDisplayName(routing.toModel)
+            let savings = UsageFormatter.usdString(routing.estimatedSavingsUSD)
+            let item = NSMenuItem(
+                title: "Routing: shift \(routing.shiftPercent)% \(from) -> \(to) · save \(savings)",
+                action: nil,
+                keyEquivalent: "")
+            item.isEnabled = false
+            submenu.addItem(item)
+        }
+
         if !modelBreakdown.isEmpty {
             submenu.addItem(NSMenuItem.separator())
             let header = NSMenuItem(title: "Models by project", action: nil, keyEquivalent: "")
@@ -74,7 +96,10 @@ extension StatusItemController {
 
             let limited = modelBreakdown.prefix(limit)
             for summary in limited {
-                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
+                let project = self.displayProjectName(
+                    projectID: summary.projectID,
+                    projectName: summary.projectName,
+                    confidence: summary.projectNameConfidence)
                 let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 var title = "\(project) · \(summary.model): \(tokens) tokens"
@@ -93,7 +118,10 @@ extension StatusItemController {
 
             let limited = projectBreakdown.prefix(limit)
             for summary in limited {
-                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
+                let project = self.displayProjectName(
+                    projectID: summary.projectID,
+                    projectName: summary.projectName,
+                    confidence: summary.projectNameConfidence)
                 let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 let modelsText = summary.modelsUsed.isEmpty
@@ -125,7 +153,11 @@ extension StatusItemController {
         return submenu
     }
 
-    func displayProjectName(projectID: String?, projectName: String?) -> String {
+    func displayProjectName(
+        projectID: String?,
+        projectName: String?,
+        confidence: UsageLedgerProjectNameConfidence? = nil) -> String
+    {
         let trimmedProjectName = projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmedProjectName, !trimmedProjectName.isEmpty {
             return trimmedProjectName
@@ -138,6 +170,9 @@ extension StatusItemController {
             !budgetName.isEmpty
         {
             return budgetName
+        }
+        if confidence == .some(.none) || confidence == .some(.low) {
+            return "Unknown project"
         }
         return projectID
     }

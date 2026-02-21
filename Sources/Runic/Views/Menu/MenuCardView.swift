@@ -103,6 +103,10 @@ struct UsageMenuCardView: View {
             let blockDetail: String?
             let modelLine: String?
             let projectLine: String?
+            let reliabilityLine: String?
+            let reliabilityDetail: String?
+            let routingLine: String?
+            let routingDetail: String?
             let updatedLine: String?
             let errorLine: String?
         }
@@ -741,6 +745,26 @@ private struct InsightsContent: View {
                     .font(.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
+            if let reliabilityLine = self.section.reliabilityLine {
+                Text(reliabilityLine)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
+            if let reliabilityDetail = self.section.reliabilityDetail {
+                Text(reliabilityDetail)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
+            if let routingLine = self.section.routingLine {
+                Text(routingLine)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
+            if let routingDetail = self.section.routingDetail {
+                Text(routingDetail)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
             if let updated = self.section.updatedLine {
                 Text(updated)
                     .font(.caption)
@@ -1067,6 +1091,8 @@ extension UsageMenuCardView.Model {
         let ledgerActiveBlock: UsageLedgerBlockSummary?
         let ledgerTopModel: UsageLedgerModelSummary?
         let ledgerTopProject: UsageLedgerProjectSummary?
+        let ledgerReliability: UsageLedgerReliabilityScore?
+        let ledgerRouting: UsageLedgerRoutingRecommendation?
         let ledgerError: String?
         let ledgerUpdatedAt: Date?
         let account: AccountInfo
@@ -1170,6 +1196,10 @@ extension UsageMenuCardView.Model {
             blockDetail: section.blockDetail,
             modelLine: nil,
             projectLine: section.projectLine,
+            reliabilityLine: section.reliabilityLine,
+            reliabilityDetail: section.reliabilityDetail,
+            routingLine: section.routingLine,
+            routingDetail: section.routingDetail,
             updatedLine: section.updatedLine,
             errorLine: section.errorLine)
     }
@@ -1423,13 +1453,30 @@ extension UsageMenuCardView.Model {
 
         var projectLine: String?
         if let topProject {
-            let name = topProject.projectName ?? topProject.projectID ?? "Unknown project"
+            let name = topProject.displayProjectName
             let tokens = UsageFormatter.tokenCountString(topProject.totals.totalTokens)
             var parts = ["Top project: \(name) · \(tokens) tokens"]
             if let cost = topProject.totals.costUSD {
                 parts.append(UsageFormatter.usdString(cost))
             }
             projectLine = parts.joined(separator: " · ")
+        }
+
+        var reliabilityLine: String?
+        var reliabilityDetail: String?
+        if let reliability = input.ledgerReliability {
+            reliabilityLine = "Reliability: \(reliability.score)/100 · \(reliability.grade)"
+            reliabilityDetail = reliability.primarySignal ?? reliability.summary
+        }
+
+        var routingLine: String?
+        var routingDetail: String?
+        if let routing = input.ledgerRouting {
+            let from = UsageFormatter.modelDisplayName(routing.fromModel)
+            let to = UsageFormatter.modelDisplayName(routing.toModel)
+            routingLine = "Routing advisor: shift \(routing.shiftPercent)% \(from) -> \(to)"
+            let confidenceText = "\(Int((routing.confidence * 100).rounded()))%"
+            routingDetail = "Estimated savings: \(UsageFormatter.usdString(routing.estimatedSavingsUSD)) · confidence \(confidenceText)"
         }
 
         let updatedLine = input.ledgerUpdatedAt.map { UsageFormatter.updatedString(from: $0, now: input.now) }
@@ -1442,6 +1489,10 @@ extension UsageMenuCardView.Model {
             blockDetail: blockDetail,
             modelLine: modelLine,
             projectLine: projectLine,
+            reliabilityLine: reliabilityLine,
+            reliabilityDetail: reliabilityDetail,
+            routingLine: routingLine,
+            routingDetail: routingDetail,
             updatedLine: updatedLine,
             errorLine: (error?.isEmpty ?? true) ? nil : error)
     }

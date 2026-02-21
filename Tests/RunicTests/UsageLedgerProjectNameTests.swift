@@ -51,4 +51,78 @@ struct UsageLedgerProjectNameTests {
         #expect(modelSummary?.projectID == "proj-123")
         #expect(modelSummary?.projectName == "Core Platform")
     }
+
+    @Test
+    func projectSummariesGroupByInferredNameWhenProjectIDIsMissing() {
+        let now = Date()
+        let entries = [
+            UsageLedgerEntry(
+                provider: .codex,
+                timestamp: now,
+                sessionID: "s1",
+                projectID: nil,
+                projectName: "Alpha Workspace",
+                model: "gpt-5",
+                inputTokens: 50,
+                outputTokens: 10,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: 0.10,
+                requestID: "ra",
+                messageID: nil,
+                version: nil,
+                source: .codexLog),
+            UsageLedgerEntry(
+                provider: .codex,
+                timestamp: now.addingTimeInterval(5),
+                sessionID: "s2",
+                projectID: nil,
+                projectName: "Beta Workspace",
+                model: "gpt-5",
+                inputTokens: 40,
+                outputTokens: 15,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: 0.12,
+                requestID: "rb",
+                messageID: nil,
+                version: nil,
+                source: .codexLog),
+        ]
+
+        let summaries = UsageLedgerAggregator.projectSummaries(entries: entries)
+        #expect(summaries.count == 2)
+        let names = Set(summaries.map(\.projectName).compactMap { $0 })
+        #expect(names.contains("Alpha Workspace"))
+        #expect(names.contains("Beta Workspace"))
+    }
+
+    @Test
+    func projectSummariesInferProjectNameFromPathLikeIdentifier() {
+        let now = Date()
+        let entries = [
+            UsageLedgerEntry(
+                provider: .codex,
+                timestamp: now,
+                sessionID: "s1",
+                projectID: "/Users/me/workspace/Runic-App",
+                projectName: nil,
+                model: "gpt-5",
+                inputTokens: 100,
+                outputTokens: 30,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: 0.30,
+                requestID: "r-path",
+                messageID: nil,
+                version: nil,
+                source: .codexLog),
+        ]
+
+        let summary = UsageLedgerAggregator.projectSummaries(entries: entries).first
+        #expect(summary != nil)
+        #expect(summary?.projectKey != nil)
+        #expect(summary?.projectNameSource == .inferredFromPath)
+        #expect(summary?.displayProjectName == "Runic-App")
+    }
 }

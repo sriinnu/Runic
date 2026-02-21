@@ -306,7 +306,10 @@ extension StatusItemController {
         if let topProject {
             lines.append("")
             lines.append("## Top project")
-            let project = self.displayProjectName(projectID: topProject.projectID, projectName: topProject.projectName)
+            let project = self.displayProjectName(
+                projectID: topProject.projectID,
+                projectName: topProject.projectName,
+                confidence: topProject.projectNameConfidence)
             var line = "- \(project): \(UsageFormatter.tokenCountString(topProject.totals.totalTokens)) tokens"
             if let cost = topProject.totals.costUSD {
                 line += " (\(UsageFormatter.usdString(cost)))"
@@ -318,7 +321,10 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Models by project")
             for summary in modelBreakdown {
-                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
+                let project = self.displayProjectName(
+                    projectID: summary.projectID,
+                    projectName: summary.projectName,
+                    confidence: summary.projectNameConfidence)
                 var line = "- \(project) - \(summary.model): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens"
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
@@ -331,7 +337,10 @@ extension StatusItemController {
             lines.append("")
             lines.append("## Projects")
             for summary in projectBreakdown {
-                let project = self.displayProjectName(projectID: summary.projectID, projectName: summary.projectName)
+                let project = self.displayProjectName(
+                    projectID: summary.projectID,
+                    projectName: summary.projectName,
+                    confidence: summary.projectNameConfidence)
                 var line = "- \(project): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens"
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
@@ -341,6 +350,35 @@ extension StatusItemController {
                 }
                 lines.append(line)
             }
+        }
+
+        if let reliability = UsageLedgerInsightsAdvisor.reliabilityScore(
+            provider: provider,
+            daily: daily,
+            activeBlock: block,
+            modelBreakdown: modelBreakdown,
+            projectBreakdown: projectBreakdown,
+            providerError: self.store.error(for: provider),
+            ledgerError: loadError)
+        {
+            lines.append("")
+            lines.append("## Reliability")
+            lines.append("- Score: \(reliability.score)/100 (\(reliability.grade))")
+            lines.append("- Summary: \(reliability.summary)")
+            if let primary = reliability.primarySignal {
+                lines.append("- Signal: \(primary)")
+            }
+        }
+
+        if let routing = UsageLedgerInsightsAdvisor.routingRecommendation(modelBreakdown: modelBreakdown) {
+            lines.append("")
+            lines.append("## Routing advisor")
+            let from = UsageFormatter.modelDisplayName(routing.fromModel)
+            let to = UsageFormatter.modelDisplayName(routing.toModel)
+            lines.append("- Suggestion: Shift \(routing.shiftPercent)% of \(from) traffic to \(to)")
+            lines.append("- Estimated savings: \(UsageFormatter.usdString(routing.estimatedSavingsUSD))")
+            lines.append("- Confidence: \(Int((routing.confidence * 100).rounded()))%")
+            lines.append("- Rationale: \(routing.rationale)")
         }
 
         if let loadError {
