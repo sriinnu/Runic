@@ -67,6 +67,7 @@ extension UsageStore {
         _ = self.ledgerSpendForecasts
         _ = self.ledgerProjectSpendForecasts
         _ = self.ledgerTopProjectSpendForecasts
+        _ = self.ledgerAnomalies
         _ = self.ledgerErrors
         _ = self.ledgerUpdatedAt
         _ = self.credits
@@ -302,6 +303,173 @@ struct ConsecutiveFailureGate {
     }
 }
 
+struct UsageLedgerAnomalySummary: Sendable, Hashable {
+    enum Severity: Int, Sendable, Hashable {
+        case elevated = 1
+        case high = 2
+        case critical = 3
+
+        var label: String {
+            switch self {
+            case .elevated: "Elevated"
+            case .high: "High"
+            case .critical: "Critical"
+            }
+        }
+    }
+
+    struct MetricAnomaly: Sendable, Hashable {
+        enum Metric: String, Sendable, Hashable {
+            case tokens
+            case spend
+
+            var label: String {
+                switch self {
+                case .tokens: "tokens"
+                case .spend: "spend"
+                }
+            }
+        }
+
+        let metric: Metric
+        let severity: Severity
+        let todayValue: Double
+        let baselineAverage: Double
+        let percentIncrease: Double
+    }
+
+    let provider: UsageProvider
+    let baselineDays: Int
+    let tokenAnomaly: MetricAnomaly?
+    let spendAnomaly: MetricAnomaly?
+
+    var primaryAnomaly: MetricAnomaly? {
+        [self.tokenAnomaly, self.spendAnomaly]
+            .compactMap { $0 }
+            .max { lhs, rhs in
+                if lhs.severity != rhs.severity {
+                    return lhs.severity.rawValue < rhs.severity.rawValue
+                }
+                return lhs.percentIncrease < rhs.percentIncrease
+            }
+    }
+
+    func secondaryAnomaly(excluding metric: MetricAnomaly.Metric) -> MetricAnomaly? {
+        let candidates = [self.tokenAnomaly, self.spendAnomaly].compactMap { $0 }
+        guard !candidates.isEmpty else { return nil }
+        return candidates.first { $0.metric != metric }
+    }
+}
+
+enum UsageLedgerAnomalyDetector {
+    private static let baselineDayCount = 7
+    private static let minimumIncreaseThreshold = 0.60
+
+    private struct DayUsageBucket {
+        var tokens: Int = 0
+        var costSum: Double = 0
+        var hasCost: Bool = false
+
+        mutating func consume(_ summary: UsageLedgerDailySummary) {
+            self.tokens += summary.totals.totalTokens
+            if let cost = summary.totals.costUSD {
+                self.costSum += cost
+                self.hasCost = true
+            }
+        }
+
+        var costUSD: Double? {
+            self.hasCost ? self.costSum : nil
+        }
+    }
+
+    static func summaries(
+        dailySummaries: [UsageLedgerDailySummary],
+        now: Date,
+        calendar: Calendar? = nil) -> [UsageProvider: UsageLedgerAnomalySummary]
+    {
+        var calendar = calendar ?? Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        let todayStart = calendar.startOfDay(for: now)
+
+        var bucketsByProvider: [UsageProvider: [Date: DayUsageBucket]] = [:]
+        for summary in dailySummaries {
+            let dayStart = calendar.startOfDay(for: summary.dayStart)
+            bucketsByProvider[summary.provider, default: [:]][dayStart, default: DayUsageBucket()].consume(summary)
+        }
+
+        var summariesByProvider: [UsageProvider: UsageLedgerAnomalySummary] = [:]
+        for (provider, dayBuckets) in bucketsByProvider {
+            guard let todayBucket = dayBuckets[todayStart] else { continue }
+
+            var baselineBuckets: [DayUsageBucket] = []
+            baselineBuckets.reserveCapacity(self.baselineDayCount)
+            for dayOffset in 1...self.baselineDayCount {
+                guard let baselineDay = calendar.date(byAdding: .day, value: -dayOffset, to: todayStart),
+                      let bucket = dayBuckets[baselineDay]
+                else {
+                    baselineBuckets.removeAll(keepingCapacity: true)
+                    break
+                }
+                baselineBuckets.append(bucket)
+            }
+            guard baselineBuckets.count == self.baselineDayCount else { continue }
+
+            let tokenAnomaly = self.metricAnomaly(
+                metric: .tokens,
+                todayValue: Double(todayBucket.tokens),
+                baselineValues: baselineBuckets.map { Double($0.tokens) })
+
+            var spendAnomaly: UsageLedgerAnomalySummary.MetricAnomaly?
+            if let todayCost = todayBucket.costUSD {
+                spendAnomaly = self.metricAnomaly(
+                    metric: .spend,
+                    todayValue: todayCost,
+                    baselineValues: baselineBuckets.compactMap(\.costUSD))
+            }
+
+            if tokenAnomaly != nil || spendAnomaly != nil {
+                summariesByProvider[provider] = UsageLedgerAnomalySummary(
+                    provider: provider,
+                    baselineDays: self.baselineDayCount,
+                    tokenAnomaly: tokenAnomaly,
+                    spendAnomaly: spendAnomaly)
+            }
+        }
+
+        return summariesByProvider
+    }
+
+    private static func metricAnomaly(
+        metric: UsageLedgerAnomalySummary.MetricAnomaly.Metric,
+        todayValue: Double,
+        baselineValues: [Double]) -> UsageLedgerAnomalySummary.MetricAnomaly?
+    {
+        guard baselineValues.count == self.baselineDayCount else { return nil }
+        guard baselineValues.allSatisfy(\.isFinite) else { return nil }
+        guard todayValue.isFinite else { return nil }
+
+        let baselineAverage = baselineValues.reduce(0, +) / Double(baselineValues.count)
+        guard baselineAverage > 0 else { return nil }
+
+        let increase = (todayValue - baselineAverage) / baselineAverage
+        guard let severity = self.severity(for: increase) else { return nil }
+        return UsageLedgerAnomalySummary.MetricAnomaly(
+            metric: metric,
+            severity: severity,
+            todayValue: todayValue,
+            baselineAverage: baselineAverage,
+            percentIncrease: increase)
+    }
+
+    private static func severity(for increase: Double) -> UsageLedgerAnomalySummary.Severity? {
+        guard increase.isFinite, increase >= self.minimumIncreaseThreshold else { return nil }
+        if increase >= 2.0 { return .critical }
+        if increase >= 1.0 { return .high }
+        return .elevated
+    }
+}
+
 @MainActor
 @Observable
 final class UsageStore {
@@ -324,6 +492,7 @@ final class UsageStore {
     private(set) var ledgerSpendForecasts: [UsageProvider: UsageLedgerSpendForecast] = [:]
     private(set) var ledgerProjectSpendForecasts: [UsageProvider: [UsageLedgerSpendForecast]] = [:]
     private(set) var ledgerTopProjectSpendForecasts: [UsageProvider: UsageLedgerSpendForecast] = [:]
+    private(set) var ledgerAnomalies: [UsageProvider: UsageLedgerAnomalySummary] = [:]
     private(set) var ledgerErrors: [UsageProvider: String] = [:]
     private(set) var ledgerUpdatedAt: [UsageProvider: Date] = [:]
     var credits: CreditsSnapshot?
@@ -666,6 +835,10 @@ final class UsageStore {
 
     func ledgerTopProjectSpendForecast(for provider: UsageProvider) -> UsageLedgerSpendForecast? {
         self.ledgerTopProjectSpendForecasts[provider]
+    }
+
+    func ledgerAnomalySummary(for provider: UsageProvider) -> UsageLedgerAnomalySummary? {
+        self.ledgerAnomalies[provider]
     }
 
 
@@ -1131,6 +1304,12 @@ final class UsageStore {
                         self.ledgerTopProjectSpendForecasts.removeValue(forKey: provider)
                     }
 
+                    if let anomaly = result.anomaliesByProvider[provider] {
+                        self.ledgerAnomalies[provider] = anomaly
+                    } else {
+                        self.ledgerAnomalies.removeValue(forKey: provider)
+                    }
+
                     if let lastActivity = result.lastActivityByProvider[provider] {
                         self.lastLedgerActivityAt[provider] = lastActivity
                     }
@@ -1191,6 +1370,7 @@ final class UsageStore {
         let spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
         let projectSpendForecastsByProvider: [UsageProvider: [UsageLedgerSpendForecast]]
         let topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
+        let anomaliesByProvider: [UsageProvider: UsageLedgerAnomalySummary]
         let errorsByProvider: [UsageProvider: String]
         let lastActivityByProvider: [UsageProvider: Date]
         let updatedAt: Date
@@ -1223,6 +1403,7 @@ final class UsageStore {
                 spendForecastsByProvider: [:],
                 projectSpendForecastsByProvider: [:],
                 topProjectSpendForecastsByProvider: [:],
+                anomaliesByProvider: [:],
                 errorsByProvider: [:],
                 lastActivityByProvider: [:],
                 updatedAt: now,
@@ -1350,6 +1531,11 @@ final class UsageStore {
             }
         }
 
+        let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
+            dailySummaries: dailySummaries,
+            now: now,
+            calendar: calendar)
+
         return LedgerRefreshResult(
             dailyByProvider: dailyByProvider,
             activeBlocksByProvider: activeByProvider,
@@ -1360,6 +1546,7 @@ final class UsageStore {
             spendForecastsByProvider: spendForecastsByProvider,
             projectSpendForecastsByProvider: projectSpendForecastsByProvider,
             topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
+            anomaliesByProvider: anomaliesByProvider,
             errorsByProvider: errors,
             lastActivityByProvider: lastActivityByProvider,
             updatedAt: now,

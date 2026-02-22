@@ -108,6 +108,8 @@ struct UsageMenuCardView: View {
             let modelLine: String?
             let projectLine: String?
             let projectDetail: String?
+            let anomalyLine: String?
+            let anomalyDetail: String?
             let reliabilityLine: String?
             let reliabilityDetail: String?
             let routingLine: String?
@@ -773,6 +775,16 @@ private struct InsightsContent: View {
                     .font(.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
+            if let anomalyLine = self.section.anomalyLine {
+                Text(anomalyLine)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
+            if let anomalyDetail = self.section.anomalyDetail {
+                Text(anomalyDetail)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
             if let reliabilityLine = self.section.reliabilityLine {
                 Text(reliabilityLine)
                     .font(.footnote)
@@ -1134,6 +1146,7 @@ extension UsageMenuCardView.Model {
         let ledgerTopProject: UsageLedgerProjectSummary?
         let ledgerSpendForecast: UsageLedgerSpendForecast?
         let ledgerTopProjectSpendForecast: UsageLedgerSpendForecast?
+        let ledgerAnomaly: UsageLedgerAnomalySummary?
         let ledgerReliability: UsageLedgerReliabilityScore?
         let ledgerRouting: UsageLedgerRoutingRecommendation?
         let ledgerError: String?
@@ -1247,6 +1260,8 @@ extension UsageMenuCardView.Model {
             modelLine: nil,
             projectLine: section.projectLine,
             projectDetail: section.projectDetail,
+            anomalyLine: section.anomalyLine,
+            anomalyDetail: section.anomalyDetail,
             reliabilityLine: section.reliabilityLine,
             reliabilityDetail: section.reliabilityDetail,
             routingLine: section.routingLine,
@@ -1504,7 +1519,8 @@ extension UsageMenuCardView.Model {
         let topProjectSpendForecast = input.ledgerTopProjectSpendForecast?.provider == input.provider
             ? input.ledgerTopProjectSpendForecast
             : nil
-        let hasData = daily != nil || block != nil || topModel != nil || topProject != nil || spendForecast != nil
+        let anomaly = input.ledgerAnomaly?.provider == input.provider ? input.ledgerAnomaly : nil
+        let hasData = daily != nil || block != nil || topModel != nil || topProject != nil || spendForecast != nil || anomaly != nil
         if !hasData && (error?.isEmpty ?? true) {
             return nil
         }
@@ -1640,6 +1656,17 @@ extension UsageMenuCardView.Model {
             }
         }
 
+        var anomalyLine: String?
+        var anomalyDetail: String?
+        if let anomaly, let primary = anomaly.primaryAnomaly {
+            anomalyLine = "Anomaly: \(primary.severity.label) \(primary.metric.label) spike"
+            var details = [Self.anomalyMetricDetail(primary, baselineDays: anomaly.baselineDays)]
+            if let secondary = anomaly.secondaryAnomaly(excluding: primary.metric) {
+                details.append(Self.anomalyMetricDetail(secondary, baselineDays: anomaly.baselineDays))
+            }
+            anomalyDetail = details.joined(separator: "\n")
+        }
+
         var reliabilityLine: String?
         var reliabilityDetail: String?
         if let reliability = input.ledgerReliability {
@@ -1669,12 +1696,32 @@ extension UsageMenuCardView.Model {
             modelLine: modelLine,
             projectLine: projectLine,
             projectDetail: projectDetail,
+            anomalyLine: anomalyLine,
+            anomalyDetail: anomalyDetail,
             reliabilityLine: reliabilityLine,
             reliabilityDetail: reliabilityDetail,
             routingLine: routingLine,
             routingDetail: routingDetail,
             updatedLine: updatedLine,
             errorLine: (error?.isEmpty ?? true) ? nil : error)
+    }
+
+    private static func anomalyMetricDetail(
+        _ anomaly: UsageLedgerAnomalySummary.MetricAnomaly,
+        baselineDays: Int) -> String
+    {
+        let percentText = "\(Int((anomaly.percentIncrease * 100).rounded()))%"
+        let baselineLabel = "\(baselineDays)d avg"
+        switch anomaly.metric {
+        case .tokens:
+            let todayTokens = UsageFormatter.tokenCountString(Int(anomaly.todayValue.rounded()))
+            let baselineTokens = UsageFormatter.tokenCountString(Int(anomaly.baselineAverage.rounded()))
+            return "Tokens \(todayTokens) today · +\(percentText) vs \(baselineLabel) \(baselineTokens)"
+        case .spend:
+            let todaySpend = UsageFormatter.usdString(anomaly.todayValue)
+            let baselineSpend = UsageFormatter.usdString(anomaly.baselineAverage)
+            return "Spend \(todaySpend) today · +\(percentText) vs \(baselineLabel) \(baselineSpend)"
+        }
     }
 
     private static func insightsProjectDisplayName(_ summary: UsageLedgerProjectSummary) -> String {

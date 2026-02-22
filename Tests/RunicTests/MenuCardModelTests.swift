@@ -21,6 +21,7 @@ private extension UsageMenuCardView.Model.Input {
         ledgerTopProject: UsageLedgerProjectSummary? = nil,
         ledgerSpendForecast: UsageLedgerSpendForecast? = nil,
         ledgerTopProjectSpendForecast: UsageLedgerSpendForecast? = nil,
+        ledgerAnomaly: UsageLedgerAnomalySummary? = nil,
         ledgerReliability: UsageLedgerReliabilityScore? = nil,
         ledgerRouting: UsageLedgerRoutingRecommendation? = nil,
         ledgerError: String? = nil,
@@ -49,6 +50,7 @@ private extension UsageMenuCardView.Model.Input {
             ledgerTopProject: ledgerTopProject,
             ledgerSpendForecast: ledgerSpendForecast,
             ledgerTopProjectSpendForecast: ledgerTopProjectSpendForecast,
+            ledgerAnomaly: ledgerAnomaly,
             ledgerReliability: ledgerReliability,
             ledgerRouting: ledgerRouting,
             ledgerError: ledgerError,
@@ -491,5 +493,46 @@ struct MenuCardModelTests {
         #expect(model.insights?.forecastLine?.contains("Month-end forecast") == true)
         #expect(model.insights?.projectDetail?.contains("Budget") == true)
         #expect(model.insights?.projectDetail?.contains("Breach") == true)
+    }
+
+    @Test
+    func insightsSurfaceAnomalySeverityLine() {
+        let metadata = ProviderDefaults.metadata[.codex]!
+        let anomaly = UsageLedgerAnomalySummary(
+            provider: .codex,
+            baselineDays: 7,
+            tokenAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
+                metric: .tokens,
+                severity: .high,
+                todayValue: 4_200,
+                baselineAverage: 1_500,
+                percentIncrease: 1.8),
+            spendAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
+                metric: .spend,
+                severity: .elevated,
+                todayValue: 17.5,
+                baselineAverage: 9.0,
+                percentIncrease: 0.94))
+        let model = UsageMenuCardView.Model.make(.init(
+            provider: .codex,
+            metadata: metadata,
+            snapshot: nil,
+            credits: nil,
+            creditsError: nil,
+            dashboard: nil,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            ledgerAnomaly: anomaly,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            now: Date()))
+
+        #expect(model.insights?.anomalyLine == "Anomaly: High tokens spike")
+        #expect(model.insights?.anomalyDetail?.contains("+180%") == true)
     }
 }

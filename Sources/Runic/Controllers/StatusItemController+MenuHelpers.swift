@@ -258,6 +258,7 @@ extension StatusItemController {
         let ledgerTopProject = self.store.ledgerTopProject(for: target)
         let ledgerSpendForecast = self.store.ledgerSpendForecast(for: target)
         let ledgerTopProjectSpendForecast = self.store.ledgerTopProjectSpendForecast(for: target)
+        let ledgerAnomaly = self.store.ledgerAnomalySummary(for: target)
         let ledgerReliability = self.store.ledgerReliabilityScore(for: target)
         let ledgerRouting = self.store.ledgerRoutingRecommendation(for: target)
         let ledgerError = self.store.ledgerError(for: target)
@@ -301,6 +302,7 @@ extension StatusItemController {
             ledgerTopProject: ledgerTopProject,
             ledgerSpendForecast: ledgerSpendForecast,
             ledgerTopProjectSpendForecast: ledgerTopProjectSpendForecast,
+            ledgerAnomaly: ledgerAnomaly,
             ledgerReliability: ledgerReliability,
             ledgerRouting: ledgerRouting,
             ledgerError: ledgerError,
