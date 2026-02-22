@@ -11,18 +11,18 @@ Ship operator-grade insights in small, verifiable slices without destabilizing c
 
 - [x] Create research-backed roadmap document  
   File: `docs/research/feature_uiux_roadmap_2026-02-22.md`
-- [ ] Add probabilistic month-end forecast confidence bands (`p50/p80/p95`) to core forecast model
-- [ ] Render confidence bands in menu Insights line when available
-- [ ] Add/extend tests for confidence-band generation and menu formatting
+- [x] Add probabilistic month-end forecast confidence bands (`p50/p80/p95`) to core forecast model
+- [x] Render confidence bands in menu Insights line when available
+- [x] Add/extend tests for confidence-band generation and menu formatting
 
 ## P1 (Next)
 
-- [ ] Anomaly explainability v2
-  - Add explanation object for why severity was chosen
-  - Surface primary and secondary contributing factors in menu copy
-- [ ] Policy engine foundation (warn / soft-limit / hard-stop)
-  - Core model in `RunicCore`
-  - Deterministic decision tests
+- [x] Anomaly explainability v2
+  - [x] Add explanation object for why severity was chosen
+  - [x] Surface primary and secondary contributing factors in menu copy
+- [x] Policy engine foundation (warn / soft-limit / hard-stop)
+  - [x] Core model in `RunicCore`
+  - [x] Deterministic decision tests
 
 ## P2 (After P1)
 

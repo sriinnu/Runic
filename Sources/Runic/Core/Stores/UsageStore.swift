@@ -338,6 +338,20 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
         let percentIncrease: Double
     }
 
+    struct Explanation: Sendable, Hashable {
+        struct Factor: Sendable, Hashable {
+            let metric: MetricAnomaly.Metric
+            let severity: Severity
+            let percentIncrease: Double
+            let detail: String
+        }
+
+        let headline: String
+        let details: [String]
+        let primaryFactor: Factor
+        let contributingFactors: [Factor]
+    }
+
     let provider: UsageProvider
     let baselineDays: Int
     let tokenAnomaly: MetricAnomaly?
@@ -358,6 +372,43 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
         let candidates = [self.tokenAnomaly, self.spendAnomaly].compactMap { $0 }
         guard !candidates.isEmpty else { return nil }
         return candidates.first { $0.metric != metric }
+    }
+
+    var explanation: Explanation? {
+        guard let primary = self.primaryAnomaly else { return nil }
+        let primaryFactor = self.factor(from: primary)
+        var contributingFactors: [Explanation.Factor] = []
+        if let secondary = self.secondaryAnomaly(excluding: primary.metric) {
+            contributingFactors.append(self.factor(from: secondary))
+        }
+        return Explanation(
+            headline: "Anomaly: \(primary.severity.label) \(primary.metric.label) spike",
+            details: [primaryFactor.detail] + contributingFactors.map(\.detail),
+            primaryFactor: primaryFactor,
+            contributingFactors: contributingFactors)
+    }
+
+    private func factor(from anomaly: MetricAnomaly) -> Explanation.Factor {
+        Explanation.Factor(
+            metric: anomaly.metric,
+            severity: anomaly.severity,
+            percentIncrease: anomaly.percentIncrease,
+            detail: self.metricDetail(for: anomaly))
+    }
+
+    private func metricDetail(for anomaly: MetricAnomaly) -> String {
+        let percentText = "\(Int((anomaly.percentIncrease * 100).rounded()))%"
+        let baselineLabel = "\(self.baselineDays)d avg"
+        switch anomaly.metric {
+        case .tokens:
+            let todayTokens = UsageFormatter.tokenCountString(Int(anomaly.todayValue.rounded()))
+            let baselineTokens = UsageFormatter.tokenCountString(Int(anomaly.baselineAverage.rounded()))
+            return "Tokens \(todayTokens) today · +\(percentText) vs \(baselineLabel) \(baselineTokens)"
+        case .spend:
+            let todaySpend = UsageFormatter.usdString(anomaly.todayValue)
+            let baselineSpend = UsageFormatter.usdString(anomaly.baselineAverage)
+            return "Spend \(todaySpend) today · +\(percentText) vs \(baselineLabel) \(baselineSpend)"
+        }
     }
 }
 

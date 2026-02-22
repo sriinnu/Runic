@@ -1677,13 +1677,9 @@ extension UsageMenuCardView.Model {
 
         var anomalyLine: String?
         var anomalyDetail: String?
-        if let anomaly, let primary = anomaly.primaryAnomaly {
-            anomalyLine = "Anomaly: \(primary.severity.label) \(primary.metric.label) spike"
-            var details = [Self.anomalyMetricDetail(primary, baselineDays: anomaly.baselineDays)]
-            if let secondary = anomaly.secondaryAnomaly(excluding: primary.metric) {
-                details.append(Self.anomalyMetricDetail(secondary, baselineDays: anomaly.baselineDays))
-            }
-            anomalyDetail = details.joined(separator: "\n")
+        if let anomaly, let explanation = anomaly.explanation {
+            anomalyLine = explanation.headline
+            anomalyDetail = explanation.details.joined(separator: "\n")
         }
 
         var reliabilityLine: String?
@@ -1723,24 +1719,6 @@ extension UsageMenuCardView.Model {
             routingDetail: routingDetail,
             updatedLine: updatedLine,
             errorLine: (error?.isEmpty ?? true) ? nil : error)
-    }
-
-    private static func anomalyMetricDetail(
-        _ anomaly: UsageLedgerAnomalySummary.MetricAnomaly,
-        baselineDays: Int) -> String
-    {
-        let percentText = "\(Int((anomaly.percentIncrease * 100).rounded()))%"
-        let baselineLabel = "\(baselineDays)d avg"
-        switch anomaly.metric {
-        case .tokens:
-            let todayTokens = UsageFormatter.tokenCountString(Int(anomaly.todayValue.rounded()))
-            let baselineTokens = UsageFormatter.tokenCountString(Int(anomaly.baselineAverage.rounded()))
-            return "Tokens \(todayTokens) today · +\(percentText) vs \(baselineLabel) \(baselineTokens)"
-        case .spend:
-            let todaySpend = UsageFormatter.usdString(anomaly.todayValue)
-            let baselineSpend = UsageFormatter.usdString(anomaly.baselineAverage)
-            return "Spend \(todaySpend) today · +\(percentText) vs \(baselineLabel) \(baselineSpend)"
-        }
     }
 
     private static func insightsProjectDisplayName(_ summary: UsageLedgerProjectSummary) -> String {

@@ -111,6 +111,41 @@ struct UsageLedgerAnomalyDetectionTests {
         #expect(anomalies.isEmpty)
     }
 
+    @Test
+    func explanationIncludesHeadlineAndContributingFactors() {
+        let summary = UsageLedgerAnomalySummary(
+            provider: .codex,
+            baselineDays: 7,
+            tokenAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
+                metric: .tokens,
+                severity: .high,
+                todayValue: 4_200,
+                baselineAverage: 1_500,
+                percentIncrease: 1.8),
+            spendAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
+                metric: .spend,
+                severity: .elevated,
+                todayValue: 17.5,
+                baselineAverage: 9.0,
+                percentIncrease: 0.94))
+
+        let explanation = summary.explanation
+        #expect(explanation?.headline == "Anomaly: High tokens spike")
+        #expect(explanation?.details.count == 2)
+        #expect(explanation?.details.first?.contains("+180%") == true)
+        #expect(explanation?.details.last?.contains("+94%") == true)
+    }
+
+    @Test
+    func explanationIsNilWhenNoAnomaliesExist() {
+        let summary = UsageLedgerAnomalySummary(
+            provider: .codex,
+            baselineDays: 7,
+            tokenAnomaly: nil,
+            spendAnomaly: nil)
+        #expect(summary.explanation == nil)
+    }
+
     private func dailySummary(
         provider: UsageProvider,
         dayOffset: Int,
