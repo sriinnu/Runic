@@ -30,6 +30,7 @@ private extension UsageMenuCardView.Model.Input {
         isRefreshing: Bool,
         lastError: String?,
         usageBarsShowUsed: Bool,
+        menuMode: MenuMode = .`operator`,
         tokenCostUsageEnabled: Bool,
         showOptionalCreditsAndExtraUsage: Bool,
         now: Date)
@@ -60,6 +61,7 @@ private extension UsageMenuCardView.Model.Input {
             lastError: lastError,
             usageBarsShowUsed: usageBarsShowUsed,
             usageMetricDisplayMode: .barsAndPercent,
+            menuMode: menuMode,
             tokenCostUsageEnabled: tokenCostUsageEnabled,
             showOptionalCreditsAndExtraUsage: showOptionalCreditsAndExtraUsage,
             now: now)

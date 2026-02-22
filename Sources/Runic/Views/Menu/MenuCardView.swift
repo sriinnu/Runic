@@ -139,6 +139,7 @@ struct UsageMenuCardView: View {
         let headerBadge: HeaderBadge?
         let metrics: [Metric]
         let usageMetricDisplayMode: UsageMetricDisplayMode
+        let menuMode: MenuMode
         let creditsText: String?
         let creditsRemaining: Double?
         let creditsHintText: String?
@@ -177,11 +178,13 @@ struct UsageMenuCardView: View {
                 }
             } else {
                 let hasUsage = !self.model.metrics.isEmpty
-                let hasCredits = self.model.creditsText != nil
-                let hasExtraUsage = self.model.providerCost != nil
-                let hasTokenCost = self.model.tokenUsage != nil
+                let includeSummarySections = self.model.menuMode != .glance
+                let includeInsightSections = self.model.menuMode == .`operator`
+                let hasCredits = includeSummarySections && self.model.creditsText != nil
+                let hasExtraUsage = includeSummarySections && self.model.providerCost != nil
+                let hasTokenCost = includeSummarySections && self.model.tokenUsage != nil
                 let hasCost = hasExtraUsage || hasTokenCost
-                let hasInsights = self.model.insights != nil
+                let hasInsights = includeInsightSections && self.model.insights != nil
 
                 VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
                     if hasUsage {
@@ -228,7 +231,7 @@ struct UsageMenuCardView: View {
                         Divider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
-                    if let credits = self.model.creditsText {
+                    if hasCredits, let credits = self.model.creditsText {
                         CreditsBarContent(
                             creditsText: credits,
                             creditsRemaining: self.model.creditsRemaining,
@@ -240,7 +243,7 @@ struct UsageMenuCardView: View {
                         Divider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
-                    if let providerCost = self.model.providerCost {
+                    if hasExtraUsage, let providerCost = self.model.providerCost {
                         ProviderCostContent(
                             section: providerCost,
                             progressColor: self.model.progressColor)
@@ -249,7 +252,7 @@ struct UsageMenuCardView: View {
                         Divider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
-                    if let tokenUsage = self.model.tokenUsage {
+                    if hasTokenCost, let tokenUsage = self.model.tokenUsage {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                             Text("Cost")
                                 .font(.body)
@@ -303,7 +306,7 @@ struct UsageMenuCardView: View {
                         Divider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
-                    if let insights = self.model.insights {
+                    if hasInsights, let insights = self.model.insights {
                         InsightsContent(section: insights)
                     }
                 }
@@ -317,8 +320,11 @@ struct UsageMenuCardView: View {
     }
 
     private var hasDetails: Bool {
-        !self.model.metrics.isEmpty || self.model.placeholder != nil || self.model.tokenUsage != nil ||
-            self.model.providerCost != nil || self.model.insights != nil
+        let includeSummarySections = self.model.menuMode != .glance
+        let includeInsightSections = self.model.menuMode == .`operator`
+        return !self.model.metrics.isEmpty || self.model.placeholder != nil || (includeSummarySections && (
+            self.model.tokenUsage != nil || self.model.providerCost != nil)) || (includeInsightSections &&
+            self.model.insights != nil)
     }
 }
 
@@ -1156,6 +1162,7 @@ extension UsageMenuCardView.Model {
         let lastError: String?
         let usageBarsShowUsed: Bool
         let usageMetricDisplayMode: UsageMetricDisplayMode
+        let menuMode: MenuMode
         let tokenCostUsageEnabled: Bool
         let showOptionalCreditsAndExtraUsage: Bool
         let now: Date
@@ -1217,6 +1224,7 @@ extension UsageMenuCardView.Model {
             headerBadge: headerBadge,
             metrics: metrics,
             usageMetricDisplayMode: input.usageMetricDisplayMode,
+            menuMode: input.menuMode,
             creditsText: creditsText,
             creditsRemaining: input.credits?.remaining,
             creditsHintText: creditsHintText,

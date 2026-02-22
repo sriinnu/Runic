@@ -312,6 +312,7 @@ extension StatusItemController {
             lastError: self.store.error(for: target),
             usageBarsShowUsed: self.settings.usageBarsShowUsed,
             usageMetricDisplayMode: self.settings.usageMetricDisplayMode,
+            menuMode: self.settings.menuMode,
             tokenCostUsageEnabled: self.settings.isCostUsageEffectivelyEnabled(for: target),
             showOptionalCreditsAndExtraUsage: self.settings.showOptionalCreditsAndExtraUsage,
             now: Date())

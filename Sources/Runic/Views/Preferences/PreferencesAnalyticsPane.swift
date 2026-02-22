@@ -55,6 +55,20 @@ struct AnalyticsPane: View {
                             .foregroundStyle(.tertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                        Text("Menu mode")
+                            .font(.body)
+                        Picker("", selection: self.$settings.menuMode) {
+                            ForEach(MenuMode.allCases) { mode in
+                                Text(mode.label).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        Text("Glance: usage only. Analyst: usage + credits/cost. Operator: full insights and actions.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     PreferenceToggleRow(
                         title: "Show credits + extra usage",
                         subtitle: "Show Codex Credits and Claude Extra usage sections in the menu.",

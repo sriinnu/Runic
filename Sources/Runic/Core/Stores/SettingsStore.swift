@@ -67,6 +67,25 @@ enum UsageMetricDisplayMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum MenuMode: String, CaseIterable, Identifiable {
+    case glance
+    case analyst
+    case `operator`
+
+    var id: String { self.rawValue }
+
+    var label: String {
+        switch self {
+        case .glance:
+            "Glance"
+        case .analyst:
+            "Analyst"
+        case .`operator`:
+            "Operator"
+        }
+    }
+}
+
 enum ChartStyle: String, CaseIterable, Identifiable {
     case line
     case area
@@ -242,6 +261,12 @@ final class SettingsStore {
     var usageMetricDisplayMode: UsageMetricDisplayMode {
         didSet {
             self.userDefaults.set(self.usageMetricDisplayMode.rawValue, forKey: "usageMetricDisplayMode")
+        }
+    }
+
+    var menuMode: MenuMode {
+        didSet {
+            self.userDefaults.set(self.menuMode.rawValue, forKey: "menuMode")
         }
     }
 
@@ -454,6 +479,7 @@ final class SettingsStore {
         _ = self.sessionQuotaNotificationsEnabled
         _ = self.usageBarsShowUsed
         _ = self.usageMetricDisplayMode
+        _ = self.menuMode
         _ = self.chartStyle
         _ = self.numberFormat
         _ = self.dateFormat
@@ -565,6 +591,8 @@ final class SettingsStore {
         self.usageBarsShowUsed = userDefaults.object(forKey: "usageBarsShowUsed") as? Bool ?? false
         let metricDisplayRaw = userDefaults.string(forKey: "usageMetricDisplayMode")
         self.usageMetricDisplayMode = UsageMetricDisplayMode(rawValue: metricDisplayRaw ?? "") ?? .barsAndPercent
+        let menuModeRaw = userDefaults.string(forKey: "menuMode")
+        self.menuMode = MenuMode(rawValue: menuModeRaw ?? "") ?? .`operator`
         let chartStyleRaw = userDefaults.string(forKey: "chartStyle")
         self.chartStyle = ChartStyle(rawValue: chartStyleRaw ?? "") ?? .line
         let numberFormatRaw = userDefaults.string(forKey: "numberFormat")

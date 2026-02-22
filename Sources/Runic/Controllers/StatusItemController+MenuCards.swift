@@ -62,11 +62,15 @@ extension StatusItemController {
         sidebar: MenuCardSidebarConfig?,
         webItems: OpenAIWebMenuItems)
     {
+        let menuMode = self.settings.menuMode
+        let includeSummarySections = menuMode != .glance
+        let includeInsights = menuMode == .`operator`
+        let includeActions = menuMode == .`operator`
         let hasUsageBlock = !model.metrics.isEmpty || model.placeholder != nil
-        let hasCredits = model.creditsText != nil
-        let hasExtraUsage = model.providerCost != nil
-        let hasCost = model.tokenUsage != nil
-        let hasInsights = model.insights != nil
+        let hasCredits = includeSummarySections && model.creditsText != nil
+        let hasExtraUsage = includeSummarySections && model.providerCost != nil
+        let hasCost = includeSummarySections && model.tokenUsage != nil
+        let hasInsights = includeInsights && model.insights != nil
         let bottomPadding = MenuCardMetrics.sectionBottomPadding
         let sectionSpacing = MenuCardMetrics.sectionTopPadding
         let usageBottomPadding = bottomPadding
@@ -88,10 +92,14 @@ extension StatusItemController {
                     bottomPadding: usageBottomPadding,
                     width: $0)
             }
-            let usageSubmenu = self.makeUsageSubmenu(
-                provider: provider,
-                snapshot: self.store.snapshot(for: provider),
-                webItems: webItems)
+            let usageSubmenu: NSMenu? = if includeActions {
+                self.makeUsageSubmenu(
+                    provider: provider,
+                    snapshot: self.store.snapshot(for: provider),
+                    webItems: webItems)
+            } else {
+                nil
+            }
             menu.addItem(self.makeMenuCardItem(
                 usageView,
                 id: "menuCardUsage",
@@ -112,13 +120,17 @@ extension StatusItemController {
                     bottomPadding: creditsBottomPadding,
                     width: $0)
             }
-            let creditsSubmenu = webItems.hasCreditsHistory ? self.makeCreditsHistorySubmenu() : nil
+            let creditsSubmenu: NSMenu? = if includeActions, webItems.hasCreditsHistory {
+                self.makeCreditsHistorySubmenu()
+            } else {
+                nil
+            }
             menu.addItem(self.makeMenuCardItem(
                 creditsView,
                 id: "menuCardCredits",
                 width: width,
                 submenu: creditsSubmenu))
-            if provider == .codex {
+            if includeActions, provider == .codex {
                 menu.addItem(self.makeBuyCreditsItem())
             }
             if hasExtraUsage || hasCost || hasInsights {
@@ -149,7 +161,11 @@ extension StatusItemController {
                     bottomPadding: bottomPadding,
                     width: $0)
             }
-            let costSubmenu = webItems.hasCostHistory ? self.makeCostHistorySubmenu(provider: provider) : nil
+            let costSubmenu: NSMenu? = if includeActions, webItems.hasCostHistory {
+                self.makeCostHistorySubmenu(provider: provider)
+            } else {
+                nil
+            }
             menu.addItem(self.makeMenuCardItem(
                 costView,
                 id: "menuCardCost",
