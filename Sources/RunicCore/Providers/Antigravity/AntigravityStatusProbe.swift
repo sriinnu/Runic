@@ -49,7 +49,8 @@ public struct AntigravityStatusSnapshot: Sendable {
             usedPercent: 100 - quota.remainingPercent,
             windowMinutes: nil,
             resetsAt: quota.resetTime,
-            resetDescription: quota.resetDescription)
+            resetDescription: quota.resetDescription,
+            label: self.formattedModelLabel(quota))
     }
 
     private static func selectModels(_ models: [AntigravityModelQuota]) -> [AntigravityModelQuota] {
@@ -86,6 +87,20 @@ public struct AntigravityStatusSnapshot: Sendable {
     private static func isGeminiFlash(_ label: String) -> Bool {
         let lower = label.lowercased()
         return lower.contains("gemini") && lower.contains("flash")
+    }
+
+    private static func formattedModelLabel(_ quota: AntigravityModelQuota) -> String {
+        let preferred = quota.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !preferred.isEmpty {
+            return preferred
+        }
+        let fallback = quota.modelId.trimmingCharacters(in: .whitespacesAndNewlines)
+        if fallback.isEmpty {
+            return "Model"
+        }
+        return fallback
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
     }
 }
 

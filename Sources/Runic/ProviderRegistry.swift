@@ -34,7 +34,9 @@ struct ProviderRegistry {
                 isEnabled: { settings.isProviderEnabled(provider: provider, metadata: meta) },
                 fetch: {
                     let snapshot = await MainActor.run {
-                        ProviderSettingsSnapshot(
+                        let cleanedCopilotToken = settings.copilotAPIToken.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        return ProviderSettingsSnapshot(
                             debugMenuEnabled: settings.debugMenuEnabled,
                             codex: ProviderSettingsSnapshot.CodexProviderSettings(
                                 usageDataSource: settings.codexUsageDataSource),
@@ -42,7 +44,8 @@ struct ProviderRegistry {
                                 usageDataSource: settings.claudeUsageDataSource,
                                 webExtrasEnabled: settings.claudeWebExtrasEnabled),
                             zai: ProviderSettingsSnapshot.ZaiProviderSettings(),
-                            copilot: ProviderSettingsSnapshot.CopilotProviderSettings())
+                            copilot: ProviderSettingsSnapshot.CopilotProviderSettings(
+                                apiToken: cleanedCopilotToken.isEmpty ? nil : cleanedCopilotToken))
                     }
                     let context = ProviderFetchContext(
                         runtime: .app,

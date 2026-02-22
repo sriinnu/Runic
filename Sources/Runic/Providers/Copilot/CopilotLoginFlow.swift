@@ -4,7 +4,7 @@ import SwiftUI
 
 @MainActor
 struct CopilotLoginFlow {
-    static func run(settings: SettingsStore) async {
+    static func run(settings: SettingsStore) async -> Bool {
         let flow = CopilotDeviceFlow()
 
         do {
@@ -20,17 +20,18 @@ struct CopilotLoginFlow {
             alert.informativeText = """
             A device code has been copied to your clipboard: \(code.userCode)
 
-            Please verify it at: \(code.verificationUri)
+            We will open GitHub with the code prefilled.
+            If the browser still asks for a code, paste: \(code.userCode)
             """
             alert.addButton(withTitle: "Open Browser")
             alert.addButton(withTitle: "Cancel")
 
             let response = alert.runModal()
             if response == .alertSecondButtonReturn {
-                return // Cancelled
+                return false // Cancelled
             }
 
-            if let url = URL(string: code.verificationUri) {
+            if let url = Self.makeVerificationURL(code: code) {
                 NSWorkspace.shared.open(url)
             }
 
@@ -75,7 +76,7 @@ struct CopilotLoginFlow {
             Self.dismissWaitingAlert(waitingAlert, parentWindow: hostWindow, closeHost: shouldCloseHostWindow)
             let waitResponse = await waitTask.value
             if waitResponse == .alertFirstButtonReturn {
-                return
+                return false
             }
 
             switch tokenResult {
@@ -89,12 +90,14 @@ struct CopilotLoginFlow {
                 let success = NSAlert()
                 success.messageText = "Login Successful"
                 success.runModal()
+                return true
             case let .failure(error):
-                guard !(error is CancellationError) else { return }
+                guard !(error is CancellationError) else { return false }
                 let err = NSAlert()
                 err.messageText = "Login Failed"
                 err.informativeText = error.localizedDescription
                 err.runModal()
+                return false
             }
 
         } catch {
@@ -102,6 +105,7 @@ struct CopilotLoginFlow {
             err.messageText = "Login Failed"
             err.informativeText = error.localizedDescription
             err.runModal()
+            return false
         }
     }
 
@@ -167,5 +171,23 @@ struct CopilotLoginFlow {
         window.center()
         window.makeKeyAndOrderFront(nil)
         return window
+    }
+
+    private static func makeVerificationURL(code: CopilotDeviceFlow.DeviceCodeResponse) -> URL? {
+        if let complete = code.verificationUriComplete,
+           let completeURL = URL(string: complete)
+        {
+            return completeURL
+        }
+
+        guard var components = URLComponents(string: code.verificationUri) else {
+            return URL(string: code.verificationUri)
+        }
+        var items = components.queryItems ?? []
+        if !items.contains(where: { $0.name.caseInsensitiveCompare("user_code") == .orderedSame }) {
+            items.append(URLQueryItem(name: "user_code", value: code.userCode))
+        }
+        components.queryItems = items
+        return components.url ?? URL(string: code.verificationUri)
     }
 }

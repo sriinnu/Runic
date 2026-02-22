@@ -39,11 +39,13 @@ public struct MiniMaxBaseResponse: Decodable {
 public struct MiniMaxUsageSnapshot: Sendable {
     public let total: Int
     public let used: Int
+    public let modelName: String?
     public let updatedAt: Date
 
-    public init(total: Int, used: Int, updatedAt: Date) {
+    public init(total: Int, used: Int, modelName: String? = nil, updatedAt: Date) {
         self.total = total
         self.used = used
+        self.modelName = modelName
         self.updatedAt = updatedAt
     }
 
@@ -67,7 +69,8 @@ extension MiniMaxUsageSnapshot {
             usedPercent: percent,
             windowMinutes: 24 * 60,
             resetsAt: nil,
-            resetDescription: "\(self.used) / \(self.total) (Please verify meaning)")
+            resetDescription: "\(self.used) / \(self.total) (Please verify meaning)",
+            label: self.modelName?.trimmingCharacters(in: .whitespacesAndNewlines))
 
         let identity = ProviderIdentitySnapshot(
             providerID: .minimax,
@@ -136,6 +139,7 @@ public struct MiniMaxUsageFetcher: Sendable {
             return MiniMaxUsageSnapshot(
                 total: firstModel.currentIntervalTotalCount,
                 used: firstModel.currentIntervalUsageCount,
+                modelName: firstModel.modelName,
                 updatedAt: Date())
                 
         } catch {

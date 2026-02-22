@@ -11,6 +11,7 @@ public struct CopilotDeviceFlow: Sendable {
         public let deviceCode: String
         public let userCode: String
         public let verificationUri: String
+        public let verificationUriComplete: String?
         public let expiresIn: Int
         public let interval: Int
 
@@ -18,6 +19,7 @@ public struct CopilotDeviceFlow: Sendable {
             case deviceCode = "device_code"
             case userCode = "user_code"
             case verificationUri = "verification_uri"
+            case verificationUriComplete = "verification_uri_complete"
             case expiresIn = "expires_in"
             case interval
         }

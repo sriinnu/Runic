@@ -25,7 +25,9 @@ struct CopilotProviderImplementation: ProviderImplementation {
                         style: .bordered,
                         isVisible: { context.settings.copilotAPIToken.isEmpty },
                         perform: {
-                            await CopilotLoginFlow.run(settings: context.settings)
+                            let didLogin = await CopilotLoginFlow.run(settings: context.settings)
+                            guard didLogin else { return }
+                            await context.store.refresh(trigger: .login)
                         }),
                     ProviderSettingsActionDescriptor(
                         id: "copilot-relogin",
@@ -33,7 +35,9 @@ struct CopilotProviderImplementation: ProviderImplementation {
                         style: .link,
                         isVisible: { !context.settings.copilotAPIToken.isEmpty },
                         perform: {
-                            await CopilotLoginFlow.run(settings: context.settings)
+                            let didLogin = await CopilotLoginFlow.run(settings: context.settings)
+                            guard didLogin else { return }
+                            await context.store.refresh(trigger: .login)
                         }),
                 ],
                 isVisible: nil),
@@ -42,7 +46,9 @@ struct CopilotProviderImplementation: ProviderImplementation {
 
     @MainActor
     func runLoginFlow(context: ProviderLoginContext) async -> Bool {
-        await CopilotLoginFlow.run(settings: context.controller.settings)
+        let didLogin = await CopilotLoginFlow.run(settings: context.controller.settings)
+        guard didLogin else { return false }
+        await context.controller.store.refresh(trigger: .login)
         return true
     }
 }

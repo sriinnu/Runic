@@ -24,7 +24,11 @@ public struct ProviderSettingsSnapshot: Sendable {
     }
 
     public struct CopilotProviderSettings: Sendable {
-        public init() {}
+        public let apiToken: String?
+
+        public init(apiToken: String?) {
+            self.apiToken = apiToken
+        }
     }
 
     public let debugMenuEnabled: Bool

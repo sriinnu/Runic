@@ -237,13 +237,15 @@ struct MiniMaxParsedUsage: Sendable {
     let resetsAt: Date?
     let resetDescription: String?
     let planName: String?
+    let modelName: String?
 
     func toUsageSnapshot(updatedAt: Date) -> UsageSnapshot {
         let primary = RateWindow(
             usedPercent: min(100, max(0, self.usedPercent)),
             windowMinutes: self.windowMinutes,
             resetsAt: self.resetsAt,
-            resetDescription: self.resetDescription)
+            resetDescription: self.resetDescription,
+            label: self.modelName)
         let identity = ProviderIdentitySnapshot(
             providerID: .minimax,
             accountEmail: nil,
@@ -284,7 +286,8 @@ enum MiniMaxWebParsing {
             windowMinutes: windowMinutes,
             resetsAt: resetInfo?.resetsAt,
             resetDescription: resetInfo?.resetDescription,
-            planName: planName)
+            planName: planName,
+            modelName: nil)
     }
 
     static func parseRemainsResponse(_ data: Data, now: Date = Date()) throws -> MiniMaxParsedUsage {
@@ -305,9 +308,10 @@ enum MiniMaxWebParsing {
         }
 
         let payload = (json["data"] as? [String: Any]) ?? json
-        guard let usage = self.extractModelRemains(from: payload) else {
+        guard let modelRemains = self.extractModelRemains(from: payload) else {
             throw MiniMaxWebUsageError.parseFailed("Missing model_remains usage")
         }
+        let usage = modelRemains.usedPercent
 
         let startTime = self.timestamp(payload["start_time"])
         let endTime = self.timestamp(payload["end_time"])
@@ -322,7 +326,8 @@ enum MiniMaxWebParsing {
             windowMinutes: windowMinutes,
             resetsAt: resetsAt,
             resetDescription: resetDescription,
-            planName: planName)
+            planName: planName,
+            modelName: modelRemains.modelName)
     }
 
     // MARK: - Manual parsing
@@ -459,7 +464,12 @@ enum MiniMaxWebParsing {
 
     // MARK: - JSON parsing
 
-    private static func extractModelRemains(from payload: [String: Any]) -> Double? {
+    private struct ModelRemainsUsage {
+        let usedPercent: Double
+        let modelName: String?
+    }
+
+    private static func extractModelRemains(from payload: [String: Any]) -> ModelRemainsUsage? {
         if let model = payload["model_remains"] {
             return self.extractUsagePercent(from: model)
         }
@@ -472,17 +482,22 @@ enum MiniMaxWebParsing {
         return nil
     }
 
-    private static func extractUsagePercent(from value: Any) -> Double? {
+    private static func extractUsagePercent(from value: Any) -> ModelRemainsUsage? {
         if let dict = value as? [String: Any] {
             let used = self.doubleValue(dict["used"] ?? dict["used_quota"] ?? dict["usedQuota"])
             let total = self.doubleValue(dict["total"] ?? dict["total_quota"] ?? dict["totalQuota"])
             let remaining = self.doubleValue(dict["remaining"] ?? dict["remaining_quota"] ?? dict["remainingQuota"])
+            let modelName = self.firstString(in: dict, keys: ["model_name", "model", "name", "label"])
 
             if let used, let total, total > 0 {
-                return min(100, max(0, used / total * 100))
+                return ModelRemainsUsage(
+                    usedPercent: min(100, max(0, used / total * 100)),
+                    modelName: modelName)
             }
             if let remaining, let total, total > 0 {
-                return min(100, max(0, (total - remaining) / total * 100))
+                return ModelRemainsUsage(
+                    usedPercent: min(100, max(0, (total - remaining) / total * 100)),
+                    modelName: modelName)
             }
         }
         if let dicts = value as? [[String: Any]] {

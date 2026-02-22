@@ -14,30 +14,630 @@ private struct ProviderUsageStatus {
 }
 
 private enum ProviderListMetrics {
-    static let contentInset: CGFloat = PreferencesLayoutMetrics.paneHorizontal
-    static let rowSpacing: CGFloat = RunicSpacing.sm  // 12pt - horizontal spacing between elements
-    static let providerVerticalSpacing: CGFloat = RunicSpacing.md  // 16pt - vertical spacing between providers
-    static let sectionSpacing: CGFloat = RunicSpacing.md  // 16pt - spacing between provider sections
+    static let contentInset: CGFloat = 24
+    static let rowSpacing: CGFloat = RunicSpacing.sm
     static let reorderHandleSize: CGFloat = 12
     static let reorderDotSize: CGFloat = 4
     static let reorderDotSpacing: CGFloat = 4
     static let rowInsets = EdgeInsets(
-        top: RunicSpacing.xs,  // 8pt
+        top: RunicSpacing.xxxs,
         leading: contentInset,
-        bottom: RunicSpacing.xs,  // 8pt
+        bottom: RunicSpacing.xxxs,
         trailing: contentInset)
-    static let dividerBottomInset: CGFloat = RunicSpacing.xs  // 8pt
+    static let sectionEdgeInset: CGFloat = RunicSpacing.md
+    static let dividerBottomInset: CGFloat = RunicSpacing.xxs
     static let checkboxSize: CGFloat = 20
-    static let iconSize: CGFloat = 32  // 32pt
+    static let iconSize: CGFloat = 30
     static let dividerLeadingInset: CGFloat = contentInset
     static let dividerTrailingInset: CGFloat = contentInset
-    static let fieldHorizontalPadding: CGFloat = RunicSpacing.xs  // 8pt
-    static let fieldVerticalPadding: CGFloat = RunicSpacing.xxs  // 4pt
-    static let errorCardPadding: CGFloat = RunicSpacing.sm  // 12pt
-    static let statusBadgePaddingH: CGFloat = RunicSpacing.xs  // 8pt
-    static let statusBadgePaddingV: CGFloat = RunicSpacing.xxs  // 4pt
-    static let rowBackgroundCornerRadius: CGFloat = RunicCornerRadius.md
+    static let providerCardPadding = EdgeInsets(
+        top: RunicSpacing.md,
+        leading: RunicSpacing.md,
+        bottom: RunicSpacing.md,
+        trailing: RunicSpacing.md)
+    static let supplementalCardPadding = EdgeInsets(
+        top: RunicSpacing.sm,
+        leading: RunicSpacing.md,
+        bottom: RunicSpacing.sm,
+        trailing: RunicSpacing.md)
+    static let fieldMaxWidth: CGFloat = 420
+    static let errorCardPadding: CGFloat = RunicSpacing.sm
+    static let statusBadgePaddingH: CGFloat = RunicSpacing.xs
+    static let statusBadgePaddingV: CGFloat = RunicSpacing.xxxs
+    static let rowBackgroundCornerRadius: CGFloat = RunicCornerRadius.lg
     static let errorCardCornerRadius: CGFloat = RunicCornerRadius.sm
+    static let insightsCardPadding: CGFloat = RunicSpacing.xs
+    static let insightsLineSpacing: CGFloat = RunicSpacing.xxxs
+    static let insightsLabelWidth: CGFloat = 84
+    static let sidebarStatusLabelWidth: CGFloat = 62
+}
+
+private struct ProviderInsightLine: Identifiable, Equatable {
+    let id: String
+    let label: String
+    let value: String
+    let help: String?
+
+    init(id: String, label: String, value: String, help: String? = nil) {
+        self.id = id
+        self.label = label
+        self.value = value
+        self.help = help
+    }
+}
+
+@MainActor
+private enum ProviderInsightsComposer {
+    static func lines(
+        for provider: UsageProvider,
+        store: UsageStore,
+        maxRows: Int? = nil) -> [ProviderInsightLine]
+    {
+        var rows: [ProviderInsightLine] = []
+        let snapshot = store.snapshot(for: provider)
+        let identity = snapshot?.identity(for: provider) ?? snapshot?.identity
+        let tokenSnapshot = store.tokenSnapshot(for: provider)
+        let attempts = store.fetchAttempts(for: provider)
+        let reliability = store.ledgerReliabilityScore(for: provider)
+        let anomaly = store.ledgerAnomalySummary(for: provider)
+        let spendForecast = store.ledgerSpendForecast(for: provider)
+        let topProjectSpendForecast = store.ledgerTopProjectSpendForecast(for: provider)
+        let modelBreakdown = store.ledgerModelBreakdown(for: provider)
+        let projectBreakdown = store.ledgerProjectBreakdown(for: provider)
+
+        if let who = self.actorValue(identity: identity) {
+            rows.append(ProviderInsightLine(id: "actor", label: "Who", value: who))
+        }
+        if let planAuth = self.planAuthValue(identity: identity) {
+            rows.append(ProviderInsightLine(id: "plan-auth", label: "Plan/Auth", value: planAuth))
+        }
+        if let fetch = self.fetchHealthValue(attempts) {
+            rows.append(ProviderInsightLine(
+                id: "fetch",
+                label: "Fetch",
+                value: fetch,
+                help: self.fetchAttemptsHelp(attempts)))
+        }
+        if store.isStale(provider: provider), let fetchError = self.fetchErrorValue(attempts) {
+            rows.append(ProviderInsightLine(
+                id: "fetch-error",
+                label: "Fetch err",
+                value: fetchError,
+                help: self.fetchAttemptsHelp(attempts)))
+        }
+        if let reliabilityValue = self.reliabilityValue(reliability) {
+            rows.append(ProviderInsightLine(
+                id: "reliability",
+                label: "Reliability",
+                value: reliabilityValue,
+                help: self.reliabilityHelpText(reliability)))
+        }
+        if let costAlertValue = self.costAnomalyValue(anomaly) {
+            rows.append(ProviderInsightLine(
+                id: "cost-alert",
+                label: "Cost alert",
+                value: costAlertValue,
+                help: self.costAnomalyHelpText(anomaly)))
+        }
+
+        if let topModel = store.ledgerTopModel(for: provider), topModel.provider == provider {
+            rows.append(ProviderInsightLine(
+                id: "top-model",
+                label: "Top model",
+                value: self.topModelValue(topModel)))
+        } else if let windowModels = self.windowModelsValue(snapshot) {
+            rows.append(ProviderInsightLine(
+                id: "models",
+                label: "Models",
+                value: windowModels))
+        }
+
+        if let topProject = store.ledgerTopProject(for: provider), topProject.provider == provider {
+            rows.append(ProviderInsightLine(
+                id: "top-project",
+                label: "Top project",
+                value: self.topProjectValue(topProject),
+                help: self.projectIdentityHelpText(topProject)))
+        }
+
+        if let modelMix = self.modelMixValue(modelBreakdown) {
+            rows.append(ProviderInsightLine(id: "model-mix", label: "Model mix", value: modelMix))
+        }
+
+        if let projectMix = self.projectMixValue(projectBreakdown) {
+            rows.append(ProviderInsightLine(
+                id: "project-mix",
+                label: "Project mix",
+                value: projectMix,
+                help: self.projectMixHelpText(projectBreakdown)))
+        }
+
+        if let usage = self.usageValue(snapshot?.primary) {
+            rows.append(ProviderInsightLine(id: "usage", label: "Usage", value: usage))
+        }
+
+        if let spend = self.spendValue(snapshot?.providerCost) {
+            rows.append(ProviderInsightLine(id: "spend", label: "Spend", value: spend))
+        }
+        if let forecast = self.forecastValue(spendForecast) {
+            rows.append(ProviderInsightLine(
+                id: "forecast",
+                label: "Forecast",
+                value: forecast,
+                help: self.forecastHelpText(spendForecast)))
+        }
+        if let budget = self.budgetValue(spendForecast) {
+            rows.append(ProviderInsightLine(
+                id: "budget",
+                label: "Budget",
+                value: budget,
+                help: self.budgetHelpText(spendForecast)))
+        }
+        if let projectBudget = self.projectBudgetValue(topProjectSpendForecast) {
+            rows.append(ProviderInsightLine(
+                id: "project-budget",
+                label: "Prj budget",
+                value: projectBudget,
+                help: self.budgetHelpText(topProjectSpendForecast)))
+        }
+
+        if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
+            rows.append(ProviderInsightLine(id: "today", label: "Today", value: today))
+        }
+
+        if let last30 = self.tokenWindowValue(
+            tokens: tokenSnapshot?.last30DaysTokens,
+            cost: tokenSnapshot?.last30DaysCostUSD)
+        {
+            rows.append(ProviderInsightLine(id: "last30", label: "30d", value: last30))
+        }
+
+        if let reset = self.resetValue(snapshot?.primary) {
+            rows.append(ProviderInsightLine(id: "reset", label: "Reset", value: reset))
+        }
+
+        guard let maxRows, maxRows > 0, rows.count > maxRows else {
+            return rows
+        }
+        return Array(rows.prefix(maxRows))
+    }
+
+    private static func actorValue(identity: ProviderIdentitySnapshot?) -> String? {
+        let email = self.trimmed(identity?.accountEmail)
+        let organization = self.trimmed(identity?.accountOrganization)
+        if let email, let organization {
+            if email.caseInsensitiveCompare(organization) == .orderedSame {
+                return email
+            }
+            return "\(email) · \(organization)"
+        }
+        return email ?? organization
+    }
+
+    private static func planAuthValue(identity: ProviderIdentitySnapshot?) -> String? {
+        guard let raw = self.trimmed(identity?.loginMethod) else { return nil }
+        let cleaned = UsageFormatter.cleanPlanName(raw)
+        return cleaned.isEmpty ? raw : cleaned
+    }
+
+    private static func topModelValue(_ summary: UsageLedgerModelSummary) -> String {
+        let model = UsageFormatter.modelDisplayName(summary.model)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        var parts = [model, "\(tokens) tok", "\(summary.entryCount) req"]
+        if let cost = summary.totals.costUSD {
+            parts.append(UsageFormatter.usdString(cost))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func topProjectValue(_ summary: UsageLedgerProjectSummary) -> String {
+        let project = self.shortProjectName(summary.displayProjectName)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        var parts = [project, "\(tokens) tok", "\(summary.entryCount) req"]
+        if let cost = summary.totals.costUSD {
+            parts.append(UsageFormatter.usdString(cost))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func modelMixValue(_ summaries: [UsageLedgerModelSummary]) -> String? {
+        guard !summaries.isEmpty else { return nil }
+        var tokensByModel: [String: Int] = [:]
+        for summary in summaries {
+            tokensByModel[summary.model, default: 0] += summary.totals.totalTokens
+        }
+        let ranked = tokensByModel.map { (model: $0.key, tokens: $0.value) }.sorted { lhs, rhs in
+            if lhs.tokens == rhs.tokens {
+                return UsageFormatter.modelDisplayName(lhs.model) < UsageFormatter.modelDisplayName(rhs.model)
+            }
+            return lhs.tokens > rhs.tokens
+        }
+        guard ranked.count > 1 else { return nil }
+        let rendered = ranked.prefix(2).map { item in
+            let name = UsageFormatter.modelDisplayName(item.model)
+            let tokens = UsageFormatter.tokenCountString(item.tokens)
+            return "\(name) \(tokens)"
+        }
+        var value = rendered.joined(separator: " · ")
+        if ranked.count > 2 {
+            value += " +\(ranked.count - 2) more"
+        }
+        return value
+    }
+
+    private static func projectMixValue(_ summaries: [UsageLedgerProjectSummary]) -> String? {
+        guard summaries.count > 1 else { return nil }
+        let ranked = summaries.sorted { lhs, rhs in
+            if lhs.totals.totalTokens == rhs.totals.totalTokens {
+                return lhs.displayProjectName < rhs.displayProjectName
+            }
+            return lhs.totals.totalTokens > rhs.totals.totalTokens
+        }
+        let rendered = ranked.prefix(2).map { summary in
+            let project = self.shortProjectName(summary.displayProjectName)
+            let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+            return "\(project) \(tokens)"
+        }
+        var value = rendered.joined(separator: " · ")
+        if ranked.count > 2 {
+            value += " +\(ranked.count - 2) more"
+        }
+        return value
+    }
+
+    private static func shortProjectName(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let maxLength = 44
+        guard trimmed.count > maxLength else { return trimmed }
+        let prefixLength = 28
+        let suffixLength = 12
+        guard trimmed.count > (prefixLength + suffixLength + 1) else {
+            let index = trimmed.index(trimmed.startIndex, offsetBy: maxLength)
+            return "\(trimmed[..<index])…"
+        }
+        let prefixEnd = trimmed.index(trimmed.startIndex, offsetBy: prefixLength)
+        let suffixStart = trimmed.index(trimmed.endIndex, offsetBy: -suffixLength)
+        return "\(trimmed[..<prefixEnd])…\(trimmed[suffixStart...])"
+    }
+
+    private static func projectMixHelpText(_ summaries: [UsageLedgerProjectSummary]) -> String? {
+        guard summaries.count > 1 else { return nil }
+        let ranked = summaries.sorted { lhs, rhs in
+            if lhs.totals.totalTokens == rhs.totals.totalTokens {
+                return lhs.displayProjectName < rhs.displayProjectName
+            }
+            return lhs.totals.totalTokens > rhs.totals.totalTokens
+        }
+        let details = ranked.prefix(3).map { summary in
+            let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+            let project = summary.displayProjectName
+            return "\(project): \(tokens) tok"
+        }
+        return details.isEmpty ? nil : details.joined(separator: "\n")
+    }
+
+    private static func projectIdentityHelpText(_ summary: UsageLedgerProjectSummary) -> String? {
+        let displayName = summary.displayProjectName
+        let source = summary.projectNameSource ?? .unknown
+        let confidence = summary.projectNameConfidence ?? .none
+        let shouldAnnotateSource = source != .projectName && source != .budgetOverride
+        let shouldAnnotateConfidence = confidence != .high
+        let isUnknown = displayName == "Unknown project"
+
+        var details: [String] = []
+        if shouldAnnotateSource {
+            details.append("source: \(self.projectSourceLabel(source))")
+        }
+        if shouldAnnotateConfidence {
+            details.append("confidence: \(self.projectConfidenceLabel(confidence))")
+        }
+        if isUnknown, let fingerprint = self.projectIDFingerprint(summary.projectID) {
+            details.append("id: \(fingerprint)")
+        }
+        if let provenance = self.trimmed(summary.projectNameProvenance) {
+            details.append("via: \(provenance)")
+        }
+        guard !details.isEmpty else { return nil }
+        return ([displayName] + details).joined(separator: "\n")
+    }
+
+    private static func projectSourceLabel(_ source: UsageLedgerProjectNameSource) -> String {
+        switch source {
+        case .projectName: return "project name"
+        case .projectID: return "project id"
+        case .inferredFromPath: return "path-derived"
+        case .inferredFromName: return "name-derived"
+        case .budgetOverride: return "budget override"
+        case .unknown: return "unknown"
+        }
+    }
+
+    private static func projectConfidenceLabel(_ confidence: UsageLedgerProjectNameConfidence) -> String {
+        switch confidence {
+        case .high: return "high"
+        case .medium: return "medium"
+        case .low: return "low"
+        case .none: return "none"
+        }
+    }
+
+    private static func projectIDFingerprint(_ projectID: String?) -> String? {
+        guard let projectID = projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty else {
+            return nil
+        }
+
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in projectID.lowercased().utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(format: "%08llx", hash)
+    }
+
+    private static func trimmed(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    private static func usageValue(_ window: RateWindow?) -> String? {
+        guard let window else { return nil }
+        var parts = ["\(Int(window.usedPercent.rounded()))% used"]
+        if let minutes = window.windowMinutes, minutes > 0 {
+            parts.append("\(minutes)m window")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func spendValue(_ providerCost: ProviderCostSnapshot?) -> String? {
+        guard let providerCost else { return nil }
+        let used = UsageFormatter.currencyString(providerCost.used, currencyCode: providerCost.currencyCode)
+        var value: String
+        if providerCost.limit > 0 {
+            let limitText = UsageFormatter.currencyString(providerCost.limit, currencyCode: providerCost.currencyCode)
+            value = "\(used) / \(limitText)"
+        } else {
+            value = used
+        }
+        if let period = self.trimmed(providerCost.period) {
+            value += " · \(period)"
+        }
+        return value
+    }
+
+    private static func forecastValue(_ forecast: UsageLedgerSpendForecast?) -> String? {
+        guard let forecast else { return nil }
+        var parts = [UsageFormatter.usdString(forecast.projected30DayCostUSD), "/ 30d"]
+        if forecast.averageDailyCostUSD.isFinite, forecast.averageDailyCostUSD >= 0 {
+            parts.append("· \(UsageFormatter.usdString(forecast.averageDailyCostUSD))/day")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func budgetValue(_ forecast: UsageLedgerSpendForecast?) -> String? {
+        guard let forecast, let limit = forecast.budgetLimitUSD, limit > 0 else { return nil }
+        let limitText = UsageFormatter.usdString(limit)
+        if let eta = forecast.budgetETAInDays {
+            return "\(limitText) · \(self.budgetBreachETAText(days: eta))"
+        }
+        if forecast.budgetWillBreach {
+            return "\(limitText) · Breach risk"
+        }
+        return "\(limitText) · On track"
+    }
+
+    private static func projectBudgetValue(_ forecast: UsageLedgerSpendForecast?) -> String? {
+        guard let forecast, let limit = forecast.budgetLimitUSD, limit > 0 else { return nil }
+        let name = self.shortProjectName(forecast.projectName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Top project")
+        if let eta = forecast.budgetETAInDays {
+            return "\(name) · \(self.budgetBreachETAText(days: eta))"
+        }
+        if forecast.budgetWillBreach {
+            return "\(name) · Breach risk"
+        }
+        return "\(name) · On track"
+    }
+
+    private static func forecastHelpText(_ forecast: UsageLedgerSpendForecast?) -> String? {
+        guard let forecast else { return nil }
+        var lines: [String] = []
+        let observedLabel = forecast.observedDays == 1 ? "day" : "days"
+        lines.append("Observed: \(forecast.observedDays) \(observedLabel)")
+        lines.append("Projected 30d: \(UsageFormatter.usdString(forecast.projected30DayCostUSD))")
+        if let p50 = forecast.projectedCostP50USD {
+            lines.append("p50: \(UsageFormatter.usdString(p50))")
+        }
+        if let p80 = forecast.projectedCostP80USD {
+            lines.append("p80: \(UsageFormatter.usdString(p80))")
+        }
+        if let p95 = forecast.projectedCostP95USD {
+            lines.append("p95: \(UsageFormatter.usdString(p95))")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func budgetHelpText(_ forecast: UsageLedgerSpendForecast?) -> String? {
+        guard let forecast, let limit = forecast.budgetLimitUSD, limit > 0 else { return nil }
+        var lines = [
+            "Budget limit: \(UsageFormatter.usdString(limit))",
+            "Projected 30d: \(UsageFormatter.usdString(forecast.projected30DayCostUSD))"
+        ]
+        if let eta = forecast.budgetETAInDays {
+            lines.append(self.budgetBreachETAText(days: eta))
+        } else if forecast.budgetWillBreach {
+            lines.append("Breach risk at current pace")
+        } else {
+            lines.append("No breach at current pace")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func budgetBreachETAText(days: Double) -> String {
+        guard days.isFinite else { return "Breach ETA unavailable" }
+        if days <= 0 { return "Breach now" }
+        let now = Date()
+        let etaDate = now.addingTimeInterval(days * 24 * 60 * 60)
+        let countdown = UsageFormatter.resetCountdownDescription(from: etaDate, now: now)
+        if countdown == "now" { return "Breach now" }
+        return "Breach \(countdown)"
+    }
+
+    private static func resetValue(_ window: RateWindow?) -> String? {
+        guard let window else { return nil }
+        if let resetsAt = window.resetsAt {
+            return UsageFormatter.resetCountdownDescription(from: resetsAt)
+        }
+        return self.trimmed(window.resetDescription)
+    }
+
+    private static func tokenWindowValue(tokens: Int?, cost: Double?) -> String? {
+        var parts: [String] = []
+        if let cost, cost.isFinite, cost >= 0 {
+            parts.append(UsageFormatter.usdString(cost))
+        }
+        if let tokens, tokens >= 0 {
+            parts.append("\(UsageFormatter.tokenCountString(tokens)) tok")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private static func reliabilityValue(_ reliability: UsageLedgerReliabilityScore?) -> String? {
+        guard let reliability else { return nil }
+        return "\(reliability.grade) · \(reliability.score)/100"
+    }
+
+    private static func reliabilityHelpText(_ reliability: UsageLedgerReliabilityScore?) -> String? {
+        guard let reliability else { return nil }
+        var lines = [reliability.summary]
+        if let primary = self.trimmed(reliability.primarySignal), !primary.isEmpty {
+            lines.append(primary)
+        }
+        for signal in reliability.signals {
+            let trimmed = self.trimmed(signal) ?? ""
+            guard !trimmed.isEmpty else { continue }
+            if lines.contains(trimmed) { continue }
+            lines.append(trimmed)
+            if lines.count >= 5 { break }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func costAnomalyValue(_ anomaly: UsageLedgerAnomalySummary?) -> String? {
+        guard let spend = anomaly?.spendAnomaly else { return nil }
+        let percent = Int((spend.percentIncrease * 100).rounded())
+        return "\(spend.severity.label) spend +\(percent)%"
+    }
+
+    private static func costAnomalyHelpText(_ anomaly: UsageLedgerAnomalySummary?) -> String? {
+        guard let anomaly, let spend = anomaly.spendAnomaly else { return nil }
+        let percent = Int((spend.percentIncrease * 100).rounded())
+        var lines = [
+            "Spend today: \(UsageFormatter.usdString(spend.todayValue))",
+            "Baseline (\(anomaly.baselineDays)d avg): \(UsageFormatter.usdString(spend.baselineAverage))",
+            "Increase: +\(percent)%",
+            "Severity: \(spend.severity.label)"
+        ]
+        if let explanation = anomaly.explanation {
+            lines.append(contentsOf: explanation.details.prefix(2))
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func fetchHealthValue(_ attempts: [ProviderFetchAttempt]) -> String? {
+        guard !attempts.isEmpty else { return nil }
+        let rendered = attempts.prefix(3).map { attempt in
+            let status: String
+            if !attempt.wasAvailable {
+                status = "unavailable"
+            } else if self.trimmed(attempt.errorDescription) != nil {
+                status = "failed"
+            } else {
+                status = "ok"
+            }
+            return "\(self.fetchStrategyLabel(attempt)) \(status)"
+        }
+        var value = rendered.joined(separator: " · ")
+        if attempts.count > 3 {
+            value += " +\(attempts.count - 3) more"
+        }
+        return value
+    }
+
+    private static func fetchErrorValue(_ attempts: [ProviderFetchAttempt]) -> String? {
+        guard let latestError = attempts.reversed().compactMap({ self.trimmed($0.errorDescription) }).first else {
+            return nil
+        }
+        return self.truncated(latestError, maxLength: 88)
+    }
+
+    private static func fetchAttemptsHelp(_ attempts: [ProviderFetchAttempt]) -> String? {
+        guard !attempts.isEmpty else { return nil }
+        return attempts.map { attempt in
+            let status: String
+            if !attempt.wasAvailable {
+                status = "unavailable"
+            } else if let error = self.trimmed(attempt.errorDescription) {
+                return "\(attempt.strategyID) (\(self.fetchKindLabel(attempt.kind))) failed: \(error)"
+            } else {
+                status = "ok"
+            }
+            return "\(attempt.strategyID) (\(self.fetchKindLabel(attempt.kind))) \(status)"
+        }.joined(separator: "\n")
+    }
+
+    private static func fetchStrategyLabel(_ attempt: ProviderFetchAttempt) -> String {
+        let raw = attempt.strategyID
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+        let cleaned = UsageFormatter.cleanPlanName(raw).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleaned.isEmpty {
+            return cleaned
+        }
+        return self.fetchKindLabel(attempt.kind)
+    }
+
+    private static func fetchKindLabel(_ kind: ProviderFetchKind) -> String {
+        switch kind {
+        case .cli: return "cli"
+        case .web: return "web"
+        case .oauth: return "oauth"
+        case .apiToken: return "api"
+        case .api: return "api"
+        case .localProbe: return "local"
+        case .webDashboard: return "web"
+        }
+    }
+
+    private static func truncated(_ text: String, maxLength: Int) -> String {
+        guard text.count > maxLength else { return text }
+        let index = text.index(text.startIndex, offsetBy: maxLength)
+        return "\(text[..<index])…"
+    }
+
+    private static func windowModelsValue(_ snapshot: UsageSnapshot?) -> String? {
+        guard let snapshot else { return nil }
+        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap { $0 }
+        guard !windows.isEmpty else { return nil }
+
+        var seen: Set<String> = []
+        var items: [String] = []
+        for window in windows {
+            guard let rawLabel = self.trimmed(window.label) else { continue }
+            let normalized = rawLabel.lowercased()
+            guard !seen.contains(normalized) else { continue }
+            seen.insert(normalized)
+
+            let label = UsageFormatter.modelDisplayName(rawLabel)
+            let used = Int(window.usedPercent.rounded())
+            items.append("\(label) \(used)%")
+        }
+        guard !items.isEmpty else { return nil }
+        if items.count > 3 {
+            let visible = items.prefix(3).joined(separator: " · ")
+            return "\(visible) +\(items.count - 3) more"
+        }
+        return items.joined(separator: " · ")
+    }
 }
 
 @MainActor
@@ -411,9 +1011,9 @@ private struct ProviderListView: View {
 
     private func rowInsets(withDivider: Bool, addTopPadding: Bool, addBottomPadding: Bool) -> EdgeInsets {
         let base = ProviderListMetrics.rowInsets
-        let topInset = addTopPadding ? PreferencesLayoutMetrics.paneVertical : base.top
+        let topInset = addTopPadding ? ProviderListMetrics.sectionEdgeInset : base.top
         let bottomInset = addBottomPadding
-            ? PreferencesLayoutMetrics.paneVertical
+            ? ProviderListMetrics.sectionEdgeInset
             : (withDivider ? ProviderListMetrics.dividerBottomInset : base.bottom)
         return EdgeInsets(
             top: topInset,
@@ -449,6 +1049,59 @@ private struct ProviderListBrandIcon: View {
 }
 
 @MainActor
+private struct ProviderInsightsView: View {
+    let lines: [ProviderInsightLine]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ProviderListMetrics.insightsLineSpacing) {
+            ForEach(self.lines) { line in
+                if let help = line.help {
+                    HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+                        Text("\(line.label):")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: ProviderListMetrics.insightsLabelWidth, alignment: .leading)
+                        Text(line.value)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+                    .help(help)
+                    .accessibilityHint(help)
+                    .accessibilityLabel("\(line.label): \(line.value)")
+                } else {
+                    HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+                        Text("\(line.label):")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: ProviderListMetrics.insightsLabelWidth, alignment: .leading)
+                        Text(line.value)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+                    .accessibilityLabel("\(line.label): \(line.value)")
+                }
+            }
+        }
+        .padding(ProviderListMetrics.insightsCardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.42))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
+        }
+    }
+}
+
+@MainActor
 private struct ProviderListProviderRowView: View {
     let provider: UsageProvider
     @Bindable var store: UsageStore
@@ -464,9 +1117,10 @@ private struct ProviderListProviderRowView: View {
     @FocusState private var isToggleFocused: Bool
 
     var body: some View {
-        let titleIndent = ProviderListMetrics.iconSize + RunicSpacing.sm  // Updated to use RunicSpacing.sm
         let isRefreshing = self.store.refreshingProviders.contains(self.provider)
         let showReorderHandle = self.isHovering || self.isToggleFocused
+        let metadata = self.store.metadata(for: self.provider)
+        let insightLines = ProviderInsightsComposer.lines(for: self.provider, store: self.store, maxRows: 4)
 
         HStack(alignment: .top, spacing: ProviderListMetrics.rowSpacing) {
             Toggle("", isOn: self.$isEnabled)
@@ -475,30 +1129,31 @@ private struct ProviderListProviderRowView: View {
                 .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
                 .focused(self.$isToggleFocused)
 
-            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                    HStack(alignment: .center, spacing: RunicSpacing.sm) {
+            VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                    HStack(alignment: .top, spacing: RunicSpacing.sm) {
                         ProviderListBrandIcon(provider: self.provider)
-                            .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
-                        Text(self.store.metadata(for: self.provider).displayName)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
+                        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                            Text(metadata.displayName)
+                                .font(.headline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text(self.subtitle)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: RunicSpacing.xs)
                     }
-                    Text(self.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.leading, titleIndent)
 
                     HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                        Text(self.sourceLabel)
+                        self.sourceBadge
+                        Text(self.statusLabel)
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
 
                         if isRefreshing {
                             ProgressView()
-                                .controlSize(.mini)
+                                .controlSize(.small)
                                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                             Text("Refreshing…")
                                 .font(.caption2)
@@ -508,32 +1163,36 @@ private struct ProviderListProviderRowView: View {
                                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                         }
                     }
-                    .padding(.leading, titleIndent)
                 }
                 .contentShape(Rectangle())
                 .onTapGesture { self.isEnabled.toggle() }
 
+                if !insightLines.isEmpty {
+                    ProviderInsightsView(lines: insightLines)
+                        .padding(.top, RunicSpacing.xxs)
+                }
+
                 if let errorDisplay {
                     ProviderErrorView(
-                        title: "Last \(self.store.metadata(for: self.provider).displayName) fetch failed:",
+                        title: "Last \(metadata.displayName) fetch failed:",
                         display: errorDisplay,
                         isExpanded: self.$isErrorExpanded,
                         onCopy: { self.onCopyError(errorDisplay.full) })
-                        .padding(.top, RunicSpacing.sm)
-                        .padding(.leading, titleIndent)
+                        .padding(.top, RunicSpacing.xxs)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(RunicSpacing.sm)
-        .background(
+        .padding(ProviderListMetrics.providerCardPadding)
+        .background(self.cardBackground)
+        .overlay {
             RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
-                .fill(self.rowBackgroundColor)
-        )
+                .strokeBorder(self.cardBorderColor, lineWidth: 1)
+        }
         .overlay(alignment: .topLeading) {
             ProviderListReorderHandle(isVisible: showReorderHandle)
                 .offset(
-                    x: -(ProviderListMetrics.reorderHandleSize + ProviderListMetrics.rowSpacing),
+                    x: -(ProviderListMetrics.reorderHandleSize + RunicSpacing.xs),
                     y: RunicSpacing.sm)
         }
         .onHover { isHovering in
@@ -548,9 +1207,20 @@ private struct ProviderListProviderRowView: View {
             .font(.caption2.weight(.medium))
             .padding(.horizontal, ProviderListMetrics.statusBadgePaddingH)
             .padding(.vertical, ProviderListMetrics.statusBadgePaddingV)
-            .background(backgroundColor)
+            .background(Capsule(style: .continuous).fill(backgroundColor))
             .foregroundStyle(color)
-            .cornerRadius(RunicCornerRadius.xs)
+    }
+
+    private var sourceBadge: some View {
+        Text(self.sourceLabel)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, RunicSpacing.xs)
+            .padding(.vertical, RunicSpacing.xxxs)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
+            )
     }
 
     private var usageStatusColors: (Color, Color) {
@@ -566,11 +1236,26 @@ private struct ProviderListProviderRowView: View {
 
     private var rowBackgroundColor: Color {
         if self.isHovering {
-            return Color(nsColor: .controlBackgroundColor).opacity(0.5)
+            return Color(nsColor: .controlBackgroundColor).opacity(0.7)
         } else if self.isEnabled {
-            return Color(nsColor: .controlBackgroundColor).opacity(0.3)
+            return Color(nsColor: .controlBackgroundColor).opacity(0.55)
         }
-        return Color.clear
+        return Color(nsColor: .controlBackgroundColor).opacity(0.35)
+    }
+
+    private var cardBorderColor: Color {
+        if self.isHovering {
+            return Color.accentColor.opacity(0.35)
+        }
+        if self.isEnabled {
+            return Color(nsColor: .separatorColor).opacity(0.28)
+        }
+        return Color(nsColor: .separatorColor).opacity(0.18)
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+            .fill(self.rowBackgroundColor)
     }
 }
 
@@ -637,114 +1322,36 @@ private struct ProviderListToggleRowView: View {
                 .toggleStyle(.checkbox)
                 .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
 
-            HStack(alignment: .top, spacing: RunicSpacing.sm) {
-                Color.clear
-                    .frame(width: ProviderListMetrics.iconSize, height: ProviderListMetrics.iconSize)
-
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text(self.toggle.title)
-                            .font(.body.weight(.medium))
-                        Text(self.toggle.subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if self.toggle.binding.wrappedValue {
-                        if let status = self.toggle.statusText?(), !status.isEmpty {
-                            Text(status)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(4)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(RunicSpacing.xs)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(
-                                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-                                )
-                        }
-
-                        let actions = self.toggle.actions.filter { $0.isVisible?() ?? true }
-                        if !actions.isEmpty {
-                            HStack(spacing: RunicSpacing.xs) {
-                                ForEach(actions) { action in
-                                    Button(action.title) {
-                                        Task { @MainActor in
-                                            await action.perform()
-                                        }
-                                    }
-                                    .applyProviderSettingsButtonStyle(action.style)
-                                    .controlSize(.small)
-                                }
-                            }
-                        }
-                    }
+            VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                    Text(self.toggle.title)
+                        .font(.callout.weight(.semibold))
+                    Text(self.toggle.subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding(RunicSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.2))
-        )
-        .onChange(of: self.toggle.binding.wrappedValue) { _, enabled in
-            guard let onChange = self.toggle.onChange else { return }
-            Task { @MainActor in
-                await onChange(enabled)
-            }
-        }
-        .task(id: self.toggle.binding.wrappedValue) {
-            guard self.toggle.binding.wrappedValue else { return }
-            guard let onAppear = self.toggle.onAppearWhenEnabled else { return }
-            await onAppear()
-        }
-    }
-}
 
-@MainActor
-private struct ProviderListFieldRowView: View {
-    let provider: UsageProvider
-    let field: ProviderSettingsFieldDescriptor
-
-    var body: some View {
-        HStack(alignment: .top, spacing: ProviderListMetrics.rowSpacing) {
-            Color.clear
-                .frame(width: ProviderListMetrics.checkboxSize, height: ProviderListMetrics.checkboxSize)
-                .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
-
-            HStack(alignment: .top, spacing: RunicSpacing.sm) {
-                Color.clear
-                    .frame(width: ProviderListMetrics.iconSize, height: ProviderListMetrics.iconSize)
-
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text(self.field.title)
-                            .font(.body.weight(.medium))
-                        Text(self.field.subtitle)
+                if self.toggle.binding.wrappedValue {
+                    if let status = self.toggle.statusText?(), !status.isEmpty {
+                        Text(status)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(4)
                             .fixedSize(horizontal: false, vertical: true)
+                            .padding(RunicSpacing.xs)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
+                            )
+                            .overlay {
+                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                    .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+                            }
                     }
 
-                    switch self.field.kind {
-                    case .plain:
-                        TextField(self.field.placeholder ?? "", text: self.field.binding)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.callout)
-                            .padding(.horizontal, ProviderListMetrics.fieldHorizontalPadding)
-                            .padding(.vertical, ProviderListMetrics.fieldVerticalPadding)
-                    case .secure:
-                        SecureField(self.field.placeholder ?? "", text: self.field.binding)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.callout)
-                            .padding(.horizontal, ProviderListMetrics.fieldHorizontalPadding)
-                            .padding(.vertical, ProviderListMetrics.fieldVerticalPadding)
-                    }
-
-                    let actions = self.field.actions.filter { $0.isVisible?() ?? true }
+                    let actions = self.toggle.actions.filter { $0.isVisible?() ?? true }
                     if !actions.isEmpty {
                         HStack(spacing: RunicSpacing.xs) {
                             ForEach(actions) { action in
@@ -759,14 +1366,106 @@ private struct ProviderListFieldRowView: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.leading, ProviderListMetrics.iconSize + RunicSpacing.sm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(ProviderListMetrics.supplementalCardPadding)
+        .background(self.supplementalCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+                .strokeBorder(self.supplementalCardBorderColor, lineWidth: 1)
+        }
+        .onChange(of: self.toggle.binding.wrappedValue) { _, enabled in
+            guard let onChange = self.toggle.onChange else { return }
+            Task { @MainActor in
+                await onChange(enabled)
             }
         }
-        .padding(RunicSpacing.sm)
-        .background(
+        .task(id: self.toggle.binding.wrappedValue) {
+            guard self.toggle.binding.wrappedValue else { return }
+            guard let onAppear = self.toggle.onAppearWhenEnabled else { return }
+            await onAppear()
+        }
+    }
+
+    private var supplementalCardBackground: some View {
+        RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.3))
+    }
+
+    private var supplementalCardBorderColor: Color {
+        Color(nsColor: .separatorColor).opacity(0.18)
+    }
+}
+
+@MainActor
+private struct ProviderListFieldRowView: View {
+    let provider: UsageProvider
+    let field: ProviderSettingsFieldDescriptor
+
+    var body: some View {
+        HStack(alignment: .top, spacing: ProviderListMetrics.rowSpacing) {
+            Color.clear
+                .frame(width: ProviderListMetrics.checkboxSize, height: ProviderListMetrics.checkboxSize)
+                .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
+
+            VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                    Text(self.field.title)
+                        .font(.callout.weight(.semibold))
+                    Text(self.field.subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                switch self.field.kind {
+                case .plain:
+                    TextField(self.field.placeholder ?? "", text: self.field.binding)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.callout)
+                        .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
+                case .secure:
+                    SecureField(self.field.placeholder ?? "", text: self.field.binding)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.callout)
+                        .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
+                }
+
+                let actions = self.field.actions.filter { $0.isVisible?() ?? true }
+                if !actions.isEmpty {
+                    HStack(spacing: RunicSpacing.xs) {
+                        ForEach(actions) { action in
+                            Button(action.title) {
+                                Task { @MainActor in
+                                    await action.perform()
+                                }
+                            }
+                            .applyProviderSettingsButtonStyle(action.style)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+            .padding(.leading, ProviderListMetrics.iconSize + RunicSpacing.sm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(ProviderListMetrics.supplementalCardPadding)
+        .background(self.supplementalCardBackground)
+        .overlay {
             RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.2))
-        )
+                .strokeBorder(self.supplementalCardBorderColor, lineWidth: 1)
+        }
+    }
+
+    private var supplementalCardBackground: some View {
+        RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.3))
+    }
+
+    private var supplementalCardBorderColor: Color {
+        Color(nsColor: .separatorColor).opacity(0.18)
     }
 }
 
@@ -958,6 +1657,72 @@ private struct ProviderSidebarRow: View {
 }
 
 @MainActor
+private struct ProviderSidebarKeyValueRow: View {
+    let label: String
+    let value: String
+    let helpText: String?
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+            Text("\(self.label):")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .frame(width: ProviderListMetrics.sidebarStatusLabelWidth, alignment: .leading)
+            if let helpText = self.helpText {
+                Text(self.value)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .help(helpText)
+            } else {
+                Text(self.value)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+}
+
+@MainActor
+private struct ProviderSidebarMetricChip: View {
+    let title: String
+    let value: String
+    let helpText: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+            Text(self.title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+            Text(self.value)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, RunicSpacing.xs)
+        .padding(.vertical, RunicSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(Color(nsColor: .textBackgroundColor).opacity(0.55))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+        )
+        .help(self.helpText ?? "")
+    }
+}
+
+@MainActor
 private struct ProviderSidebarDetailView: View {
     let provider: UsageProvider
     @Bindable var store: UsageStore
@@ -971,8 +1736,13 @@ private struct ProviderSidebarDetailView: View {
     let errorDisplay: ProviderErrorDisplay?
     @Binding var isErrorExpanded: Bool
     let onCopyError: (String) -> Void
+    @State private var diagnosticsCopyStatus: String?
 
     var body: some View {
+        let insightLines = ProviderInsightsComposer.lines(for: self.provider, store: self.store)
+        let topModelLines = self.topModelLines
+        let topProjectLines = self.topProjectLines
+
         ScrollView {
             VStack(alignment: .leading, spacing: RunicSpacing.md) {
                 // Header
@@ -995,15 +1765,104 @@ private struct ProviderSidebarDetailView: View {
 
                 // Status
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                    HStack(spacing: RunicSpacing.xs) {
-                        Text("Source:")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                        Text(self.sourceLabel)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    ProviderSidebarKeyValueRow(label: "Source", value: self.sourceLabel, helpText: nil)
+                    ProviderSidebarKeyValueRow(label: "Updated", value: self.statusLabel, helpText: nil)
+                    if let runtimeMetrics = self.runtimeMetrics {
+                        ProviderSidebarKeyValueRow(
+                            label: "Runtime",
+                            value: runtimeMetrics.lineText,
+                            helpText: runtimeMetrics.hoverText)
                     }
                     self.statusBadge
+
+                    if !self.quickMetrics.isEmpty {
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
+                                GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
+                            ],
+                            alignment: .leading,
+                            spacing: RunicSpacing.xs)
+                        {
+                            ForEach(self.quickMetrics) { metric in
+                                ProviderSidebarMetricChip(
+                                    title: metric.title,
+                                    value: metric.value,
+                                    helpText: metric.helpText)
+                            }
+                        }
+                        .padding(.top, RunicSpacing.xxxs)
+                    }
+
+                    HStack(spacing: RunicSpacing.xs) {
+                        Button("Copy diagnostics") {
+                            self.copyDiagnostics()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("Copy fetch path, reliability, anomaly, and budget/forecast details.")
+
+                        if let diagnosticsCopyStatus {
+                            Text(diagnosticsCopyStatus)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .padding(RunicSpacing.sm)
+                .background(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
+                )
+
+                if !insightLines.isEmpty {
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Insights")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                        ProviderInsightsView(lines: insightLines)
+                    }
+                }
+
+                if !topModelLines.isEmpty || !topProjectLines.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                        Text("Activity Leaders")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+
+                        if !topModelLines.isEmpty {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                Text("Models")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
+                                    Text("\(index + 1). \(line)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+                                }
+                            }
+                        }
+
+                        if !topProjectLines.isEmpty {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                Text("Projects")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                ForEach(Array(topProjectLines.enumerated()), id: \.offset) { index, line in
+                                    Text("\(index + 1). \(line)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Error
@@ -1131,5 +1990,324 @@ private struct ProviderSidebarDetailView: View {
                 }
             }
         }
+    }
+
+    private struct QuickMetricItem: Identifiable {
+        let id: String
+        let title: String
+        let value: String
+        let helpText: String?
+    }
+
+    private var quickMetrics: [QuickMetricItem] {
+        var items: [QuickMetricItem] = []
+        let snapshot = self.store.snapshot(for: self.provider)
+        let tokenSnapshot = self.store.tokenSnapshot(for: self.provider)
+
+        if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
+            items.append(QuickMetricItem(id: "today", title: "Today", value: today, helpText: "Session cost and tokens."))
+        }
+        if let last30 = self.tokenWindowValue(
+            tokens: tokenSnapshot?.last30DaysTokens,
+            cost: tokenSnapshot?.last30DaysCostUSD)
+        {
+            items.append(QuickMetricItem(id: "30d", title: "30d", value: last30, helpText: "Last 30 days cost and tokens."))
+        }
+        if let spend = self.providerSpendValue(snapshot?.providerCost) {
+            items.append(QuickMetricItem(id: "spend", title: "Spend", value: spend, helpText: "Provider billing usage."))
+        }
+        if let topModel = self.store.ledgerTopModel(for: self.provider) {
+            let modelName = UsageFormatter.modelDisplayName(topModel.model)
+            let tokens = UsageFormatter.tokenCountString(topModel.totals.totalTokens)
+            items.append(QuickMetricItem(
+                id: "top-model",
+                title: "Top model",
+                value: "\(modelName) · \(tokens) tok",
+                helpText: "Highest token usage model in the active insights window."))
+        }
+        return items
+    }
+
+    private func tokenWindowValue(tokens: Int?, cost: Double?) -> String? {
+        var parts: [String] = []
+        if let cost, cost.isFinite, cost >= 0 {
+            parts.append(UsageFormatter.usdString(cost))
+        }
+        if let tokens, tokens >= 0 {
+            parts.append("\(UsageFormatter.tokenCountString(tokens)) tok")
+        }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " · ")
+    }
+
+    private func providerSpendValue(_ providerCost: ProviderCostSnapshot?) -> String? {
+        guard let providerCost else { return nil }
+        let used = UsageFormatter.currencyString(providerCost.used, currencyCode: providerCost.currencyCode)
+        if providerCost.limit > 0 {
+            let limitText = UsageFormatter.currencyString(providerCost.limit, currencyCode: providerCost.currencyCode)
+            return "\(used) / \(limitText)"
+        }
+        return used
+    }
+
+    private var topModelLines: [String] {
+        let ranked = self.store.ledgerModelBreakdown(for: self.provider).sorted { lhs, rhs in
+            if lhs.totals.totalTokens == rhs.totals.totalTokens {
+                return UsageFormatter.modelDisplayName(lhs.model) < UsageFormatter.modelDisplayName(rhs.model)
+            }
+            return lhs.totals.totalTokens > rhs.totals.totalTokens
+        }
+        return ranked.prefix(3).map { summary in
+            let name = UsageFormatter.modelDisplayName(summary.model)
+            return self.usageLine(title: name, totals: summary.totals, requests: summary.entryCount)
+        }
+    }
+
+    private var topProjectLines: [String] {
+        let ranked = self.store.ledgerProjectBreakdown(for: self.provider).sorted { lhs, rhs in
+            if lhs.totals.totalTokens == rhs.totals.totalTokens {
+                return lhs.displayProjectName < rhs.displayProjectName
+            }
+            return lhs.totals.totalTokens > rhs.totals.totalTokens
+        }
+        return ranked.prefix(3).map { summary in
+            let project = summary.displayProjectName
+            return self.usageLine(title: project, totals: summary.totals, requests: summary.entryCount)
+        }
+    }
+
+    private func usageLine(title: String, totals: UsageLedgerTotals, requests: Int) -> String {
+        let tokens = UsageFormatter.tokenCountString(totals.totalTokens)
+        var parts = ["\(title)", "\(tokens) tok", "\(requests) req"]
+        if let cost = totals.costUSD {
+            parts.append(UsageFormatter.usdString(cost))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private struct RuntimeMetricsData {
+        let lineText: String
+        let hoverText: String?
+    }
+
+    private var runtimeMetrics: RuntimeMetricsData? {
+        let attempts = self.store.fetchAttempts(for: self.provider)
+        guard !attempts.isEmpty || self.store.snapshot(for: self.provider) != nil else {
+            return nil
+        }
+
+        var parts: [String] = []
+        if let updatedAt = self.store.snapshot(for: self.provider)?.updatedAt {
+            parts.append("success \(updatedAt.relativeDescription())")
+        } else {
+            parts.append("no success yet")
+        }
+
+        var hoverText: String?
+        if !attempts.isEmpty {
+            let retryCount = self.retryCount(from: attempts)
+            if retryCount > 0 {
+                parts.append("retry \(retryCount)")
+            }
+            if let activeAttempt = self.activeAttempt(from: attempts) {
+                parts.append(Self.fetchKindLabel(activeAttempt.kind))
+                if let strategyID = self.trimmed(activeAttempt.strategyID) {
+                    hoverText = "Strategy: \(strategyID)"
+                }
+            }
+        }
+
+        return RuntimeMetricsData(
+            lineText: parts.joined(separator: " · "),
+            hoverText: hoverText)
+    }
+
+    private func retryCount(from attempts: [ProviderFetchAttempt]) -> Int {
+        guard !attempts.isEmpty else { return 0 }
+        if let successIndex = attempts.firstIndex(where: { $0.wasAvailable && self.trimmed($0.errorDescription) == nil }) {
+            return max(0, successIndex)
+        }
+        return max(0, attempts.count - 1)
+    }
+
+    private func activeAttempt(from attempts: [ProviderFetchAttempt]) -> ProviderFetchAttempt? {
+        guard !attempts.isEmpty else { return nil }
+        return attempts.first(where: { $0.wasAvailable && self.trimmed($0.errorDescription) == nil }) ??
+            attempts.last(where: { $0.wasAvailable }) ??
+            attempts.last
+    }
+
+    private func trimmed(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    private static func fetchKindLabel(_ kind: ProviderFetchKind) -> String {
+        switch kind {
+        case .cli: return "cli"
+        case .web: return "web"
+        case .oauth: return "oauth"
+        case .apiToken: return "api"
+        case .api: return "api"
+        case .localProbe: return "local"
+        case .webDashboard: return "web"
+        }
+    }
+
+    private func copyDiagnostics() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(self.diagnosticsReport, forType: .string)
+        self.diagnosticsCopyStatus = "Copied"
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            self.diagnosticsCopyStatus = nil
+        }
+    }
+
+    private var diagnosticsReport: String {
+        let metadata = self.store.metadata(for: self.provider)
+        let attempts = self.store.fetchAttempts(for: self.provider)
+        let snapshot = self.store.snapshot(for: self.provider)
+        let forecast = self.store.ledgerSpendForecast(for: self.provider)
+        let topProjectForecast = self.store.ledgerTopProjectSpendForecast(for: self.provider)
+        let reliability = self.store.ledgerReliabilityScore(for: self.provider)
+        let anomaly = self.store.ledgerAnomalySummary(for: self.provider)
+        let iso = ISO8601DateFormatter()
+
+        var lines: [String] = []
+        lines.append("# \(metadata.displayName) Diagnostics")
+        lines.append("provider: \(self.provider.rawValue)")
+        lines.append("generated_at: \(iso.string(from: Date()))")
+        lines.append("enabled: \(self.isEnabled ? "true" : "false")")
+        lines.append("source: \(self.sourceLabel)")
+        lines.append("updated: \(self.statusLabel)")
+        if let runtime = self.runtimeMetrics?.lineText {
+            lines.append("runtime: \(runtime)")
+        }
+
+        if let snapshot {
+            lines.append("")
+            lines.append("usage_snapshot:")
+            lines.append("- updated_at: \(iso.string(from: snapshot.updatedAt))")
+            lines.append("- primary_used_percent: \(Int(snapshot.primary.usedPercent.rounded()))")
+            if let minutes = snapshot.primary.windowMinutes, minutes > 0 {
+                lines.append("- primary_window_minutes: \(minutes)")
+            }
+            if let reset = snapshot.primary.resetsAt {
+                lines.append("- primary_resets_at: \(iso.string(from: reset))")
+            }
+            if let cost = snapshot.providerCost {
+                lines.append("- provider_spend_used: \(UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode))")
+                if cost.limit > 0 {
+                    lines.append("- provider_spend_limit: \(UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode))")
+                }
+                if let period = self.trimmed(cost.period) {
+                    lines.append("- provider_spend_period: \(period)")
+                }
+            }
+        }
+
+        lines.append("")
+        lines.append("fetch_path:")
+        if attempts.isEmpty {
+            lines.append("- none")
+        } else {
+            for attempt in attempts {
+                let state: String
+                if !attempt.wasAvailable {
+                    state = "unavailable"
+                } else if let error = self.trimmed(attempt.errorDescription) {
+                    state = "failed: \(error)"
+                } else {
+                    state = "ok"
+                }
+                lines.append("- \(attempt.strategyID) [\(Self.fetchKindLabel(attempt.kind))] \(state)")
+            }
+        }
+
+        if let forecast {
+            lines.append("")
+            lines.append("provider_forecast:")
+            lines.append("- projected_30d: \(UsageFormatter.usdString(forecast.projected30DayCostUSD))")
+            lines.append("- average_daily: \(UsageFormatter.usdString(forecast.averageDailyCostUSD))")
+            if let p50 = forecast.projectedCostP50USD {
+                lines.append("- p50: \(UsageFormatter.usdString(p50))")
+            }
+            if let p80 = forecast.projectedCostP80USD {
+                lines.append("- p80: \(UsageFormatter.usdString(p80))")
+            }
+            if let p95 = forecast.projectedCostP95USD {
+                lines.append("- p95: \(UsageFormatter.usdString(p95))")
+            }
+            if let limit = forecast.budgetLimitUSD, limit > 0 {
+                lines.append("- budget_limit: \(UsageFormatter.usdString(limit))")
+                lines.append("- budget_status: \(self.budgetStatusText(forecast))")
+            }
+        }
+
+        if let topProjectForecast {
+            lines.append("")
+            lines.append("top_project_forecast:")
+            if let name = self.trimmed(topProjectForecast.projectName) {
+                lines.append("- project: \(name)")
+            }
+            lines.append("- projected_30d: \(UsageFormatter.usdString(topProjectForecast.projected30DayCostUSD))")
+            if let limit = topProjectForecast.budgetLimitUSD, limit > 0 {
+                lines.append("- budget_limit: \(UsageFormatter.usdString(limit))")
+                lines.append("- budget_status: \(self.budgetStatusText(topProjectForecast))")
+            }
+        }
+
+        if let reliability {
+            lines.append("")
+            lines.append("reliability:")
+            lines.append("- score: \(reliability.score)/100")
+            lines.append("- grade: \(reliability.grade)")
+            lines.append("- summary: \(reliability.summary)")
+            if let signal = self.trimmed(reliability.primarySignal) {
+                lines.append("- signal: \(signal)")
+            }
+        }
+
+        if let anomaly {
+            lines.append("")
+            lines.append("anomaly:")
+            if let spend = anomaly.spendAnomaly {
+                lines.append("- spend: \(spend.severity.label) +\(Int((spend.percentIncrease * 100).rounded()))%")
+            }
+            if let token = anomaly.tokenAnomaly {
+                lines.append("- tokens: \(token.severity.label) +\(Int((token.percentIncrease * 100).rounded()))%")
+            }
+            if let explanation = anomaly.explanation {
+                lines.append("- headline: \(explanation.headline)")
+                for detail in explanation.details {
+                    lines.append("- detail: \(detail)")
+                }
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func budgetStatusText(_ forecast: UsageLedgerSpendForecast) -> String {
+        if let eta = forecast.budgetETAInDays {
+            return self.budgetBreachETAText(days: eta)
+        }
+        if forecast.budgetWillBreach {
+            return "Breach risk"
+        }
+        return "On track"
+    }
+
+    private func budgetBreachETAText(days: Double) -> String {
+        guard days.isFinite else { return "Breach ETA unavailable" }
+        if days <= 0 { return "Breach now" }
+        let now = Date()
+        let etaDate = now.addingTimeInterval(days * 24 * 60 * 60)
+        let countdown = UsageFormatter.resetCountdownDescription(from: etaDate, now: now)
+        if countdown == "now" { return "Breach now" }
+        return "Breach \(countdown)"
     }
 }
