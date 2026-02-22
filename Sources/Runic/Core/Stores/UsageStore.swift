@@ -521,6 +521,27 @@ enum UsageLedgerAnomalyDetector {
     }
 }
 
+struct ProviderHistoryDaySnapshot: Sendable, Hashable, Identifiable {
+    let dayStart: Date
+    let totals: UsageLedgerTotals
+    let requestCount: Int
+    let modelsUsed: [String]
+    let topModel: UsageLedgerModelSummary?
+    let topProject: UsageLedgerProjectSummary?
+
+    var id: Date { self.dayStart }
+}
+
+struct ProviderHistoryMonthSnapshot: Sendable, Hashable {
+    let provider: UsageProvider
+    let monthStart: Date
+    let generatedAt: Date
+    let days: [ProviderHistoryDaySnapshot]
+    let isSupported: Bool
+    let note: String?
+    let error: String?
+}
+
 @MainActor
 @Observable
 final class UsageStore {
@@ -604,12 +625,15 @@ final class UsageStore {
     @ObservationIgnored private var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored private var ledgerRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var providerHistoryMonthCache: [UsageProvider: [String: ProviderHistoryMonthCacheEntry]] = [:]
     @ObservationIgnored private var lastKnownSessionRemaining: [UsageProvider: Double] = [:]
     @ObservationIgnored private(set) var lastTokenFetchAt: [UsageProvider: Date] = [:]
     @ObservationIgnored private let tokenFetchTTL: TimeInterval = 60 * 60
     @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
     @ObservationIgnored private let ledgerRefreshTTL: TimeInterval = 90
     @ObservationIgnored private let ledgerMaxAgeDays: Int = 3
+    @ObservationIgnored private let providerHistoryCacheTTL: TimeInterval = 90
+    @ObservationIgnored private let providerHistoryMaxScanDays: Int = 180
     @ObservationIgnored nonisolated(unsafe) private let performanceStorage: PerformanceStorageImpl?
 
     init(
@@ -915,6 +939,174 @@ final class UsageStore {
     func ledgerRoutingRecommendation(for provider: UsageProvider) -> UsageLedgerRoutingRecommendation? {
         UsageLedgerInsightsAdvisor.routingRecommendation(
             modelBreakdown: self.ledgerModelBreakdown(for: provider))
+    }
+
+    func providerHistoryMonth(
+        provider: UsageProvider,
+        monthStart: Date,
+        forceRefresh: Bool = false) async -> ProviderHistoryMonthSnapshot
+    {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        let normalizedMonthStart = self.normalizedMonthStart(monthStart, calendar: calendar)
+        let now = Date()
+        let cacheKey = self.historyMonthCacheKey(for: normalizedMonthStart)
+
+        if !forceRefresh,
+           let cached = self.providerHistoryMonthCache[provider]?[cacheKey],
+           now.timeIntervalSince(cached.fetchedAt) <= self.providerHistoryCacheTTL
+        {
+            return cached.snapshot
+        }
+
+        let scanDays = self.providerHistoryScanDays(
+            monthStart: normalizedMonthStart,
+            now: now,
+            calendar: calendar)
+
+        guard let source = self.providerHistorySource(
+            provider: provider,
+            now: now,
+            maxAgeDays: scanDays)
+        else {
+            let unsupported = Self.unsupportedHistorySnapshot(
+                provider: provider,
+                monthStart: normalizedMonthStart,
+                generatedAt: now)
+            self.providerHistoryMonthCache[provider, default: [:]][cacheKey] = ProviderHistoryMonthCacheEntry(
+                fetchedAt: now,
+                snapshot: unsupported)
+            return unsupported
+        }
+
+        let note = self.providerHistoryNote(scanDays: scanDays)
+
+        let snapshot = await Task.detached(priority: .utility) {
+            let timeZone = TimeZone.current
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = timeZone
+
+            do {
+                let loaded = try await source.loadEntries()
+                let providerEntries = loaded.filter { $0.provider == provider }
+                let monthEntries = providerEntries.filter {
+                    calendar.isDate($0.timestamp, equalTo: normalizedMonthStart, toGranularity: .month)
+                }
+                let days = Self.providerHistoryDays(entries: monthEntries, timeZone: timeZone)
+                return ProviderHistoryMonthSnapshot(
+                    provider: provider,
+                    monthStart: normalizedMonthStart,
+                    generatedAt: now,
+                    days: days,
+                    isSupported: true,
+                    note: note,
+                    error: nil)
+            } catch {
+                return ProviderHistoryMonthSnapshot(
+                    provider: provider,
+                    monthStart: normalizedMonthStart,
+                    generatedAt: now,
+                    days: [],
+                    isSupported: true,
+                    note: note,
+                    error: error.localizedDescription)
+            }
+        }.value
+
+        self.providerHistoryMonthCache[provider, default: [:]][cacheKey] = ProviderHistoryMonthCacheEntry(
+            fetchedAt: now,
+            snapshot: snapshot)
+        return snapshot
+    }
+
+    private func normalizedMonthStart(_ date: Date, calendar: Calendar) -> Date {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+    }
+
+    private func historyMonthCacheKey(for monthStart: Date) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        let components = calendar.dateComponents([.year, .month], from: monthStart)
+        return String(format: "%04d-%02d", components.year ?? 1970, components.month ?? 1)
+    }
+
+    private func providerHistoryScanDays(monthStart: Date, now: Date, calendar: Calendar) -> Int {
+        let start = calendar.startOfDay(for: monthStart)
+        let end = calendar.startOfDay(for: now)
+        let daysBetween = max(0, calendar.dateComponents([.day], from: start, to: end).day ?? 0)
+        let target = max(35, daysBetween + 7)
+        return min(self.providerHistoryMaxScanDays, target)
+    }
+
+    private func providerHistoryNote(scanDays: Int) -> String? {
+        guard scanDays >= self.providerHistoryMaxScanDays else { return nil }
+        return "History scans up to the most recent \(scanDays) days for performance."
+    }
+
+    private func providerHistorySource(
+        provider: UsageProvider,
+        now: Date,
+        maxAgeDays: Int) -> (any UsageLedgerSource)?
+    {
+        switch provider {
+        case .claude:
+            return ClaudeUsageLogSource(maxAgeDays: maxAgeDays, now: now)
+        case .codex:
+            return CodexUsageLogSource(maxAgeDays: maxAgeDays, now: now)
+        default:
+            return nil
+        }
+    }
+
+    private static func unsupportedHistorySnapshot(
+        provider: UsageProvider,
+        monthStart: Date,
+        generatedAt: Date) -> ProviderHistoryMonthSnapshot
+    {
+        ProviderHistoryMonthSnapshot(
+            provider: provider,
+            monthStart: monthStart,
+            generatedAt: generatedAt,
+            days: [],
+            isSupported: false,
+            note: "History is currently available for Claude and Codex local ledger sources.",
+            error: nil)
+    }
+
+    nonisolated private static func providerHistoryDays(
+        entries: [UsageLedgerEntry],
+        timeZone: TimeZone) -> [ProviderHistoryDaySnapshot]
+    {
+        guard !entries.isEmpty else { return [] }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+
+        let dailySummaries = UsageLedgerAggregator.dailySummaries(
+            entries: entries,
+            timeZone: timeZone,
+            groupByProject: false)
+            .sorted { $0.dayStart < $1.dayStart }
+
+        var entriesByDay: [Date: [UsageLedgerEntry]] = [:]
+        for entry in entries {
+            let dayStart = calendar.startOfDay(for: entry.timestamp)
+            entriesByDay[dayStart, default: []].append(entry)
+        }
+
+        return dailySummaries.map { summary in
+            let dayEntries = entriesByDay[summary.dayStart] ?? []
+            let topModel = UsageLedgerAggregator.modelSummaries(entries: dayEntries).first
+            let topProject = UsageLedgerAggregator.projectSummaries(entries: dayEntries).first
+            return ProviderHistoryDaySnapshot(
+                dayStart: summary.dayStart,
+                totals: summary.totals,
+                requestCount: dayEntries.count,
+                modelsUsed: summary.modelsUsed,
+                topModel: topModel,
+                topProject: topProject)
+        }
     }
 
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
@@ -1426,6 +1618,11 @@ final class UsageStore {
         let lastActivityByProvider: [UsageProvider: Date]
         let updatedAt: Date
         let providers: [UsageProvider]
+    }
+
+    private struct ProviderHistoryMonthCacheEntry {
+        let fetchedAt: Date
+        let snapshot: ProviderHistoryMonthSnapshot
     }
 
     private func ledgerSources(

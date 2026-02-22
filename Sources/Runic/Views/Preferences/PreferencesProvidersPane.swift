@@ -1722,6 +1722,80 @@ private struct ProviderSidebarMetricChip: View {
     }
 }
 
+private enum ProviderDetailSubview: String, CaseIterable, Identifiable {
+    case overview = "Overview"
+    case history = "History"
+
+    var id: String { self.rawValue }
+}
+
+private enum ProviderHistoryMetricMode: String, CaseIterable, Identifiable {
+    case tokens = "Tokens"
+    case cost = "Cost"
+    case requests = "Requests"
+
+    var id: String { self.rawValue }
+}
+
+@MainActor
+private struct ProviderHistoryCalendarDayCell: View {
+    let dayNumber: Int
+    let isInMonth: Bool
+    let isSelected: Bool
+    let hasActivity: Bool
+    let intensity: Double
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: self.action) {
+            VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+                Text("\(self.dayNumber)")
+                    .font(.caption.weight(self.isSelected ? .semibold : .regular))
+                    .foregroundStyle(self.isInMonth ? .primary : .tertiary)
+                Spacer(minLength: 0)
+                if self.hasActivity {
+                    Capsule(style: .continuous)
+                        .fill(Color.accentColor.opacity(0.35 + (0.45 * self.intensity)))
+                        .frame(height: 4)
+                } else {
+                    Capsule(style: .continuous)
+                        .fill(Color(nsColor: .separatorColor).opacity(self.isInMonth ? 0.14 : 0.08))
+                        .frame(height: 2)
+                }
+            }
+            .padding(RunicSpacing.xs)
+            .frame(maxWidth: .infinity, minHeight: 46, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    .fill(self.backgroundColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    .strokeBorder(self.borderColor, lineWidth: self.isSelected ? 1.5 : 1)
+            )
+            .opacity(self.isInMonth ? 1 : 0.52)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var backgroundColor: Color {
+        if self.isSelected {
+            return Color.accentColor.opacity(0.18)
+        }
+        if self.hasActivity {
+            return Color.accentColor.opacity(0.06 + (0.18 * self.intensity))
+        }
+        return Color(nsColor: .textBackgroundColor).opacity(self.isInMonth ? 0.55 : 0.32)
+    }
+
+    private var borderColor: Color {
+        if self.isSelected {
+            return Color.accentColor.opacity(0.75)
+        }
+        return Color(nsColor: .separatorColor).opacity(self.isInMonth ? 0.22 : 0.12)
+    }
+}
+
 @MainActor
 private struct ProviderSidebarDetailView: View {
     let provider: UsageProvider
@@ -1737,6 +1811,13 @@ private struct ProviderSidebarDetailView: View {
     @Binding var isErrorExpanded: Bool
     let onCopyError: (String) -> Void
     @State private var diagnosticsCopyStatus: String?
+    @State private var selectedSubview: ProviderDetailSubview = .overview
+    @State private var historyMetricMode: ProviderHistoryMetricMode = .tokens
+    @State private var historyMonthStart: Date = Self.monthStart(for: Date())
+    @State private var historySnapshot: ProviderHistoryMonthSnapshot?
+    @State private var historySelectedDay: Date?
+    @State private var historyIsLoading = false
+    @State private var historyError: String?
 
     var body: some View {
         let insightLines = ProviderInsightsComposer.lines(for: self.provider, store: self.store)
@@ -1763,109 +1844,119 @@ private struct ProviderSidebarDetailView: View {
 
                 Divider()
 
-                // Status
-                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                    ProviderSidebarKeyValueRow(label: "Source", value: self.sourceLabel, helpText: nil)
-                    ProviderSidebarKeyValueRow(label: "Updated", value: self.statusLabel, helpText: nil)
-                    if let runtimeMetrics = self.runtimeMetrics {
-                        ProviderSidebarKeyValueRow(
-                            label: "Runtime",
-                            value: runtimeMetrics.lineText,
-                            helpText: runtimeMetrics.hoverText)
-                    }
-                    self.statusBadge
-
-                    if !self.quickMetrics.isEmpty {
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
-                                GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
-                            ],
-                            alignment: .leading,
-                            spacing: RunicSpacing.xs)
-                        {
-                            ForEach(self.quickMetrics) { metric in
-                                ProviderSidebarMetricChip(
-                                    title: metric.title,
-                                    value: metric.value,
-                                    helpText: metric.helpText)
-                            }
-                        }
-                        .padding(.top, RunicSpacing.xxxs)
-                    }
-
-                    HStack(spacing: RunicSpacing.xs) {
-                        Button("Copy diagnostics") {
-                            self.copyDiagnostics()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .help("Copy fetch path, reliability, anomaly, and budget/forecast details.")
-
-                        if let diagnosticsCopyStatus {
-                            Text(diagnosticsCopyStatus)
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                        }
+                Picker("View", selection: self.$selectedSubview) {
+                    ForEach(ProviderDetailSubview.allCases) { view in
+                        Text(view.rawValue).tag(view)
                     }
                 }
-                .padding(RunicSpacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
-                )
+                .pickerStyle(.segmented)
 
-                if !insightLines.isEmpty {
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text("Insights")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                        ProviderInsightsView(lines: insightLines)
-                    }
-                }
-
-                if !topModelLines.isEmpty || !topProjectLines.isEmpty {
-                    Divider()
+                if self.selectedSubview == .overview {
+                    // Status
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                        Text("Activity Leaders")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
+                        ProviderSidebarKeyValueRow(label: "Source", value: self.sourceLabel, helpText: nil)
+                        ProviderSidebarKeyValueRow(label: "Updated", value: self.statusLabel, helpText: nil)
+                        if let runtimeMetrics = self.runtimeMetrics {
+                            ProviderSidebarKeyValueRow(
+                                label: "Runtime",
+                                value: runtimeMetrics.lineText,
+                                helpText: runtimeMetrics.hoverText)
+                        }
+                        self.statusBadge
 
-                        if !topModelLines.isEmpty {
-                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                Text("Models")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
-                                    Text("\(index + 1). \(line)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .textSelection(.enabled)
+                        if !self.quickMetrics.isEmpty {
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
+                                    GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
+                                ],
+                                alignment: .leading,
+                                spacing: RunicSpacing.xs)
+                            {
+                                ForEach(self.quickMetrics) { metric in
+                                    ProviderSidebarMetricChip(
+                                        title: metric.title,
+                                        value: metric.value,
+                                        helpText: metric.helpText)
                                 }
                             }
+                            .padding(.top, RunicSpacing.xxxs)
                         }
 
-                        if !topProjectLines.isEmpty {
-                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                Text("Projects")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                ForEach(Array(topProjectLines.enumerated()), id: \.offset) { index, line in
-                                    Text("\(index + 1). \(line)")
-                                        .font(.caption)
+                        HStack(spacing: RunicSpacing.xs) {
+                            Button("Copy diagnostics") {
+                                self.copyDiagnostics()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .help("Copy fetch path, reliability, anomaly, and budget/forecast details.")
+
+                            if let diagnosticsCopyStatus {
+                                Text(diagnosticsCopyStatus)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                    .padding(RunicSpacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                            .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
+                    )
+
+                    if !insightLines.isEmpty {
+                        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                            Text("Insights")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                            ProviderInsightsView(lines: insightLines)
+                        }
+                    }
+
+                    if !topModelLines.isEmpty || !topProjectLines.isEmpty {
+                        Divider()
+                        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                            Text("Activity Leaders")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+
+                            if !topModelLines.isEmpty {
+                                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                    Text("Models")
+                                        .font(.caption2.weight(.semibold))
                                         .foregroundStyle(.secondary)
-                                        .textSelection(.enabled)
+                                    ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
+                                        Text("\(index + 1). \(line)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+                                    }
+                                }
+                            }
+
+                            if !topProjectLines.isEmpty {
+                                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                    Text("Projects")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    ForEach(Array(topProjectLines.enumerated()), id: \.offset) { index, line in
+                                        Text("\(index + 1). \(line)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+                                    }
                                 }
                             }
                         }
                     }
+                } else {
+                    self.historyContent
                 }
 
-                // Error
                 if let errorDisplay, self.isEnabled {
                     ProviderErrorView(
                         title: "Last fetch failed:",
@@ -1939,6 +2030,19 @@ private struct ProviderSidebarDetailView: View {
             .padding(RunicSpacing.lg)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .task(id: self.historyTaskID) {
+            guard self.selectedSubview == .history else { return }
+            await self.loadHistoryMonth()
+        }
+        .onChange(of: self.provider) { _, _ in
+            self.selectedSubview = .overview
+            self.historyMetricMode = .tokens
+            self.historyMonthStart = Self.monthStart(for: Date())
+            self.historySnapshot = nil
+            self.historySelectedDay = nil
+            self.historyError = nil
+            self.historyIsLoading = false
+        }
     }
 
     private var statusBadge: some View {
@@ -1958,6 +2062,435 @@ private struct ProviderSidebarDetailView: View {
         case .error: return (.red, Color.red.opacity(0.15))
         case .neutral: return (.secondary, Color(nsColor: .controlBackgroundColor))
         }
+    }
+
+    private var historyTaskID: String {
+        let monthKey = Int(self.historyMonthStart.timeIntervalSince1970)
+        return "\(self.provider.rawValue)-\(self.selectedSubview.rawValue)-\(monthKey)"
+    }
+
+    private var historyContent: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+            HStack(alignment: .center, spacing: RunicSpacing.xs) {
+                Button {
+                    self.shiftHistoryMonth(by: -1)
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Previous month")
+
+                Text(self.historyMonthTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 110, alignment: .leading)
+
+                Button {
+                    self.shiftHistoryMonth(by: 1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!self.canShiftHistoryForward)
+                .help("Next month")
+
+                Spacer()
+
+                Picker("Metric", selection: self.$historyMetricMode) {
+                    ForEach(ProviderHistoryMetricMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+            }
+
+            if self.historyIsLoading, self.historySnapshot == nil {
+                HStack(spacing: RunicSpacing.xs) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading history…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(RunicSpacing.sm)
+            } else if let snapshot = self.historySnapshot {
+                if !snapshot.isSupported {
+                    Text(snapshot.note ?? "History is not available for this provider yet.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(RunicSpacing.sm)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
+                        )
+                } else {
+                    if let note = snapshot.note, !note.isEmpty {
+                        Text(note)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    self.historyCalendarGrid
+                    self.historyDayDetailCard
+                }
+            } else {
+                Text("History is empty for this period.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(RunicSpacing.sm)
+            }
+
+            if let historyError = self.historyError {
+                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                    Text("History load failed")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.red)
+                    Text(historyError)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                    Button("Retry") {
+                        Task { await self.loadHistoryMonth(forceRefresh: true) }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(RunicSpacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        .fill(Color.red.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        .strokeBorder(Color.red.opacity(0.28), lineWidth: 1)
+                )
+            }
+
+            Text("Local aggregated history only. Prompts, cookies, API keys, and raw payloads are never shown here.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(RunicSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
+        )
+    }
+
+    private var historyCalendarGrid: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            let weekdays = self.weekdaySymbols
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: RunicSpacing.xxs), count: 7), spacing: RunicSpacing.xxs) {
+                ForEach(weekdays, id: \.self) { symbol in
+                    Text(symbol)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: RunicSpacing.xxs), count: 7), spacing: RunicSpacing.xxs) {
+                ForEach(self.calendarDaysForMonth, id: \.self) { day in
+                    let inMonth = self.historyCalendar.isDate(day, equalTo: self.historyMonthStart, toGranularity: .month)
+                    let normalizedDay = self.historyCalendar.startOfDay(for: day)
+                    let summary = self.historySummaryByDay[normalizedDay]
+                    let dayNumber = self.historyCalendar.component(.day, from: day)
+                    let isSelected = self.historySelectedDay.map { self.historyCalendar.isDate($0, inSameDayAs: day) } ?? false
+                    ProviderHistoryCalendarDayCell(
+                        dayNumber: dayNumber,
+                        isInMonth: inMonth,
+                        isSelected: isSelected,
+                        hasActivity: summary != nil,
+                        intensity: self.historyIntensity(for: summary),
+                        action: { self.historySelectedDay = normalizedDay })
+                    .help(self.historyDayHelp(for: day, summary: summary))
+                }
+            }
+        }
+    }
+
+    private var historyDayDetailCard: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            if let selected = self.selectedHistoryDaySummary {
+                Text(selected.dayStart.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: RunicSpacing.xs) {
+                    ProviderSidebarMetricChip(
+                        title: "Requests",
+                        value: self.decimalString(selected.requestCount),
+                        helpText: "Count of requests recorded in local ledger logs.")
+                    ProviderSidebarMetricChip(
+                        title: "Tokens",
+                        value: "\(UsageFormatter.tokenCountString(selected.totals.totalTokens)) tok",
+                        helpText: "Input + output + cache tokens.")
+                    if let spend = selected.totals.costUSD {
+                        ProviderSidebarMetricChip(
+                            title: "Spend",
+                            value: UsageFormatter.usdString(spend),
+                            helpText: "Estimated day spend from ledger pricing.")
+                    }
+                }
+
+                if let topModel = selected.topModel {
+                    Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+
+                if let topProject = selected.topProject {
+                    let project = self.projectDisplay(topProject)
+                    Text("Top project: \(project.title)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .help(project.helpText ?? "")
+                }
+
+                if !selected.modelsUsed.isEmpty {
+                    Text("Models used: \(selected.modelsUsed.prefix(4).map { UsageFormatter.modelDisplayName($0) }.joined(separator: ", "))")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .textSelection(.enabled)
+                }
+            } else {
+                Text(self.historySelectedDay?.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("No recorded activity for this day.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(RunicSpacing.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(Color(nsColor: .textBackgroundColor).opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private var historyMonthTitle: String {
+        self.historyMonthStart.formatted(.dateTime.month(.wide).year())
+    }
+
+    private var canShiftHistoryForward: Bool {
+        self.historyMonthStart < Self.monthStart(for: Date())
+    }
+
+    private var historyCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        return calendar
+    }
+
+    private var weekdaySymbols: [String] {
+        let symbols = self.historyCalendar.veryShortStandaloneWeekdaySymbols
+        guard !symbols.isEmpty else { return [] }
+        let start = max(0, min(symbols.count - 1, self.historyCalendar.firstWeekday - 1))
+        return Array(symbols[start...]) + Array(symbols[..<start])
+    }
+
+    private var calendarDaysForMonth: [Date] {
+        guard let monthInterval = self.historyCalendar.dateInterval(of: .month, for: self.historyMonthStart),
+              let firstWeek = self.historyCalendar.dateInterval(of: .weekOfMonth, for: monthInterval.start),
+              let lastDayOfMonth = self.historyCalendar.date(byAdding: .day, value: -1, to: monthInterval.end),
+              let lastWeek = self.historyCalendar.dateInterval(of: .weekOfMonth, for: lastDayOfMonth)
+        else {
+            return []
+        }
+
+        var days: [Date] = []
+        var cursor = firstWeek.start
+        while cursor < lastWeek.end {
+            days.append(cursor)
+            guard let next = self.historyCalendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return days
+    }
+
+    private var historySummaryByDay: [Date: ProviderHistoryDaySnapshot] {
+        guard let snapshot = self.historySnapshot else { return [:] }
+        var map: [Date: ProviderHistoryDaySnapshot] = [:]
+        for day in snapshot.days {
+            map[self.historyCalendar.startOfDay(for: day.dayStart)] = day
+        }
+        return map
+    }
+
+    private var selectedHistoryDaySummary: ProviderHistoryDaySnapshot? {
+        guard let snapshot = self.historySnapshot else { return nil }
+        guard let selectedDay = self.historySelectedDay else { return snapshot.days.last }
+        return snapshot.days.first { self.historyCalendar.isDate($0.dayStart, inSameDayAs: selectedDay) }
+    }
+
+    private var historyMaxMetricValue: Double {
+        guard let snapshot = self.historySnapshot, !snapshot.days.isEmpty else { return 0 }
+        return snapshot.days.reduce(0) { max($0, self.historyMetricValue(for: $1)) }
+    }
+
+    private func historyMetricValue(for day: ProviderHistoryDaySnapshot) -> Double {
+        switch self.historyMetricMode {
+        case .tokens:
+            return Double(day.totals.totalTokens)
+        case .cost:
+            return max(0, day.totals.costUSD ?? 0)
+        case .requests:
+            return Double(day.requestCount)
+        }
+    }
+
+    private func historyIntensity(for day: ProviderHistoryDaySnapshot?) -> Double {
+        guard let day else { return 0 }
+        let maxValue = self.historyMaxMetricValue
+        guard maxValue > 0 else { return 0.15 }
+        return min(1, max(0.15, self.historyMetricValue(for: day) / maxValue))
+    }
+
+    private func historyDayHelp(for day: Date, summary: ProviderHistoryDaySnapshot?) -> String {
+        var lines: [String] = [day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year())]
+        guard let summary else {
+            lines.append("No recorded activity")
+            return lines.joined(separator: "\n")
+        }
+        lines.append("Requests: \(self.decimalString(summary.requestCount))")
+        lines.append("Tokens: \(UsageFormatter.tokenCountString(summary.totals.totalTokens))")
+        if let spend = summary.totals.costUSD {
+            lines.append("Spend: \(UsageFormatter.usdString(spend))")
+        }
+        if let topModel = summary.topModel {
+            lines.append("Top model: \(UsageFormatter.modelDisplayName(topModel.model))")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private func shiftHistoryMonth(by delta: Int) {
+        guard delta != 0 else { return }
+        guard let shifted = self.historyCalendar.date(byAdding: .month, value: delta, to: self.historyMonthStart) else {
+            return
+        }
+        let candidate = Self.monthStart(for: shifted)
+        if delta > 0, candidate > Self.monthStart(for: Date()) {
+            return
+        }
+        self.historyMonthStart = candidate
+        self.historySnapshot = nil
+        self.historySelectedDay = nil
+        self.historyError = nil
+    }
+
+    private static func monthStart(for date: Date) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        let components = calendar.dateComponents([.year, .month], from: date)
+        return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+    }
+
+    private func loadHistoryMonth(forceRefresh: Bool = false) async {
+        guard !self.historyIsLoading else { return }
+        self.historyIsLoading = true
+        self.historyError = nil
+        let snapshot = await self.store.providerHistoryMonth(
+            provider: self.provider,
+            monthStart: self.historyMonthStart,
+            forceRefresh: forceRefresh)
+        self.historySnapshot = snapshot
+        self.historyError = snapshot.error
+        self.historyIsLoading = false
+        self.selectDefaultHistoryDay(from: snapshot)
+    }
+
+    private func selectDefaultHistoryDay(from snapshot: ProviderHistoryMonthSnapshot) {
+        guard !snapshot.days.isEmpty else {
+            self.historySelectedDay = self.historyCalendar.startOfDay(for: self.historyMonthStart)
+            return
+        }
+        if let selected = self.historySelectedDay,
+           snapshot.days.contains(where: { self.historyCalendar.isDate($0.dayStart, inSameDayAs: selected) })
+        {
+            self.historySelectedDay = self.historyCalendar.startOfDay(for: selected)
+            return
+        }
+        self.historySelectedDay = snapshot.days.map(\.dayStart).max()
+    }
+
+    private struct ProjectDisplay {
+        let title: String
+        let helpText: String?
+    }
+
+    private func projectDisplay(_ summary: UsageLedgerProjectSummary) -> ProjectDisplay {
+        let displayName = summary.displayProjectName
+        let source = summary.projectNameSource ?? .unknown
+        let confidence = summary.projectNameConfidence ?? .none
+        let shouldAnnotateSource = source != .projectName && source != .budgetOverride
+        let shouldAnnotateConfidence = confidence != .high
+        let isUnknown = displayName == "Unknown project"
+
+        var details: [String] = []
+        if shouldAnnotateSource {
+            details.append("source: \(self.projectSourceLabel(source))")
+        }
+        if shouldAnnotateConfidence {
+            details.append("confidence: \(self.projectConfidenceLabel(confidence))")
+        }
+        if isUnknown, let fingerprint = self.projectIDFingerprint(summary.projectID) {
+            details.append("id: \(fingerprint)")
+        }
+        if let provenance = self.trimmed(summary.projectNameProvenance) {
+            details.append("via: \(provenance)")
+        }
+        return ProjectDisplay(
+            title: displayName,
+            helpText: details.isEmpty ? nil : details.joined(separator: "\n"))
+    }
+
+    private func projectSourceLabel(_ source: UsageLedgerProjectNameSource) -> String {
+        switch source {
+        case .projectName: return "project name"
+        case .projectID: return "project id"
+        case .inferredFromPath: return "path-derived"
+        case .inferredFromName: return "name-derived"
+        case .budgetOverride: return "budget override"
+        case .unknown: return "unknown"
+        }
+    }
+
+    private func projectConfidenceLabel(_ confidence: UsageLedgerProjectNameConfidence) -> String {
+        switch confidence {
+        case .high: return "high"
+        case .medium: return "medium"
+        case .low: return "low"
+        case .none: return "none"
+        }
+    }
+
+    private func projectIDFingerprint(_ projectID: String?) -> String? {
+        guard let projectID = projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty else {
+            return nil
+        }
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in projectID.lowercased().utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(format: "%08llx", hash)
     }
 
     @ViewBuilder
@@ -2083,6 +2616,14 @@ private struct ProviderSidebarDetailView: View {
             parts.append(UsageFormatter.usdString(cost))
         }
         return parts.joined(separator: " · ")
+    }
+
+    private func decimalString(_ value: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
     private struct RuntimeMetricsData {
