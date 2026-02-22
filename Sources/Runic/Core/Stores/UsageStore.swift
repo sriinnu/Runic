@@ -351,7 +351,6 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
         let primaryFactor: Factor
         let contributingFactors: [Factor]
     }
-
     let provider: UsageProvider
     let baselineDays: Int
     let tokenAnomaly: MetricAnomaly?
@@ -373,7 +372,7 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
         guard !candidates.isEmpty else { return nil }
         return candidates.first { $0.metric != metric }
     }
-
+    
     var explanation: Explanation? {
         guard let primary = self.primaryAnomaly else { return nil }
         let primaryFactor = self.factor(from: primary)
@@ -543,7 +542,6 @@ struct ProviderHistoryMonthSnapshot: Sendable, Hashable {
     let note: String?
     let error: String?
 }
-
 @MainActor
 @Observable
 final class UsageStore {
@@ -916,7 +914,7 @@ final class UsageStore {
     func ledgerProjectBreakdown(for provider: UsageProvider) -> [UsageLedgerProjectSummary] {
         self.ledgerProjectBreakdowns[provider] ?? []
     }
-
+    
     func ledgerSpendForecast(for provider: UsageProvider) -> UsageLedgerSpendForecast? {
         self.ledgerSpendForecasts[provider]
     }
@@ -1714,7 +1712,6 @@ final class UsageStore {
                     } else {
                         self.ledgerTopProjectSpendForecasts.removeValue(forKey: provider)
                     }
-
                     if let anomaly = result.anomaliesByProvider[provider] {
                         self.ledgerAnomalies[provider] = anomaly
                     } else {
@@ -1813,21 +1810,21 @@ final class UsageStore {
         now: Date) async -> LedgerRefreshResult
     {
         guard !sources.isEmpty else {
-            return LedgerRefreshResult(
-                dailyByProvider: [:],
-                activeBlocksByProvider: [:],
-                topModelsByProvider: [:],
-                topProjectsByProvider: [:],
-                modelBreakdownsByProvider: [:],
-                projectBreakdownsByProvider: [:],
-                spendForecastsByProvider: [:],
-                projectSpendForecastsByProvider: [:],
-                topProjectSpendForecastsByProvider: [:],
-                anomaliesByProvider: [:],
-                errorsByProvider: [:],
-                lastActivityByProvider: [:],
-                updatedAt: now,
-                providers: [])
+        return LedgerRefreshResult(
+            dailyByProvider: [:],
+            activeBlocksByProvider: [:],
+            topModelsByProvider: [:],
+            topProjectsByProvider: [:],
+            modelBreakdownsByProvider: [:],
+            projectBreakdownsByProvider: [:],
+            spendForecastsByProvider: [:],
+            projectSpendForecastsByProvider: [:],
+            topProjectSpendForecastsByProvider: [:],
+            anomaliesByProvider: [:],
+            errorsByProvider: [:],
+            lastActivityByProvider: [:],
+            updatedAt: now,
+            providers: [])
         }
 
         let providers = sources.map(\.0)
@@ -1918,10 +1915,10 @@ final class UsageStore {
             projectBreakdownsByProvider[summary.provider, default: []].append(summary)
         }
 
-        let providerForecasts = UsageLedgerAggregator.providerSpendForecasts(
-            entries: entries,
-            now: now,
-            timeZone: timeZone)
+    let providerForecasts = UsageLedgerAggregator.providerSpendForecasts(
+        entries: entries,
+        now: now,
+        timeZone: timeZone)
         var spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
         for forecast in providerForecasts where spendForecastsByProvider[forecast.provider] == nil {
             spendForecastsByProvider[forecast.provider] = forecast
@@ -1944,33 +1941,32 @@ final class UsageStore {
         }
 
         var topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
-        for (provider, summary) in topProjectsByProvider {
-            guard let forecasts = projectSpendForecastsByProvider[provider] else { continue }
-            if let matched = self.matchingProjectForecast(for: summary, forecasts: forecasts) {
-                topProjectSpendForecastsByProvider[provider] = matched
-            }
+    for (provider, summary) in topProjectsByProvider {
+        guard let forecasts = projectSpendForecastsByProvider[provider] else { continue }
+        if let matched = self.matchingProjectForecast(for: summary, forecasts: forecasts) {
+            topProjectSpendForecastsByProvider[provider] = matched
         }
-
-        let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
-            dailySummaries: dailySummaries,
-            now: now,
-            calendar: calendar)
+    }
+    let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
+        dailySummaries: dailySummaries,
+        now: now,
+        calendar: calendar)
 
         return LedgerRefreshResult(
             dailyByProvider: dailyByProvider,
-            activeBlocksByProvider: activeByProvider,
-            topModelsByProvider: topModelsByProvider,
-            topProjectsByProvider: topProjectsByProvider,
-            modelBreakdownsByProvider: modelBreakdownsByProvider,
-            projectBreakdownsByProvider: projectBreakdownsByProvider,
-            spendForecastsByProvider: spendForecastsByProvider,
-            projectSpendForecastsByProvider: projectSpendForecastsByProvider,
-            topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
-            anomaliesByProvider: anomaliesByProvider,
-            errorsByProvider: errors,
-            lastActivityByProvider: lastActivityByProvider,
-            updatedAt: now,
-            providers: providers)
+        activeBlocksByProvider: activeByProvider,
+        topModelsByProvider: topModelsByProvider,
+        topProjectsByProvider: topProjectsByProvider,
+        modelBreakdownsByProvider: modelBreakdownsByProvider,
+        projectBreakdownsByProvider: projectBreakdownsByProvider,
+        spendForecastsByProvider: spendForecastsByProvider,
+        projectSpendForecastsByProvider: projectSpendForecastsByProvider,
+        topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
+        anomaliesByProvider: anomaliesByProvider,
+        errorsByProvider: errors,
+        lastActivityByProvider: lastActivityByProvider,
+        updatedAt: now,
+        providers: providers)
     }
 
     private func projectNameOverridesFromBudgets() -> [String: String] {
