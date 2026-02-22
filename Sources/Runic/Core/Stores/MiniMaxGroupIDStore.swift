@@ -1,5 +1,6 @@
 import RunicCore
 import Foundation
+import LocalAuthentication
 import Security
 
 protocol MiniMaxGroupIDStoring: Sendable {
@@ -29,7 +30,7 @@ struct KeychainMiniMaxGroupIDStore: MiniMaxGroupIDStoring {
 
     func loadGroupID() throws -> String? {
         var result: CFTypeRef?
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
@@ -37,9 +38,15 @@ struct KeychainMiniMaxGroupIDStore: MiniMaxGroupIDStoring {
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
+        let authContext = LAContext()
+        authContext.interactionNotAllowed = true
+        query[kSecUseAuthenticationContext as String] = authContext
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound {
+            return nil
+        }
+        if status == errSecInteractionNotAllowed {
             return nil
         }
         guard status == errSecSuccess else {

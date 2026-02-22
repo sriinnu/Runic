@@ -2,6 +2,9 @@ import Foundation
 #if canImport(Security)
 import Security
 #endif
+#if canImport(LocalAuthentication)
+import LocalAuthentication
+#endif
 
 /// Generic fetcher for custom API provider usage and balance data
 public actor GenericProviderFetcher {
@@ -246,7 +249,7 @@ public actor GenericProviderFetcher {
     private func keychainToken(account: String) -> String? {
         #if canImport(Security)
         var result: CFTypeRef?
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
             kSecAttrAccount as String: account,
@@ -254,9 +257,17 @@ public actor GenericProviderFetcher {
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
+#if canImport(LocalAuthentication)
+        let authContext = LAContext()
+        authContext.interactionNotAllowed = true
+        query[kSecUseAuthenticationContext as String] = authContext
+#endif
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound {
+            return nil
+        }
+        if status == errSecInteractionNotAllowed {
             return nil
         }
         guard status == errSecSuccess else {

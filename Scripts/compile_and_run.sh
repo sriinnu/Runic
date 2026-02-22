@@ -151,24 +151,46 @@ HOST_ARCH="$(uname -m)"
 ARCHES_VALUE="${HOST_ARCH}"
 DEV_BUILD_ROOT="${ROOT_DIR}/builds/dev"
 DEV_BUILD_LABEL="${RUNIC_DEV_BUILD_LABEL:-dev-current}"
+DEV_SIGNING_MODE="${RUNIC_SIGNING:-${CODEXBAR_SIGNING:-}}"
 if [[ -n "${RELEASE_ARCHES}" ]]; then
   ARCHES_VALUE="${RELEASE_ARCHES}"
 fi
 if [[ "${DEBUG_LLDB}" == "1" ]]; then
-  run_step "package app" env \
-    CODEXBAR_ALLOW_LLDB=1 \
-    RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
-    RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
-    RUNIC_STABLE_BUILD_DIR=1 \
-    ARCHES="${ARCHES_VALUE}" \
-    "${ROOT_DIR}/Scripts/package_app.sh" debug
+  if [[ -n "${DEV_SIGNING_MODE}" ]]; then
+    run_step "package app" env \
+      CODEXBAR_ALLOW_LLDB=1 \
+      RUNIC_SIGNING="${DEV_SIGNING_MODE}" \
+      RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
+      RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
+      RUNIC_STABLE_BUILD_DIR=1 \
+      ARCHES="${ARCHES_VALUE}" \
+      "${ROOT_DIR}/Scripts/package_app.sh" debug
+  else
+    run_step "package app" env \
+      CODEXBAR_ALLOW_LLDB=1 \
+      RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
+      RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
+      RUNIC_STABLE_BUILD_DIR=1 \
+      ARCHES="${ARCHES_VALUE}" \
+      "${ROOT_DIR}/Scripts/package_app.sh" debug
+  fi
 else
-  run_step "package app" env \
-    RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
-    RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
-    RUNIC_STABLE_BUILD_DIR=1 \
-    ARCHES="${ARCHES_VALUE}" \
-    "${ROOT_DIR}/Scripts/package_app.sh"
+  if [[ -n "${DEV_SIGNING_MODE}" ]]; then
+    run_step "package app" env \
+      RUNIC_SIGNING="${DEV_SIGNING_MODE}" \
+      RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
+      RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
+      RUNIC_STABLE_BUILD_DIR=1 \
+      ARCHES="${ARCHES_VALUE}" \
+      "${ROOT_DIR}/Scripts/package_app.sh"
+  else
+    run_step "package app" env \
+      RUNIC_BUILD_ROOT="${DEV_BUILD_ROOT}" \
+      RUNIC_BUILD_LABEL="${DEV_BUILD_LABEL}" \
+      RUNIC_STABLE_BUILD_DIR=1 \
+      ARCHES="${ARCHES_VALUE}" \
+      "${ROOT_DIR}/Scripts/package_app.sh"
+  fi
 fi
 
 # 4) Launch the packaged app.

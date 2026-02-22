@@ -1,5 +1,6 @@
 import Foundation
 #if os(macOS)
+import LocalAuthentication
 import Security
 #endif
 
@@ -143,12 +144,17 @@ public enum ClaudeOAuthCredentialsStore {
 
     public static func loadFromKeychain() throws -> Data {
         #if os(macOS)
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.keychainService,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
+        // Avoid surfacing password dialogs during automatic provider refresh.
+        // When interaction would be required, we fall back to the credentials file.
+        let authContext = LAContext()
+        authContext.interactionNotAllowed = true
+        query[kSecUseAuthenticationContext as String] = authContext
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -160,6 +166,8 @@ public enum ClaudeOAuthCredentialsStore {
             if data.isEmpty { throw ClaudeOAuthCredentialsError.notFound }
             return data
         case errSecItemNotFound:
+            throw ClaudeOAuthCredentialsError.notFound
+        case errSecInteractionNotAllowed:
             throw ClaudeOAuthCredentialsError.notFound
         default:
             throw ClaudeOAuthCredentialsError.keychainError(Int(status))

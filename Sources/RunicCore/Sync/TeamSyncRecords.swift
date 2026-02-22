@@ -1,6 +1,7 @@
 import Foundation
 import CloudKit
 import CryptoKit
+import LocalAuthentication
 
 // MARK: - CloudKit Record Type Constants
 
@@ -754,14 +755,20 @@ private func saveToKeychain(key: String, data: Data) {
 }
 
 private func loadFromKeychain(key: String) -> Data? {
-    let query: [String: Any] = [
+    var query: [String: Any] = [
         kSecClass as String: kSecClassGenericPassword,
         kSecAttrService as String: "com.sriinnu.athena.Runic",
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
         kSecReturnData as String: true
     ]
+    let authContext = LAContext()
+    authContext.interactionNotAllowed = true
+    query[kSecUseAuthenticationContext as String] = authContext
     var result: AnyObject?
     let status = SecItemCopyMatching(query as CFDictionary, &result)
+    if status == errSecInteractionNotAllowed {
+        return nil
+    }
     return status == errSecSuccess ? result as? Data : nil
 }

@@ -1,6 +1,7 @@
 #if os(macOS)
 import CommonCrypto
 import Foundation
+import LocalAuthentication
 import Security
 import SQLite3
 
@@ -99,12 +100,18 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
     }
 
     private static func readKeychainPassword(service: String) -> String? {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
+        // Never trigger an authentication dialog from background refresh loops.
+        // If access requires UI, return nil and let callers fall back gracefully.
+        let authContext = LAContext()
+        authContext.interactionNotAllowed = true
+        query[kSecUseAuthenticationContext as String] = authContext
+
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         guard status == errSecSuccess, let data = item as? Data else {
