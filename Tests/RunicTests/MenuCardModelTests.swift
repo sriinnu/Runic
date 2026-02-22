@@ -15,6 +15,16 @@ private extension UsageMenuCardView.Model.Input {
         dashboardError: String?,
         tokenSnapshot: CostUsageTokenSnapshot?,
         tokenError: String?,
+        ledgerDaily: UsageLedgerDailySummary? = nil,
+        ledgerActiveBlock: UsageLedgerBlockSummary? = nil,
+        ledgerTopModel: UsageLedgerModelSummary? = nil,
+        ledgerTopProject: UsageLedgerProjectSummary? = nil,
+        ledgerSpendForecast: UsageLedgerSpendForecast? = nil,
+        ledgerTopProjectSpendForecast: UsageLedgerSpendForecast? = nil,
+        ledgerReliability: UsageLedgerReliabilityScore? = nil,
+        ledgerRouting: UsageLedgerRoutingRecommendation? = nil,
+        ledgerError: String? = nil,
+        ledgerUpdatedAt: Date? = nil,
         account: AccountInfo,
         isRefreshing: Bool,
         lastError: String?,
@@ -33,14 +43,16 @@ private extension UsageMenuCardView.Model.Input {
             dashboardError: dashboardError,
             tokenSnapshot: tokenSnapshot,
             tokenError: tokenError,
-            ledgerDaily: nil,
-            ledgerActiveBlock: nil,
-            ledgerTopModel: nil,
-            ledgerTopProject: nil,
-            ledgerReliability: nil,
-            ledgerRouting: nil,
-            ledgerError: nil,
-            ledgerUpdatedAt: nil,
+            ledgerDaily: ledgerDaily,
+            ledgerActiveBlock: ledgerActiveBlock,
+            ledgerTopModel: ledgerTopModel,
+            ledgerTopProject: ledgerTopProject,
+            ledgerSpendForecast: ledgerSpendForecast,
+            ledgerTopProjectSpendForecast: ledgerTopProjectSpendForecast,
+            ledgerReliability: ledgerReliability,
+            ledgerRouting: ledgerRouting,
+            ledgerError: ledgerError,
+            ledgerUpdatedAt: ledgerUpdatedAt,
             account: account,
             isRefreshing: isRefreshing,
             lastError: lastError,
@@ -419,5 +431,65 @@ struct MenuCardModelTests {
             now: now))
 
         #expect(model.providerCost == nil)
+    }
+
+    @Test
+    func insightsShowForecastAndBudgetETAForTopProject() {
+        let now = Date()
+        let metadata = ProviderDefaults.metadata[.codex]!
+        let topProject = UsageLedgerProjectSummary(
+            provider: .codex,
+            projectKey: "id:proj-runic",
+            projectID: "proj-runic",
+            projectName: "Runic",
+            entryCount: 5,
+            totals: UsageLedgerTotals(
+                inputTokens: 2_000,
+                outputTokens: 1_000,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: 12.5),
+            modelsUsed: ["gpt-5"])
+        let providerForecast = UsageLedgerSpendForecast(
+            provider: .codex,
+            observedDays: 3,
+            observedCostUSD: 36,
+            averageDailyCostUSD: 12,
+            projected30DayCostUSD: 360)
+        let projectForecast = UsageLedgerSpendForecast(
+            provider: .codex,
+            projectKey: "id:proj-runic",
+            projectID: "proj-runic",
+            projectName: "Runic",
+            observedDays: 3,
+            observedCostUSD: 36,
+            averageDailyCostUSD: 12,
+            projected30DayCostUSD: 360)
+            .applyingBudget(monthlyLimitUSD: 60)
+
+        let model = UsageMenuCardView.Model.make(.init(
+            provider: .codex,
+            metadata: metadata,
+            snapshot: nil,
+            credits: nil,
+            creditsError: nil,
+            dashboard: nil,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            ledgerTopProject: topProject,
+            ledgerSpendForecast: providerForecast,
+            ledgerTopProjectSpendForecast: projectForecast,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            now: now))
+
+        #expect(model.insights?.forecastLine?.contains("Month-end forecast") == true)
+        #expect(model.insights?.projectDetail?.contains("Budget") == true)
+        #expect(model.insights?.projectDetail?.contains("Breach") == true)
     }
 }

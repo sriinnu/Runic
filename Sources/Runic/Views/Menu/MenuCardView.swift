@@ -102,10 +102,12 @@ struct UsageMenuCardView: View {
             let title: String
             let todayLine: String?
             let todayDetail: String?
+            let forecastLine: String?
             let blockLine: String?
             let blockDetail: String?
             let modelLine: String?
             let projectLine: String?
+            let projectDetail: String?
             let reliabilityLine: String?
             let reliabilityDetail: String?
             let routingLine: String?
@@ -742,6 +744,11 @@ private struct InsightsContent: View {
                     .font(.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
+            if let forecastLine = self.section.forecastLine {
+                Text(forecastLine)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
             if let block = self.section.blockLine {
                 Text(block)
                     .font(.footnote)
@@ -758,6 +765,11 @@ private struct InsightsContent: View {
             }
             if let projectLine = self.section.projectLine {
                 Text(projectLine)
+                    .font(.footnote)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+            }
+            if let projectDetail = self.section.projectDetail {
+                Text(projectDetail)
                     .font(.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
@@ -1120,6 +1132,8 @@ extension UsageMenuCardView.Model {
         let ledgerActiveBlock: UsageLedgerBlockSummary?
         let ledgerTopModel: UsageLedgerModelSummary?
         let ledgerTopProject: UsageLedgerProjectSummary?
+        let ledgerSpendForecast: UsageLedgerSpendForecast?
+        let ledgerTopProjectSpendForecast: UsageLedgerSpendForecast?
         let ledgerReliability: UsageLedgerReliabilityScore?
         let ledgerRouting: UsageLedgerRoutingRecommendation?
         let ledgerError: String?
@@ -1227,10 +1241,12 @@ extension UsageMenuCardView.Model {
             title: section.title,
             todayLine: section.todayLine,
             todayDetail: section.todayDetail,
+            forecastLine: section.forecastLine,
             blockLine: section.blockLine,
             blockDetail: section.blockDetail,
             modelLine: nil,
             projectLine: section.projectLine,
+            projectDetail: section.projectDetail,
             reliabilityLine: section.reliabilityLine,
             reliabilityDetail: section.reliabilityDetail,
             routingLine: section.routingLine,
@@ -1484,7 +1500,11 @@ extension UsageMenuCardView.Model {
         let block = input.ledgerActiveBlock?.provider == input.provider ? input.ledgerActiveBlock : nil
         let topModel = input.ledgerTopModel?.provider == input.provider ? input.ledgerTopModel : nil
         let topProject = input.ledgerTopProject?.provider == input.provider ? input.ledgerTopProject : nil
-        let hasData = daily != nil || block != nil || topModel != nil || topProject != nil
+        let spendForecast = input.ledgerSpendForecast?.provider == input.provider ? input.ledgerSpendForecast : nil
+        let topProjectSpendForecast = input.ledgerTopProjectSpendForecast?.provider == input.provider
+            ? input.ledgerTopProjectSpendForecast
+            : nil
+        let hasData = daily != nil || block != nil || topModel != nil || topProject != nil || spendForecast != nil
         if !hasData && (error?.isEmpty ?? true) {
             return nil
         }
@@ -1520,6 +1540,13 @@ extension UsageMenuCardView.Model {
             if !details.isEmpty {
                 todayDetail = details.joined(separator: "\n")
             }
+        }
+
+        var forecastLine: String?
+        if let spendForecast {
+            let projected = UsageFormatter.usdString(spendForecast.projected30DayCostUSD)
+            let observedDayLabel = spendForecast.observedDays == 1 ? "day" : "days"
+            forecastLine = "Month-end forecast: \(projected) · \(spendForecast.observedDays) observed \(observedDayLabel)"
         }
 
         var blockLine: String?
@@ -1583,6 +1610,7 @@ extension UsageMenuCardView.Model {
         }
 
         var projectLine: String?
+        var projectDetail: String?
         if let topProject {
             let name = Self.insightsProjectDisplayName(topProject)
             let tokens = UsageFormatter.tokenCountString(topProject.totals.totalTokens)
@@ -1597,6 +1625,19 @@ extension UsageMenuCardView.Model {
                 }
             }
             projectLine = parts.joined(separator: " · ")
+
+            if let projectForecast = topProjectSpendForecast {
+                var detailParts = ["30d forecast \(UsageFormatter.usdString(projectForecast.projected30DayCostUSD))"]
+                if let budgetLimit = projectForecast.budgetLimitUSD {
+                    detailParts.append("Budget \(UsageFormatter.usdString(budgetLimit))")
+                    if let budgetETAInDays = projectForecast.budgetETAInDays {
+                        detailParts.append(Self.budgetBreachETAText(days: budgetETAInDays, now: input.now))
+                    } else if !projectForecast.budgetWillBreach {
+                        detailParts.append("No breach at current pace")
+                    }
+                }
+                projectDetail = detailParts.joined(separator: " · ")
+            }
         }
 
         var reliabilityLine: String?
@@ -1622,10 +1663,12 @@ extension UsageMenuCardView.Model {
             title: "Insights",
             todayLine: todayLine,
             todayDetail: todayDetail,
+            forecastLine: forecastLine,
             blockLine: blockLine,
             blockDetail: blockDetail,
             modelLine: modelLine,
             projectLine: projectLine,
+            projectDetail: projectDetail,
             reliabilityLine: reliabilityLine,
             reliabilityDetail: reliabilityDetail,
             routingLine: routingLine,
@@ -1705,6 +1748,15 @@ extension UsageMenuCardView.Model {
             hash = hash &* 0x100000001b3
         }
         return String(format: "%08llx", hash)
+    }
+
+    private static func budgetBreachETAText(days: Double, now: Date) -> String {
+        guard days.isFinite else { return "Breach ETA unavailable" }
+        if days <= 0 { return "Breach now" }
+        let etaDate = now.addingTimeInterval(days * 24 * 60 * 60)
+        let countdown = UsageFormatter.resetCountdownDescription(from: etaDate, now: now)
+        if countdown == "now" { return "Breach now" }
+        return "Breach \(countdown)"
     }
 
     private static func clamped(_ value: Double) -> Double {

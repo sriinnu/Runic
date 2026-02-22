@@ -64,6 +64,9 @@ extension UsageStore {
         _ = self.ledgerTopProjects
         _ = self.ledgerModelBreakdowns
         _ = self.ledgerProjectBreakdowns
+        _ = self.ledgerSpendForecasts
+        _ = self.ledgerProjectSpendForecasts
+        _ = self.ledgerTopProjectSpendForecasts
         _ = self.ledgerErrors
         _ = self.ledgerUpdatedAt
         _ = self.credits
@@ -318,6 +321,9 @@ final class UsageStore {
     private(set) var ledgerTopProjects: [UsageProvider: UsageLedgerProjectSummary] = [:]
     private(set) var ledgerModelBreakdowns: [UsageProvider: [UsageLedgerModelSummary]] = [:]
     private(set) var ledgerProjectBreakdowns: [UsageProvider: [UsageLedgerProjectSummary]] = [:]
+    private(set) var ledgerSpendForecasts: [UsageProvider: UsageLedgerSpendForecast] = [:]
+    private(set) var ledgerProjectSpendForecasts: [UsageProvider: [UsageLedgerSpendForecast]] = [:]
+    private(set) var ledgerTopProjectSpendForecasts: [UsageProvider: UsageLedgerSpendForecast] = [:]
     private(set) var ledgerErrors: [UsageProvider: String] = [:]
     private(set) var ledgerUpdatedAt: [UsageProvider: Date] = [:]
     var credits: CreditsSnapshot?
@@ -648,6 +654,18 @@ final class UsageStore {
 
     func ledgerProjectBreakdown(for provider: UsageProvider) -> [UsageLedgerProjectSummary] {
         self.ledgerProjectBreakdowns[provider] ?? []
+    }
+
+    func ledgerSpendForecast(for provider: UsageProvider) -> UsageLedgerSpendForecast? {
+        self.ledgerSpendForecasts[provider]
+    }
+
+    func ledgerProjectSpendForecasts(for provider: UsageProvider) -> [UsageLedgerSpendForecast] {
+        self.ledgerProjectSpendForecasts[provider] ?? []
+    }
+
+    func ledgerTopProjectSpendForecast(for provider: UsageProvider) -> UsageLedgerSpendForecast? {
+        self.ledgerTopProjectSpendForecasts[provider]
     }
 
 
@@ -1095,6 +1113,24 @@ final class UsageStore {
                         self.ledgerProjectBreakdowns.removeValue(forKey: provider)
                     }
 
+                    if let forecast = result.spendForecastsByProvider[provider] {
+                        self.ledgerSpendForecasts[provider] = forecast
+                    } else {
+                        self.ledgerSpendForecasts.removeValue(forKey: provider)
+                    }
+
+                    if let forecasts = result.projectSpendForecastsByProvider[provider] {
+                        self.ledgerProjectSpendForecasts[provider] = forecasts
+                    } else {
+                        self.ledgerProjectSpendForecasts.removeValue(forKey: provider)
+                    }
+
+                    if let forecast = result.topProjectSpendForecastsByProvider[provider] {
+                        self.ledgerTopProjectSpendForecasts[provider] = forecast
+                    } else {
+                        self.ledgerTopProjectSpendForecasts.removeValue(forKey: provider)
+                    }
+
                     if let lastActivity = result.lastActivityByProvider[provider] {
                         self.lastLedgerActivityAt[provider] = lastActivity
                     }
@@ -1152,6 +1188,9 @@ final class UsageStore {
         let topProjectsByProvider: [UsageProvider: UsageLedgerProjectSummary]
         let modelBreakdownsByProvider: [UsageProvider: [UsageLedgerModelSummary]]
         let projectBreakdownsByProvider: [UsageProvider: [UsageLedgerProjectSummary]]
+        let spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
+        let projectSpendForecastsByProvider: [UsageProvider: [UsageLedgerSpendForecast]]
+        let topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
         let errorsByProvider: [UsageProvider: String]
         let lastActivityByProvider: [UsageProvider: Date]
         let updatedAt: Date
@@ -1181,6 +1220,9 @@ final class UsageStore {
                 topProjectsByProvider: [:],
                 modelBreakdownsByProvider: [:],
                 projectBreakdownsByProvider: [:],
+                spendForecastsByProvider: [:],
+                projectSpendForecastsByProvider: [:],
+                topProjectSpendForecastsByProvider: [:],
                 errorsByProvider: [:],
                 lastActivityByProvider: [:],
                 updatedAt: now,
@@ -1275,6 +1317,39 @@ final class UsageStore {
             projectBreakdownsByProvider[summary.provider, default: []].append(summary)
         }
 
+        let providerForecasts = UsageLedgerAggregator.providerSpendForecasts(
+            entries: entries,
+            now: now,
+            timeZone: timeZone)
+        var spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
+        for forecast in providerForecasts where spendForecastsByProvider[forecast.provider] == nil {
+            spendForecastsByProvider[forecast.provider] = forecast
+        }
+
+        let budgetLimitsByProjectID = self.activeBudgetLimitsByProjectID()
+        let projectForecasts = UsageLedgerAggregator.projectSpendForecasts(
+            entries: entries,
+            now: now,
+            timeZone: timeZone)
+            .map {
+                self.resolvedSpendForecast(
+                    $0,
+                    budgetProjectNames: budgetProjectNames,
+                    budgetLimitsByProjectID: budgetLimitsByProjectID)
+            }
+        var projectSpendForecastsByProvider: [UsageProvider: [UsageLedgerSpendForecast]] = [:]
+        for forecast in projectForecasts {
+            projectSpendForecastsByProvider[forecast.provider, default: []].append(forecast)
+        }
+
+        var topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
+        for (provider, summary) in topProjectsByProvider {
+            guard let forecasts = projectSpendForecastsByProvider[provider] else { continue }
+            if let matched = self.matchingProjectForecast(for: summary, forecasts: forecasts) {
+                topProjectSpendForecastsByProvider[provider] = matched
+            }
+        }
+
         return LedgerRefreshResult(
             dailyByProvider: dailyByProvider,
             activeBlocksByProvider: activeByProvider,
@@ -1282,6 +1357,9 @@ final class UsageStore {
             topProjectsByProvider: topProjectsByProvider,
             modelBreakdownsByProvider: modelBreakdownsByProvider,
             projectBreakdownsByProvider: projectBreakdownsByProvider,
+            spendForecastsByProvider: spendForecastsByProvider,
+            projectSpendForecastsByProvider: projectSpendForecastsByProvider,
+            topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
             errorsByProvider: errors,
             lastActivityByProvider: lastActivityByProvider,
             updatedAt: now,
@@ -1297,6 +1375,69 @@ final class UsageStore {
             }
         }
         return namesByProjectID
+    }
+
+    private func activeBudgetLimitsByProjectID() -> [String: Double] {
+        var limitsByProjectID: [String: Double] = [:]
+        for budget in ProjectBudgetStore.getAllBudgets() where budget.enabled && budget.monthlyLimit > 0 {
+            limitsByProjectID[budget.projectID] = budget.monthlyLimit
+        }
+        return limitsByProjectID
+    }
+
+    private func resolvedSpendForecast(
+        _ forecast: UsageLedgerSpendForecast,
+        budgetProjectNames: [String: String],
+        budgetLimitsByProjectID: [String: Double]) -> UsageLedgerSpendForecast
+    {
+        let budgetName = forecast.projectID.flatMap { budgetProjectNames[$0] }
+        let identity = UsageLedgerProjectIdentityResolver.resolve(
+            provider: forecast.provider,
+            projectID: forecast.projectID,
+            projectName: forecast.projectName,
+            budgetNameOverride: budgetName)
+        let resolved = UsageLedgerSpendForecast(
+            provider: forecast.provider,
+            projectKey: forecast.projectKey ?? identity.key,
+            projectID: identity.projectID ?? forecast.projectID,
+            projectName: identity.displayName ?? forecast.projectName,
+            observedDays: forecast.observedDays,
+            observedCostUSD: forecast.observedCostUSD,
+            averageDailyCostUSD: forecast.averageDailyCostUSD,
+            projected30DayCostUSD: forecast.projected30DayCostUSD,
+            projectionDays: forecast.projectionDays,
+            budgetLimitUSD: forecast.budgetLimitUSD,
+            budgetETAInDays: forecast.budgetETAInDays,
+            budgetWillBreach: forecast.budgetWillBreach)
+        let budgetLimit = resolved.projectID.flatMap { budgetLimitsByProjectID[$0] }
+        return resolved.applyingBudget(monthlyLimitUSD: budgetLimit)
+    }
+
+    private func matchingProjectForecast(
+        for summary: UsageLedgerProjectSummary,
+        forecasts: [UsageLedgerSpendForecast]) -> UsageLedgerSpendForecast?
+    {
+        if let key = summary.projectKey,
+           let byKey = forecasts.first(where: { $0.projectKey == key })
+        {
+            return byKey
+        }
+        if let projectID = summary.projectID,
+           let byID = forecasts.first(where: { $0.projectID == projectID })
+        {
+            return byID
+        }
+        let summaryName = summary.projectName?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        if let summaryName, !summaryName.isEmpty {
+            return forecasts.first {
+                $0.projectName?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .lowercased() == summaryName
+            }
+        }
+        return nil
     }
 
     private func resolvedProjectSummary(

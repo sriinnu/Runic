@@ -36,6 +36,11 @@ public enum UsageLedgerAggregator {
         let hourStart: Date
     }
 
+    private struct SpendForecastKey: Hashable {
+        let provider: UsageProvider
+        let projectKey: String?
+    }
+
     public static func dailySummaries(
         entries: [UsageLedgerEntry],
         timeZone: TimeZone,
@@ -242,6 +247,85 @@ public enum UsageLedgerAggregator {
         }
     }
 
+    public static func providerSpendForecasts(
+        entries: [UsageLedgerEntry],
+        now: Date = Date(),
+        timeZone: TimeZone = .current,
+        projectionDays: Int = 30) -> [UsageLedgerSpendForecast]
+    {
+        self.spendForecasts(
+            entries: entries,
+            now: now,
+            timeZone: timeZone,
+            projectionDays: projectionDays,
+            groupByProject: false)
+    }
+
+    public static func projectSpendForecasts(
+        entries: [UsageLedgerEntry],
+        now: Date = Date(),
+        timeZone: TimeZone = .current,
+        projectionDays: Int = 30) -> [UsageLedgerSpendForecast]
+    {
+        self.spendForecasts(
+            entries: entries,
+            now: now,
+            timeZone: timeZone,
+            projectionDays: projectionDays,
+            groupByProject: true)
+    }
+
+    private static func spendForecasts(
+        entries: [UsageLedgerEntry],
+        now: Date,
+        timeZone: TimeZone,
+        projectionDays: Int,
+        groupByProject: Bool) -> [UsageLedgerSpendForecast]
+    {
+        guard projectionDays > 0 else { return [] }
+        let calendar = calendarFor(timeZone)
+        var buckets: [SpendForecastKey: SpendForecastAccumulator] = [:]
+
+        for entry in entries {
+            guard self.isInSameMonth(entry.timestamp, as: now, calendar: calendar) else { continue }
+            guard let cost = entry.costUSD else { continue }
+            let dayStart = calendar.startOfDay(for: entry.timestamp)
+            let projectIdentity: UsageLedgerProjectIdentity? = if groupByProject {
+                UsageLedgerProjectIdentityResolver.resolve(
+                    provider: entry.provider,
+                    projectID: entry.projectID,
+                    projectName: entry.projectName)
+            } else {
+                nil
+            }
+            let key = SpendForecastKey(
+                provider: entry.provider,
+                projectKey: projectIdentity?.key)
+            buckets[key, default: SpendForecastAccumulator()]
+                .consume(entry, costUSD: cost, dayStart: dayStart, identity: projectIdentity)
+        }
+
+        return buckets.compactMap { key, accumulator in
+            accumulator.forecast(
+                provider: key.provider,
+                projectKey: key.projectKey,
+                projectionDays: projectionDays)
+        }
+        .sorted { lhs, rhs in
+            if lhs.projected30DayCostUSD != rhs.projected30DayCostUSD {
+                return lhs.projected30DayCostUSD > rhs.projected30DayCostUSD
+            }
+            if lhs.provider != rhs.provider {
+                return lhs.provider.rawValue < rhs.provider.rawValue
+            }
+            return (lhs.projectKey ?? lhs.projectID ?? "") < (rhs.projectKey ?? rhs.projectID ?? "")
+        }
+    }
+
+    private static func isInSameMonth(_ date: Date, as reference: Date, calendar: Calendar) -> Bool {
+        calendar.isDate(date, equalTo: reference, toGranularity: .month)
+    }
+
     private static func calendarFor(_ timeZone: TimeZone) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
@@ -417,6 +501,93 @@ private struct AggregateAccumulator {
         guard let tpm = self.tokensPerMinute(since: start, now: now) else { return nil }
         let projected = tpm * (duration / 60)
         return Int(projected.rounded())
+    }
+}
+
+private struct SpendForecastAccumulator {
+    private(set) var observedCostUSD: Double = 0
+    private(set) var observedDayStarts: Set<Date> = []
+    private(set) var projectID: String?
+    private(set) var projectName: String?
+    private(set) var projectNameConfidence: UsageLedgerProjectNameConfidence = .none
+    private(set) var projectNameSource: UsageLedgerProjectNameSource = .unknown
+    private(set) var projectNameProvenance: String?
+
+    mutating func consume(
+        _ entry: UsageLedgerEntry,
+        costUSD: Double,
+        dayStart: Date,
+        identity: UsageLedgerProjectIdentity?)
+    {
+        self.observedCostUSD += costUSD
+        self.observedDayStarts.insert(dayStart)
+        self.mergeProjectIdentity(from: identity, fallbackEntry: entry)
+    }
+
+    func forecast(
+        provider: UsageProvider,
+        projectKey: String?,
+        projectionDays: Int) -> UsageLedgerSpendForecast?
+    {
+        guard !self.observedDayStarts.isEmpty else { return nil }
+        guard self.observedCostUSD.isFinite else { return nil }
+        let observedDays = self.observedDayStarts.count
+        guard observedDays > 0 else { return nil }
+        let averageDailyCostUSD = self.observedCostUSD / Double(observedDays)
+        guard averageDailyCostUSD.isFinite else { return nil }
+        let projected30DayCostUSD = averageDailyCostUSD * Double(projectionDays)
+        guard projected30DayCostUSD.isFinite else { return nil }
+
+        return UsageLedgerSpendForecast(
+            provider: provider,
+            projectKey: projectKey,
+            projectID: projectKey == nil ? nil : self.projectID,
+            projectName: projectKey == nil ? nil : self.projectName,
+            observedDays: observedDays,
+            observedCostUSD: self.observedCostUSD,
+            averageDailyCostUSD: averageDailyCostUSD,
+            projected30DayCostUSD: projected30DayCostUSD,
+            projectionDays: projectionDays)
+    }
+
+    private mutating func mergeProjectIdentity(from identity: UsageLedgerProjectIdentity?, fallbackEntry: UsageLedgerEntry) {
+        if self.projectID == nil {
+            let preferredID = identity?.projectID?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let preferredID, !preferredID.isEmpty {
+                self.projectID = preferredID
+            } else if let fallbackID = fallbackEntry.projectID?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !fallbackID.isEmpty
+            {
+                self.projectID = fallbackID
+            }
+        }
+
+        let fallbackName = fallbackEntry.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidateName = identity?.displayName ?? ((fallbackName?.isEmpty ?? true) ? nil : fallbackName)
+        let candidateConfidence = identity?.confidence ?? (candidateName == nil ? .none : .high)
+        let candidateSource = identity?.source ?? (candidateName == nil ? .unknown : .projectName)
+        let candidateProvenance = identity?.provenance
+
+        guard let candidateName, !candidateName.isEmpty else { return }
+        let shouldAdopt: Bool
+        if self.projectName == nil {
+            shouldAdopt = true
+        } else if candidateConfidence.rank > self.projectNameConfidence.rank {
+            shouldAdopt = true
+        } else if candidateConfidence.rank == self.projectNameConfidence.rank,
+                  candidateName.count > (self.projectName?.count ?? 0)
+        {
+            shouldAdopt = true
+        } else {
+            shouldAdopt = false
+        }
+
+        if shouldAdopt {
+            self.projectName = candidateName
+            self.projectNameConfidence = candidateConfidence
+            self.projectNameSource = candidateSource
+            self.projectNameProvenance = candidateProvenance
+        }
     }
 }
 
