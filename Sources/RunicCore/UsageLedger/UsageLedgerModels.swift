@@ -321,6 +321,9 @@ public struct UsageLedgerSpendForecast: Sendable, Codable, Hashable {
     public let observedCostUSD: Double
     public let averageDailyCostUSD: Double
     public let projected30DayCostUSD: Double
+    public let projectedCostP50USD: Double?
+    public let projectedCostP80USD: Double?
+    public let projectedCostP95USD: Double?
     public let projectionDays: Int
     public let budgetLimitUSD: Double?
     public let budgetETAInDays: Double?
@@ -335,6 +338,9 @@ public struct UsageLedgerSpendForecast: Sendable, Codable, Hashable {
         observedCostUSD: Double,
         averageDailyCostUSD: Double,
         projected30DayCostUSD: Double,
+        projectedCostP50USD: Double? = nil,
+        projectedCostP80USD: Double? = nil,
+        projectedCostP95USD: Double? = nil,
         projectionDays: Int = 30,
         budgetLimitUSD: Double? = nil,
         budgetETAInDays: Double? = nil,
@@ -348,6 +354,9 @@ public struct UsageLedgerSpendForecast: Sendable, Codable, Hashable {
         self.observedCostUSD = observedCostUSD
         self.averageDailyCostUSD = averageDailyCostUSD
         self.projected30DayCostUSD = projected30DayCostUSD
+        self.projectedCostP50USD = projectedCostP50USD
+        self.projectedCostP80USD = projectedCostP80USD
+        self.projectedCostP95USD = projectedCostP95USD
         self.projectionDays = projectionDays
         self.budgetLimitUSD = budgetLimitUSD
         self.budgetETAInDays = budgetETAInDays
@@ -369,6 +378,9 @@ public struct UsageLedgerSpendForecast: Sendable, Codable, Hashable {
                 observedCostUSD: self.observedCostUSD,
                 averageDailyCostUSD: self.averageDailyCostUSD,
                 projected30DayCostUSD: self.projected30DayCostUSD,
+                projectedCostP50USD: self.projectedCostP50USD,
+                projectedCostP80USD: self.projectedCostP80USD,
+                projectedCostP95USD: self.projectedCostP95USD,
                 projectionDays: self.projectionDays,
                 budgetLimitUSD: nil,
                 budgetETAInDays: nil,
@@ -394,6 +406,9 @@ public struct UsageLedgerSpendForecast: Sendable, Codable, Hashable {
             observedCostUSD: self.observedCostUSD,
             averageDailyCostUSD: self.averageDailyCostUSD,
             projected30DayCostUSD: self.projected30DayCostUSD,
+            projectedCostP50USD: self.projectedCostP50USD,
+            projectedCostP80USD: self.projectedCostP80USD,
+            projectedCostP95USD: self.projectedCostP95USD,
             projectionDays: self.projectionDays,
             budgetLimitUSD: monthlyLimitUSD,
             budgetETAInDays: etaDays,

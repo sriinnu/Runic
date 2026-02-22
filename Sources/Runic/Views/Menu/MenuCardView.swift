@@ -1570,7 +1570,18 @@ extension UsageMenuCardView.Model {
         if let spendForecast {
             let projected = UsageFormatter.usdString(spendForecast.projected30DayCostUSD)
             let observedDayLabel = spendForecast.observedDays == 1 ? "day" : "days"
-            forecastLine = "Month-end forecast: \(projected) · \(spendForecast.observedDays) observed \(observedDayLabel)"
+            var parts = ["Month-end forecast: \(projected)"]
+            if let p50 = spendForecast.projectedCostP50USD,
+               let p80 = spendForecast.projectedCostP80USD,
+               let p95 = spendForecast.projectedCostP95USD
+            {
+                let p50Text = UsageFormatter.usdString(p50)
+                let p80Text = UsageFormatter.usdString(p80)
+                let p95Text = UsageFormatter.usdString(p95)
+                parts.append("p50 \(p50Text) · p80 \(p80Text) · p95 \(p95Text)")
+            }
+            parts.append("\(spendForecast.observedDays) observed \(observedDayLabel)")
+            forecastLine = parts.joined(separator: " · ")
         }
 
         var blockLine: String?

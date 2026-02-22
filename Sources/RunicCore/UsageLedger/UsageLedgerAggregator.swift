@@ -507,6 +507,7 @@ private struct AggregateAccumulator {
 private struct SpendForecastAccumulator {
     private(set) var observedCostUSD: Double = 0
     private(set) var observedDayStarts: Set<Date> = []
+    private(set) var dailyCostByDayStart: [Date: Double] = [:]
     private(set) var projectID: String?
     private(set) var projectName: String?
     private(set) var projectNameConfidence: UsageLedgerProjectNameConfidence = .none
@@ -521,6 +522,7 @@ private struct SpendForecastAccumulator {
     {
         self.observedCostUSD += costUSD
         self.observedDayStarts.insert(dayStart)
+        self.dailyCostByDayStart[dayStart, default: 0] += costUSD
         self.mergeProjectIdentity(from: identity, fallbackEntry: entry)
     }
 
@@ -537,6 +539,7 @@ private struct SpendForecastAccumulator {
         guard averageDailyCostUSD.isFinite else { return nil }
         let projected30DayCostUSD = averageDailyCostUSD * Double(projectionDays)
         guard projected30DayCostUSD.isFinite else { return nil }
+        let projectedQuantiles = self.projectedCostQuantiles(projectionDays: projectionDays)
 
         return UsageLedgerSpendForecast(
             provider: provider,
@@ -547,7 +550,40 @@ private struct SpendForecastAccumulator {
             observedCostUSD: self.observedCostUSD,
             averageDailyCostUSD: averageDailyCostUSD,
             projected30DayCostUSD: projected30DayCostUSD,
+            projectedCostP50USD: projectedQuantiles?.p50,
+            projectedCostP80USD: projectedQuantiles?.p80,
+            projectedCostP95USD: projectedQuantiles?.p95,
             projectionDays: projectionDays)
+    }
+
+    private func projectedCostQuantiles(projectionDays: Int) -> (p50: Double, p80: Double, p95: Double)? {
+        guard projectionDays > 0 else { return nil }
+        let dailyCosts = self.dailyCostByDayStart.values
+            .filter(\.isFinite)
+            .sorted()
+        guard dailyCosts.count >= 3 else { return nil }
+        let projectionScale = Double(projectionDays)
+        let p50 = self.percentile(sortedValues: dailyCosts, quantile: 0.50) * projectionScale
+        let p80 = self.percentile(sortedValues: dailyCosts, quantile: 0.80) * projectionScale
+        let p95 = self.percentile(sortedValues: dailyCosts, quantile: 0.95) * projectionScale
+        guard p50.isFinite, p80.isFinite, p95.isFinite else { return nil }
+        return (p50: p50, p80: p80, p95: p95)
+    }
+
+    private func percentile(sortedValues: [Double], quantile: Double) -> Double {
+        guard !sortedValues.isEmpty else { return 0 }
+        guard sortedValues.count > 1 else { return sortedValues[0] }
+        let q = min(max(quantile, 0), 1)
+        let position = q * Double(sortedValues.count - 1)
+        let lowerIndex = Int(floor(position))
+        let upperIndex = Int(ceil(position))
+        if lowerIndex == upperIndex {
+            return sortedValues[lowerIndex]
+        }
+        let lowerValue = sortedValues[lowerIndex]
+        let upperValue = sortedValues[upperIndex]
+        let weight = position - Double(lowerIndex)
+        return lowerValue + ((upperValue - lowerValue) * weight)
     }
 
     private mutating func mergeProjectIdentity(from identity: UsageLedgerProjectIdentity?, fallbackEntry: UsageLedgerEntry) {

@@ -459,7 +459,10 @@ struct MenuCardModelTests {
             observedDays: 3,
             observedCostUSD: 36,
             averageDailyCostUSD: 12,
-            projected30DayCostUSD: 360)
+            projected30DayCostUSD: 360,
+            projectedCostP50USD: 330,
+            projectedCostP80USD: 420,
+            projectedCostP95USD: 510)
         let projectForecast = UsageLedgerSpendForecast(
             provider: .codex,
             projectKey: "id:proj-runic",
@@ -493,6 +496,8 @@ struct MenuCardModelTests {
             now: now))
 
         #expect(model.insights?.forecastLine?.contains("Month-end forecast") == true)
+        #expect(model.insights?.forecastLine?.contains("p80") == true)
+        #expect(model.insights?.forecastLine?.contains("p95") == true)
         #expect(model.insights?.projectDetail?.contains("Budget") == true)
         #expect(model.insights?.projectDetail?.contains("Breach") == true)
     }
