@@ -690,22 +690,52 @@ struct ProvidersPane: View {
 
     private var listLayout: some View {
         PreferencesListPane(horizontalPadding: 0, verticalPadding: 0) {
-            ProviderListView(
-                providers: self.providers,
-                store: self.store,
-                isEnabled: { provider in self.binding(for: provider) },
-                subtitle: { provider in self.providerSubtitle(provider) },
-                usageStatus: { provider in self.providerUsageStatus(provider) },
-                sourceLabel: { provider in self.providerSourceLabel(provider) },
-                statusLabel: { provider in self.providerStatusLabel(provider) },
-                settingsToggles: { provider in self.extraSettingsToggles(for: provider) },
-                settingsFields: { provider in self.extraSettingsFields(for: provider) },
-                errorDisplay: { provider in self.providerErrorDisplay(provider) },
-                isErrorExpanded: { provider in self.expandedBinding(for: provider) },
-                onCopyError: { text in self.copyToPasteboard(text) },
-                moveProviders: { fromOffsets, toOffset in
-                    self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
-                })
+            VStack(spacing: 0) {
+                HStack(alignment: .center, spacing: RunicSpacing.xs) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.caption)
+                        .foregroundStyle(Color.accentColor)
+                    Text("Provider History calendar is in Sidebar layout.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Open Sidebar") {
+                        self.settings.providersPaneSidebar = true
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .padding(.horizontal, ProviderListMetrics.contentInset)
+                .padding(.vertical, RunicSpacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
+                )
+                .padding(.horizontal, ProviderListMetrics.contentInset)
+                .padding(.top, RunicSpacing.xs)
+                .padding(.bottom, RunicSpacing.xxs)
+
+                ProviderListView(
+                    providers: self.providers,
+                    store: self.store,
+                    isEnabled: { provider in self.binding(for: provider) },
+                    subtitle: { provider in self.providerSubtitle(provider) },
+                    usageStatus: { provider in self.providerUsageStatus(provider) },
+                    sourceLabel: { provider in self.providerSourceLabel(provider) },
+                    statusLabel: { provider in self.providerStatusLabel(provider) },
+                    settingsToggles: { provider in self.extraSettingsToggles(for: provider) },
+                    settingsFields: { provider in self.extraSettingsFields(for: provider) },
+                    errorDisplay: { provider in self.providerErrorDisplay(provider) },
+                    isErrorExpanded: { provider in self.expandedBinding(for: provider) },
+                    onCopyError: { text in self.copyToPasteboard(text) },
+                    moveProviders: { fromOffsets, toOffset in
+                        self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
+                    })
+            }
         }
     }
 
