@@ -184,6 +184,35 @@ struct GeminiStatusProbeTests {
         #expect(hasResets)
     }
 
+    @Test
+    func toUsageSnapshotPreservesModelLabelsAndTertiaryWindow() throws {
+        let output = """
+        │  gemini-2.5-pro                               2       40.0% (Resets in 6h)  │
+        │  gemini-2.5-flash                             5       65.0% (Resets in 3h)  │
+        │  gemini-2.5-flash-lite                        8       30.0% (Resets in 1h)  │
+        """
+        let snapshot = try GeminiStatusProbe.parse(text: output)
+        let usage = snapshot.toUsageSnapshot()
+        #expect(Int(usage.primary.usedPercent.rounded()) == 60)
+        #expect(usage.primary.label == "gemini 2.5 pro")
+        #expect(Int(usage.secondary?.usedPercent.rounded() ?? -1) == 70)
+        #expect(usage.secondary?.label == "gemini 2.5 flash lite")
+        #expect(Int(usage.tertiary?.usedPercent.rounded() ?? -1) == 35)
+        #expect(usage.tertiary?.label == "gemini 2.5 flash")
+    }
+
+    @Test
+    func toUsageSnapshotFallsBackWhenProTierIsMissing() throws {
+        let output = """
+        │  gemini-2.5-flash                             2       90.0% (Resets in 6h)  │
+        │  gemini-2.5-flash-lite                        3       25.0% (Resets in 6h)  │
+        """
+        let snapshot = try GeminiStatusProbe.parse(text: output)
+        let usage = snapshot.toUsageSnapshot()
+        #expect(Int(usage.primary.usedPercent.rounded()) == 75)
+        #expect(usage.primary.label == "gemini 2.5 flash lite")
+    }
+
     // MARK: - Live API test
 
     @Test

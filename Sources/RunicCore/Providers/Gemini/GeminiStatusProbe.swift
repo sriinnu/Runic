@@ -28,28 +28,21 @@ public struct GeminiStatusSnapshot: Sendable {
     }
 
     /// Converts Gemini quotas to a unified UsageSnapshot.
-    /// Groups quotas by tier: Pro (24h window) as primary, Flash (24h window) as secondary.
+    /// Prioritizes Pro and Flash tiers, then fills an optional tertiary slot with the next-most-constrained model.
     public func toUsageSnapshot() -> UsageSnapshot {
-        let lower = self.modelQuotas.map { ($0.modelId.lowercased(), $0) }
-        let flashQuotas = lower.filter { $0.0.contains("flash") }.map(\.1)
-        let proQuotas = lower.filter { $0.0.contains("pro") }.map(\.1)
+        let selected = Self.selectDisplayQuotas(self.modelQuotas)
+        let primaryQuota = selected.first
+        let secondaryQuota = selected.count > 1 ? selected[1] : nil
+        let tertiaryQuota = selected.count > 2 ? selected[2] : nil
 
-        let flashMin = flashQuotas.min(by: { $0.percentLeft < $1.percentLeft })
-        let proMin = proQuotas.min(by: { $0.percentLeft < $1.percentLeft })
-
-        let primary = RateWindow(
-            usedPercent: proMin.map { 100 - $0.percentLeft } ?? 0,
+        let primary = Self.rateWindow(from: primaryQuota) ?? RateWindow(
+            usedPercent: 0,
             windowMinutes: 1440,
-            resetsAt: proMin?.resetTime,
-            resetDescription: proMin?.resetDescription)
-
-        let secondary: RateWindow? = flashMin.map {
-            RateWindow(
-                usedPercent: 100 - $0.percentLeft,
-                windowMinutes: 1440,
-                resetsAt: $0.resetTime,
-                resetDescription: $0.resetDescription)
-        }
+            resetsAt: nil,
+            resetDescription: nil,
+            label: nil)
+        let secondary = Self.rateWindow(from: secondaryQuota)
+        let tertiary = Self.rateWindow(from: tertiaryQuota)
 
         let identity = ProviderIdentitySnapshot(
             providerID: .gemini,
@@ -59,8 +52,76 @@ public struct GeminiStatusSnapshot: Sendable {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
+            tertiary: tertiary,
             updatedAt: Date(),
             identity: identity)
+    }
+
+    private static func selectDisplayQuotas(_ quotas: [GeminiModelQuota]) -> [GeminiModelQuota] {
+        guard !quotas.isEmpty else { return [] }
+
+        let normalized = quotas.map { (quota: $0, lowerModelID: $0.modelId.lowercased()) }
+        let pro = normalized
+            .filter { $0.lowerModelID.contains("pro") }
+            .map(\.quota)
+            .min(by: { $0.percentLeft < $1.percentLeft })
+        let flash = normalized
+            .filter { $0.lowerModelID.contains("flash") }
+            .map(\.quota)
+            .min(by: { $0.percentLeft < $1.percentLeft })
+
+        var ordered: [GeminiModelQuota] = []
+        if let pro {
+            ordered.append(pro)
+        }
+        if let flash, !Self.containsModel(ordered, matching: flash) {
+            ordered.append(flash)
+        }
+
+        for quota in quotas.sorted(by: { lhs, rhs in
+            if lhs.percentLeft == rhs.percentLeft {
+                return lhs.modelId.localizedCaseInsensitiveCompare(rhs.modelId) == .orderedAscending
+            }
+            return lhs.percentLeft < rhs.percentLeft
+        }) where ordered.count < 3 {
+            guard !Self.containsModel(ordered, matching: quota) else { continue }
+            ordered.append(quota)
+        }
+
+        return Array(ordered.prefix(3))
+    }
+
+    private static func containsModel(_ quotas: [GeminiModelQuota], matching candidate: GeminiModelQuota) -> Bool {
+        let normalized = candidate.modelId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return quotas.contains {
+            $0.modelId
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased() == normalized
+        }
+    }
+
+    private static func rateWindow(from quota: GeminiModelQuota?) -> RateWindow? {
+        guard let quota else { return nil }
+        return RateWindow(
+            usedPercent: max(0, min(100, 100 - quota.percentLeft)),
+            windowMinutes: 1440,
+            resetsAt: quota.resetTime,
+            resetDescription: quota.resetDescription,
+            label: self.formattedModelLabel(quota.modelId))
+    }
+
+    private static func formattedModelLabel(_ modelID: String) -> String? {
+        let trimmed = modelID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let lastPathComponent = trimmed.split(separator: "/").last.map(String.init) ?? trimmed
+        let normalized = lastPathComponent
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalized.isEmpty ? nil : normalized
     }
 }
 

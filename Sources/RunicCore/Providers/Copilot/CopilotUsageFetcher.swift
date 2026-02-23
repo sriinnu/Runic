@@ -154,17 +154,15 @@ public struct CopilotUsageFetcher: Sendable {
     }
 
     private func makeSnapshot(from usage: CopilotUsageResponse) throws -> UsageSnapshot {
-        let quota = usage.quotaSnapshots
         let resetDate = self.parseDate(usage.quotaResetDate)
-        let primarySnapshot = quota?.premiumInteractions ?? quota?.completions ?? quota?.chat
-        let primary = self.makeRateWindow(from: primarySnapshot, resetAt: resetDate)
-        let secondarySnapshot: CopilotUsageResponse.QuotaSnapshot?
-        if primarySnapshot?.quotaId == quota?.chat?.quotaId {
-            secondarySnapshot = quota?.completions
-        } else {
-            secondarySnapshot = quota?.chat
-        }
-        let secondary = self.makeRateWindow(from: secondarySnapshot, resetAt: resetDate)
+        let orderedSnapshots = self.orderedQuotaSnapshots(usage.quotaSnapshots)
+        let primary = self.makeRateWindow(from: orderedSnapshots.first, resetAt: resetDate)
+        let secondary = self.makeRateWindow(
+            from: orderedSnapshots.count > 1 ? orderedSnapshots[1] : nil,
+            resetAt: resetDate)
+        let tertiary = self.makeRateWindow(
+            from: orderedSnapshots.count > 2 ? orderedSnapshots[2] : nil,
+            resetAt: resetDate)
 
         let resolvedPrimary = primary ?? RateWindow(
             usedPercent: 0,
@@ -186,7 +184,7 @@ public struct CopilotUsageFetcher: Sendable {
         return UsageSnapshot(
             primary: resolvedPrimary,
             secondary: secondary,
-            tertiary: nil,
+            tertiary: tertiary,
             providerCost: nil,
             updatedAt: Date(),
             identity: identity)
@@ -231,6 +229,31 @@ public struct CopilotUsageFetcher: Sendable {
         return quotaID
             .replacingOccurrences(of: "_", with: " ")
             .replacingOccurrences(of: "-", with: " ")
+    }
+
+    private func orderedQuotaSnapshots(_ snapshots: CopilotUsageResponse.QuotaSnapshots?) -> [CopilotUsageResponse.QuotaSnapshot] {
+        guard let snapshots else { return [] }
+        let candidates = [snapshots.premiumInteractions, snapshots.completions, snapshots.chat]
+        var ordered: [CopilotUsageResponse.QuotaSnapshot] = []
+        var seen: Set<String> = []
+
+        for candidate in candidates {
+            guard let candidate else { continue }
+            let fingerprint = self.quotaFingerprint(candidate)
+            guard seen.insert(fingerprint).inserted else { continue }
+            ordered.append(candidate)
+        }
+        return ordered
+    }
+
+    private func quotaFingerprint(_ snapshot: CopilotUsageResponse.QuotaSnapshot) -> String {
+        if let quotaID = snapshot.quotaId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !quotaID.isEmpty
+        {
+            return "id:\(quotaID.lowercased())"
+        }
+        return "fallback:\(snapshot.entitlement ?? -1)|\(snapshot.normalizedRemaining ?? -1)|" +
+            "\(snapshot.percentRemaining ?? -1)|\(snapshot.timestampUTC ?? "")"
     }
 
     private func errorSnippet(from data: Data) -> String {

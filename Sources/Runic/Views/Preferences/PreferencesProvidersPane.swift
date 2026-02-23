@@ -2607,6 +2607,14 @@ private struct ProviderSidebarDetailView: View {
                 title: "Top model",
                 value: "\(modelName) · \(tokens) tok",
                 helpText: "Highest token usage model in the active insights window."))
+        } else if let windowModel = self.topWindowModel {
+            let modelName = UsageFormatter.modelDisplayName(windowModel.label)
+            let used = Int(windowModel.window.usedPercent.rounded())
+            items.append(QuickMetricItem(
+                id: "top-model-window",
+                title: "Top model",
+                value: "\(modelName) · \(used)% used",
+                helpText: "Most constrained model/category from live quota windows."))
         }
         if let coverage = metadata.usageCoverage.summaryLabel {
             let value = coverage.replacingOccurrences(of: "usage: ", with: "")
@@ -2648,10 +2656,13 @@ private struct ProviderSidebarDetailView: View {
             }
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
-        return ranked.prefix(3).map { summary in
-            let name = UsageFormatter.modelDisplayName(summary.model)
-            return self.usageLine(title: name, totals: summary.totals, requests: summary.entryCount)
+        if !ranked.isEmpty {
+            return ranked.prefix(3).map { summary in
+                let name = UsageFormatter.modelDisplayName(summary.model)
+                return self.usageLine(title: name, totals: summary.totals, requests: summary.entryCount)
+            }
         }
+        return self.windowModelLines
     }
 
     private var topProjectLines: [String] {
@@ -2674,6 +2685,53 @@ private struct ProviderSidebarDetailView: View {
             parts.append(UsageFormatter.usdString(cost))
         }
         return parts.joined(separator: " · ")
+    }
+
+    private var windowModelLines: [String] {
+        self.labeledQuotaWindows(from: self.store.snapshot(for: self.provider)).prefix(3).map { item in
+            let modelName = UsageFormatter.modelDisplayName(item.label)
+            let used = Int(item.window.usedPercent.rounded())
+            let remaining = Int(item.window.remainingPercent.rounded())
+            var parts = [modelName, "\(used)% used", "\(remaining)% left"]
+            if let resetsAt = item.window.resetsAt {
+                parts.append("reset \(UsageFormatter.resetCountdownDescription(from: resetsAt))")
+            } else if let resetDescription = item.window.resetDescription?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !resetDescription.isEmpty
+            {
+                parts.append(resetDescription)
+            }
+            return parts.joined(separator: " · ")
+        }
+    }
+
+    private var topWindowModel: (label: String, window: RateWindow)? {
+        self.labeledQuotaWindows(from: self.store.snapshot(for: self.provider)).first
+    }
+
+    private func labeledQuotaWindows(from snapshot: UsageSnapshot?) -> [(label: String, window: RateWindow)] {
+        guard let snapshot else { return [] }
+        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap { $0 }
+        var seen: Set<String> = []
+        var labeled: [(label: String, window: RateWindow)] = []
+
+        for window in windows {
+            guard let label = window.label?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !label.isEmpty
+            else {
+                continue
+            }
+            let normalized = label.lowercased()
+            guard seen.insert(normalized).inserted else { continue }
+            labeled.append((label, window))
+        }
+
+        return labeled.sorted { lhs, rhs in
+            if lhs.window.usedPercent == rhs.window.usedPercent {
+                return lhs.label.localizedCaseInsensitiveCompare(rhs.label) == .orderedAscending
+            }
+            return lhs.window.usedPercent > rhs.window.usedPercent
+        }
     }
 
     private func decimalString(_ value: Int) -> String {

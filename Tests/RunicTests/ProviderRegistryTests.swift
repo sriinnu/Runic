@@ -15,4 +15,15 @@ final class ProviderRegistryTests: XCTestCase {
         let secondPass = ProviderDescriptorRegistry.all.map(\.id)
         XCTAssertEqual(ids, secondPass, "ProviderDescriptorRegistry order changed between reads.")
     }
+
+    func test_providerUsageCoverageFlagsForQuotaModelProviders() {
+        let metadata = ProviderDefaults.metadata
+
+        XCTAssertTrue(
+            metadata[.gemini]?.usageCoverage.supportsModelBreakdown == true,
+            "Gemini should advertise model breakdown coverage from quota windows.")
+        XCTAssertTrue(
+            metadata[.antigravity]?.usageCoverage.supportsModelBreakdown == true,
+            "Antigravity should advertise model breakdown coverage from quota windows.")
+    }
 }
