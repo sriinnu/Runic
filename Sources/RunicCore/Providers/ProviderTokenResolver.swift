@@ -163,6 +163,12 @@ public enum ProviderTokenResolver {
         if let token = self.cleaned(environment["COPILOT_API_TOKEN"]) {
             return ProviderTokenResolution(token: token, source: .environment)
         }
+        if let token = self.cleaned(environment["GITHUB_TOKEN"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["GH_TOKEN"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
         if let token = CopilotVSCodeTokenReader.token(environment: environment) {
             return ProviderTokenResolution(token: token, source: .vscode)
         }
