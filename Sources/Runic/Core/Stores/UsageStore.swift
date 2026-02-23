@@ -725,6 +725,8 @@ final class UsageStore {
         case .xai: nil
         case .cerebras: nil
         case .sambanova: nil
+        case .azure: nil
+        case .bedrock: nil
         }
     }
 
@@ -2705,6 +2707,14 @@ extension UsageStore {
             case .sambanova:
                 let text = "SambaNova debug log not yet implemented"
                 await MainActor.run { self.probeLogs[.sambanova] = text }
+                return text
+            case .azure:
+                let text = "Azure OpenAI debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.azure] = text }
+                return text
+            case .bedrock:
+                let text = "Amazon Bedrock debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.bedrock] = text }
                 return text
             }
         }.value

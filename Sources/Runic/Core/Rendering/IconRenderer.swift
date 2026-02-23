@@ -180,6 +180,8 @@ enum IconRenderer {
         case xai
         case cerebras
         case sambanova
+        case azure
+        case bedrock
         case zai
         case combined
     }
@@ -283,6 +285,8 @@ enum IconRenderer {
         case .xai: return .xai
         case .cerebras: return .cerebras
         case .sambanova: return .sambanova
+        case .azure: return .azure
+        case .bedrock: return .bedrock
         case .combined: return .combined
         }
     }
@@ -679,6 +683,48 @@ enum IconRenderer {
                 controlPoint2: point(x: centerXPx + 1, y: centerYPx - 4))
             bottomArc.close()
             bottomArc.fill()
+        case .azure:
+            let outerRect = Self.grid.rect(
+                x: centerXPx - 4,
+                y: centerYPx - 4,
+                w: 8,
+                h: 8)
+            let innerRect = Self.grid.rect(
+                x: centerXPx - 2,
+                y: centerYPx - 2,
+                w: 4,
+                h: 4)
+            let ring = NSBezierPath()
+            ring.appendOval(in: outerRect)
+            ring.appendOval(in: innerRect)
+            ring.windingRule = .evenOdd
+            ring.fill()
+            let slash = NSBezierPath()
+            slash.move(to: point(x: centerXPx - 5, y: centerYPx - 1))
+            slash.line(to: point(x: centerXPx - 3, y: centerYPx - 3))
+            slash.line(to: point(x: centerXPx + 5, y: centerYPx + 5))
+            slash.line(to: point(x: centerXPx + 3, y: centerYPx + 7))
+            slash.close()
+            slash.fill()
+        case .bedrock:
+            let top = NSBezierPath()
+            top.move(to: point(x: centerXPx - 4, y: centerYPx + 2))
+            top.line(to: point(x: centerXPx, y: centerYPx + 6))
+            top.line(to: point(x: centerXPx + 4, y: centerYPx + 2))
+            top.line(to: point(x: centerXPx + 2, y: centerYPx))
+            top.line(to: point(x: centerXPx, y: centerYPx + 2))
+            top.line(to: point(x: centerXPx - 2, y: centerYPx))
+            top.close()
+            top.fill()
+            let bottom = NSBezierPath()
+            bottom.move(to: point(x: centerXPx - 4, y: centerYPx - 2))
+            bottom.line(to: point(x: centerXPx, y: centerYPx - 6))
+            bottom.line(to: point(x: centerXPx + 4, y: centerYPx - 2))
+            bottom.line(to: point(x: centerXPx + 2, y: centerYPx))
+            bottom.line(to: point(x: centerXPx, y: centerYPx - 2))
+            bottom.line(to: point(x: centerXPx - 2, y: centerYPx))
+            bottom.close()
+            bottom.fill()
         case .zai:
             let slashGapPx = 3
             let slashWidthPx = 2
@@ -868,6 +914,8 @@ enum IconRenderer {
         case .xai: 19
         case .cerebras: 20
         case .sambanova: 21
+        case .azure: 22
+        case .bedrock: 23
         case .combined: 99
         }
     }

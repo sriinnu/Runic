@@ -43,6 +43,7 @@ public enum ProviderTokenResolver {
     private static let xaiAccount = "xai-api-token"
     private static let cerebrasAccount = "cerebras-api-token"
     private static let sambanovaAccount = "sambanova-api-token"
+    private static let azureOpenAIAccount = "azure-openai-api-token"
 
     public static func zaiToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.zaiResolution(environment: environment)?.token
@@ -132,6 +133,12 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
         self.sambaNovaResolution(environment: environment)?.token
+    }
+
+    public static func azureOpenAIToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.azureOpenAIResolution(environment: environment)?.token
     }
 
     public static func zaiResolution(
@@ -363,6 +370,21 @@ public enum ProviderTokenResolver {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
         if let token = self.cleaned(environment["SAMBANOVA_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func azureOpenAIResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.azureOpenAIAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["AZURE_OPENAI_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["AZURE_AI_API_KEY"]) {
             return ProviderTokenResolution(token: token, source: .environment)
         }
         return nil

@@ -476,6 +476,41 @@ final class SettingsStore {
         didSet { self.schedulePersistSambaNovaAPIToken() }
     }
 
+    /// Azure OpenAI endpoint URL (stored in UserDefaults).
+    var azureOpenAIEndpoint: String {
+        didSet { self.userDefaults.set(self.azureOpenAIEndpoint, forKey: "azureOpenAIEndpoint") }
+    }
+
+    /// Azure OpenAI deployment name (stored in UserDefaults).
+    var azureOpenAIDeployment: String {
+        didSet { self.userDefaults.set(self.azureOpenAIDeployment, forKey: "azureOpenAIDeployment") }
+    }
+
+    /// Azure OpenAI API version (stored in UserDefaults).
+    var azureOpenAIAPIVersion: String {
+        didSet { self.userDefaults.set(self.azureOpenAIAPIVersion, forKey: "azureOpenAIAPIVersion") }
+    }
+
+    /// Azure OpenAI API key (stored in Keychain).
+    var azureOpenAIAPIToken: String {
+        didSet { self.schedulePersistAzureOpenAIAPIToken() }
+    }
+
+    /// Amazon Bedrock region (stored in UserDefaults).
+    var bedrockRegion: String {
+        didSet { self.userDefaults.set(self.bedrockRegion, forKey: "bedrockRegion") }
+    }
+
+    /// Optional AWS profile for Amazon Bedrock (stored in UserDefaults).
+    var bedrockAWSProfile: String {
+        didSet { self.userDefaults.set(self.bedrockAWSProfile, forKey: "bedrockAWSProfile") }
+    }
+
+    /// Optional model filter for Amazon Bedrock (stored in UserDefaults).
+    var bedrockModelID: String {
+        didSet { self.userDefaults.set(self.bedrockModelID, forKey: "bedrockModelID") }
+    }
+
     private var selectedMenuProviderRaw: String? {
         didSet {
             if let raw = self.selectedMenuProviderRaw {
@@ -572,6 +607,13 @@ final class SettingsStore {
         _ = self.xaiAPIToken
         _ = self.cerebrasAPIToken
         _ = self.sambaNovaAPIToken
+        _ = self.azureOpenAIEndpoint
+        _ = self.azureOpenAIDeployment
+        _ = self.azureOpenAIAPIVersion
+        _ = self.azureOpenAIAPIToken
+        _ = self.bedrockRegion
+        _ = self.bedrockAWSProfile
+        _ = self.bedrockModelID
         _ = self.debugLoadingPattern
         _ = self.selectedMenuProvider
         _ = self.providerToggleRevision
@@ -620,6 +662,8 @@ final class SettingsStore {
     @ObservationIgnored private var cerebrasTokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let sambaNovaTokenStore: any SambaNovaTokenStoring
     @ObservationIgnored private var sambaNovaTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let azureOpenAITokenStore: any AzureOpenAITokenStoring
+    @ObservationIgnored private var azureOpenAITokenPersistTask: Task<Void, Never>?
     // Cache enablement so tight UI loops (menu bar animations) don't hit UserDefaults each tick.
     @ObservationIgnored private var cachedProviderEnablement: [UsageProvider: Bool] = [:]
     @ObservationIgnored private var cachedProviderEnablementRevision: Int = -1
@@ -650,7 +694,8 @@ final class SettingsStore {
         cohereTokenStore: any CohereTokenStoring = KeychainCohereTokenStore(),
         xaiTokenStore: any XAITokenStoring = KeychainXAITokenStore(),
         cerebrasTokenStore: any CerebrasTokenStoring = KeychainCerebrasTokenStore(),
-        sambaNovaTokenStore: any SambaNovaTokenStoring = KeychainSambaNovaTokenStore())
+        sambaNovaTokenStore: any SambaNovaTokenStoring = KeychainSambaNovaTokenStore(),
+        azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore())
     {
         self.userDefaults = userDefaults
         self.zaiTokenStore = zaiTokenStore
@@ -671,6 +716,7 @@ final class SettingsStore {
         self.xaiTokenStore = xaiTokenStore
         self.cerebrasTokenStore = cerebrasTokenStore
         self.sambaNovaTokenStore = sambaNovaTokenStore
+        self.azureOpenAITokenStore = azureOpenAITokenStore
         self.providerOrderRaw = userDefaults.stringArray(forKey: "providerOrder") ?? []
         let raw = userDefaults.string(forKey: "refreshFrequency") ?? RefreshFrequency.manual.rawValue
         self.refreshFrequency = RefreshFrequency(rawValue: raw) ?? .manual
@@ -741,6 +787,13 @@ final class SettingsStore {
         let iconSizeRaw = userDefaults.string(forKey: "providerSwitcherIconSize")
         self.providerSwitcherIconSize = ProviderSwitcherIconSize(rawValue: iconSizeRaw ?? "") ?? .medium
         self.providersPaneSidebar = userDefaults.object(forKey: "providersPaneSidebar") as? Bool ?? false
+        self.azureOpenAIEndpoint = userDefaults.string(forKey: "azureOpenAIEndpoint") ?? ""
+        self.azureOpenAIDeployment = userDefaults.string(forKey: "azureOpenAIDeployment") ?? ""
+        self.azureOpenAIAPIVersion = userDefaults.string(forKey: "azureOpenAIAPIVersion")
+            ?? "2024-10-21"
+        self.bedrockRegion = userDefaults.string(forKey: "bedrockRegion") ?? ""
+        self.bedrockAWSProfile = userDefaults.string(forKey: "bedrockAWSProfile") ?? ""
+        self.bedrockModelID = userDefaults.string(forKey: "bedrockModelID") ?? ""
         self.zaiAPIToken = (try? zaiTokenStore.loadToken()) ?? ""
         self.minimaxAPIToken = (try? minimaxTokenStore.loadToken()) ?? ""
         self.minimaxCookieHeader = (try? minimaxCookieHeaderStore.loadHeader()) ?? ""
@@ -759,6 +812,7 @@ final class SettingsStore {
         self.xaiAPIToken = (try? xaiTokenStore.loadToken()) ?? ""
         self.cerebrasAPIToken = (try? cerebrasTokenStore.loadToken()) ?? ""
         self.sambaNovaAPIToken = (try? sambaNovaTokenStore.loadToken()) ?? ""
+        self.azureOpenAIAPIToken = (try? azureOpenAITokenStore.loadToken()) ?? ""
         self.selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
         self.providerDetectionCompleted = userDefaults.object(
             forKey: "providerDetectionCompleted") as? Bool ?? false
@@ -1436,6 +1490,32 @@ final class SettingsStore {
             }.value
             if let error {
                 RunicLog.logger("sambanova-token-store").error("Failed to persist SambaNova token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistAzureOpenAIAPIToken() {
+        self.azureOpenAITokenPersistTask?.cancel()
+        let token = self.azureOpenAIAPIToken
+        let tokenStore = self.azureOpenAITokenStore
+        self.azureOpenAITokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("azure-openai-token-store")
+                    .error("Failed to persist Azure OpenAI token: \(error)")
             }
         }
     }

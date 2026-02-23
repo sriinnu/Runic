@@ -772,7 +772,7 @@ enum RunicCLI {
             print(
                 "  Providers: codex, claude, cursor, gemini, factory, copilot, zai, antigravity, minimax, " +
                     "openrouter, groq, deepseek, fireworks, mistral, perplexity, kimi, auggie, together, " +
-                    "cohere, xai, cerebras, sambanova")
+                    "cohere, xai, cerebras, sambanova, azure, bedrock")
         }
         if command == "cost" || command == nil {
             print("cost - Print local cost usage as text or JSON")

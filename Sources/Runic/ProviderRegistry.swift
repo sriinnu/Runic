@@ -36,6 +36,20 @@ struct ProviderRegistry {
                     let snapshot = await MainActor.run {
                         let cleanedCopilotToken = settings.copilotAPIToken.trimmingCharacters(
                             in: .whitespacesAndNewlines)
+                        let cleanedAzureToken = settings.azureOpenAIAPIToken.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedAzureEndpoint = settings.azureOpenAIEndpoint.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedAzureDeployment = settings.azureOpenAIDeployment.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedAzureAPIVersion = settings.azureOpenAIAPIVersion.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedBedrockRegion = settings.bedrockRegion.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedBedrockProfile = settings.bedrockAWSProfile.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedBedrockModel = settings.bedrockModelID.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
                         return ProviderSettingsSnapshot(
                             debugMenuEnabled: settings.debugMenuEnabled,
                             codex: ProviderSettingsSnapshot.CodexProviderSettings(
@@ -45,7 +59,16 @@ struct ProviderRegistry {
                                 webExtrasEnabled: settings.claudeWebExtrasEnabled),
                             zai: ProviderSettingsSnapshot.ZaiProviderSettings(),
                             copilot: ProviderSettingsSnapshot.CopilotProviderSettings(
-                                apiToken: cleanedCopilotToken.isEmpty ? nil : cleanedCopilotToken))
+                                apiToken: cleanedCopilotToken.isEmpty ? nil : cleanedCopilotToken),
+                            azure: ProviderSettingsSnapshot.AzureProviderSettings(
+                                apiToken: cleanedAzureToken.isEmpty ? nil : cleanedAzureToken,
+                                endpoint: cleanedAzureEndpoint.isEmpty ? nil : cleanedAzureEndpoint,
+                                deployment: cleanedAzureDeployment.isEmpty ? nil : cleanedAzureDeployment,
+                                apiVersion: cleanedAzureAPIVersion.isEmpty ? nil : cleanedAzureAPIVersion),
+                            bedrock: ProviderSettingsSnapshot.BedrockProviderSettings(
+                                region: cleanedBedrockRegion.isEmpty ? nil : cleanedBedrockRegion,
+                                profile: cleanedBedrockProfile.isEmpty ? nil : cleanedBedrockProfile,
+                                modelID: cleanedBedrockModel.isEmpty ? nil : cleanedBedrockModel))
                     }
                     let context = ProviderFetchContext(
                         runtime: .app,

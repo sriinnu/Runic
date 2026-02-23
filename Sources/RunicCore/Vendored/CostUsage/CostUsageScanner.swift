@@ -88,6 +88,10 @@ enum CostUsageScanner {
             return CostUsageDailyReport(data: [], summary: nil)
         case .sambanova:
             return CostUsageDailyReport(data: [], summary: nil)
+        case .azure:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .bedrock:
+            return CostUsageDailyReport(data: [], summary: nil)
         }
     }
 

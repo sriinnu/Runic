@@ -826,6 +826,8 @@ struct ProvidersPane: View {
             .xai,
             .cerebras,
             .sambanova,
+            .azure,
+            .bedrock,
         ]
         if apiBackedProviders.contains(provider) {
             return "api\(coverageSuffix)"

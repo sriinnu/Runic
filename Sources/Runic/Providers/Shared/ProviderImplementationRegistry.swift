@@ -32,6 +32,8 @@ enum ProviderImplementationRegistry {
         _ = ProviderImplementationRegistry.register(XAIProviderImplementation())
         _ = ProviderImplementationRegistry.register(CerebrasProviderImplementation())
         _ = ProviderImplementationRegistry.register(SambaNovaProviderImplementation())
+        _ = ProviderImplementationRegistry.register(AzureProviderImplementation())
+        _ = ProviderImplementationRegistry.register(BedrockProviderImplementation())
     }()
 
     private static func ensureBootstrapped() {
