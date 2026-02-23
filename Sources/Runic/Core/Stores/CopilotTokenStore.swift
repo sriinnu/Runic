@@ -35,6 +35,7 @@ struct KeychainCopilotTokenStore: CopilotTokenStoring {
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
             kSecUseDataProtectionKeychain as String: true,
+            kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
@@ -77,6 +78,7 @@ struct KeychainCopilotTokenStore: CopilotTokenStoring {
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
             kSecUseDataProtectionKeychain as String: true,
+            kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
         ]
         let attributes: [String: Any] = [
             kSecValueData as String: data,
@@ -109,6 +111,7 @@ struct KeychainCopilotTokenStore: CopilotTokenStoring {
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
             kSecUseDataProtectionKeychain as String: true,
+            kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
         ]
         let status = SecItemDelete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound {

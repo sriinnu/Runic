@@ -414,6 +414,7 @@ public enum ProviderTokenResolver {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecUseDataProtectionKeychain as String: true,
+            kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
