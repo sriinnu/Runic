@@ -447,14 +447,14 @@ public enum ProviderTokenResolver {
         }
 
         guard let data = result as? Data,
-              let token = String(data: data, encoding: .utf8)?
-                  .trimmingCharacters(in: .whitespacesAndNewlines),
-                  !token.isEmpty
+              let token = String(data: data, encoding: .utf8),
+              let cleaned = self.cleaned(token),
+              !cleaned.isEmpty
         else {
             return nil
         }
 
-        return token
+        return cleaned
         #else
         _ = service
         _ = account
