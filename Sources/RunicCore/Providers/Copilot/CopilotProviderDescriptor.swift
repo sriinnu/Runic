@@ -52,26 +52,44 @@ struct CopilotAPIFetchStrategy: ProviderFetchStrategy {
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let token = Self.resolveToken(context: context), !token.isEmpty else {
+        guard let selection = Self.resolveToken(context: context), !selection.token.isEmpty else {
             throw URLError(.userAuthenticationRequired)
         }
-        let fetcher = CopilotUsageFetcher(token: token)
+        let fetcher = CopilotUsageFetcher(token: selection.token, tokenSourceLabel: selection.sourceLabel)
         let snap = try await fetcher.fetch()
         return self.makeResult(
             usage: snap,
-            sourceLabel: "api")
+            sourceLabel: "api(\(selection.sourceLabel))")
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
     }
 
-    private static func resolveToken(context: ProviderFetchContext) -> String? {
+    private struct CopilotTokenSelection {
+        let token: String
+        let sourceLabel: String
+    }
+
+    private static func resolveToken(context: ProviderFetchContext) -> CopilotTokenSelection? {
         if let token = context.settings?.copilot?.apiToken?.trimmingCharacters(in: .whitespacesAndNewlines),
            !token.isEmpty
         {
-            return token
+            return CopilotTokenSelection(token: token, sourceLabel: "settings")
         }
-        return ProviderTokenResolver.copilotToken(environment: context.env)
+        guard let resolution = ProviderTokenResolver.copilotResolution(environment: context.env) else { return nil }
+        let sourceLabel = self.sourceLabel(from: resolution.source, sourceKey: resolution.sourceKey)
+        return CopilotTokenSelection(token: resolution.token, sourceLabel: sourceLabel)
+    }
+
+    private static func sourceLabel(from source: ProviderTokenSource, sourceKey: String?) -> String {
+        switch source {
+        case .keychain:
+            return sourceKey ?? "keychain"
+        case .environment:
+            return sourceKey ?? "env"
+        case .vscode:
+            return sourceKey ?? "vscode"
+        }
     }
 }

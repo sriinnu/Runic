@@ -13,6 +13,7 @@ struct CopilotTokenResolverTests {
         let resolution = ProviderTokenResolver.copilotResolution(environment: env)
         #expect(resolution?.token == "copilot-env-token")
         #expect(resolution?.source == .environment)
+        #expect(resolution?.sourceKey == "COPILOT_API_TOKEN")
     }
 
     @Test
@@ -23,6 +24,7 @@ struct CopilotTokenResolverTests {
         ]
         let resolution = ProviderTokenResolver.copilotResolution(environment: env)
         #expect(resolution?.token == "github-token")
+        #expect(resolution?.sourceKey == "GITHUB_TOKEN")
     }
 
     @Test
@@ -33,6 +35,7 @@ struct CopilotTokenResolverTests {
         ]
         let resolution = ProviderTokenResolver.copilotResolution(environment: env)
         #expect(resolution?.token == "gh-fallback-token")
+        #expect(resolution?.sourceKey == "GH_TOKEN")
     }
 
     @Test
@@ -44,4 +47,3 @@ struct CopilotTokenResolverTests {
         #expect(token == "quoted-token")
     }
 }
-

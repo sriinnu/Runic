@@ -15,10 +15,12 @@ public enum ProviderTokenSource: String, Sendable {
 public struct ProviderTokenResolution: Sendable {
     public let token: String
     public let source: ProviderTokenSource
+    public let sourceKey: String?
 
-    public init(token: String, source: ProviderTokenSource) {
+    public init(token: String, source: ProviderTokenSource, sourceKey: String? = nil) {
         self.token = token
         self.source = source
+        self.sourceKey = sourceKey
     }
 }
 
@@ -158,19 +160,19 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
     {
         if let token = self.keychainToken(service: self.keychainService, account: self.copilotAccount) {
-            return ProviderTokenResolution(token: token, source: .keychain)
+            return ProviderTokenResolution(token: token, source: .keychain, sourceKey: "copilot-api-token")
         }
         if let token = self.cleaned(environment["COPILOT_API_TOKEN"]) {
-            return ProviderTokenResolution(token: token, source: .environment)
+            return ProviderTokenResolution(token: token, source: .environment, sourceKey: "COPILOT_API_TOKEN")
         }
         if let token = self.cleaned(environment["GITHUB_TOKEN"]) {
-            return ProviderTokenResolution(token: token, source: .environment)
+            return ProviderTokenResolution(token: token, source: .environment, sourceKey: "GITHUB_TOKEN")
         }
         if let token = self.cleaned(environment["GH_TOKEN"]) {
-            return ProviderTokenResolution(token: token, source: .environment)
+            return ProviderTokenResolution(token: token, source: .environment, sourceKey: "GH_TOKEN")
         }
         if let token = CopilotVSCodeTokenReader.token(environment: environment) {
-            return ProviderTokenResolution(token: token, source: .vscode)
+            return ProviderTokenResolution(token: token, source: .vscode, sourceKey: "vscode")
         }
         return nil
     }

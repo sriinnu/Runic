@@ -47,46 +47,59 @@ public struct CopilotUsageFetcher: Sendable {
     }
 
     private let token: String
+    private let tokenSourceLabel: String
+    private static let log = RunicLog.logger("copilot-usage")
 
-    public init(token: String) {
+    public init(token: String, tokenSourceLabel: String = "settings") {
         self.token = token
+        self.tokenSourceLabel = tokenSourceLabel
     }
 
     public func fetch() async throws -> UsageSnapshot {
         guard let url = URL(string: "https://api.github.com/copilot_internal/user") else {
             throw URLError(.badURL)
         }
+        Self.log.debug("Starting Copilot fetch using token source \(self.tokenSourceLabel).")
 
         var attemptNotes: [String] = []
         let githubAuthHeaders = [
             ("token", "token \(self.token)"),
             ("bearer", "Bearer \(self.token)"),
         ]
+        attemptNotes.append("auth-source=\(self.tokenSourceLabel)")
 
         for (label, value) in githubAuthHeaders {
             do {
+                Self.log.debug("Attempting Copilot fetch with \(label) auth.")
                 let usage = try await self.fetchUsage(url: url, authorization: value)
                 return try self.makeSnapshot(from: usage)
             } catch let error as CopilotUsageFetchError {
                 attemptNotes.append("\(label): \(error.localizedDescription)")
+                Self.log.warning("Copilot fetch with \(label) auth failed: \(error.localizedDescription)")
             } catch {
                 attemptNotes.append("\(label): \(error.localizedDescription)")
+                Self.log.warning("Copilot fetch with \(label) auth failed: \(error.localizedDescription)")
             }
         }
 
         if let copilotSessionToken = try? await self.exchangeCopilotSessionToken() {
+            Self.log.debug("Attempting Copilot token-exchange flow.")
             do {
                 let usage = try await self.fetchUsage(url: url, authorization: "Bearer \(copilotSessionToken)")
                 return try self.makeSnapshot(from: usage)
             } catch let error as CopilotUsageFetchError {
                 attemptNotes.append("copilot-session: \(error.localizedDescription)")
+                Self.log.warning("Copilot session-token flow failed: \(error.localizedDescription)")
             } catch {
                 attemptNotes.append("copilot-session: \(error.localizedDescription)")
+                Self.log.warning("Copilot session-token flow failed: \(error.localizedDescription)")
             }
         } else {
             attemptNotes.append("copilot-session: token exchange failed")
+            Self.log.warning("Copilot session-token flow failed to exchange token.")
         }
 
+        Self.log.error("Copilot fetch failed after attempts: \(attemptNotes.joined(separator: " | "))")
         throw CopilotUsageFetchError.allAttemptsFailed(details: attemptNotes)
     }
 
@@ -156,6 +169,9 @@ public struct CopilotUsageFetcher: Sendable {
     private func makeSnapshot(from usage: CopilotUsageResponse) throws -> UsageSnapshot {
         let resetDate = self.parseDate(usage.quotaResetDate)
         let orderedSnapshots = self.orderedQuotaSnapshots(usage.quotaSnapshots)
+        guard !orderedSnapshots.isEmpty else {
+            throw CopilotUsageFetchError.noQuotaData
+        }
         let primary = self.makeRateWindow(from: orderedSnapshots.first, resetAt: resetDate)
         let secondary = self.makeRateWindow(
             from: orderedSnapshots.count > 1 ? orderedSnapshots[1] : nil,
