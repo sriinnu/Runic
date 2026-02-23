@@ -796,6 +796,7 @@ struct ProvidersPane: View {
     private func providerSubtitle(_ provider: UsageProvider) -> String {
         let meta = self.store.metadata(for: provider)
         let cliName = meta.cliName
+        let coverageSuffix = meta.usageCoverage.summaryLabel.map { " • \($0)" } ?? ""
         let version = self.store.version(for: provider)
         var versionText = version ?? "not detected"
         if provider == .claude, let parenRange = versionText.range(of: "(") {
@@ -803,7 +804,7 @@ struct ProvidersPane: View {
         }
 
         if cliName == "codex" {
-            return versionText
+            return "\(versionText)\(coverageSuffix)"
         }
 
         // Cursor is web-based, no CLI version to detect
@@ -827,14 +828,14 @@ struct ProvidersPane: View {
             .sambanova,
         ]
         if apiBackedProviders.contains(provider) {
-            return "api"
+            return "api\(coverageSuffix)"
         }
 
         var detail = "\(cliName) \(versionText)"
         if provider == .antigravity {
             detail += " • experimental"
         }
-        return detail
+        return "\(detail)\(coverageSuffix)"
     }
 
     private func providerUsageStatus(_ provider: UsageProvider) -> ProviderUsageStatus {
@@ -2582,6 +2583,7 @@ private struct ProviderSidebarDetailView: View {
         var items: [QuickMetricItem] = []
         let snapshot = self.store.snapshot(for: self.provider)
         let tokenSnapshot = self.store.tokenSnapshot(for: self.provider)
+        let metadata = self.store.metadata(for: self.provider)
 
         if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
             items.append(QuickMetricItem(id: "today", title: "Today", value: today, helpText: "Session cost and tokens."))
@@ -2603,6 +2605,14 @@ private struct ProviderSidebarDetailView: View {
                 title: "Top model",
                 value: "\(modelName) · \(tokens) tok",
                 helpText: "Highest token usage model in the active insights window."))
+        }
+        if let coverage = metadata.usageCoverage.summaryLabel {
+            let value = coverage.replacingOccurrences(of: "usage: ", with: "")
+            items.append(QuickMetricItem(
+                id: "coverage",
+                title: "Data",
+                value: value,
+                helpText: "Provider coverage for model-level usage, token metrics, and project attribution."))
         }
         return items
     }

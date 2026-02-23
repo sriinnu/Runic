@@ -55,6 +55,39 @@ public enum IconStyle: Sendable {
     case combined
 }
 
+public struct ProviderUsageCoverage: Sendable, Equatable {
+    public let supportsModelBreakdown: Bool
+    public let supportsTokenMetrics: Bool
+    public let supportsProjectAttribution: Bool
+
+    public init(
+        supportsModelBreakdown: Bool = false,
+        supportsTokenMetrics: Bool = false,
+        supportsProjectAttribution: Bool = false)
+    {
+        self.supportsModelBreakdown = supportsModelBreakdown
+        self.supportsTokenMetrics = supportsTokenMetrics
+        self.supportsProjectAttribution = supportsProjectAttribution
+    }
+
+    public static let none = ProviderUsageCoverage()
+
+    public var summaryLabel: String? {
+        var parts: [String] = []
+        if self.supportsModelBreakdown {
+            parts.append("models")
+        }
+        if self.supportsTokenMetrics {
+            parts.append("tokens")
+        }
+        if self.supportsProjectAttribution {
+            parts.append("projects")
+        }
+        guard !parts.isEmpty else { return nil }
+        return "usage: " + parts.joined(separator: "+")
+    }
+}
+
 public struct ProviderMetadata: Sendable {
     public let id: UsageProvider
     public let displayName: String
@@ -78,6 +111,8 @@ public struct ProviderMetadata: Sendable {
     public let statusLinkURL: String?
     /// Google Workspace product ID for status polling (appsstatus dashboard).
     public let statusWorkspaceProductID: String?
+    /// Data coverage for this provider's usage fetch path.
+    public let usageCoverage: ProviderUsageCoverage
 
     public init(
         id: UsageProvider,
@@ -98,7 +133,8 @@ public struct ProviderMetadata: Sendable {
         subscriptionDashboardURL: String? = nil,
         statusPageURL: String?,
         statusLinkURL: String? = nil,
-        statusWorkspaceProductID: String? = nil)
+        statusWorkspaceProductID: String? = nil,
+        usageCoverage: ProviderUsageCoverage = .none)
     {
         self.id = id
         self.displayName = displayName
@@ -119,6 +155,7 @@ public struct ProviderMetadata: Sendable {
         self.statusPageURL = statusPageURL
         self.statusLinkURL = statusLinkURL
         self.statusWorkspaceProductID = statusWorkspaceProductID
+        self.usageCoverage = usageCoverage
     }
 }
 

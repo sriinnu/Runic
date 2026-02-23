@@ -22,7 +22,11 @@ public enum OpenRouterProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://openrouter.ai/account",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: true,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .openrouter,
                 iconResourceName: "ProviderIcon-openrouter",

@@ -22,7 +22,11 @@ public enum CopilotProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://github.com/settings/copilot",
-                statusPageURL: "https://www.githubstatus.com/"),
+                statusPageURL: "https://www.githubstatus.com/",
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .copilot,
                 iconResourceName: "ProviderIcon-copilot",

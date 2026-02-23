@@ -24,7 +24,11 @@ public enum ClaudeProviderDescriptor {
                 browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 dashboardURL: "https://console.anthropic.com/settings/billing",
                 subscriptionDashboardURL: "https://claude.ai/settings/usage",
-                statusPageURL: "https://status.claude.com/"),
+                statusPageURL: "https://status.claude.com/",
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: true,
+                    supportsProjectAttribution: true)),
             branding: ProviderBranding(
                 iconStyle: .claude,
                 iconResourceName: "ProviderIcon-claude",

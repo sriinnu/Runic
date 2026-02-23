@@ -23,7 +23,11 @@ public enum CodexProviderDescriptor {
                 usesAccountFallback: true,
                 browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 dashboardURL: "https://chatgpt.com/codex/settings/usage",
-                statusPageURL: "https://status.openai.com/"),
+                statusPageURL: "https://status.openai.com/",
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: true,
+                    supportsProjectAttribution: true)),
             branding: ProviderBranding(
                 iconStyle: .codex,
                 iconResourceName: "ProviderIcon-codex",
