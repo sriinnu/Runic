@@ -26,9 +26,9 @@ Ship operator-grade insights in small, verifiable slices without destabilizing c
 
 ## P2 (After P1)
 
-- [ ] OTel GenAI ingestion adapter (feature-flagged)
-- [ ] Team showback/chargeback summary exports
-- [ ] Cross-platform parity matrix and release gate checklist
+- [x] OTel GenAI ingestion adapter (feature-flagged)
+- [x] Team showback/chargeback summary exports
+- [x] Cross-platform parity matrix and release gate checklist
 
 ## Immediate Work Plan (This Branch)
 
