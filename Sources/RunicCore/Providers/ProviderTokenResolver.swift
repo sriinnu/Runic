@@ -9,6 +9,7 @@ import LocalAuthentication
 public enum ProviderTokenSource: String, Sendable {
     case keychain
     case environment
+    case vscode
 }
 
 public struct ProviderTokenResolution: Sendable {
@@ -161,6 +162,9 @@ public enum ProviderTokenResolver {
         }
         if let token = self.cleaned(environment["COPILOT_API_TOKEN"]) {
             return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = CopilotVSCodeTokenReader.token(environment: environment) {
+            return ProviderTokenResolution(token: token, source: .vscode)
         }
         return nil
     }

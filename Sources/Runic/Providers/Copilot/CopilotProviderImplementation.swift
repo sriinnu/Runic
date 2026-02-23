@@ -20,6 +20,34 @@ struct CopilotProviderImplementation: ProviderImplementation {
                 binding: context.stringBinding(\.copilotAPIToken),
                 actions: [
                     ProviderSettingsActionDescriptor(
+                        id: "copilot-import-vscode",
+                        title: "Import VS Code login",
+                        style: .link,
+                        isVisible: { context.settings.copilotAPIToken.isEmpty },
+                        perform: {
+                            if let token = CopilotVSCodeTokenReader.token(allowUserInteraction: true) {
+                                context.settings.copilotAPIToken = token
+                                context.settings.setProviderEnabled(
+                                    provider: .copilot,
+                                    metadata: ProviderRegistry.shared.metadata[.copilot]!,
+                                    enabled: true)
+                                let success = NSAlert()
+                                success.messageText = "VS Code Login Imported"
+                                success.informativeText = "Runic imported your GitHub Copilot token from VS Code."
+                                success.runModal()
+                                await context.store.refresh(trigger: .login)
+                                return
+                            }
+
+                            let failure = NSAlert()
+                            failure.messageText = "Import Failed"
+                            failure.informativeText = """
+                            Runic could not access VS Code Copilot credentials.
+                            You can sign in directly using "Sign in with GitHub" below.
+                            """
+                            failure.runModal()
+                        }),
+                    ProviderSettingsActionDescriptor(
                         id: "copilot-login",
                         title: "Sign in with GitHub",
                         style: .bordered,

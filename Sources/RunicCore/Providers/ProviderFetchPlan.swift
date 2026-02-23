@@ -110,6 +110,11 @@ public enum ProviderFetchError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case let .noAvailableStrategy(provider):
+            if provider == .copilot {
+                return """
+                No available fetch strategy for copilot. Add `COPILOT_API_TOKEN`, sign in from Runic Copilot settings, or keep VS Code signed in with accessible keychain secrets.
+                """
+            }
             return "No available fetch strategy for \(provider.rawValue)."
         case .missingCredentials:
             return "Missing or invalid credentials."
