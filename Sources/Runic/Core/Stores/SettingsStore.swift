@@ -421,6 +421,61 @@ final class SettingsStore {
         didSet { self.schedulePersistGroqAPIToken() }
     }
 
+    /// DeepSeek API key (stored in Keychain).
+    var deepSeekAPIToken: String {
+        didSet { self.schedulePersistDeepSeekAPIToken() }
+    }
+
+    /// Fireworks API key (stored in Keychain).
+    var fireworksAPIToken: String {
+        didSet { self.schedulePersistFireworksAPIToken() }
+    }
+
+    /// Mistral API key (stored in Keychain).
+    var mistralAPIToken: String {
+        didSet { self.schedulePersistMistralAPIToken() }
+    }
+
+    /// Perplexity API key (stored in Keychain).
+    var perplexityAPIToken: String {
+        didSet { self.schedulePersistPerplexityAPIToken() }
+    }
+
+    /// Kimi API key (stored in Keychain).
+    var kimiAPIToken: String {
+        didSet { self.schedulePersistKimiAPIToken() }
+    }
+
+    /// Auggie API token (stored in Keychain).
+    var auggieAPIToken: String {
+        didSet { self.schedulePersistAuggieAPIToken() }
+    }
+
+    /// Together API key (stored in Keychain).
+    var togetherAPIToken: String {
+        didSet { self.schedulePersistTogetherAPIToken() }
+    }
+
+    /// Cohere API key (stored in Keychain).
+    var cohereAPIToken: String {
+        didSet { self.schedulePersistCohereAPIToken() }
+    }
+
+    /// xAI API key (stored in Keychain).
+    var xaiAPIToken: String {
+        didSet { self.schedulePersistXAiAPIToken() }
+    }
+
+    /// Cerebras API key (stored in Keychain).
+    var cerebrasAPIToken: String {
+        didSet { self.schedulePersistCerebrasAPIToken() }
+    }
+
+    /// SambaNova API key (stored in Keychain).
+    var sambaNovaAPIToken: String {
+        didSet { self.schedulePersistSambaNovaAPIToken() }
+    }
+
     private var selectedMenuProviderRaw: String? {
         didSet {
             if let raw = self.selectedMenuProviderRaw {
@@ -506,6 +561,17 @@ final class SettingsStore {
         _ = self.copilotAPIToken
         _ = self.openRouterAPIToken
         _ = self.groqAPIToken
+        _ = self.deepSeekAPIToken
+        _ = self.fireworksAPIToken
+        _ = self.mistralAPIToken
+        _ = self.perplexityAPIToken
+        _ = self.kimiAPIToken
+        _ = self.auggieAPIToken
+        _ = self.togetherAPIToken
+        _ = self.cohereAPIToken
+        _ = self.xaiAPIToken
+        _ = self.cerebrasAPIToken
+        _ = self.sambaNovaAPIToken
         _ = self.debugLoadingPattern
         _ = self.selectedMenuProvider
         _ = self.providerToggleRevision
@@ -532,6 +598,28 @@ final class SettingsStore {
     @ObservationIgnored private var openRouterTokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let groqTokenStore: any GroqTokenStoring
     @ObservationIgnored private var groqTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let deepSeekTokenStore: any DeepSeekTokenStoring
+    @ObservationIgnored private var deepSeekTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let fireworksTokenStore: any FireworksTokenStoring
+    @ObservationIgnored private var fireworksTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let mistralTokenStore: any MistralTokenStoring
+    @ObservationIgnored private var mistralTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let perplexityTokenStore: any PerplexityTokenStoring
+    @ObservationIgnored private var perplexityTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let kimiTokenStore: any KimiTokenStoring
+    @ObservationIgnored private var kimiTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let auggieTokenStore: any AuggieTokenStoring
+    @ObservationIgnored private var auggieTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let togetherTokenStore: any TogetherTokenStoring
+    @ObservationIgnored private var togetherTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let cohereTokenStore: any CohereTokenStoring
+    @ObservationIgnored private var cohereTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let xaiTokenStore: any XAITokenStoring
+    @ObservationIgnored private var xaiTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let cerebrasTokenStore: any CerebrasTokenStoring
+    @ObservationIgnored private var cerebrasTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let sambaNovaTokenStore: any SambaNovaTokenStoring
+    @ObservationIgnored private var sambaNovaTokenPersistTask: Task<Void, Never>?
     // Cache enablement so tight UI loops (menu bar animations) don't hit UserDefaults each tick.
     @ObservationIgnored private var cachedProviderEnablement: [UsageProvider: Bool] = [:]
     @ObservationIgnored private var cachedProviderEnablementRevision: Int = -1
@@ -551,7 +639,18 @@ final class SettingsStore {
         minimaxGroupIDStore: any MiniMaxGroupIDStoring = KeychainMiniMaxGroupIDStore(),
         copilotTokenStore: any CopilotTokenStoring = KeychainCopilotTokenStore(),
         openRouterTokenStore: any OpenRouterTokenStoring = KeychainOpenRouterTokenStore(),
-        groqTokenStore: any GroqTokenStoring = KeychainGroqTokenStore())
+        groqTokenStore: any GroqTokenStoring = KeychainGroqTokenStore(),
+        deepSeekTokenStore: any DeepSeekTokenStoring = KeychainDeepSeekTokenStore(),
+        fireworksTokenStore: any FireworksTokenStoring = KeychainFireworksTokenStore(),
+        mistralTokenStore: any MistralTokenStoring = KeychainMistralTokenStore(),
+        perplexityTokenStore: any PerplexityTokenStoring = KeychainPerplexityTokenStore(),
+        kimiTokenStore: any KimiTokenStoring = KeychainKimiTokenStore(),
+        auggieTokenStore: any AuggieTokenStoring = KeychainAuggieTokenStore(),
+        togetherTokenStore: any TogetherTokenStoring = KeychainTogetherTokenStore(),
+        cohereTokenStore: any CohereTokenStoring = KeychainCohereTokenStore(),
+        xaiTokenStore: any XAITokenStoring = KeychainXAITokenStore(),
+        cerebrasTokenStore: any CerebrasTokenStoring = KeychainCerebrasTokenStore(),
+        sambaNovaTokenStore: any SambaNovaTokenStoring = KeychainSambaNovaTokenStore())
     {
         self.userDefaults = userDefaults
         self.zaiTokenStore = zaiTokenStore
@@ -561,6 +660,17 @@ final class SettingsStore {
         self.copilotTokenStore = copilotTokenStore
         self.openRouterTokenStore = openRouterTokenStore
         self.groqTokenStore = groqTokenStore
+        self.deepSeekTokenStore = deepSeekTokenStore
+        self.fireworksTokenStore = fireworksTokenStore
+        self.mistralTokenStore = mistralTokenStore
+        self.perplexityTokenStore = perplexityTokenStore
+        self.kimiTokenStore = kimiTokenStore
+        self.auggieTokenStore = auggieTokenStore
+        self.togetherTokenStore = togetherTokenStore
+        self.cohereTokenStore = cohereTokenStore
+        self.xaiTokenStore = xaiTokenStore
+        self.cerebrasTokenStore = cerebrasTokenStore
+        self.sambaNovaTokenStore = sambaNovaTokenStore
         self.providerOrderRaw = userDefaults.stringArray(forKey: "providerOrder") ?? []
         let raw = userDefaults.string(forKey: "refreshFrequency") ?? RefreshFrequency.manual.rawValue
         self.refreshFrequency = RefreshFrequency(rawValue: raw) ?? .manual
@@ -638,6 +748,17 @@ final class SettingsStore {
         self.copilotAPIToken = (try? copilotTokenStore.loadToken()) ?? ""
         self.openRouterAPIToken = (try? openRouterTokenStore.loadToken()) ?? ""
         self.groqAPIToken = (try? groqTokenStore.loadToken()) ?? ""
+        self.deepSeekAPIToken = (try? deepSeekTokenStore.loadToken()) ?? ""
+        self.fireworksAPIToken = (try? fireworksTokenStore.loadToken()) ?? ""
+        self.mistralAPIToken = (try? mistralTokenStore.loadToken()) ?? ""
+        self.perplexityAPIToken = (try? perplexityTokenStore.loadToken()) ?? ""
+        self.kimiAPIToken = (try? kimiTokenStore.loadToken()) ?? ""
+        self.auggieAPIToken = (try? auggieTokenStore.loadToken()) ?? ""
+        self.togetherAPIToken = (try? togetherTokenStore.loadToken()) ?? ""
+        self.cohereAPIToken = (try? cohereTokenStore.loadToken()) ?? ""
+        self.xaiAPIToken = (try? xaiTokenStore.loadToken()) ?? ""
+        self.cerebrasAPIToken = (try? cerebrasTokenStore.loadToken()) ?? ""
+        self.sambaNovaAPIToken = (try? sambaNovaTokenStore.loadToken()) ?? ""
         self.selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
         self.providerDetectionCompleted = userDefaults.object(
             forKey: "providerDetectionCompleted") as? Bool ?? false
@@ -1040,6 +1161,281 @@ final class SettingsStore {
             }.value
             if let error {
                 RunicLog.logger("groq-token-store").error("Failed to persist Groq token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistDeepSeekAPIToken() {
+        self.deepSeekTokenPersistTask?.cancel()
+        let token = self.deepSeekAPIToken
+        let tokenStore = self.deepSeekTokenStore
+        self.deepSeekTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("deepseek-token-store").error("Failed to persist DeepSeek token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistFireworksAPIToken() {
+        self.fireworksTokenPersistTask?.cancel()
+        let token = self.fireworksAPIToken
+        let tokenStore = self.fireworksTokenStore
+        self.fireworksTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("fireworks-token-store").error("Failed to persist Fireworks token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistMistralAPIToken() {
+        self.mistralTokenPersistTask?.cancel()
+        let token = self.mistralAPIToken
+        let tokenStore = self.mistralTokenStore
+        self.mistralTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("mistral-token-store").error("Failed to persist Mistral token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistPerplexityAPIToken() {
+        self.perplexityTokenPersistTask?.cancel()
+        let token = self.perplexityAPIToken
+        let tokenStore = self.perplexityTokenStore
+        self.perplexityTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("perplexity-token-store").error("Failed to persist Perplexity token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistKimiAPIToken() {
+        self.kimiTokenPersistTask?.cancel()
+        let token = self.kimiAPIToken
+        let tokenStore = self.kimiTokenStore
+        self.kimiTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("kimi-token-store").error("Failed to persist Kimi token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistAuggieAPIToken() {
+        self.auggieTokenPersistTask?.cancel()
+        let token = self.auggieAPIToken
+        let tokenStore = self.auggieTokenStore
+        self.auggieTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("auggie-token-store").error("Failed to persist Auggie token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistTogetherAPIToken() {
+        self.togetherTokenPersistTask?.cancel()
+        let token = self.togetherAPIToken
+        let tokenStore = self.togetherTokenStore
+        self.togetherTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("together-token-store").error("Failed to persist Together token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistCohereAPIToken() {
+        self.cohereTokenPersistTask?.cancel()
+        let token = self.cohereAPIToken
+        let tokenStore = self.cohereTokenStore
+        self.cohereTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("cohere-token-store").error("Failed to persist Cohere token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistXAiAPIToken() {
+        self.xaiTokenPersistTask?.cancel()
+        let token = self.xaiAPIToken
+        let tokenStore = self.xaiTokenStore
+        self.xaiTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("xai-token-store").error("Failed to persist xAI token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistCerebrasAPIToken() {
+        self.cerebrasTokenPersistTask?.cancel()
+        let token = self.cerebrasAPIToken
+        let tokenStore = self.cerebrasTokenStore
+        self.cerebrasTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("cerebras-token-store").error("Failed to persist Cerebras token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistSambaNovaAPIToken() {
+        self.sambaNovaTokenPersistTask?.cancel()
+        let token = self.sambaNovaAPIToken
+        let tokenStore = self.sambaNovaTokenStore
+        self.sambaNovaTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("sambanova-token-store").error("Failed to persist SambaNova token: \(error)")
             }
         }
     }

@@ -714,6 +714,17 @@ final class UsageStore {
         case .minimax: nil
         case .openrouter: nil
         case .groq: nil
+        case .deepseek: nil
+        case .fireworks: nil
+        case .mistral: nil
+        case .perplexity: nil
+        case .kimi: nil
+        case .auggie: nil
+        case .together: nil
+        case .cohere: nil
+        case .xai: nil
+        case .cerebras: nil
+        case .sambanova: nil
         }
     }
 
@@ -734,14 +745,16 @@ final class UsageStore {
     }
 
     var isStale: Bool {
-        (self.isEnabled(.codex) && self.lastCodexError != nil) ||
-            (self.isEnabled(.claude) && self.lastClaudeError != nil) ||
-            (self.isEnabled(.zai) && self.errors[.zai] != nil) ||
-            (self.isEnabled(.gemini) && self.errors[.gemini] != nil) ||
-            (self.isEnabled(.antigravity) && self.errors[.antigravity] != nil) ||
-            (self.isEnabled(.cursor) && self.errors[.cursor] != nil) ||
-            (self.isEnabled(.factory) && self.errors[.factory] != nil) ||
-            (self.isEnabled(.copilot) && self.errors[.copilot] != nil)
+        self.enabledProviders().contains { provider in
+            switch provider {
+            case .codex:
+                self.lastCodexError != nil
+            case .claude:
+                self.lastClaudeError != nil
+            default:
+                self.errors[provider] != nil
+            }
+        }
     }
 
     func autoRefreshStatusLine() -> String? {
@@ -2648,6 +2661,50 @@ extension UsageStore {
             case .groq:
                 let text = "Groq debug log not yet implemented"
                 await MainActor.run { self.probeLogs[.groq] = text }
+                return text
+            case .deepseek:
+                let text = "DeepSeek debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.deepseek] = text }
+                return text
+            case .fireworks:
+                let text = "Fireworks debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.fireworks] = text }
+                return text
+            case .mistral:
+                let text = "Mistral debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.mistral] = text }
+                return text
+            case .perplexity:
+                let text = "Perplexity debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.perplexity] = text }
+                return text
+            case .kimi:
+                let text = "Kimi debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.kimi] = text }
+                return text
+            case .auggie:
+                let text = "Auggie debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.auggie] = text }
+                return text
+            case .together:
+                let text = "Together debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.together] = text }
+                return text
+            case .cohere:
+                let text = "Cohere debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.cohere] = text }
+                return text
+            case .xai:
+                let text = "xAI debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.xai] = text }
+                return text
+            case .cerebras:
+                let text = "Cerebras debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.cerebras] = text }
+                return text
+            case .sambanova:
+                let text = "SambaNova debug log not yet implemented"
+                await MainActor.run { self.probeLogs[.sambanova] = text }
                 return text
             }
         }.value

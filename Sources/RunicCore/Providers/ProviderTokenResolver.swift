@@ -32,6 +32,17 @@ public enum ProviderTokenResolver {
     private static let minimaxGroupAccount = "minimax-group-id"
     private static let openRouterAccount = "openrouter-api-token"
     private static let groqAccount = "groq-api-token"
+    private static let deepSeekAccount = "deepseek-api-token"
+    private static let fireworksAccount = "fireworks-api-token"
+    private static let mistralAccount = "mistral-api-token"
+    private static let perplexityAccount = "perplexity-api-token"
+    private static let kimiAccount = "kimi-api-token"
+    private static let auggieAccount = "auggie-api-token"
+    private static let togetherAccount = "together-api-token"
+    private static let cohereAccount = "cohere-api-token"
+    private static let xaiAccount = "xai-api-token"
+    private static let cerebrasAccount = "cerebras-api-token"
+    private static let sambanovaAccount = "sambanova-api-token"
 
     public static func zaiToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.zaiResolution(environment: environment)?.token
@@ -65,6 +76,62 @@ public enum ProviderTokenResolver {
 
     public static func groqToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.groqResolution(environment: environment)?.token
+    }
+
+    public static func deepSeekToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.deepSeekResolution(environment: environment)?.token
+    }
+
+    public static func fireworksToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.fireworksResolution(environment: environment)?.token
+    }
+
+    public static func mistralToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.mistralResolution(environment: environment)?.token
+    }
+
+    public static func perplexityToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.perplexityResolution(environment: environment)?.token
+    }
+
+    public static func kimiToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.kimiResolution(environment: environment)?.token
+    }
+
+    public static func auggieToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.auggieResolution(environment: environment)?.token
+    }
+
+    public static func togetherToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.togetherResolution(environment: environment)?.token
+    }
+
+    public static func cohereToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.cohereResolution(environment: environment)?.token
+    }
+
+    public static func xaiToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.xaiResolution(environment: environment)?.token
+    }
+
+    public static func cerebrasToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.cerebrasResolution(environment: environment)?.token
+    }
+
+    public static func sambaNovaToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.sambaNovaResolution(environment: environment)?.token
     }
 
     public static func zaiResolution(
@@ -155,6 +222,147 @@ public enum ProviderTokenResolver {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
         if let token = self.cleaned(environment["GROQ_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func deepSeekResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.deepSeekAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["DEEPSEEK_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func fireworksResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.fireworksAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["FIREWORKS_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func mistralResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.mistralAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["MISTRAL_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func perplexityResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.perplexityAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["PPLX_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["PERPLEXITY_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func kimiResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.kimiAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["KIMI_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["MOONSHOT_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func auggieResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.auggieAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["AUGMENT_API_TOKEN"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["AUGGIE_API_TOKEN"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func togetherResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.togetherAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["TOGETHER_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func cohereResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.cohereAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["COHERE_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func xaiResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.xaiAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["XAI_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func cerebrasResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.cerebrasAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["CEREBRAS_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func sambaNovaResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.sambanovaAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["SAMBANOVA_API_KEY"]) {
             return ProviderTokenResolution(token: token, source: .environment)
         }
         return nil

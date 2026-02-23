@@ -21,6 +21,17 @@ enum ProviderImplementationRegistry {
         _ = ProviderImplementationRegistry.register(MiniMaxProviderImplementation())
         _ = ProviderImplementationRegistry.register(OpenRouterProviderImplementation())
         _ = ProviderImplementationRegistry.register(GroqProviderImplementation())
+        _ = ProviderImplementationRegistry.register(DeepSeekProviderImplementation())
+        _ = ProviderImplementationRegistry.register(FireworksProviderImplementation())
+        _ = ProviderImplementationRegistry.register(MistralProviderImplementation())
+        _ = ProviderImplementationRegistry.register(PerplexityProviderImplementation())
+        _ = ProviderImplementationRegistry.register(KimiProviderImplementation())
+        _ = ProviderImplementationRegistry.register(AuggieProviderImplementation())
+        _ = ProviderImplementationRegistry.register(TogetherProviderImplementation())
+        _ = ProviderImplementationRegistry.register(CohereProviderImplementation())
+        _ = ProviderImplementationRegistry.register(XAIProviderImplementation())
+        _ = ProviderImplementationRegistry.register(CerebrasProviderImplementation())
+        _ = ProviderImplementationRegistry.register(SambaNovaProviderImplementation())
     }()
 
     private static func ensureBootstrapped() {

@@ -46,6 +46,17 @@ enum ProviderChoice: String, AppEnum {
         case .minimax: return nil // MiniMax not yet supported in widgets
         case .openrouter: return nil // OpenRouter not yet supported in widgets
         case .groq: return nil // Groq not yet supported in widgets
+        case .deepseek: return nil // DeepSeek not yet supported in widgets
+        case .fireworks: return nil // Fireworks not yet supported in widgets
+        case .mistral: return nil // Mistral not yet supported in widgets
+        case .perplexity: return nil // Perplexity not yet supported in widgets
+        case .kimi: return nil // Kimi not yet supported in widgets
+        case .auggie: return nil // Auggie not yet supported in widgets
+        case .together: return nil // Together not yet supported in widgets
+        case .cohere: return nil // Cohere not yet supported in widgets
+        case .xai: return nil // xAI not yet supported in widgets
+        case .cerebras: return nil // Cerebras not yet supported in widgets
+        case .sambanova: return nil // SambaNova not yet supported in widgets
         }
     }
 }

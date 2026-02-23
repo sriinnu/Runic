@@ -65,6 +65,17 @@ public enum ProviderDescriptorRegistry {
         _ = ProviderDescriptorRegistry.register(MiniMaxProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(OpenRouterProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(GroqProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(DeepSeekProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(FireworksProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(MistralProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(PerplexityProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(KimiProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(AuggieProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(TogetherProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(CohereProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(XAIProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(CerebrasProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(SambaNovaProviderDescriptor.descriptor)
     }()
 
     private static func ensureBootstrapped() {

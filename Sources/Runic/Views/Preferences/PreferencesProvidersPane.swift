@@ -810,7 +810,23 @@ struct ProvidersPane: View {
         if provider == .cursor || provider == .minimax {
             return "web"
         }
-        if provider == .zai {
+        let apiBackedProviders: Set<UsageProvider> = [
+            .zai,
+            .openrouter,
+            .groq,
+            .deepseek,
+            .fireworks,
+            .mistral,
+            .perplexity,
+            .kimi,
+            .auggie,
+            .together,
+            .cohere,
+            .xai,
+            .cerebras,
+            .sambanova,
+        ]
+        if apiBackedProviders.contains(provider) {
             return "api"
         }
 

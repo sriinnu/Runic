@@ -268,6 +268,17 @@ private struct ProviderSwitchChip: View {
         case .minimax: "MiniMax"
         case .openrouter: "OR"
         case .groq: "Groq"
+        case .deepseek: "DeepSeek"
+        case .fireworks: "Fireworks"
+        case .mistral: "Mistral"
+        case .perplexity: "PPLX"
+        case .kimi: "Kimi"
+        case .auggie: "Auggie"
+        case .together: "Together"
+        case .cohere: "Cohere"
+        case .xai: "xAI"
+        case .cerebras: "Cerebras"
+        case .sambanova: "SambaNova"
         }
     }
 }
@@ -584,6 +595,28 @@ enum WidgetColors {
             Color(red: 255 / 255, green: 90 / 255, blue: 0 / 255) // OpenRouter orange
         case .groq:
             Color(red: 0 / 255, green: 200 / 255, blue: 150 / 255) // Groq teal
+        case .deepseek:
+            Color(red: 76 / 255, green: 110 / 255, blue: 245 / 255)
+        case .fireworks:
+            Color(red: 255 / 255, green: 115 / 255, blue: 0 / 255)
+        case .mistral:
+            Color(red: 255 / 255, green: 90 / 255, blue: 52 / 255)
+        case .perplexity:
+            Color(red: 35 / 255, green: 180 / 255, blue: 146 / 255)
+        case .kimi:
+            Color(red: 0 / 255, green: 129 / 255, blue: 255 / 255)
+        case .auggie:
+            Color(red: 255 / 255, green: 180 / 255, blue: 0 / 255)
+        case .together:
+            Color(red: 98 / 255, green: 76 / 255, blue: 245 / 255)
+        case .cohere:
+            Color(red: 58 / 255, green: 95 / 255, blue: 255 / 255)
+        case .xai:
+            Color(red: 20 / 255, green: 20 / 255, blue: 20 / 255)
+        case .cerebras:
+            Color(red: 14 / 255, green: 122 / 255, blue: 161 / 255)
+        case .sambanova:
+            Color(red: 236 / 255, green: 84 / 255, blue: 74 / 255)
         }
     }
 }

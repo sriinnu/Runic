@@ -14,6 +14,17 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case minimax
     case openrouter
     case groq
+    case deepseek
+    case fireworks
+    case mistral
+    case perplexity
+    case kimi
+    case auggie
+    case together
+    case cohere
+    case xai
+    case cerebras
+    case sambanova
 }
 
 // swiftformat:enable sortDeclarations
@@ -30,6 +41,17 @@ public enum IconStyle: Sendable {
     case minimax
     case openrouter
     case groq
+    case deepseek
+    case fireworks
+    case mistral
+    case perplexity
+    case kimi
+    case auggie
+    case together
+    case cohere
+    case xai
+    case cerebras
+    case sambanova
     case combined
 }
 

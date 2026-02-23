@@ -66,6 +66,28 @@ enum CostUsageScanner {
             return CostUsageDailyReport(data: [], summary: nil)
         case .groq:
             return CostUsageDailyReport(data: [], summary: nil)
+        case .deepseek:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .fireworks:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .mistral:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .perplexity:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .kimi:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .auggie:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .together:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .cohere:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .xai:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .cerebras:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .sambanova:
+            return CostUsageDailyReport(data: [], summary: nil)
         }
     }
 
