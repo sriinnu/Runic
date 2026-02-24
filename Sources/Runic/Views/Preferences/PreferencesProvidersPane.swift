@@ -103,6 +103,7 @@ private enum ProviderInsightsComposer {
         let topProjectSpendForecast = store.ledgerTopProjectSpendForecast(for: provider)
         let modelBreakdown = store.ledgerModelBreakdown(for: provider)
         let projectBreakdown = store.ledgerProjectBreakdown(for: provider)
+        let coverage = store.metadata(for: provider).usageCoverage
 
         if let who = self.actorValue(identity: identity) {
             rows.append(ProviderInsightLine(id: "actor", label: "Who", value: who))
@@ -139,19 +140,23 @@ private enum ProviderInsightsComposer {
                 help: self.costAnomalyHelpText(anomaly)))
         }
 
-        if let topModel = store.ledgerTopModel(for: provider), topModel.provider == provider {
+        if let topModel = store.ledgerTopModel(for: provider), topModel.provider == provider, coverage.supportsModelBreakdown {
             rows.append(ProviderInsightLine(
                 id: "top-model",
                 label: "Top model",
                 value: self.topModelValue(topModel)))
-        } else if let windowModels = self.windowModelsValue(snapshot) {
+        } else if !coverage.supportsModelBreakdown, let windowModels = self.windowModelsValue(snapshot) {
             rows.append(ProviderInsightLine(
                 id: "models",
-                label: "Models",
-                value: windowModels))
+                label: "Quota windows",
+                value: windowModels,
+                help: "Live quota windows grouped by provider response window IDs."))
         }
 
-        if let topProject = store.ledgerTopProject(for: provider), topProject.provider == provider {
+        if coverage.supportsProjectAttribution,
+           let topProject = store.ledgerTopProject(for: provider),
+           topProject.provider == provider
+        {
             rows.append(ProviderInsightLine(
                 id: "top-project",
                 label: "Top project",
@@ -159,11 +164,11 @@ private enum ProviderInsightsComposer {
                 help: self.projectIdentityHelpText(topProject)))
         }
 
-        if let modelMix = self.modelMixValue(modelBreakdown) {
+        if coverage.supportsModelBreakdown, let modelMix = self.modelMixValue(modelBreakdown) {
             rows.append(ProviderInsightLine(id: "model-mix", label: "Model mix", value: modelMix))
         }
 
-        if let projectMix = self.projectMixValue(projectBreakdown) {
+        if coverage.supportsProjectAttribution, let projectMix = self.projectMixValue(projectBreakdown) {
             rows.append(ProviderInsightLine(
                 id: "project-mix",
                 label: "Project mix",
@@ -192,7 +197,7 @@ private enum ProviderInsightsComposer {
                 value: budget,
                 help: self.budgetHelpText(spendForecast)))
         }
-        if let projectBudget = self.projectBudgetValue(topProjectSpendForecast) {
+        if coverage.supportsProjectAttribution, let projectBudget = self.projectBudgetValue(topProjectSpendForecast) {
             rows.append(ProviderInsightLine(
                 id: "project-budget",
                 label: "Prj budget",
@@ -2426,14 +2431,14 @@ private struct ProviderSidebarDetailView: View {
                             }
                         }
 
-                        if let topModel = selected.topModel {
+                        if self.supportsModelBreakdown, let topModel = selected.topModel {
                             Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
                         }
 
-                        if let topProject = selected.topProject {
+                        if self.supportsProjectAttribution, let topProject = selected.topProject {
                             let project = self.projectDisplay(topProject)
                             Text("Top project: \(project.title)")
                                 .font(.caption)
@@ -2444,7 +2449,7 @@ private struct ProviderSidebarDetailView: View {
                     }
 
                     if self.historyDayDetailMode == .models {
-                        if !selected.modelSummaries.isEmpty {
+                        if self.supportsModelBreakdown, !selected.modelSummaries.isEmpty {
                             Text("Models used")
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
@@ -2455,20 +2460,20 @@ private struct ProviderSidebarDetailView: View {
                                     .textSelection(.enabled)
                                     .help(self.historyModelLine(summary))
                             }
-                        } else if !selected.modelsUsed.isEmpty {
+                        } else if self.supportsModelBreakdown, !selected.modelsUsed.isEmpty {
                             Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                                 .textSelection(.enabled)
                         } else {
-                            Text("No models recorded for this day.")
+                            Text(self.supportsModelBreakdown ? "No models recorded for this day." : "Model attribution is not available for this provider.")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
 
                     if self.historyDayDetailMode == .projects {
-                        if !selected.projectSummaries.isEmpty {
+                        if self.supportsProjectAttribution, !selected.projectSummaries.isEmpty {
                             Text("Top projects")
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
@@ -2481,7 +2486,7 @@ private struct ProviderSidebarDetailView: View {
                                     .help(project.helpText ?? "")
                             }
                         } else {
-                            Text("No projects recorded for this day.")
+                            Text(self.supportsProjectAttribution ? "No projects recorded for this day." : "Project attribution is not available for this provider.")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
@@ -2587,14 +2592,14 @@ private struct ProviderSidebarDetailView: View {
         if let spend = summary.totals.costUSD {
             lines.append("Spend: \(UsageFormatter.usdString(spend))")
         }
-        if let topModel = summary.topModel {
+        if self.supportsModelBreakdown, let topModel = summary.topModel {
             var modelLine = "Top model: \(UsageFormatter.modelDisplayName(topModel.model))"
             if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
                 modelLine += " · \(context)"
             }
             lines.append(modelLine)
         }
-        if !summary.modelSummaries.isEmpty {
+        if self.supportsModelBreakdown, !summary.modelSummaries.isEmpty {
             let modelCount = min(3, summary.modelSummaries.count)
             for summary in summary.modelSummaries.prefix(modelCount) {
                 var line = "Model: \(UsageFormatter.modelDisplayName(summary.model)) · \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tok"
@@ -2604,7 +2609,7 @@ private struct ProviderSidebarDetailView: View {
                 lines.append(line)
             }
         }
-        if let topProject = summary.topProject {
+        if self.supportsProjectAttribution, let topProject = summary.topProject {
             var projectLine = "Top project: \(self.projectDisplay(topProject).title)"
             if let cost = topProject.totals.costUSD {
                 projectLine += " · \(UsageFormatter.usdString(cost))"
@@ -2803,6 +2808,7 @@ private struct ProviderSidebarDetailView: View {
         let tokenSnapshot = self.store.tokenSnapshot(for: self.provider)
         let metadata = self.store.metadata(for: self.provider)
         let hasModelBreakdown = metadata.usageCoverage.supportsModelBreakdown
+        let hasProjectAttribution = metadata.usageCoverage.supportsProjectAttribution
 
         if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
             items.append(QuickMetricItem(id: "today", title: "Today", value: today, helpText: "Session cost and tokens."))
@@ -2816,7 +2822,7 @@ private struct ProviderSidebarDetailView: View {
         if let spend = self.providerSpendValue(snapshot?.providerCost) {
             items.append(QuickMetricItem(id: "spend", title: "Spend", value: spend, helpText: "Provider billing usage."))
         }
-        if let topModel = self.store.ledgerTopModel(for: self.provider) {
+        if hasModelBreakdown, let topModel = self.store.ledgerTopModel(for: self.provider) {
             let modelName = UsageFormatter.modelDisplayName(topModel.model)
             var value = self.modelLineValue(
                 title: modelName,
@@ -2830,7 +2836,7 @@ private struct ProviderSidebarDetailView: View {
                 title: "Top model",
                 value: value,
                 helpText: "Highest token usage model in the active insights window."))
-        } else if let windowModel = self.topWindowModel {
+        } else if !hasModelBreakdown, let windowModel = self.topWindowModel {
             let modelName = UsageFormatter.modelDisplayName(windowModel.label)
             let used = Int(windowModel.window.usedPercent.rounded())
             items.append(QuickMetricItem(
@@ -2841,7 +2847,7 @@ private struct ProviderSidebarDetailView: View {
                     "Most constrained model/category from live quota windows."
                     : "Top quota window from live fetch response."))
         }
-        if let topProject = self.store.ledgerTopProject(for: self.provider) {
+        if hasProjectAttribution, let topProject = self.store.ledgerTopProject(for: self.provider) {
             let project = self.projectDisplay(topProject)
             let value = self.topProjectSummaryValue(topProject)
             items.append(QuickMetricItem(
@@ -2915,7 +2921,18 @@ private struct ProviderSidebarDetailView: View {
         self.store.metadata(for: self.provider).usageCoverage.supportsModelBreakdown ? "Models" : "Quota windows"
     }
 
+    private var supportsModelBreakdown: Bool {
+        self.store.metadata(for: self.provider).usageCoverage.supportsModelBreakdown
+    }
+
+    private var supportsProjectAttribution: Bool {
+        self.store.metadata(for: self.provider).usageCoverage.supportsProjectAttribution
+    }
+
     private var topProjectLines: [String] {
+        guard self.supportsProjectAttribution else {
+            return []
+        }
         let ranked = self.store.ledgerProjectBreakdown(for: self.provider).sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
                 return lhs.displayProjectName < rhs.displayProjectName
