@@ -157,11 +157,11 @@ public enum ProjectsCommand {
 
     private static func resolveProviders(_ arg: String?) -> [UsageProvider] {
         guard let arg = arg?.lowercased().trimmingCharacters(in: .whitespaces) else {
-            return [.claude, .codex]
+            return UsageProvider.allCases
         }
 
         if arg == "all" {
-            return [.claude, .codex]
+            return UsageProvider.allCases
         }
 
         guard let provider = UsageProvider(rawValue: arg) else {
@@ -181,14 +181,7 @@ public enum ProjectsCommand {
         var allEntries: [UsageLedgerEntry] = []
 
         for provider in providers {
-            let source: (any UsageLedgerSource)? = switch provider {
-            case .claude:
-                ClaudeUsageLogSource(maxAgeDays: maxAgeDays, now: now)
-            case .codex:
-                CodexUsageLogSource(maxAgeDays: maxAgeDays, now: now)
-            default:
-                nil
-            }
+            let source = UsageLedgerSourceFactory.source(for: provider, now: now, maxAgeDays: maxAgeDays)
 
             if let source {
                 let entries = try await source.loadEntries()

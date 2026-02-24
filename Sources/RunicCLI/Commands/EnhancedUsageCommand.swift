@@ -358,14 +358,7 @@ public enum EnhancedUsageCommand {
         provider: UsageProvider,
         days: Int
     ) async throws -> [DailyTrend]? {
-        let source: (any UsageLedgerSource)? = switch provider {
-        case .claude:
-            ClaudeUsageLogSource(maxAgeDays: days, now: Date())
-        case .codex:
-            CodexUsageLogSource(maxAgeDays: days, now: Date())
-        default:
-            nil
-        }
+        let source = UsageLedgerSourceFactory.source(for: provider, now: Date(), maxAgeDays: days)
 
         guard let source else { return nil }
 
