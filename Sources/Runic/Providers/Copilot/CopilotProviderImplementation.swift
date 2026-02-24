@@ -48,6 +48,34 @@ struct CopilotProviderImplementation: ProviderImplementation {
                             failure.runModal()
                         }),
                     ProviderSettingsActionDescriptor(
+                        id: "copilot-import-gh-cli",
+                        title: "Import GitHub CLI login",
+                        style: .link,
+                        isVisible: { context.settings.copilotAPIToken.isEmpty },
+                        perform: {
+                            if let token = CopilotGitHubCLITokenReader.token() {
+                                context.settings.copilotAPIToken = token
+                                context.settings.setProviderEnabled(
+                                    provider: .copilot,
+                                    metadata: ProviderRegistry.shared.metadata[.copilot]!,
+                                    enabled: true)
+                                let success = NSAlert()
+                                success.messageText = "GitHub CLI Login Imported"
+                                success.informativeText = "Runic imported your GitHub Copilot token from GitHub CLI."
+                                success.runModal()
+                                await context.store.refresh(trigger: .login)
+                                return
+                            }
+
+                            let failure = NSAlert()
+                            failure.messageText = "Import Failed"
+                            failure.informativeText = """
+                            Runic could not find a valid GitHub CLI token.
+                            Sign in with GitHub CLI (`gh auth login`) and retry, or use the GitHub sign in button.
+                            """
+                            failure.runModal()
+                        }),
+                    ProviderSettingsActionDescriptor(
                         id: "copilot-login",
                         title: "Sign in with GitHub",
                         style: .bordered,

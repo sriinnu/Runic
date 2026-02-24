@@ -116,7 +116,8 @@ public enum ProviderFetchError: LocalizedError, Sendable {
         case let .noAvailableStrategy(provider):
             if provider == .copilot {
                 return "No available fetch strategy for copilot. Add `COPILOT_API_TOKEN`, `GITHUB_TOKEN`, or `GH_TOKEN`, " +
-                    "then sign in from Runic Copilot settings or keep VS Code signed in with accessible keychain secrets."
+                    "or configure GitHub CLI (`GH_CONFIG_DIR` / `~/.config/gh`). " +
+                    "You can also sign in from Runic Copilot settings or keep VS Code signed in with accessible keychain secrets."
             }
             return "No available fetch strategy for \(provider.rawValue)."
         case .missingCredentials:

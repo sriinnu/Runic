@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import RunicCore
 
@@ -36,6 +37,31 @@ struct CopilotTokenResolverTests {
         let resolution = ProviderTokenResolver.copilotResolution(environment: env)
         #expect(resolution?.token == "gh-fallback-token")
         #expect(resolution?.sourceKey == "GH_TOKEN")
+    }
+
+    @Test
+    func copilotTokenFallsBackToGithubCLIToken() throws {
+        let token = "gho_abcdefghijklmnopqrstuvwxyz1234"
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-copilot-gh-cli-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let hostsFile = tempDir.appendingPathComponent("hosts.yml")
+        let hostsContent = """
+        github.com:
+          oauth_token: \(token)
+        """
+        try hostsContent.write(to: hostsFile, atomically: true, encoding: .utf8)
+
+        let env = [
+            "GH_CONFIG_DIR": tempDir.path,
+            "GH_TOKEN": "",
+        ]
+        let resolution = ProviderTokenResolver.copilotResolution(environment: env)
+        #expect(resolution?.token == token)
+        #expect(resolution?.source == .environment)
+        #expect(resolution?.sourceKey == "gh-cli")
     }
 
     @Test

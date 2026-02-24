@@ -56,6 +56,10 @@ public enum ProviderTokenResolver {
         self.copilotResolution(environment: environment)?.token
     }
 
+    public static func copilotCLIToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        CopilotGitHubCLITokenReader.token(environment: environment)
+    }
+
     public static func minimaxToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.minimaxResolution(environment: environment)?.token
     }
@@ -170,6 +174,9 @@ public enum ProviderTokenResolver {
         }
         if let token = self.cleaned(environment["GH_TOKEN"]) {
             return ProviderTokenResolution(token: token, source: .environment, sourceKey: "GH_TOKEN")
+        }
+        if let token = self.copilotCLIToken(environment: environment) {
+            return ProviderTokenResolution(token: token, source: .environment, sourceKey: "gh-cli")
         }
         if let token = CopilotVSCodeTokenReader.token(environment: environment) {
             return ProviderTokenResolution(token: token, source: .vscode, sourceKey: "vscode")
