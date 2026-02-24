@@ -11,9 +11,11 @@ struct OpenRouterCreditsResponse: Decodable {
 
 struct OpenRouterUsageFetcher {
     static let apiURL = URL(string: "https://openrouter.ai/api/v1/credits")!
+    private static let requestTimeout: TimeInterval = 20
 
     static func fetchCredits(apiKey: String) async throws -> OpenRouterCreditsResponse {
         var request = URLRequest(url: apiURL)
+        request.timeoutInterval = Self.requestTimeout
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 

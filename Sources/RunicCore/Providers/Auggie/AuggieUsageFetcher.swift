@@ -38,6 +38,7 @@ struct AuggieUsageMetrics: Sendable {
 
 struct AuggieUsageFetcher {
     static let baseURL = URL(string: "https://api.augmentcode.com/analytics/v0/daily-usage")!
+    private static let requestTimeout: TimeInterval = 20
 
     static func fetchDailyUsage(apiKey: String) async throws -> AuggieUsageMetrics {
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
@@ -48,6 +49,7 @@ struct AuggieUsageFetcher {
         let url = components?.url ?? baseURL
 
         var request = URLRequest(url: url)
+        request.timeoutInterval = Self.requestTimeout
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 

@@ -163,6 +163,27 @@ public enum UsageFormatter {
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
+    public static func tokenSummaryString(_ totals: UsageLedgerTotals, includeBreakdown: Bool = true) -> String {
+        let total = tokenCountString(totals.totalTokens)
+        guard includeBreakdown else {
+            return "\(total) tok"
+        }
+
+        var parts: [String] = []
+        if totals.inputTokens > 0 {
+            parts.append("in \(tokenCountString(totals.inputTokens))")
+        }
+        if totals.outputTokens > 0 {
+            parts.append("out \(tokenCountString(totals.outputTokens))")
+        }
+        let cached = totals.cacheCreationTokens + totals.cacheReadTokens
+        if cached > 0 {
+            parts.append("cache \(tokenCountString(cached))")
+        }
+        guard !parts.isEmpty else { return "\(total) tok" }
+        return "\(total) tok (\(parts.joined(separator: ", ")))"
+    }
+
     public static func creditEventSummary(_ event: CreditEvent) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -252,6 +273,14 @@ public enum UsageFormatter {
     }
 
     private static let modelContextExact: [String: Int] = [
+        "gpt-5": 400_000,
+        "gpt-5-codex": 400_000,
+        "gpt-5-mini": 400_000,
+        "gpt-5-nano": 400_000,
+        "gpt-5-thinking": 400_000,
+        "gpt-5-thinking-mini": 400_000,
+        "gpt-5-1": 400_000,
+        "gpt-5-2": 400_000,
         "gpt-4o": 128_000,
         "gpt-4o-mini": 128_000,
         "gpt-4-turbo": 128_000,
@@ -269,7 +298,9 @@ public enum UsageFormatter {
         "claude-opus-4-5": 200_000,
         "claude-opus-4-0": 200_000,
         "claude-opus-4-1": 200_000,
+        "claude-opus-4-6": 1_000_000,
         "claude-sonnet-4": 200_000,
+        "claude-sonnet-4-6": 1_000_000,
         "claude-opus": 200_000,
         "claude-3-opus": 200_000,
         "claude-3-sonnet": 200_000,
@@ -311,6 +342,8 @@ public enum UsageFormatter {
         ("gpt-4o", 128_000),
         ("gpt-4-", 128_000),
         ("gpt-3.5", 16_385),
+        ("gpt-5", 400_000),
+        ("gpt-5-", 400_000),
         ("claude-3", 200_000),
         ("claude-4", 200_000),
         ("o1", 200_000),

@@ -1789,6 +1789,14 @@ private enum ProviderHistoryMetricMode: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
+private enum ProviderHistoryDayDetailMode: String, CaseIterable, Identifiable {
+    case summary = "Summary"
+    case models = "Models"
+    case projects = "Projects"
+
+    var id: String { self.rawValue }
+}
+
 @MainActor
 private struct ProviderHistoryCalendarDayCell: View {
     let dayNumber: Int
@@ -1868,6 +1876,7 @@ private struct ProviderSidebarDetailView: View {
     @State private var historyMonthStart: Date = Self.monthStart(for: Date())
     @State private var historySnapshot: ProviderHistoryMonthSnapshot?
     @State private var historySelectedDay: Date?
+    @State private var historyDayDetailMode: ProviderHistoryDayDetailMode = .summary
     @State private var historyIsLoading = false
     @State private var historyError: String?
 
@@ -2092,6 +2101,7 @@ private struct ProviderSidebarDetailView: View {
             self.historyMonthStart = Self.monthStart(for: Date())
             self.historySnapshot = nil
             self.historySelectedDay = nil
+            self.historyDayDetailMode = .summary
             self.historyError = nil
             self.historyIsLoading = false
         }
@@ -2277,70 +2287,89 @@ private struct ProviderSidebarDetailView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                HStack(spacing: RunicSpacing.xs) {
-                    ProviderSidebarMetricChip(
-                        title: "Requests",
-                        value: self.decimalString(selected.requestCount),
-                        helpText: "Count of requests recorded in local ledger logs.")
-                    ProviderSidebarMetricChip(
-                        title: "Tokens",
-                        value: "\(UsageFormatter.tokenCountString(selected.totals.totalTokens)) tok",
-                        helpText: "Input + output + cache tokens.")
-                    if let spend = selected.totals.costUSD {
+                Picker("History detail", selection: self.$historyDayDetailMode) {
+                    ForEach(ProviderHistoryDayDetailMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .controlSize(.mini)
+                .frame(maxWidth: 240)
+
+                if self.historyDayDetailMode == .summary {
+                    HStack(spacing: RunicSpacing.xs) {
                         ProviderSidebarMetricChip(
-                            title: "Spend",
-                            value: UsageFormatter.usdString(spend),
-                            helpText: "Estimated day spend from ledger pricing.")
+                            title: "Requests",
+                            value: self.decimalString(selected.requestCount),
+                            helpText: "Count of requests recorded in local ledger logs.")
+                        ProviderSidebarMetricChip(
+                            title: "Tokens",
+                            value: UsageFormatter.tokenSummaryString(selected.totals),
+                            helpText: "Input, output, and cache token composition.")
+                        if let spend = selected.totals.costUSD {
+                            ProviderSidebarMetricChip(
+                                title: "Spend",
+                                value: UsageFormatter.usdString(spend),
+                                helpText: "Estimated day spend from ledger pricing.")
+                        }
                     }
-                }
 
-                if let topModel = selected.topModel {
-                    Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                }
-
-                if let topProject = selected.topProject {
-                    let project = self.projectDisplay(topProject)
-                    Text("Top project: \(project.title)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .help(project.helpText ?? "")
-                }
-
-                if !selected.modelSummaries.isEmpty {
-                    let modelSummaries = selected.modelSummaries.prefix(4)
-                    Text("Models used")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                    ForEach(Array(modelSummaries.enumerated()), id: \.offset) { _, summary in
-                        Text("• \(self.historyModelLine(summary))")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                    if let topModel = selected.topModel {
+                        Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                             .textSelection(.enabled)
-                            .help(self.historyModelLine(summary))
                     }
-                } else if !selected.modelsUsed.isEmpty {
-                    Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .textSelection(.enabled)
-                }
 
-                if !selected.projectSummaries.isEmpty {
-                    let projects = selected.projectSummaries.prefix(3)
-                    Text("Top projects")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                    ForEach(Array(projects.enumerated()), id: \.offset) { _, summary in
-                        let project = self.projectDisplay(summary)
-                        Text("• \(self.historyProjectLine(summary))")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                    if let topProject = selected.topProject {
+                        let project = self.projectDisplay(topProject)
+                        Text("Top project: \(project.title)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                             .textSelection(.enabled)
                             .help(project.helpText ?? "")
+                    }
+                }
+                if self.historyDayDetailMode == .models {
+                    if !selected.modelSummaries.isEmpty {
+                        Text("Models used")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(selected.modelSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                            Text("• \(self.historyModelLine(summary))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .textSelection(.enabled)
+                                .help(self.historyModelLine(summary))
+                        }
+                    } else if !selected.modelsUsed.isEmpty {
+                        Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .textSelection(.enabled)
+                    } else {
+                        Text("No models recorded for this day.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                if self.historyDayDetailMode == .projects {
+                    if !selected.projectSummaries.isEmpty {
+                        Text("Top projects")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(selected.projectSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                            let project = self.projectDisplay(summary)
+                            Text("• \(self.historyProjectLine(summary))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .textSelection(.enabled)
+                                .help(project.helpText ?? "")
+                        }
+                    } else {
+                        Text("No projects recorded for this day.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
             } else {
@@ -2449,7 +2478,7 @@ private struct ProviderSidebarDetailView: View {
             return lines.joined(separator: "\n")
         }
         lines.append("Requests: \(self.decimalString(summary.requestCount))")
-        lines.append("Tokens: \(UsageFormatter.tokenCountString(summary.totals.totalTokens))")
+        lines.append("Tokens: \(UsageFormatter.tokenSummaryString(summary.totals))")
         if let spend = summary.totals.costUSD {
             lines.append("Spend: \(UsageFormatter.usdString(spend))")
         }
@@ -2774,8 +2803,8 @@ private struct ProviderSidebarDetailView: View {
         requests: Int,
         model: String? = nil) -> String
     {
-        let tokens = UsageFormatter.tokenCountString(totals.totalTokens)
-        var parts = ["\(title)", "\(tokens) tok", "\(requests) req"]
+        let tokens = UsageFormatter.tokenSummaryString(totals)
+        var parts = ["\(title)", "\(tokens)", "\(requests) req"]
         if let model, let context = UsageFormatter.modelContextLabel(for: model) {
             parts.append(context)
         }

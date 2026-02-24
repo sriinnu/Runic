@@ -21,22 +21,14 @@ struct BedrockModelsResponse: Decodable, Sendable {
 }
 
 struct BedrockUsageFetcher {
+    private static let commandTimeout: TimeInterval = 20
+
     static func fetchModels(
         region: String,
         profile: String?,
         modelFilter: String?) async throws -> BedrockModelsResponse
     {
-        try await Task.detached(priority: .utility) {
-            try self.fetchModelsSync(region: region, profile: profile, modelFilter: modelFilter)
-        }.value
-    }
-
-    private static func fetchModelsSync(
-        region: String,
-        profile: String?,
-        modelFilter: String?) throws -> BedrockModelsResponse
-    {
-        let output = try self.runAWSCLI(
+        let output = try await self.runAWSCLI(
             arguments: ["bedrock", "list-foundation-models", "--region", region, "--output", "json"],
             profile: profile)
 
@@ -61,53 +53,37 @@ struct BedrockUsageFetcher {
         return BedrockModelsResponse(modelSummaries: filtered)
     }
 
-    private static func runAWSCLI(arguments: [String], profile: String?) throws -> Data {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["aws"] + arguments
-
+    private static func runAWSCLI(arguments: [String], profile: String?) async throws -> Data {
         var environment = ProcessInfo.processInfo.environment
         environment["PATH"] = self.effectivePATH(existing: environment["PATH"])
         if let profile = self.cleaned(profile) {
             environment["AWS_PROFILE"] = profile
         }
-        process.environment = environment
-
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
 
         do {
-            try process.run()
-        } catch {
-            throw BedrockCLIError.awsCLINotFound
+            let result = try await SubprocessRunner.run(
+                binary: "/usr/bin/env",
+                arguments: ["aws"] + arguments,
+                environment: environment,
+                timeout: Self.commandTimeout,
+                label: "bedrock.cli")
+            let output = Data(result.stdout.utf8)
+            guard !output.isEmpty else {
+                throw BedrockCLIError.emptyResponse
+            }
+            return output
+        } catch let error as SubprocessRunnerError {
+            switch error {
+            case .binaryNotFound:
+                throw BedrockCLIError.awsCLINotFound
+            case let .launchFailed(details):
+                throw BedrockCLIError.commandFailed(statusCode: -1, detail: details)
+            case .timedOut:
+                throw BedrockCLIError.commandTimedOut
+            case let .nonZeroExit(code, stderr):
+                throw BedrockCLIError.commandFailed(statusCode: Int(code), detail: stderr)
+            }
         }
-
-        process.waitUntilExit()
-        let output = stdout.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
-
-        guard process.terminationStatus == 0 else {
-            let stderrMessage = String(data: stderrData, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let stdoutMessage = String(data: output, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let detail = [stderrMessage, stdoutMessage]
-                .compactMap { message in
-                    guard let message, !message.isEmpty else { return nil }
-                    return message
-                }
-                .joined(separator: " | ")
-            throw BedrockCLIError.commandFailed(
-                statusCode: Int(process.terminationStatus),
-                detail: detail.isEmpty ? nil : detail)
-        }
-
-        guard !output.isEmpty else {
-            throw BedrockCLIError.emptyResponse
-        }
-        return output
     }
 
     private static func effectivePATH(existing: String?) -> String {
@@ -168,6 +144,7 @@ extension BedrockModelsResponse {
 enum BedrockCLIError: LocalizedError, Sendable {
     case awsCLINotFound
     case commandFailed(statusCode: Int, detail: String?)
+    case commandTimedOut
     case decodeFailed(String)
     case emptyResponse
 
@@ -180,6 +157,8 @@ enum BedrockCLIError: LocalizedError, Sendable {
                 return "AWS Bedrock CLI request failed (\(statusCode)): \(detail)"
             }
             return "AWS Bedrock CLI request failed with exit code \(statusCode)."
+        case .commandTimedOut:
+            return "AWS Bedrock CLI request timed out."
         case let .decodeFailed(detail):
             return "Could not decode Bedrock response: \(detail)"
         case .emptyResponse:

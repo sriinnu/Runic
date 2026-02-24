@@ -106,6 +106,10 @@ public struct ProviderFetchOutcome: @unchecked Sendable {
 public enum ProviderFetchError: LocalizedError, Sendable {
     case noAvailableStrategy(UsageProvider)
     case missingCredentials
+    case strategyTimeout(
+        provider: UsageProvider,
+        strategyID: String,
+        timeoutSeconds: TimeInterval)
 
     public var errorDescription: String? {
         switch self {
@@ -117,6 +121,9 @@ public enum ProviderFetchError: LocalizedError, Sendable {
             return "No available fetch strategy for \(provider.rawValue)."
         case .missingCredentials:
             return "Missing or invalid credentials."
+        case let .strategyTimeout(provider, strategyID, timeoutSeconds):
+            return "Fetch strategy \(strategyID) for \(provider.rawValue) timed out after " +
+                "\(String(format: "%.1f", timeoutSeconds))s."
         }
     }
 }
@@ -158,9 +165,14 @@ extension ProviderFetchStrategy {
 
 public struct ProviderFetchPipeline: Sendable {
     public let resolveStrategies: @Sendable (ProviderFetchContext) async -> [any ProviderFetchStrategy]
+    public let strategyTimeout: TimeInterval
 
-    public init(resolveStrategies: @escaping @Sendable (ProviderFetchContext) async -> [any ProviderFetchStrategy]) {
+    public init(
+        resolveStrategies: @escaping @Sendable (ProviderFetchContext) async -> [any ProviderFetchStrategy],
+        strategyTimeout: TimeInterval = 45
+    ) {
         self.resolveStrategies = resolveStrategies
+        self.strategyTimeout = strategyTimeout
     }
 
     public func fetch(context: ProviderFetchContext, provider: UsageProvider) async -> ProviderFetchOutcome {
@@ -180,7 +192,10 @@ public struct ProviderFetchPipeline: Sendable {
             }
 
             do {
-                let result = try await strategy.fetch(context)
+                let result = try await self.fetchWithTimeout(
+                    strategy: strategy,
+                    context: context,
+                    provider: provider)
                 attempts.append(ProviderFetchAttempt(
                     strategyID: strategy.id,
                     kind: strategy.kind,
@@ -202,6 +217,33 @@ public struct ProviderFetchPipeline: Sendable {
 
         let error = ProviderFetchError.noAvailableStrategy(provider)
         return ProviderFetchOutcome(result: .failure(error), attempts: attempts)
+    }
+
+    private func fetchWithTimeout(
+        strategy: any ProviderFetchStrategy,
+        context: ProviderFetchContext,
+        provider: UsageProvider) async throws -> ProviderFetchResult
+    {
+        try await withThrowingTaskGroup(of: ProviderFetchResult.self) { group in
+            group.addTask {
+                try await strategy.fetch(context)
+            }
+
+            group.addTask {
+                try await Task.sleep(for: .seconds(self.strategyTimeout))
+                throw ProviderFetchError.strategyTimeout(
+                    provider: provider,
+                    strategyID: strategy.id,
+                    timeoutSeconds: self.strategyTimeout)
+            }
+
+            defer { group.cancelAll() }
+
+            guard let result = try await group.next() else {
+                throw CancellationError()
+            }
+            return result
+        }
     }
 }
 
