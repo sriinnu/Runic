@@ -78,18 +78,12 @@ struct PreferencesView: View {
                     .pickerStyle(.segmented)
 
                     if self.providersSection == .builtIn {
-                        Button {
-                            self.settings.providersPaneSidebar.toggle()
-                        } label: {
-                            Image(systemName: self.settings.providersPaneSidebar
-                                  ? "list.bullet" : "sidebar.left")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        Picker("", selection: self.$settings.providersPaneSidebar) {
+                            Text("List").tag(false)
+                            Text("Sidebar").tag(true)
                         }
-                        .buttonStyle(.bordered)
+                        .pickerStyle(.segmented)
                         .controlSize(.small)
-                        .help(self.settings.providersPaneSidebar
-                              ? "Switch to list view" : "Switch to sidebar view")
                     }
                 }
                 .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)

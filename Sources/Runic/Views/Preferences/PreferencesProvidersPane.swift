@@ -15,14 +15,22 @@ private struct ProviderUsageStatus {
 
 private enum ProviderListMetrics {
     static let contentInset: CGFloat = 16
+    static let listHeaderCornerRadius: CGFloat = RunicCornerRadius.md
+    static let listHeaderPadding: EdgeInsets = .init(
+        top: RunicSpacing.xs,
+        leading: RunicSpacing.md,
+        bottom: RunicSpacing.xs,
+        trailing: RunicSpacing.md)
+    static let listHeaderBackgroundOpacity: Double = 0.26
+    static let listHeaderBorderOpacity: Double = 0.2
     static let rowSpacing: CGFloat = RunicSpacing.sm
     static let reorderHandleSize: CGFloat = 12
     static let reorderDotSize: CGFloat = 4
     static let reorderDotSpacing: CGFloat = 4
     static let rowInsets = EdgeInsets(
-        top: RunicSpacing.xxxs,
+        top: RunicSpacing.xxs,
         leading: contentInset,
-        bottom: RunicSpacing.xxxs,
+        bottom: RunicSpacing.xxs,
         trailing: contentInset)
     static let sectionEdgeInset: CGFloat = RunicSpacing.md
     static let dividerBottomInset: CGFloat = RunicSpacing.xxs
@@ -729,34 +737,8 @@ struct ProvidersPane: View {
 
     private var listLayout: some View {
         PreferencesListPane(horizontalPadding: 0, verticalPadding: 0) {
-            VStack(spacing: 0) {
-                HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.caption)
-                        .foregroundStyle(Color.accentColor)
-                    Text("Provider History calendar is in Sidebar layout.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Open Sidebar") {
-                        self.settings.providersPaneSidebar = true
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                .padding(.horizontal, ProviderListMetrics.contentInset)
-                .padding(.vertical, RunicSpacing.xs)
-                .background(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
-                )
-                .padding(.horizontal, ProviderListMetrics.contentInset)
-                .padding(.top, RunicSpacing.xs)
-                .padding(.bottom, RunicSpacing.xxs)
+            VStack(spacing: ProviderListMetrics.sidebarSectionSpacing) {
+                self.listLayoutHeader
 
                 ProviderListView(
                     providers: self.providers,
@@ -776,6 +758,38 @@ struct ProvidersPane: View {
                     })
             }
         }
+    }
+
+    private var listLayoutHeader: some View {
+        HStack(alignment: .top, spacing: RunicSpacing.sm) {
+            Image(systemName: "square.grid.2x2")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                Text("Built-in providers")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text("Switch to sidebar layout for per-day history cards and model or project drill-down details.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(ProviderListMetrics.listHeaderPadding)
+        .background(
+            RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.listHeaderBackgroundOpacity))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
+                .strokeBorder(
+                    Color(nsColor: .separatorColor).opacity(ProviderListMetrics.listHeaderBorderOpacity),
+                    lineWidth: 1)
+        )
+        .padding(.horizontal, ProviderListMetrics.contentInset)
     }
 
     // MARK: - Sidebar layout
@@ -1786,15 +1800,43 @@ private struct ProviderSidebarSectionCard<Content: View>: View {
     }
 }
 
+private struct ProviderHistoryNavigationButton: View {
+    let systemName: String
+    let enabled: Bool
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: self.action) {
+            Image(systemName: self.systemName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(self.enabled ? .secondary : .tertiary)
+                .frame(width: 26, height: 26)
+        }
+        .buttonStyle(.plain)
+        .disabled(!self.enabled)
+        .background(
+            Circle()
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(self.enabled ? 0.48 : 0.2))
+                .overlay(
+                    Circle()
+                        .strokeBorder(
+                            Color(
+                                nsColor: .separatorColor).opacity(self.enabled ? 0.28 : 0.1),
+                            lineWidth: 1))
+        )
+        .help(self.help)
+        .accessibilityLabel(help)
+    }
+}
+
 private struct ProviderSidebarSectionHeader: View {
     let title: String
 
     var body: some View {
         Text(self.title)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.tertiary)
-            .textCase(.uppercase)
-            .tracking(0.25)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -2234,29 +2276,24 @@ private struct ProviderSidebarDetailView: View {
         ProviderSidebarSectionCard {
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                    Button {
+                    ProviderHistoryNavigationButton(
+                        systemName: "chevron.left",
+                        enabled: true,
+                        help: "Previous month") {
                         self.shiftHistoryMonth(by: -1)
-                    } label: {
-                        Image(systemName: "chevron.left")
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .help("Previous month")
 
                     Text(self.historyMonthTitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                        .frame(minWidth: 110, alignment: .leading)
+                        .frame(minWidth: 130, alignment: .leading)
 
-                    Button {
+                    ProviderHistoryNavigationButton(
+                        systemName: "chevron.right",
+                        enabled: self.canShiftHistoryForward,
+                        help: "Next month") {
                         self.shiftHistoryMonth(by: 1)
-                    } label: {
-                        Image(systemName: "chevron.right")
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .disabled(!self.canShiftHistoryForward)
-                    .help("Next month")
 
                     Spacer()
 
@@ -2297,6 +2334,10 @@ private struct ProviderSidebarDetailView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                         }
+                        Text(snapshot.days.count == 1 ? "1 active day in \(self.historyMonthTitle)." : "\(snapshot.days.count) active days in \(self.historyMonthTitle).")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .padding(.bottom, RunicSpacing.xxs)
 
                         self.historyCalendarGrid
                         self.historyDayDetailCard
