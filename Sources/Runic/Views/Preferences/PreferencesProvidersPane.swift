@@ -2310,11 +2310,38 @@ private struct ProviderSidebarDetailView: View {
                         .help(project.helpText ?? "")
                 }
 
-                if !selected.modelsUsed.isEmpty {
-                    Text("Models used: \(selected.modelsUsed.prefix(4).map { UsageFormatter.modelDisplayName($0) }.joined(separator: ", "))")
+                if !selected.modelSummaries.isEmpty {
+                    let modelSummaries = selected.modelSummaries.prefix(4)
+                    Text("Models used")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    ForEach(Array(modelSummaries.enumerated()), id: \.offset) { _, summary in
+                        Text("• \(self.historyModelLine(summary))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .textSelection(.enabled)
+                            .help(self.historyModelLine(summary))
+                    }
+                } else if !selected.modelsUsed.isEmpty {
+                    Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .textSelection(.enabled)
+                }
+
+                if !selected.projectSummaries.isEmpty {
+                    let projects = selected.projectSummaries.prefix(3)
+                    Text("Top projects")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    ForEach(Array(projects.enumerated()), id: \.offset) { _, summary in
+                        let project = self.projectDisplay(summary)
+                        Text("• \(self.historyProjectLine(summary))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .textSelection(.enabled)
+                            .help(project.helpText ?? "")
+                    }
                 }
             } else {
                 Text(self.historySelectedDay?.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
@@ -2433,7 +2460,55 @@ private struct ProviderSidebarDetailView: View {
             }
             lines.append(modelLine)
         }
+        if !summary.modelSummaries.isEmpty {
+            let modelCount = min(3, summary.modelSummaries.count)
+            for summary in summary.modelSummaries.prefix(modelCount) {
+                var line = "Model: \(UsageFormatter.modelDisplayName(summary.model)) · \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tok"
+                if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+                    line += " · \(context)"
+                }
+                lines.append(line)
+            }
+        }
+        if let topProject = summary.topProject {
+            var projectLine = "Top project: \(self.projectDisplay(topProject).title)"
+            if let cost = topProject.totals.costUSD {
+                projectLine += " · \(UsageFormatter.usdString(cost))"
+            }
+            lines.append(projectLine)
+        }
         return lines.joined(separator: "\n")
+    }
+
+    private func renderedModelsList(_ modelsUsed: [String]) -> [String] {
+        var seen: Set<String> = []
+        var rendered: [String] = []
+        for model in modelsUsed {
+            let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed).inserted else { continue }
+            var text = UsageFormatter.modelDisplayName(trimmed)
+            if let context = UsageFormatter.modelContextLabel(for: trimmed) {
+                text += " \(context)"
+            }
+            rendered.append(text)
+        }
+        return rendered
+    }
+
+    private func historyModelLine(_ summary: UsageLedgerModelSummary) -> String {
+        self.usageLine(
+            title: UsageFormatter.modelDisplayName(summary.model),
+            totals: summary.totals,
+            requests: summary.entryCount,
+            model: summary.model)
+    }
+
+    private func historyProjectLine(_ summary: UsageLedgerProjectSummary) -> String {
+        let project = self.projectDisplay(summary)
+        return self.usageLine(
+            title: project.title,
+            totals: summary.totals,
+            requests: summary.entryCount)
     }
 
     private func shiftHistoryMonth(by delta: Int) {

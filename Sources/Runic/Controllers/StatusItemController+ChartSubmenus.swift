@@ -190,9 +190,7 @@ extension StatusItemController {
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 let modelsText = summary.modelsUsed.isEmpty
                     ? nil
-                    : (summary.modelsUsed.count <= 3
-                        ? summary.modelsUsed.joined(separator: ", ")
-                        : "\(summary.modelsUsed.count) models")
+                    : Self.renderedModelsLine(for: summary.modelsUsed)
                 var title = "\(project): \(tokens) tokens · \(summary.entryCount) req"
                 if let costText { title += " · \(costText)" }
                 if let per1K = UsageFormatter.usdPer1KTokensString(
@@ -480,6 +478,22 @@ extension StatusItemController {
     }
 
     // MARK: - Private helpers
+
+    private static func renderedModelsLine(for modelsUsed: [String]) -> String {
+        var seen: Set<String> = []
+        var rendered: [String] = []
+        for model in modelsUsed {
+            let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed).inserted else { continue }
+            var text = UsageFormatter.modelDisplayName(trimmed)
+            if let context = UsageFormatter.modelContextLabel(for: trimmed) {
+                text += " \(context)"
+            }
+            rendered.append(text)
+            if rendered.count >= 3 { break }
+        }
+        return rendered.joined(separator: ", ")
+    }
 
     private func modelQuotaWindows(for provider: UsageProvider) -> [RateWindow] {
         guard let snapshot = self.store.snapshot(for: provider) else { return [] }

@@ -295,7 +295,10 @@ extension StatusItemController {
                 lines.append("- Cache: \(UsageFormatter.tokenCountString(cacheTotal))")
             }
             if !daily.modelsUsed.isEmpty {
-                lines.append("- Models: \(daily.modelsUsed.joined(separator: ", "))")
+                let renderedModels = Self.renderedModelsLine(for: daily.modelsUsed)
+                if !renderedModels.isEmpty {
+                    lines.append("- Models: \(renderedModels)")
+                }
             }
         }
 
@@ -432,7 +435,7 @@ extension StatusItemController {
                     line += " · \(per1K)"
                 }
                 if !summary.modelsUsed.isEmpty {
-                    line += " - models: \(summary.modelsUsed.joined(separator: ", "))"
+                    line += " - models: \(Self.renderedModelsLine(for: summary.modelsUsed))"
                 }
                 lines.append(line)
             }
@@ -506,6 +509,21 @@ extension StatusItemController {
             RunicLog.logger("insights-report").error("Failed to write report: \(error)")
             return nil
         }
+    }
+
+    private static func renderedModelsLine(for modelsUsed: [String]) -> String {
+        var seen: Set<String> = []
+        var rendered: [String] = []
+        for model in modelsUsed {
+            let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed).inserted else { continue }
+            var text = UsageFormatter.modelDisplayName(trimmed)
+            if let context = UsageFormatter.modelContextLabel(for: trimmed) {
+                text += " \(context)"
+            }
+            rendered.append(text)
+        }
+        return rendered.joined(separator: ", ")
     }
 
     func describe(_ outcome: CodexLoginRunner.Result.Outcome) -> String {
