@@ -155,6 +155,9 @@ extension StatusItemController {
                 let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
                 let modelName = UsageFormatter.modelDisplayName(summary.model)
                 var title = "\(project) · \(modelName): \(tokens) tokens · \(summary.entryCount) req"
+                if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+                    title += " · \(context)"
+                }
                 if let costText { title += " · \(costText)" }
                 if let per1K = UsageFormatter.usdPer1KTokensString(
                     costUSD: summary.totals.costUSD,

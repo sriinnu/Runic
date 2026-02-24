@@ -224,6 +224,9 @@ private enum ProviderInsightsComposer {
         let model = UsageFormatter.modelDisplayName(summary.model)
         let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
         var parts = [model, "\(tokens) tok", "\(summary.entryCount) req"]
+        if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+            parts.append(context)
+        }
         if let cost = summary.totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
         }
@@ -2292,7 +2295,7 @@ private struct ProviderSidebarDetailView: View {
                 }
 
                 if let topModel = selected.topModel {
-                    Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount))")
+                    Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
@@ -2424,7 +2427,11 @@ private struct ProviderSidebarDetailView: View {
             lines.append("Spend: \(UsageFormatter.usdString(spend))")
         }
         if let topModel = summary.topModel {
-            lines.append("Top model: \(UsageFormatter.modelDisplayName(topModel.model))")
+            var modelLine = "Top model: \(UsageFormatter.modelDisplayName(topModel.model))"
+            if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
+                modelLine += " · \(context)"
+            }
+            lines.append(modelLine)
         }
         return lines.joined(separator: "\n")
     }
@@ -2602,10 +2609,14 @@ private struct ProviderSidebarDetailView: View {
         if let topModel = self.store.ledgerTopModel(for: self.provider) {
             let modelName = UsageFormatter.modelDisplayName(topModel.model)
             let tokens = UsageFormatter.tokenCountString(topModel.totals.totalTokens)
+            var value = "\(modelName) · \(tokens) tok"
+            if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
+                value += " · \(context)"
+            }
             items.append(QuickMetricItem(
                 id: "top-model",
                 title: "Top model",
-                value: "\(modelName) · \(tokens) tok",
+                value: value,
                 helpText: "Highest token usage model in the active insights window."))
         } else if let windowModel = self.topWindowModel {
             let modelName = UsageFormatter.modelDisplayName(windowModel.label)
@@ -2659,7 +2670,11 @@ private struct ProviderSidebarDetailView: View {
         if !ranked.isEmpty {
             return ranked.prefix(3).map { summary in
                 let name = UsageFormatter.modelDisplayName(summary.model)
-                return self.usageLine(title: name, totals: summary.totals, requests: summary.entryCount)
+                return self.usageLine(
+                    title: name,
+                    totals: summary.totals,
+                    requests: summary.entryCount,
+                    model: summary.model)
             }
         }
         return self.windowModelLines
@@ -2678,9 +2693,17 @@ private struct ProviderSidebarDetailView: View {
         }
     }
 
-    private func usageLine(title: String, totals: UsageLedgerTotals, requests: Int) -> String {
+    private func usageLine(
+        title: String,
+        totals: UsageLedgerTotals,
+        requests: Int,
+        model: String? = nil) -> String
+    {
         let tokens = UsageFormatter.tokenCountString(totals.totalTokens)
         var parts = ["\(title)", "\(tokens) tok", "\(requests) req"]
+        if let model, let context = UsageFormatter.modelContextLabel(for: model) {
+            parts.append(context)
+        }
         if let cost = totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
         }

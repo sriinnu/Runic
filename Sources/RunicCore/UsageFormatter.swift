@@ -224,6 +224,129 @@ public enum UsageFormatter {
         return cleaned.isEmpty ? raw : cleaned
     }
 
+    /// Returns a human-friendly context window label for a model when known.
+    /// Examples: "ctx 128k", "ctx 1M".
+    public static func modelContextLabel(for model: String) -> String? {
+        guard let context = Self.modelContextWindow(for: model) else { return nil }
+        return "ctx \(tokenCountString(context))"
+    }
+
+    /// Resolves an approximate context window (in tokens) for common model families.
+    /// Returns nil when the model is not recognized.
+    public static func modelContextWindow(for model: String) -> Int? {
+        let normalized = Self.normalizedModelIdentifier(for: model)
+
+        if let exact = Self.modelContextExact[normalized] {
+            return exact
+        }
+
+        if let inferred = Self.modelContextFromNameTokens(normalized) {
+            return inferred
+        }
+
+        for (prefix, contextWindow) in Self.modelContextPrefixes where normalized.hasPrefix(prefix) {
+            return contextWindow
+        }
+
+        return nil
+    }
+
+    private static let modelContextExact: [String: Int] = [
+        "gpt-4o": 128_000,
+        "gpt-4o-mini": 128_000,
+        "gpt-4-turbo": 128_000,
+        "gpt-4": 128_000,
+        "gpt-3.5-turbo": 16_385,
+        "gpt-4.1": 1_000_000,
+        "gpt-4.1-mini": 1_000_000,
+        "gpt-4.1-nano": 1_000_000,
+        "o1": 200_000,
+        "o1-mini": 200_000,
+        "o1-preview": 128_000,
+        "o3-mini": 200_000,
+        "o3-mini-high": 200_000,
+        "o3-mini-low": 200_000,
+        "claude-opus-4-5": 200_000,
+        "claude-opus-4-0": 200_000,
+        "claude-opus-4-1": 200_000,
+        "claude-sonnet-4": 200_000,
+        "claude-opus": 200_000,
+        "claude-3-opus": 200_000,
+        "claude-3-sonnet": 200_000,
+        "claude-3-5-sonnet": 200_000,
+        "claude-3-7-sonnet": 200_000,
+        "claude-3-haiku": 200_000,
+        "gemini-1-5-pro": 1_000_000,
+        "gemini-1-5-flash": 1_000_000,
+        "gemini-2-0-flash": 1_000_000,
+        "gemini-2-5-pro": 1_000_000,
+        "llama-3-1-70b": 128_000,
+        "llama-3-1-8b": 128_000,
+        "llama-3-3-70b": 128_000,
+        "mistral-large": 128_000,
+        "mistral-small": 32_000,
+        "mistral-medium": 131_072,
+        "deepseek-chat": 64_000,
+        "deepseek-coder": 32_000,
+        "cohere-command": 128_000,
+        "cohere-command-r": 128_000,
+        "cohere-command-r-plus": 128_000,
+        "qwen-2-5-72b": 128_000,
+        "qwen-2-5-32b": 128_000,
+        "qwen1-5-32b": 8_192,
+        "qwen1-5-14b": 8_192,
+        "grok-2": 128_000,
+        "grok-2-mini": 131_072,
+        "grok-2-vision": 131_072,
+        "mixtral-8x7b": 32_768,
+        "mixtral-8x22b": 64_000,
+        "llama-3-8b": 8_192,
+        "llama-3-70b": 8_192,
+        "llama-2-70b": 4_096,
+        "llama-2-13b": 4_096,
+    ]
+
+    private static let modelContextPrefixes: [(String, Int)] = [
+        ("gpt-4.1", 1_000_000),
+        ("gpt-4o", 128_000),
+        ("gpt-4-", 128_000),
+        ("gpt-3.5", 16_385),
+        ("claude-3", 200_000),
+        ("claude-4", 200_000),
+        ("o1", 200_000),
+        ("o3", 200_000),
+        ("gemini-1-5", 1_000_000),
+        ("gemini-2-0", 1_000_000),
+        ("gemini-2-5", 1_000_000),
+        ("llama-3", 8_192),
+        ("qwen-2-5", 128_000),
+        ("qwen1-5", 8_192),
+    ]
+
+    private static func normalizedModelIdentifier(for model: String) -> String {
+        let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let withoutProvider = trimmed.split(separator: "/").last.map(String.init) ?? trimmed
+        return withoutProvider.replacingOccurrences(of: " ", with: "-")
+    }
+
+    private static func modelContextFromNameTokens(_ model: String) -> Int? {
+        let tokens = model.replacingOccurrences(of: "_", with: "-")
+            .split(separator: "-")
+            .map(String.init)
+
+        for token in tokens.reversed() {
+            let lower = token.lowercased()
+            if lower.hasSuffix("k"), let numeric = Int(lower.dropLast()), numeric > 0 {
+                return numeric * 1_000
+            }
+            if lower.hasSuffix("m"), let numeric = Int(lower.dropLast()), numeric > 0 {
+                return numeric * 1_000_000
+            }
+        }
+
+        return nil
+    }
+
     /// Cleans a provider plan string: strip ANSI/bracket noise, drop boilerplate words, collapse whitespace, and
     /// ensure a leading capital if the result starts lowercase.
     public static func cleanPlanName(_ text: String) -> String {

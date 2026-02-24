@@ -343,6 +343,9 @@ extension StatusItemController {
             lines.append("## Top model")
             let modelName = UsageFormatter.modelDisplayName(topModel.model)
             var line = "- \(modelName): \(UsageFormatter.tokenCountString(topModel.totals.totalTokens)) tokens · \(topModel.entryCount) req"
+            if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
+                line += " · \(context)"
+            }
             if let cost = topModel.totals.costUSD {
                 line += " (\(UsageFormatter.usdString(cost)))"
                 if let per1K = UsageFormatter.usdPer1KTokensString(
@@ -391,6 +394,9 @@ extension StatusItemController {
                     includeAttribution: true)
                 let modelName = UsageFormatter.modelDisplayName(summary.model)
                 var line = "- \(project) - \(modelName): \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tokens · \(summary.entryCount) req"
+                if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+                    line += " · \(context)"
+                }
                 if let cost = summary.totals.costUSD {
                     line += " (\(UsageFormatter.usdString(cost)))"
                 }

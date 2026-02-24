@@ -77,4 +77,21 @@ struct UsageFormatterTests {
     func cleanPlanMapsOAuthToOllama() {
         #expect(UsageFormatter.cleanPlanName("oauth") == "Ollama")
     }
+
+    @Test
+    func modelContextFromKnownModel() {
+        #expect(UsageFormatter.modelContextLabel(for: "gpt-4o") == "ctx 128K")
+        #expect(UsageFormatter.modelContextLabel(for: "claude-opus-4-5") == "ctx 200K")
+    }
+
+    @Test
+    func modelContextFromNameSuffix() {
+        #expect(UsageFormatter.modelContextWindow(for: "qwen2.5-128k-instruct") == 128_000)
+        #expect(UsageFormatter.modelContextLabel(for: "provider/qwen2.5-2m-long-context") == "ctx 2M")
+    }
+
+    @Test
+    func modelContextUnknownReturnsNil() {
+        #expect(UsageFormatter.modelContextWindow(for: "unknown-custom-model-v1") == nil)
+    }
 }
