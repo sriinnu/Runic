@@ -22,7 +22,11 @@ public enum CerebrasProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://cloud.cerebras.ai",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .cerebras,
                 iconResourceName: "ProviderIcon-cerebras",

@@ -22,7 +22,11 @@ public enum PerplexityProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://www.perplexity.ai/settings/api",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .perplexity,
                 iconResourceName: "ProviderIcon-perplexity",

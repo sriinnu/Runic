@@ -22,7 +22,11 @@ public enum AuggieProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://dashboard.augmentcode.com",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: false,
+                    supportsTokenMetrics: true,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .auggie,
                 iconResourceName: "ProviderIcon-auggie",

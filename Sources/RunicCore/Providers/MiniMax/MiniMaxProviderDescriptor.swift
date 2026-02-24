@@ -23,7 +23,11 @@ public enum MiniMaxProviderDescriptor {
                 usesAccountFallback: false,
                 browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 dashboardURL: "https://platform.minimax.io/user-center/payment/coding-plan",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: false,
+                    supportsTokenMetrics: true,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .minimax,
                 iconResourceName: "ProviderIcon-minimax",

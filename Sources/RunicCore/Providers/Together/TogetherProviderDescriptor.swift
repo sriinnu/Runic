@@ -22,7 +22,11 @@ public enum TogetherProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://api.together.xyz/settings/api-keys",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .together,
                 iconResourceName: "ProviderIcon-together",

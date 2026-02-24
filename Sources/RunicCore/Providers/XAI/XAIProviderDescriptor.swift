@@ -22,7 +22,11 @@ public enum XAIProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://console.x.ai",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .xai,
                 iconResourceName: "ProviderIcon-xai",

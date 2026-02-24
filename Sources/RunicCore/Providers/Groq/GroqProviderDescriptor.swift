@@ -10,7 +10,7 @@ public enum GroqProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .groq,
                 displayName: "Groq",
-                sessionLabel: "Tokens",
+                sessionLabel: "Models",
                 weeklyLabel: "",
                 opusLabel: nil,
                 supportsOpus: false,
@@ -22,7 +22,11 @@ public enum GroqProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 dashboardURL: "https://console.groq.com/usage",
-                statusPageURL: nil),
+                statusPageURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: true,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .groq,
                 iconResourceName: "ProviderIcon-groq",
@@ -52,7 +56,7 @@ struct GroqAPIFetchStrategy: ProviderFetchStrategy {
         guard let apiKey = Self.resolveToken(environment: context.env) else {
             throw GroqSettingsError.missingToken
         }
-        let usage = try await GroqUsageFetcher.fetchUsage(apiKey: apiKey)
+        let usage = try await GroqUsageFetcher.fetchModels(apiKey: apiKey)
         return self.makeResult(
             usage: usage.toUsageSnapshot(),
             sourceLabel: "api")

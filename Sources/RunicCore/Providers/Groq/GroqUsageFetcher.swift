@@ -1,20 +1,17 @@
 import Foundation
 
-struct GroqUsageResponse: Decodable {
-    let usage: UsageInfo?
-    let object: String?
+struct GroqModelsResponse: Decodable {
+    let data: [Model]?
 
-    struct UsageInfo: Decodable {
-        let prompt_tokens: Int?
-        let completion_tokens: Int?
-        let total_tokens: Int?
+    struct Model: Decodable {
+        let id: String?
     }
 }
 
 struct GroqUsageFetcher {
     static let apiURL = URL(string: "https://api.groq.com/openai/v1/models")!
 
-    static func fetchUsage(apiKey: String) async throws -> GroqUsageResponse {
+    static func fetchModels(apiKey: String) async throws -> GroqModelsResponse {
         var request = URLRequest(url: apiURL)
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -30,20 +27,25 @@ struct GroqUsageFetcher {
         }
 
         let decoder = JSONDecoder()
-        return try decoder.decode(GroqUsageResponse.self, from: data)
+        return try decoder.decode(GroqModelsResponse.self, from: data)
     }
 }
 
-extension GroqUsageResponse {
+extension GroqModelsResponse {
     func toUsageSnapshot() -> UsageSnapshot {
-        let totalTokens = usage?.total_tokens ?? 0
+        let models = (self.data ?? []).compactMap(\.id)
+        var summary = "Models available: \(models.count)"
+        let preview = models.prefix(3).joined(separator: ", ")
+        if !preview.isEmpty {
+            summary += " (\(preview))"
+        }
 
         return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: "Total Tokens: \(totalTokens)"),
+                resetDescription: summary),
             secondary: nil,
             tertiary: nil,
             updatedAt: Date(),

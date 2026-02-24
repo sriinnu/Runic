@@ -24,7 +24,11 @@ public enum FactoryProviderDescriptor {
                 browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 dashboardURL: "https://app.factory.ai/settings/billing",
                 statusPageURL: "https://status.factory.ai",
-                statusLinkURL: nil),
+                statusLinkURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: false,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .factory,
                 iconResourceName: "ProviderIcon-factory",

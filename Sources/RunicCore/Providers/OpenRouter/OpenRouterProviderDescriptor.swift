@@ -25,7 +25,7 @@ public enum OpenRouterProviderDescriptor {
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
                     supportsModelBreakdown: true,
-                    supportsTokenMetrics: true,
+                    supportsTokenMetrics: false,
                     supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .openrouter,

@@ -24,7 +24,11 @@ public enum CursorProviderDescriptor {
                 browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 dashboardURL: "https://cursor.com/dashboard?tab=usage",
                 statusPageURL: "https://status.cursor.com",
-                statusLinkURL: nil),
+                statusLinkURL: nil,
+                usageCoverage: ProviderUsageCoverage(
+                    supportsModelBreakdown: false,
+                    supportsTokenMetrics: false,
+                    supportsProjectAttribution: false)),
             branding: ProviderBranding(
                 iconStyle: .cursor,
                 iconResourceName: "ProviderIcon-cursor",
