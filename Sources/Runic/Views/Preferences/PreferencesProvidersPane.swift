@@ -60,6 +60,15 @@ private enum ProviderListMetrics {
     static let insightsLineSpacing: CGFloat = RunicSpacing.xxxs
     static let insightsLabelWidth: CGFloat = 84
     static let sidebarStatusLabelWidth: CGFloat = 62
+    static let sidebarCardCornerRadius: CGFloat = RunicCornerRadius.md
+    static let sidebarCardPadding: CGFloat = RunicSpacing.md
+    static let sidebarCardBackgroundOpacity: Double = 0.36
+    static let sidebarCardBorderOpacity: Double = 0.22
+    static let sidebarMicroCardCornerRadius: CGFloat = RunicCornerRadius.sm
+    static let sidebarMicroCardBackgroundOpacity: Double = 0.52
+    static let sidebarMicroCardBorderOpacity: Double = 0.2
+    static let sidebarSectionSpacing: CGFloat = RunicSpacing.md
+    static let sidebarContentGap: CGFloat = RunicSpacing.sm
 }
 
 private struct ProviderInsightLine: Identifiable, Equatable {
@@ -1734,6 +1743,44 @@ private struct ProviderSidebarRow: View {
     }
 }
 
+private struct ProviderSidebarSectionCard<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        self.content
+            .padding(ProviderListMetrics.sidebarCardPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(
+                    cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
+                    style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.sidebarCardBackgroundOpacity))
+            )
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
+                    style: .continuous)
+                    .strokeBorder(Color(nsColor: .separatorColor).opacity(ProviderListMetrics.sidebarCardBorderOpacity), lineWidth: 1)
+            )
+    }
+}
+
+private struct ProviderSidebarSectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(self.title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.tertiary)
+            .textCase(.uppercase)
+            .tracking(0.25)
+    }
+}
+
 @MainActor
 private struct ProviderSidebarKeyValueRow: View {
     let label: String
@@ -1789,12 +1836,17 @@ private struct ProviderSidebarMetricChip: View {
         .padding(.horizontal, RunicSpacing.xs)
         .padding(.vertical, RunicSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .fill(Color(nsColor: .textBackgroundColor).opacity(0.55))
+            RoundedRectangle(
+                cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                style: .continuous)
+                .fill(Color(nsColor: .textBackgroundColor).opacity(ProviderListMetrics.sidebarMicroCardBackgroundOpacity))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+            RoundedRectangle(
+                cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                style: .continuous)
+                .strokeBorder(Color(
+                    nsColor: .separatorColor).opacity(ProviderListMetrics.sidebarMicroCardBorderOpacity), lineWidth: 1)
         )
         .help(self.helpText ?? "")
     }
@@ -1912,129 +1964,127 @@ private struct ProviderSidebarDetailView: View {
         let topProjectLines = self.topProjectLines
 
         ScrollView {
-            VStack(alignment: .leading, spacing: RunicSpacing.md) {
-                // Header
-                HStack(spacing: RunicSpacing.sm) {
-                    ProviderListBrandIcon(provider: self.provider)
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text(self.store.metadata(for: self.provider).displayName)
-                            .font(.title2.weight(.semibold))
-                        Text(self.subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Toggle("Enabled", isOn: self.$isEnabled)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                }
+            VStack(alignment: .leading, spacing: ProviderListMetrics.sidebarSectionSpacing) {
+                ProviderSidebarSectionCard {
+                    VStack(alignment: .leading, spacing: RunicSpacing.md) {
+                        HStack(alignment: .top, spacing: RunicSpacing.sm) {
+                            ProviderListBrandIcon(provider: self.provider)
+                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                Text(self.store.metadata(for: self.provider).displayName)
+                                    .font(.title2.weight(.semibold))
+                                Text(self.subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Toggle("Enabled", isOn: self.$isEnabled)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+                        Divider()
 
-                Divider()
-
-                Picker("View", selection: self.$selectedSubview) {
-                    ForEach(ProviderDetailSubview.allCases) { view in
-                        Text(view.rawValue).tag(view)
+                        Picker("View", selection: self.$selectedSubview) {
+                            ForEach(ProviderDetailSubview.allCases) { view in
+                                Text(view.rawValue).tag(view)
+                            }
+                        }
+                        .pickerStyle(.segmented)
                     }
                 }
-                .pickerStyle(.segmented)
 
                 if self.selectedSubview == .overview {
-                    // Status
-                    VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                        ProviderSidebarKeyValueRow(label: "Source", value: self.sourceLabel, helpText: nil)
-                        ProviderSidebarKeyValueRow(label: "Updated", value: self.statusLabel, helpText: nil)
-                        if let runtimeMetrics = self.runtimeMetrics {
-                            ProviderSidebarKeyValueRow(
-                                label: "Runtime",
-                                value: runtimeMetrics.lineText,
-                                helpText: runtimeMetrics.hoverText)
-                        }
-                        self.statusBadge
-
-                        if !self.quickMetrics.isEmpty {
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
-                                    GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
-                                ],
-                                alignment: .leading,
-                                spacing: RunicSpacing.xs)
-                            {
-                                ForEach(self.quickMetrics) { metric in
-                                    ProviderSidebarMetricChip(
-                                        title: metric.title,
-                                        value: metric.value,
-                                        helpText: metric.helpText)
-                                }
-                            }
-                            .padding(.top, RunicSpacing.xxxs)
-                        }
-
-                        HStack(spacing: RunicSpacing.xs) {
-                            Button("Copy diagnostics") {
-                                self.copyDiagnostics()
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .help("Copy fetch path, reliability, anomaly, and budget/forecast details.")
-
-                            if let diagnosticsCopyStatus {
-                                Text(diagnosticsCopyStatus)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                    .padding(RunicSpacing.sm)
-                    .background(
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                            .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
-                    )
-
-                    if !insightLines.isEmpty {
-                        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                            Text("Insights")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                            ProviderInsightsView(lines: insightLines)
-                        }
-                    }
-
-                    if !topModelLines.isEmpty || !topProjectLines.isEmpty {
-                        Divider()
+                    ProviderSidebarSectionCard {
                         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                            Text("Activity Leaders")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tertiary)
+                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                ProviderSidebarSectionHeader(title: "Overview")
+                                ProviderSidebarKeyValueRow(label: "Source", value: self.sourceLabel, helpText: nil)
+                                ProviderSidebarKeyValueRow(label: "Updated", value: self.statusLabel, helpText: nil)
+                                if let runtimeMetrics = self.runtimeMetrics {
+                                    ProviderSidebarKeyValueRow(
+                                        label: "Runtime",
+                                        value: runtimeMetrics.lineText,
+                                        helpText: runtimeMetrics.hoverText)
+                                }
+                                self.statusBadge
+                            }
 
-                            if !topModelLines.isEmpty {
-                                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                    Text("Models")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                    ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
-                                        Text("\(index + 1). \(line)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .textSelection(.enabled)
+                            if !self.quickMetrics.isEmpty {
+                                LazyVGrid(
+                                    columns: [
+                                        GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
+                                        GridItem(.flexible(minimum: 120), spacing: RunicSpacing.xs),
+                                    ],
+                                    alignment: .leading,
+                                    spacing: RunicSpacing.xs)
+                                {
+                                    ForEach(self.quickMetrics) { metric in
+                                        ProviderSidebarMetricChip(
+                                            title: metric.title,
+                                            value: metric.value,
+                                            helpText: metric.helpText)
                                     }
                                 }
                             }
 
-                            if !topProjectLines.isEmpty {
-                                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                    Text("Projects")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                    ForEach(Array(topProjectLines.enumerated()), id: \.offset) { index, line in
-                                        Text("\(index + 1). \(line)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .textSelection(.enabled)
+                            HStack(spacing: RunicSpacing.xs) {
+                                Button("Copy diagnostics") {
+                                    self.copyDiagnostics()
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .help("Copy fetch path, reliability, anomaly, and budget/forecast details.")
+
+                                if let diagnosticsCopyStatus {
+                                    Text(diagnosticsCopyStatus)
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                    }
+
+                    if !insightLines.isEmpty {
+                        ProviderSidebarSectionCard {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                ProviderSidebarSectionHeader(title: "Insights")
+                                ProviderInsightsView(lines: insightLines)
+                            }
+                        }
+                    }
+
+                    if !topModelLines.isEmpty || !topProjectLines.isEmpty {
+                        ProviderSidebarSectionCard {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                ProviderSidebarSectionHeader(title: "Activity leaders")
+                                HStack(alignment: .top, spacing: RunicSpacing.md) {
+                                    if !topModelLines.isEmpty {
+                                        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                            Text("Models")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                            ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
+                                                Text("\(index + 1). \(line)")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                    .textSelection(.enabled)
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+
+                                    if !topProjectLines.isEmpty {
+                                        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                            Text("Projects")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                            ForEach(Array(topProjectLines.enumerated()), id: \.offset) { index, line in
+                                                Text("\(index + 1). \(line)")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                    .textSelection(.enabled)
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                 }
                             }
@@ -2052,62 +2102,68 @@ private struct ProviderSidebarDetailView: View {
                         onCopy: { self.onCopyError(errorDisplay.full) })
                 }
 
-                // Settings fields
                 if self.isEnabled, !self.settingsFields.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                        ForEach(self.settingsFields) { field in
-                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                Text(field.title)
-                                    .font(.body.weight(.medium))
-                                Text(field.subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                switch field.kind {
-                                case .plain:
-                                    TextField(field.placeholder ?? "", text: field.binding)
-                                        .textFieldStyle(.roundedBorder)
-                                        .font(.callout)
-                                case .secure:
-                                    SecureField(field.placeholder ?? "", text: field.binding)
-                                        .textFieldStyle(.roundedBorder)
-                                        .font(.callout)
+                    ProviderSidebarSectionCard {
+                        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                            ProviderSidebarSectionHeader(title: "Settings fields")
+                            ForEach(self.settingsFields) { field in
+                                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                    Text(field.title)
+                                        .font(.body.weight(.medium))
+                                    Text(field.subtitle)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    switch field.kind {
+                                    case .plain:
+                                        TextField(field.placeholder ?? "", text: field.binding)
+                                            .textFieldStyle(.roundedBorder)
+                                            .font(.callout)
+                                    case .secure:
+                                        SecureField(field.placeholder ?? "", text: field.binding)
+                                            .textFieldStyle(.roundedBorder)
+                                            .font(.callout)
+                                    }
+                                    self.fieldActions(field.actions)
                                 }
-                                self.fieldActions(field.actions)
                             }
                         }
                     }
                 }
 
-                // Settings toggles
                 if self.isEnabled, !self.settingsToggles.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                        ForEach(self.settingsToggles) { toggle in
-                            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                Toggle(isOn: toggle.binding) {
-                                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                        Text(toggle.title)
-                                            .font(.body.weight(.medium))
-                                        Text(toggle.subtitle)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                    ProviderSidebarSectionCard {
+                        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                            ProviderSidebarSectionHeader(title: "Settings toggles")
+                            ForEach(self.settingsToggles) { toggle in
+                                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                    Toggle(isOn: toggle.binding) {
+                                        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                                            Text(toggle.title)
+                                                .font(.body.weight(.medium))
+                                            Text(toggle.subtitle)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
-                                }
-                                .toggleStyle(.checkbox)
+                                    .toggleStyle(.checkbox)
 
-                                if toggle.binding.wrappedValue {
-                                    if let status = toggle.statusText?(), !status.isEmpty {
-                                        Text(status)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .padding(RunicSpacing.xs)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5)))
+                                    if toggle.binding.wrappedValue {
+                                        if let status = toggle.statusText?(), !status.isEmpty {
+                                            Text(status)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                                .padding(RunicSpacing.xs)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .background(
+                                                    RoundedRectangle(
+                                                        cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                                                        style: .continuous)
+                                                        .fill(Color(
+                                                            nsColor: .controlBackgroundColor).opacity(
+                                                                ProviderListMetrics.sidebarMicroCardBackgroundOpacity)))
+                                        }
+                                        self.toggleActions(toggle.actions)
                                     }
-                                    self.toggleActions(toggle.actions)
                                 }
                             }
                         }
@@ -2141,7 +2197,7 @@ private struct ProviderSidebarDetailView: View {
             .padding(.vertical, RunicSpacing.xxs)
             .background(bg)
             .foregroundStyle(color)
-            .cornerRadius(RunicCornerRadius.xs)
+            .clipShape(.capsule)
     }
 
     private var statusColors: (Color, Color) {
@@ -2158,120 +2214,119 @@ private struct ProviderSidebarDetailView: View {
     }
 
     private var historyContent: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-            HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                Button {
-                    self.shiftHistoryMonth(by: -1)
-                } label: {
-                    Image(systemName: "chevron.left")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Previous month")
-
-                Text(self.historyMonthTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 110, alignment: .leading)
-
-                Button {
-                    self.shiftHistoryMonth(by: 1)
-                } label: {
-                    Image(systemName: "chevron.right")
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(!self.canShiftHistoryForward)
-                .help("Next month")
-
-                Spacer()
-
-                Picker("Metric", selection: self.$historyMetricMode) {
-                    ForEach(ProviderHistoryMetricMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 220)
-            }
-
-            if self.historyIsLoading, self.historySnapshot == nil {
-                HStack(spacing: RunicSpacing.xs) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Loading history…")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(RunicSpacing.sm)
-            } else if let snapshot = self.historySnapshot {
-                if !snapshot.isSupported {
-                    Text(snapshot.note ?? "History is not available for this provider yet.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(RunicSpacing.sm)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
-                        )
-                } else {
-                    if let note = snapshot.note, !note.isEmpty {
-                        Text(note)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-
-                    self.historyCalendarGrid
-                    self.historyDayDetailCard
-                }
-            } else {
-                Text("History is empty for this period.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(RunicSpacing.sm)
-            }
-
-            if let historyError = self.historyError {
-                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                    Text("History load failed")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.red)
-                    Text(historyError)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                    Button("Retry") {
-                        Task { await self.loadHistoryMonth(forceRefresh: true) }
+        ProviderSidebarSectionCard {
+            VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                HStack(alignment: .center, spacing: RunicSpacing.xs) {
+                    Button {
+                        self.shiftHistoryMonth(by: -1)
+                    } label: {
+                        Image(systemName: "chevron.left")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                }
-                .padding(RunicSpacing.sm)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                        .fill(Color.red.opacity(0.06))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                        .strokeBorder(Color.red.opacity(0.28), lineWidth: 1)
-                )
-            }
+                    .help("Previous month")
 
-            Text("Local aggregated history only. Prompts, cookies, API keys, and raw payloads are never shown here.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                    Text(self.historyMonthTitle)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 110, alignment: .leading)
+
+                    Button {
+                        self.shiftHistoryMonth(by: 1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(!self.canShiftHistoryForward)
+                    .help("Next month")
+
+                    Spacer()
+
+                    Picker("Metric", selection: self.$historyMetricMode) {
+                        ForEach(ProviderHistoryMetricMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 220)
+                }
+
+                if self.historyIsLoading, self.historySnapshot == nil {
+                    HStack(spacing: RunicSpacing.xs) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Loading history…")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, RunicSpacing.xs)
+                } else if let snapshot = self.historySnapshot {
+                    if !snapshot.isSupported {
+                        Text(snapshot.note ?? "History is not available for this provider yet.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, RunicSpacing.xs)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(
+                                    cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                                    style: .continuous)
+                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.sidebarCardBackgroundOpacity))
+                            )
+                    } else {
+                        if let note = snapshot.note, !note.isEmpty {
+                            Text(note)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        self.historyCalendarGrid
+                        self.historyDayDetailCard
+                    }
+                } else {
+                    Text("History is empty for this period.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, RunicSpacing.xs)
+                }
+
+                if let historyError = self.historyError {
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("History load failed")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                        Text(historyError)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                        Button("Retry") {
+                            Task { await self.loadHistoryMonth(forceRefresh: true) }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    .padding(RunicSpacing.sm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                            style: .continuous)
+                            .fill(Color.red.opacity(0.06))
+                    )
+                    .overlay(
+                        RoundedRectangle(
+                            cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                            style: .continuous)
+                            .strokeBorder(Color.red.opacity(0.28), lineWidth: 1)
+                    )
+                }
+
+                Text("Local aggregated history only. Prompts, cookies, API keys, and raw payloads are never shown here.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .padding(RunicSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.35))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
-        )
     }
 
     private var historyCalendarGrid: some View {
@@ -2307,116 +2362,128 @@ private struct ProviderSidebarDetailView: View {
     }
 
     private var historyDayDetailCard: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-            if let selected = self.selectedHistoryDaySummary {
-                Text(selected.dayStart.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Picker("History detail", selection: self.$historyDayDetailMode) {
-                    ForEach(ProviderHistoryDayDetailMode.allCases) { mode in
-                        Text(mode.rawValue).tag(mode)
+        ProviderSidebarSectionCard {
+            VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+                    Text("Day details")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.25)
+                    Spacer()
+                    if self.selectedHistoryDaySummary != nil {
+                        Picker("History detail", selection: self.$historyDayDetailMode) {
+                            ForEach(ProviderHistoryDayDetailMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .controlSize(.mini)
+                        .frame(maxWidth: 240)
                     }
                 }
-                .pickerStyle(.segmented)
-                .controlSize(.mini)
-                .frame(maxWidth: 240)
 
-                if self.historyDayDetailMode == .summary {
-                    HStack(spacing: RunicSpacing.xs) {
-                        ProviderSidebarMetricChip(
-                            title: "Requests",
-                            value: self.decimalString(selected.requestCount),
-                            helpText: "Count of requests recorded in local ledger logs.")
-                        ProviderSidebarMetricChip(
-                            title: "Tokens",
-                            value: UsageFormatter.tokenSummaryString(selected.totals),
-                            helpText: "Input, output, and cache token composition.")
-                        if let spend = selected.totals.costUSD {
+                if let selected = self.selectedHistoryDaySummary {
+                    Text(selected.dayStart.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    if self.historyDayDetailMode == .summary {
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(minimum: 90), spacing: RunicSpacing.xs),
+                                GridItem(.flexible(minimum: 90), spacing: RunicSpacing.xs),
+                                GridItem(.flexible(minimum: 90), spacing: RunicSpacing.xs),
+                            ],
+                            alignment: .leading,
+                            spacing: RunicSpacing.xs)
+                        {
                             ProviderSidebarMetricChip(
-                                title: "Spend",
-                                value: UsageFormatter.usdString(spend),
-                                helpText: "Estimated day spend from ledger pricing.")
+                                title: "Requests",
+                                value: self.decimalString(selected.requestCount),
+                                helpText: "Count of requests recorded in local ledger logs.")
+                            ProviderSidebarMetricChip(
+                                title: "Tokens",
+                                value: UsageFormatter.tokenSummaryString(selected.totals),
+                                helpText: "Input, output, and cache token composition.")
+                            if let spend = selected.totals.costUSD {
+                                ProviderSidebarMetricChip(
+                                    title: "Spend",
+                                    value: UsageFormatter.usdString(spend),
+                                    helpText: "Estimated day spend from ledger pricing.")
+                            }
                         }
-                    }
 
-                    if let topModel = selected.topModel {
-                        Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-
-                    if let topProject = selected.topProject {
-                        let project = self.projectDisplay(topProject)
-                        Text("Top project: \(project.title)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                            .help(project.helpText ?? "")
-                    }
-                }
-                if self.historyDayDetailMode == .models {
-                    if !selected.modelSummaries.isEmpty {
-                        Text("Models used")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                        ForEach(Array(selected.modelSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
-                            Text("• \(self.historyModelLine(summary))")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
+                        if let topModel = selected.topModel {
+                            Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
-                                .help(self.historyModelLine(summary))
                         }
-                    } else if !selected.modelsUsed.isEmpty {
-                        Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .textSelection(.enabled)
-                    } else {
-                        Text("No models recorded for this day.")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                if self.historyDayDetailMode == .projects {
-                    if !selected.projectSummaries.isEmpty {
-                        Text("Top projects")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                        ForEach(Array(selected.projectSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
-                            let project = self.projectDisplay(summary)
-                            Text("• \(self.historyProjectLine(summary))")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
+
+                        if let topProject = selected.topProject {
+                            let project = self.projectDisplay(topProject)
+                            Text("Top project: \(project.title)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
                                 .help(project.helpText ?? "")
                         }
-                    } else {
-                        Text("No projects recorded for this day.")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
                     }
+
+                    if self.historyDayDetailMode == .models {
+                        if !selected.modelSummaries.isEmpty {
+                            Text("Models used")
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.secondary)
+                            ForEach(Array(selected.modelSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                                Text("• \(self.historyModelLine(summary))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .textSelection(.enabled)
+                                    .help(self.historyModelLine(summary))
+                            }
+                        } else if !selected.modelsUsed.isEmpty {
+                            Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .textSelection(.enabled)
+                        } else {
+                            Text("No models recorded for this day.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+
+                    if self.historyDayDetailMode == .projects {
+                        if !selected.projectSummaries.isEmpty {
+                            Text("Top projects")
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.secondary)
+                            ForEach(Array(selected.projectSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                                let project = self.projectDisplay(summary)
+                                Text("• \(self.historyProjectLine(summary))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .textSelection(.enabled)
+                                    .help(project.helpText ?? "")
+                            }
+                        } else {
+                            Text("No projects recorded for this day.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                } else {
+                    Text(self.historySelectedDay?.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text("No recorded activity for this day.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
-            } else {
-                Text(self.historySelectedDay?.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text("No recorded activity for this day.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
         }
-        .padding(RunicSpacing.sm)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .fill(Color(nsColor: .textBackgroundColor).opacity(0.5))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
-        )
     }
 
     private var historyMonthTitle: String {
