@@ -14,7 +14,7 @@ private struct ProviderUsageStatus {
 }
 
 private enum ProviderListMetrics {
-    static let contentInset: CGFloat = 24
+    static let contentInset: CGFloat = 16
     static let rowSpacing: CGFloat = RunicSpacing.sm
     static let reorderHandleSize: CGFloat = 12
     static let reorderDotSize: CGFloat = 4
@@ -31,20 +31,30 @@ private enum ProviderListMetrics {
     static let dividerLeadingInset: CGFloat = contentInset
     static let dividerTrailingInset: CGFloat = contentInset
     static let providerCardPadding = EdgeInsets(
-        top: RunicSpacing.md,
-        leading: RunicSpacing.md,
-        bottom: RunicSpacing.md,
-        trailing: RunicSpacing.md)
+        top: RunicSpacing.sm,
+        leading: RunicSpacing.sm,
+        bottom: RunicSpacing.sm,
+        trailing: RunicSpacing.sm)
+    static let providerCardBackgroundOpacity: Double = 0.55
+    static let providerCardBorderOpacity: Double = 0.25
+    static let providerCardCornerRadius: CGFloat = RunicCornerRadius.md
+    static let providerInsightsCardCornerRadius: CGFloat = RunicCornerRadius.sm
+    static let providerInsightsGridItemMinWidth: CGFloat = 210
+    static let providerInsightsChipCornerRadius: CGFloat = RunicCornerRadius.sm
+    static let providerInsightsChipSpacing: CGFloat = RunicSpacing.xxs
+    static let providerInsightsChipPadding: CGFloat = RunicSpacing.xs
+
     static let supplementalCardPadding = EdgeInsets(
         top: RunicSpacing.sm,
-        leading: RunicSpacing.md,
+        leading: RunicSpacing.sm,
         bottom: RunicSpacing.sm,
-        trailing: RunicSpacing.md)
+        trailing: RunicSpacing.sm)
+    static let supplementalCardBackgroundOpacity: Double = 0.28
+    static let supplementalCardBorderOpacity: Double = 0.18
     static let fieldMaxWidth: CGFloat = 420
     static let errorCardPadding: CGFloat = RunicSpacing.sm
     static let statusBadgePaddingH: CGFloat = RunicSpacing.xs
     static let statusBadgePaddingV: CGFloat = RunicSpacing.xxxs
-    static let rowBackgroundCornerRadius: CGFloat = RunicCornerRadius.lg
     static let errorCardCornerRadius: CGFloat = RunicCornerRadius.sm
     static let insightsCardPadding: CGFloat = RunicSpacing.xs
     static let insightsLineSpacing: CGFloat = RunicSpacing.xxxs
@@ -1105,51 +1115,66 @@ private struct ProviderInsightsView: View {
     let lines: [ProviderInsightLine]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ProviderListMetrics.insightsLineSpacing) {
+        LazyVGrid(
+            columns: [
+                GridItem(
+                    .adaptive(minimum: ProviderListMetrics.providerInsightsGridItemMinWidth),
+                    spacing: ProviderListMetrics.providerInsightsChipSpacing)
+            ],
+            alignment: .leading,
+            spacing: ProviderListMetrics.providerInsightsChipSpacing)
+        {
             ForEach(self.lines) { line in
-                if let help = line.help {
-                    HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
-                        Text("\(line.label):")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                            .frame(width: ProviderListMetrics.insightsLabelWidth, alignment: .leading)
-                        Text(line.value)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .textSelection(.enabled)
-                    }
-                    .help(help)
-                    .accessibilityHint(help)
-                    .accessibilityLabel("\(line.label): \(line.value)")
-                } else {
-                    HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
-                        Text("\(line.label):")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                            .frame(width: ProviderListMetrics.insightsLabelWidth, alignment: .leading)
-                        Text(line.value)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .textSelection(.enabled)
-                    }
-                    .accessibilityLabel("\(line.label): \(line.value)")
-                }
+                ProviderInsightChip(line: line)
             }
         }
         .padding(ProviderListMetrics.insightsCardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(
+                cornerRadius: ProviderListMetrics.providerInsightsCardCornerRadius,
+                style: .continuous)
                 .fill(Color(nsColor: .controlBackgroundColor).opacity(0.42))
         )
         .overlay {
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(
+                cornerRadius: ProviderListMetrics.providerInsightsCardCornerRadius,
+                style: .continuous)
                 .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
         }
+    }
+}
+
+private struct ProviderInsightChip: View {
+    let line: ProviderInsightLine
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+            Text(line.label.uppercased())
+                .font(.caption2.weight(.semibold))
+                .tracking(0.2)
+                .foregroundStyle(.tertiary)
+            Text(line.value)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .help(line.help ?? "")
+        }
+        .padding(ProviderListMetrics.providerInsightsChipPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: ProviderListMetrics.providerInsightsChipCornerRadius, style: .continuous)
+                .fill(Color(nsColor: .textBackgroundColor).opacity(0.45))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: ProviderListMetrics.providerInsightsChipCornerRadius, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+        )
+        .help(line.help ?? "")
+        .accessibilityLabel("\(line.label): \(line.value)")
+        .accessibilityHint(line.help ?? "")
     }
 }
 
@@ -1202,6 +1227,7 @@ private struct ProviderListProviderRowView: View {
                         Text(self.statusLabel)
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
+                            .lineLimit(1)
 
                         if isRefreshing {
                             ProgressView()
@@ -1238,7 +1264,7 @@ private struct ProviderListProviderRowView: View {
         .padding(ProviderListMetrics.providerCardPadding)
         .background(self.cardBackground)
         .overlay {
-            RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
                 .strokeBorder(self.cardBorderColor, lineWidth: 1)
         }
         .overlay(alignment: .topLeading) {
@@ -1288,9 +1314,9 @@ private struct ProviderListProviderRowView: View {
 
     private var rowBackgroundColor: Color {
         if self.isHovering {
-            return Color(nsColor: .controlBackgroundColor).opacity(0.7)
+            return Color(nsColor: .controlBackgroundColor).opacity(0.72)
         } else if self.isEnabled {
-            return Color(nsColor: .controlBackgroundColor).opacity(0.55)
+            return Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.providerCardBackgroundOpacity)
         }
         return Color(nsColor: .controlBackgroundColor).opacity(0.35)
     }
@@ -1300,13 +1326,13 @@ private struct ProviderListProviderRowView: View {
             return Color.accentColor.opacity(0.35)
         }
         if self.isEnabled {
-            return Color(nsColor: .separatorColor).opacity(0.28)
+            return Color(nsColor: .separatorColor).opacity(ProviderListMetrics.providerCardBorderOpacity)
         }
         return Color(nsColor: .separatorColor).opacity(0.18)
     }
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
             .fill(self.rowBackgroundColor)
     }
 }
@@ -1425,7 +1451,7 @@ private struct ProviderListToggleRowView: View {
         .padding(ProviderListMetrics.supplementalCardPadding)
         .background(self.supplementalCardBackground)
         .overlay {
-            RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
                 .strokeBorder(self.supplementalCardBorderColor, lineWidth: 1)
         }
         .onChange(of: self.toggle.binding.wrappedValue) { _, enabled in
@@ -1442,12 +1468,12 @@ private struct ProviderListToggleRowView: View {
     }
 
     private var supplementalCardBackground: some View {
-        RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.3))
+        RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
+            .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
     }
 
     private var supplementalCardBorderColor: Color {
-        Color(nsColor: .separatorColor).opacity(0.18)
+        Color(nsColor: .separatorColor).opacity(ProviderListMetrics.supplementalCardBorderOpacity)
     }
 }
 
@@ -1506,14 +1532,14 @@ private struct ProviderListFieldRowView: View {
         .padding(ProviderListMetrics.supplementalCardPadding)
         .background(self.supplementalCardBackground)
         .overlay {
-            RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
                 .strokeBorder(self.supplementalCardBorderColor, lineWidth: 1)
         }
     }
 
     private var supplementalCardBackground: some View {
-        RoundedRectangle(cornerRadius: ProviderListMetrics.rowBackgroundCornerRadius, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.3))
+        RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
+            .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
     }
 
     private var supplementalCardBorderColor: Color {

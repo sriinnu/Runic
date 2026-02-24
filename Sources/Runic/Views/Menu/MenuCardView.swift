@@ -38,6 +38,8 @@ enum MenuCardMetrics {
 
     /// Tail padding at the end of sections
     static let tailPadding: CGFloat = RunicSpacing.xxs  // 4
+    static let metricCardPadding: CGFloat = RunicSpacing.sm  // 8
+    static let metricCardCornerRadius: CGFloat = RunicCornerRadius.sm
 }
 
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
@@ -191,39 +193,11 @@ struct UsageMenuCardView: View {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
                             ForEach(self.model.metrics) { metric in
                                 let displayMode = self.model.usageMetricDisplayMode
-                                VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
-                                    Text(metric.title)
-                                        .font(.body)
-                                        .fontWeight(.medium)
-                                    if displayMode.showsBars {
-                                        UsageProgressBar(
-                                            percent: metric.percent,
-                                            tint: self.model.progressColor,
-                                            accessibilityLabel: metric.percentStyle.accessibilityLabel)
-                                    }
-                                    if displayMode.showsPercent || metric.resetText != nil {
-                                        HStack(alignment: .firstTextBaseline) {
-                                            if displayMode.showsPercent {
-                                                Text(metric.percentLabel)
-                                                    .font(.system(.footnote, design: .rounded))
-                                            }
-                                            if let reset = metric.resetText {
-                                                if displayMode.showsPercent {
-                                                    Spacer()
-                                                }
-                                                Text(reset)
-                                                    .font(.footnote)
-                                                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                                            }
-                                        }
-                                    }
-                                    if let detail = metric.detailText {
-                                        Text(detail)
-                                            .font(.footnote)
-                                            .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                                            .lineLimit(1)
-                                    }
-                                }
+                                UsageMenuMetricCard(
+                                    metric: metric,
+                                    displayMode: displayMode,
+                                    tint: self.model.progressColor,
+                                    isHighlighted: self.isHighlighted)
                             }
                         }
                     }
@@ -857,6 +831,66 @@ struct UsageMenuCardHeaderSectionView: View {
     }
 }
 
+private struct UsageMenuMetricCard: View {
+    let metric: UsageMenuCardView.Model.Metric
+    let displayMode: UsageMetricDisplayMode
+    let tint: Color
+    let isHighlighted: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
+            HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+                Text(self.metric.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                Spacer(minLength: RunicSpacing.xs)
+                if let reset = self.metric.resetText {
+                    Text(reset)
+                        .font(.caption2)
+                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                }
+            }
+
+            if self.displayMode.showsBars {
+                UsageProgressBar(
+                    percent: self.metric.percent,
+                    tint: self.tint,
+                    accessibilityLabel: self.metric.percentStyle.accessibilityLabel)
+            }
+
+            if self.displayMode.showsPercent {
+                HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+                    Text(self.metric.percentLabel)
+                        .font(.system(.caption, design: .rounded))
+                        .fontWeight(.medium)
+                    Spacer()
+                }
+            }
+
+            if let detail = self.metric.detailText {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .lineLimit(1)
+                    .textCase(.none)
+            }
+        }
+        .padding(MenuCardMetrics.metricCardPadding)
+        .background(
+            RoundedRectangle(
+                cornerRadius: MenuCardMetrics.metricCardCornerRadius,
+                style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(self.isHighlighted ? 0.2 : 0.14))
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: MenuCardMetrics.metricCardCornerRadius,
+                style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.25), lineWidth: 1)
+        )
+    }
+}
+
 struct UsageMenuCardUsageSectionView: View {
     let model: UsageMenuCardView.Model
     let showBottomDivider: Bool
@@ -876,39 +910,11 @@ struct UsageMenuCardUsageSectionView: View {
             } else {
                 ForEach(self.model.metrics) { metric in
                     let displayMode = self.model.usageMetricDisplayMode
-                    VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
-                        Text(metric.title)
-                            .font(.body)
-                            .fontWeight(.medium)
-                        if displayMode.showsBars {
-                            UsageProgressBar(
-                                percent: metric.percent,
-                                tint: self.model.progressColor,
-                                accessibilityLabel: metric.percentStyle.accessibilityLabel)
-                        }
-                        if displayMode.showsPercent || metric.resetText != nil {
-                            HStack(alignment: .firstTextBaseline) {
-                                if displayMode.showsPercent {
-                                    Text(metric.percentLabel)
-                                        .font(.system(.footnote, design: .rounded))
-                                }
-                                if let reset = metric.resetText {
-                                    if displayMode.showsPercent {
-                                        Spacer()
-                                    }
-                                    Text(reset)
-                                        .font(.footnote)
-                                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                                }
-                            }
-                        }
-                        if let detail = metric.detailText {
-                            Text(detail)
-                                .font(.footnote)
-                                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
-                                .lineLimit(1)
-                        }
-                    }
+                    UsageMenuMetricCard(
+                        metric: metric,
+                        displayMode: displayMode,
+                        tint: self.model.progressColor,
+                        isHighlighted: self.isHighlighted)
                 }
             }
             if self.showBottomDivider {
