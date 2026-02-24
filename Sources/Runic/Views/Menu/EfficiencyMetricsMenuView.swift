@@ -258,11 +258,20 @@ private struct MetricsRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Text(UsageFormatter.modelDisplayName(metrics.modelName))
-                .font(.caption)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(width: 140, alignment: .leading)
+            VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+                Text(UsageFormatter.modelDisplayName(metrics.modelName))
+                    .font(.caption)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if let context = UsageFormatter.modelContextLabel(for: metrics.modelName) {
+                    Text(context)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .frame(width: 140, alignment: .leading)
             Text(UsageFormatter.tokenCountString(Int(metrics.tokensPerRequest)))
                 .font(.caption)
                 .frame(width: 90, alignment: .leading)

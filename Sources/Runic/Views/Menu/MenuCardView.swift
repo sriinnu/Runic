@@ -1241,6 +1241,9 @@ extension UsageMenuCardView.Model {
         let modelName = UsageFormatter.modelDisplayName(summary.model)
         let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
         var parts = ["Top model: \(modelName)", "\(tokens) tokens", "\(summary.entryCount) req"]
+        if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+            parts.append(context)
+        }
         if let cost = summary.totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
             if let per1K = UsageFormatter.usdPer1KTokensString(
@@ -1632,6 +1635,9 @@ extension UsageMenuCardView.Model {
             let tokens = UsageFormatter.tokenCountString(topModel.totals.totalTokens)
             let modelName = UsageFormatter.modelDisplayName(topModel.model)
             var parts = ["Top model: \(modelName) · \(tokens) tokens · \(topModel.entryCount) req"]
+            if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
+                parts.append(context)
+            }
             if let cost = topModel.totals.costUSD {
                 parts.append(UsageFormatter.usdString(cost))
                 if let per1K = UsageFormatter.usdPer1KTokensString(

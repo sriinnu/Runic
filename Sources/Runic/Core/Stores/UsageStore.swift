@@ -528,6 +528,8 @@ struct ProviderHistoryDaySnapshot: Sendable, Hashable, Identifiable {
     let modelsUsed: [String]
     let topModel: UsageLedgerModelSummary?
     let topProject: UsageLedgerProjectSummary?
+    let modelSummaries: [UsageLedgerModelSummary]
+    let projectSummaries: [UsageLedgerProjectSummary]
 
     var id: Date { self.dayStart }
 }
@@ -1112,15 +1114,19 @@ final class UsageStore {
 
         return dailySummaries.map { summary in
             let dayEntries = entriesByDay[summary.dayStart] ?? []
-            let topModel = UsageLedgerAggregator.modelSummaries(entries: dayEntries).first
-            let topProject = UsageLedgerAggregator.projectSummaries(entries: dayEntries).first
+            let modelSummaries = UsageLedgerAggregator.modelSummaries(entries: dayEntries)
+            let projectSummaries = UsageLedgerAggregator.projectSummaries(entries: dayEntries)
+            let topModel = modelSummaries.first
+            let topProject = projectSummaries.first
             return ProviderHistoryDaySnapshot(
                 dayStart: summary.dayStart,
                 totals: summary.totals,
                 requestCount: dayEntries.count,
                 modelsUsed: summary.modelsUsed,
                 topModel: topModel,
-                topProject: topProject)
+                topProject: topProject,
+                modelSummaries: modelSummaries,
+                projectSummaries: projectSummaries)
         }
     }
 
@@ -2543,6 +2549,48 @@ extension UsageStore {
             return cached
         }
 
+        let settingsSnapshot = await MainActor.run {
+            ProviderSettingsSnapshot(
+                debugMenuEnabled: self.settings.debugMenuEnabled,
+                codex: ProviderSettingsSnapshot.CodexProviderSettings(
+                    usageDataSource: self.settings.codexUsageDataSource),
+                claude: ProviderSettingsSnapshot.ClaudeProviderSettings(
+                    usageDataSource: self.settings.claudeUsageDataSource,
+                    webExtrasEnabled: self.settings.claudeWebExtrasEnabled),
+                zai: ProviderSettingsSnapshot.ZaiProviderSettings(),
+                copilot: ProviderSettingsSnapshot.CopilotProviderSettings(
+                    apiToken: self.settings.copilotAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.copilotAPIToken),
+                azure: ProviderSettingsSnapshot.AzureProviderSettings(
+                    apiToken: self.settings.azureOpenAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.azureOpenAIAPIToken,
+                    endpoint: self.settings.azureOpenAIEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.azureOpenAIEndpoint,
+                    deployment: self.settings.azureOpenAIDeployment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.azureOpenAIDeployment,
+                    apiVersion: self.settings.azureOpenAIAPIVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.azureOpenAIAPIVersion),
+                bedrock: ProviderSettingsSnapshot.BedrockProviderSettings(
+                    region: self.settings.bedrockRegion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.bedrockRegion,
+                    profile: self.settings.bedrockAWSProfile.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.bedrockAWSProfile,
+                    modelID: self.settings.bedrockModelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.bedrockModelID))
+        }
+
+        let debugContext = ProviderFetchContext(
+            runtime: .app,
+            sourceMode: .auto,
+            includeCredits: true,
+            webTimeout: 15,
+            webDebugDumpHTML: false,
+            verbose: false,
+            env: ProcessInfo.processInfo.environment,
+            settings: settingsSnapshot,
+            fetcher: self.codexFetcher,
+            claudeFetcher: self.claudeFetcher)
+
         let claudeWebExtrasEnabled = self.settings.claudeWebExtrasEnabled
         let claudeUsageDataSource = self.settings.claudeUsageDataSource
         let claudeDebugMenuEnabled = self.settings.debugMenuEnabled
@@ -2626,98 +2674,379 @@ extension UsageStore {
                 await MainActor.run { self.probeLogs[.claude] = text }
                 return text
             case .zai:
-                let resolution = ProviderTokenResolver.zaiResolution()
-                let hasAny = resolution != nil
-                let source = resolution?.source.rawValue ?? "none"
-                let text = "Z_AI_API_KEY=\(hasAny ? "present" : "missing") source=\(source)"
+                let text = self.debugTokenSummary(
+                    provider: "zai",
+                    resolution: ProviderTokenResolver.zaiResolution())
                 await MainActor.run { self.probeLogs[.zai] = text }
                 return text
             case .gemini:
-                let text = "Gemini debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .gemini,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.gemini] = text }
                 return text
             case .antigravity:
-                let text = "Antigravity debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .antigravity,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.antigravity] = text }
                 return text
             case .cursor:
-                let text = "Cursor debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .cursor,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.cursor] = text }
                 return text
             case .factory:
-                let text = "Droid debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .factory,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.factory] = text }
                 return text
             case .copilot:
-                let text = "Copilot debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .copilot,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.copilot] = text }
                 return text
             case .minimax:
-                let text = "MiniMax debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .minimax,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.minimax] = text }
                 return text
             case .openrouter:
-                let text = "OpenRouter debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .openrouter,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.openrouter] = text }
                 return text
             case .groq:
-                let text = "Groq debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .groq,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.groq] = text }
                 return text
             case .deepseek:
-                let text = "DeepSeek debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .deepseek,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.deepseek] = text }
                 return text
             case .fireworks:
-                let text = "Fireworks debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .fireworks,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.fireworks] = text }
                 return text
             case .mistral:
-                let text = "Mistral debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .mistral,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.mistral] = text }
                 return text
             case .perplexity:
-                let text = "Perplexity debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .perplexity,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.perplexity] = text }
                 return text
             case .kimi:
-                let text = "Kimi debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .kimi,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.kimi] = text }
                 return text
             case .auggie:
-                let text = "Auggie debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .auggie,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.auggie] = text }
                 return text
             case .together:
-                let text = "Together debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .together,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.together] = text }
                 return text
             case .cohere:
-                let text = "Cohere debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .cohere,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.cohere] = text }
                 return text
             case .xai:
-                let text = "xAI debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .xai,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.xai] = text }
                 return text
             case .cerebras:
-                let text = "Cerebras debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .cerebras,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.cerebras] = text }
                 return text
             case .sambanova:
-                let text = "SambaNova debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .sambanova,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.sambanova] = text }
                 return text
             case .azure:
-                let text = "Azure OpenAI debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .azure,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.azure] = text }
                 return text
             case .bedrock:
-                let text = "Amazon Bedrock debug log not yet implemented"
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .bedrock,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
                 await MainActor.run { self.probeLogs[.bedrock] = text }
                 return text
             }
         }.value
+    }
+
+    private nonisolated func debugProviderProbe(
+        provider: UsageProvider,
+        context: ProviderFetchContext,
+        settings: ProviderSettingsSnapshot) async -> String
+    {
+        var lines: [String] = [
+            "provider=\(provider.rawValue)"
+        ]
+
+        lines.append(contentsOf: self.debugCredentialLines(for: provider, settings: settings))
+        let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+        let outcome = await descriptor.fetchOutcome(context: context)
+        lines.append(contentsOf: self.debugAttemptLines(from: outcome.attempts))
+
+        switch outcome.result {
+        case let .success(result):
+            lines.append("result=success")
+            lines.append("strategy_id=\(result.strategyID)")
+            lines.append("strategy_kind=\(self.debugStrategyKindLabel(result.strategyKind))")
+            lines.append("source_label=\(result.sourceLabel)")
+            lines.append(contentsOf: self.debugUsageSummary(result.usage))
+        case let .failure(error):
+            lines.append("result=failure")
+            lines.append("error=\(error.localizedDescription)")
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private nonisolated func debugCredentialLines(
+        for provider: UsageProvider,
+        settings: ProviderSettingsSnapshot) -> [String]
+    {
+        switch provider {
+        case .zai:
+            return [self.debugTokenSummary(provider: "zai", resolution: ProviderTokenResolver.zaiResolution())]
+        case .copilot:
+            return [self.debugTokenSummary(provider: "copilot", resolution: ProviderTokenResolver.copilotResolution())]
+        case .minimax:
+            return [
+                self.debugTokenSummary(
+                    provider: "minimax.api",
+                    resolution: ProviderTokenResolver.minimaxApiKeyResolution()),
+                self.debugTokenSummary(
+                    provider: "minimax.cookie",
+                    resolution: ProviderTokenResolver.minimaxCookieHeaderResolution()),
+                self.debugTokenSummary(
+                    provider: "minimax.group",
+                    resolution: ProviderTokenResolver.minimaxGroupResolution()),
+            ]
+        case .openrouter:
+            return [self.debugTokenSummary(provider: "openrouter", resolution: ProviderTokenResolver.openRouterResolution())]
+        case .groq:
+            return [self.debugTokenSummary(provider: "groq", resolution: ProviderTokenResolver.groqResolution())]
+        case .deepseek:
+            return [self.debugTokenSummary(provider: "deepseek", resolution: ProviderTokenResolver.deepSeekResolution())]
+        case .fireworks:
+            return [self.debugTokenSummary(provider: "fireworks", resolution: ProviderTokenResolver.fireworksResolution())]
+        case .mistral:
+            return [self.debugTokenSummary(provider: "mistral", resolution: ProviderTokenResolver.mistralResolution())]
+        case .perplexity:
+            return [self.debugTokenSummary(provider: "perplexity", resolution: ProviderTokenResolver.perplexityResolution())]
+        case .kimi:
+            return [self.debugTokenSummary(provider: "kimi", resolution: ProviderTokenResolver.kimiResolution())]
+        case .auggie:
+            return [self.debugTokenSummary(provider: "auggie", resolution: ProviderTokenResolver.auggieResolution())]
+        case .together:
+            return [self.debugTokenSummary(provider: "together", resolution: ProviderTokenResolver.togetherResolution())]
+        case .cohere:
+            return [self.debugTokenSummary(provider: "cohere", resolution: ProviderTokenResolver.cohereResolution())]
+        case .xai:
+            return [self.debugTokenSummary(provider: "xai", resolution: ProviderTokenResolver.xaiResolution())]
+        case .cerebras:
+            return [self.debugTokenSummary(provider: "cerebras", resolution: ProviderTokenResolver.cerebrasResolution())]
+        case .sambanova:
+            return [self.debugTokenSummary(provider: "sambanova", resolution: ProviderTokenResolver.sambaNovaResolution())]
+        case .azure:
+            var lines: [String] = [
+                "azure.endpoint=\(self.debugFieldValue(settings.azure?.endpoint))",
+                "azure.deployment=\(self.debugFieldValue(settings.azure?.deployment))",
+                "azure.apiVersion=\(self.debugFieldValue(settings.azure?.apiVersion))"
+            ]
+            lines.append(self.debugTokenSummary(provider: "azure.token", resolution: ProviderTokenResolver.azureOpenAIResolution()))
+            return lines
+        case .bedrock:
+            return [
+                "bedrock.region=\(self.debugFieldValue(settings.bedrock?.region))",
+                "bedrock.profile=\(self.debugFieldValue(settings.bedrock?.profile))",
+                "bedrock.model_filter=\(self.debugFieldValue(settings.bedrock?.modelID))",
+            ]
+        case .gemini:
+            return [
+                "gemini.authType=\(GeminiStatusProbe.currentAuthType().rawValue)",
+            ]
+        case .antigravity, .cursor, .factory:
+            return ["credentials=provider_internal"]
+        case .codex, .claude:
+            return []
+        }
+    }
+
+    private nonisolated func debugAttemptLines(from attempts: [ProviderFetchAttempt]) -> [String] {
+        var lines: [String] = []
+        if attempts.isEmpty {
+            lines.append("attempts=none")
+            return lines
+        }
+
+        let attemptSummary = attempts.enumerated().map { index, attempt in
+            let error = attempt.errorDescription ?? "nil"
+            return "attempt\(index + 1): id=\(attempt.strategyID) kind=\(attempt.kind) available=\(attempt.wasAvailable) error=\(error)"
+        }
+        lines.append("attempts=\(attempts.count)")
+        lines.append(contentsOf: attemptSummary)
+        return lines
+    }
+
+    private nonisolated func debugUsageSummary(_ snapshot: UsageSnapshot) -> [String] {
+        var lines: [String] = []
+        lines.append(self.debugRateWindowSummary(label: "primary", window: snapshot.primary))
+        if let secondary = snapshot.secondary {
+            lines.append(self.debugRateWindowSummary(label: "secondary", window: secondary))
+        }
+        if let tertiary = snapshot.tertiary {
+            lines.append(self.debugRateWindowSummary(label: "tertiary", window: tertiary))
+        }
+        if let identity = snapshot.identity {
+            lines.append("identity.email=\(identity.accountEmail ?? "nil")")
+            lines.append("identity.organization=\(identity.accountOrganization ?? "nil")")
+            lines.append("identity.loginMethod=\(identity.loginMethod ?? "nil")")
+        }
+        if let providerCost = snapshot.providerCost {
+            let resetsAt = providerCost.resetsAt?.description ?? "nil"
+            lines.append(
+                "provider_cost.used=\(providerCost.used) limit=\(providerCost.limit) " +
+                "currency=\(providerCost.currencyCode) period=\(providerCost.period ?? "nil") resetsAt=\(resetsAt)")
+        }
+        return lines
+    }
+
+    private nonisolated func debugRateWindowSummary(label: String, window: RateWindow) -> String {
+        let resetsAt = window.resetsAt?.description ?? "nil"
+        let windowMinutes = window.windowMinutes.map { "\($0)m" } ?? "nil"
+        let resetDescription = window.resetDescription ?? "nil"
+        let windowLabel = window.label ?? "nil"
+        let used = String(format: "%.2f", window.usedPercent)
+        let remaining = String(format: "%.2f", window.remainingPercent)
+        return "\(label).usedPercent=\(used) remainingPercent=\(remaining) window=\(windowMinutes) resetsAt=\(resetsAt) label=\(windowLabel) desc=\(resetDescription)"
+    }
+
+    private nonisolated func debugTokenSummary(provider: String, resolution: ProviderTokenResolution?) -> String {
+        let tokenState = resolution == nil ? "missing" : "present"
+        let source = resolution.flatMap { r in
+            let key = r.sourceKey.map { "(\($0))" } ?? ""
+            return "\(r.source.rawValue)\(key)"
+        } ?? "nil"
+        let length = resolution?.token.count ?? 0
+        return "\(provider)=\(tokenState) source=\(source) length=\(length)"
+    }
+
+    private nonisolated func debugFieldValue(_ raw: String?) -> String {
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "missing" : trimmed
+    }
+
+    private nonisolated func debugStrategyKindLabel(_ kind: ProviderFetchKind) -> String {
+        switch kind {
+        case .cli: "cli"
+        case .api: "api"
+        case .web: "web"
+        case .oauth: "oauth"
+        case .apiToken: "apiToken"
+        case .localProbe: "localProbe"
+        case .webDashboard: "webDashboard"
+        }
     }
 
     private func runWithTimeout(seconds: Double, operation: @escaping @Sendable () async -> String) async -> String {

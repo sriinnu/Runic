@@ -10,9 +10,11 @@ struct KimiModelsResponse: Decodable {
 
 struct KimiUsageFetcher {
     static let apiURL = URL(string: "https://api.moonshot.ai/v1/models")!
+    private static let requestTimeout: TimeInterval = 20
 
     static func fetchModels(apiKey: String) async throws -> KimiModelsResponse {
         var request = URLRequest(url: apiURL)
+        request.timeoutInterval = Self.requestTimeout
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 

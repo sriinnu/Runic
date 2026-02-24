@@ -100,6 +100,11 @@ struct ModelBreakdownMenuView: View {
                 Text("\(UsageFormatter.tokenCountString(item.totalTokens)) tokens")
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.secondary)
+                if let context = UsageFormatter.modelContextLabel(for: item.model) {
+                    Text(context)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                }
                 HStack(spacing: RunicSpacing.xxxs) {
                     Text("\(item.requestCount) req\(item.requestCount == 1 ? "" : "s")")
                         .font(.system(.caption2, design: .rounded))
@@ -144,6 +149,7 @@ struct ModelBreakdownMenuView: View {
     struct ModelItem: Identifiable {
         let id: String
         let displayName: String
+        let model: String
         let totalTokens: Int
         let requestCount: Int
         let costText: String?
@@ -194,6 +200,7 @@ struct ModelBreakdownMenuView: View {
             return ModelItem(
                 id: "\(summary.model)-\(index)",
                 displayName: displayName,
+                model: summary.model,
                 totalTokens: summary.totals.totalTokens,
                 requestCount: summary.entryCount,
                 costText: costText,

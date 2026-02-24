@@ -224,6 +224,9 @@ private enum ProviderInsightsComposer {
         let model = UsageFormatter.modelDisplayName(summary.model)
         let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
         var parts = [model, "\(tokens) tok", "\(summary.entryCount) req"]
+        if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+            parts.append(context)
+        }
         if let cost = summary.totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
         }
@@ -1786,6 +1789,14 @@ private enum ProviderHistoryMetricMode: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
+private enum ProviderHistoryDayDetailMode: String, CaseIterable, Identifiable {
+    case summary = "Summary"
+    case models = "Models"
+    case projects = "Projects"
+
+    var id: String { self.rawValue }
+}
+
 @MainActor
 private struct ProviderHistoryCalendarDayCell: View {
     let dayNumber: Int
@@ -1865,6 +1876,7 @@ private struct ProviderSidebarDetailView: View {
     @State private var historyMonthStart: Date = Self.monthStart(for: Date())
     @State private var historySnapshot: ProviderHistoryMonthSnapshot?
     @State private var historySelectedDay: Date?
+    @State private var historyDayDetailMode: ProviderHistoryDayDetailMode = .summary
     @State private var historyIsLoading = false
     @State private var historyError: String?
 
@@ -2089,6 +2101,7 @@ private struct ProviderSidebarDetailView: View {
             self.historyMonthStart = Self.monthStart(for: Date())
             self.historySnapshot = nil
             self.historySelectedDay = nil
+            self.historyDayDetailMode = .summary
             self.historyError = nil
             self.historyIsLoading = false
         }
@@ -2274,44 +2287,90 @@ private struct ProviderSidebarDetailView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                HStack(spacing: RunicSpacing.xs) {
-                    ProviderSidebarMetricChip(
-                        title: "Requests",
-                        value: self.decimalString(selected.requestCount),
-                        helpText: "Count of requests recorded in local ledger logs.")
-                    ProviderSidebarMetricChip(
-                        title: "Tokens",
-                        value: "\(UsageFormatter.tokenCountString(selected.totals.totalTokens)) tok",
-                        helpText: "Input + output + cache tokens.")
-                    if let spend = selected.totals.costUSD {
-                        ProviderSidebarMetricChip(
-                            title: "Spend",
-                            value: UsageFormatter.usdString(spend),
-                            helpText: "Estimated day spend from ledger pricing.")
+                Picker("History detail", selection: self.$historyDayDetailMode) {
+                    ForEach(ProviderHistoryDayDetailMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
                     }
                 }
+                .pickerStyle(.segmented)
+                .controlSize(.mini)
+                .frame(maxWidth: 240)
 
-                if let topModel = selected.topModel {
-                    Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
+                if self.historyDayDetailMode == .summary {
+                    HStack(spacing: RunicSpacing.xs) {
+                        ProviderSidebarMetricChip(
+                            title: "Requests",
+                            value: self.decimalString(selected.requestCount),
+                            helpText: "Count of requests recorded in local ledger logs.")
+                        ProviderSidebarMetricChip(
+                            title: "Tokens",
+                            value: UsageFormatter.tokenSummaryString(selected.totals),
+                            helpText: "Input, output, and cache token composition.")
+                        if let spend = selected.totals.costUSD {
+                            ProviderSidebarMetricChip(
+                                title: "Spend",
+                                value: UsageFormatter.usdString(spend),
+                                helpText: "Estimated day spend from ledger pricing.")
+                        }
+                    }
+
+                    if let topModel = selected.topModel {
+                        Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+
+                    if let topProject = selected.topProject {
+                        let project = self.projectDisplay(topProject)
+                        Text("Top project: \(project.title)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .help(project.helpText ?? "")
+                    }
                 }
-
-                if let topProject = selected.topProject {
-                    let project = self.projectDisplay(topProject)
-                    Text("Top project: \(project.title)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .help(project.helpText ?? "")
+                if self.historyDayDetailMode == .models {
+                    if !selected.modelSummaries.isEmpty {
+                        Text("Models used")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(selected.modelSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                            Text("• \(self.historyModelLine(summary))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .textSelection(.enabled)
+                                .help(self.historyModelLine(summary))
+                        }
+                    } else if !selected.modelsUsed.isEmpty {
+                        Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .textSelection(.enabled)
+                    } else {
+                        Text("No models recorded for this day.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
-
-                if !selected.modelsUsed.isEmpty {
-                    Text("Models used: \(selected.modelsUsed.prefix(4).map { UsageFormatter.modelDisplayName($0) }.joined(separator: ", "))")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .textSelection(.enabled)
+                if self.historyDayDetailMode == .projects {
+                    if !selected.projectSummaries.isEmpty {
+                        Text("Top projects")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(selected.projectSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                            let project = self.projectDisplay(summary)
+                            Text("• \(self.historyProjectLine(summary))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .textSelection(.enabled)
+                                .help(project.helpText ?? "")
+                        }
+                    } else {
+                        Text("No projects recorded for this day.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             } else {
                 Text(self.historySelectedDay?.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
@@ -2419,14 +2478,66 @@ private struct ProviderSidebarDetailView: View {
             return lines.joined(separator: "\n")
         }
         lines.append("Requests: \(self.decimalString(summary.requestCount))")
-        lines.append("Tokens: \(UsageFormatter.tokenCountString(summary.totals.totalTokens))")
+        lines.append("Tokens: \(UsageFormatter.tokenSummaryString(summary.totals))")
         if let spend = summary.totals.costUSD {
             lines.append("Spend: \(UsageFormatter.usdString(spend))")
         }
         if let topModel = summary.topModel {
-            lines.append("Top model: \(UsageFormatter.modelDisplayName(topModel.model))")
+            var modelLine = "Top model: \(UsageFormatter.modelDisplayName(topModel.model))"
+            if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
+                modelLine += " · \(context)"
+            }
+            lines.append(modelLine)
+        }
+        if !summary.modelSummaries.isEmpty {
+            let modelCount = min(3, summary.modelSummaries.count)
+            for summary in summary.modelSummaries.prefix(modelCount) {
+                var line = "Model: \(UsageFormatter.modelDisplayName(summary.model)) · \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tok"
+                if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+                    line += " · \(context)"
+                }
+                lines.append(line)
+            }
+        }
+        if let topProject = summary.topProject {
+            var projectLine = "Top project: \(self.projectDisplay(topProject).title)"
+            if let cost = topProject.totals.costUSD {
+                projectLine += " · \(UsageFormatter.usdString(cost))"
+            }
+            lines.append(projectLine)
         }
         return lines.joined(separator: "\n")
+    }
+
+    private func renderedModelsList(_ modelsUsed: [String]) -> [String] {
+        var seen: Set<String> = []
+        var rendered: [String] = []
+        for model in modelsUsed {
+            let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, seen.insert(trimmed).inserted else { continue }
+            var text = UsageFormatter.modelDisplayName(trimmed)
+            if let context = UsageFormatter.modelContextLabel(for: trimmed) {
+                text += " \(context)"
+            }
+            rendered.append(text)
+        }
+        return rendered
+    }
+
+    private func historyModelLine(_ summary: UsageLedgerModelSummary) -> String {
+        self.usageLine(
+            title: UsageFormatter.modelDisplayName(summary.model),
+            totals: summary.totals,
+            requests: summary.entryCount,
+            model: summary.model)
+    }
+
+    private func historyProjectLine(_ summary: UsageLedgerProjectSummary) -> String {
+        let project = self.projectDisplay(summary)
+        return self.usageLine(
+            title: project.title,
+            totals: summary.totals,
+            requests: summary.entryCount)
     }
 
     private func shiftHistoryMonth(by delta: Int) {
@@ -2602,10 +2713,14 @@ private struct ProviderSidebarDetailView: View {
         if let topModel = self.store.ledgerTopModel(for: self.provider) {
             let modelName = UsageFormatter.modelDisplayName(topModel.model)
             let tokens = UsageFormatter.tokenCountString(topModel.totals.totalTokens)
+            var value = "\(modelName) · \(tokens) tok"
+            if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
+                value += " · \(context)"
+            }
             items.append(QuickMetricItem(
                 id: "top-model",
                 title: "Top model",
-                value: "\(modelName) · \(tokens) tok",
+                value: value,
                 helpText: "Highest token usage model in the active insights window."))
         } else if let windowModel = self.topWindowModel {
             let modelName = UsageFormatter.modelDisplayName(windowModel.label)
@@ -2659,7 +2774,11 @@ private struct ProviderSidebarDetailView: View {
         if !ranked.isEmpty {
             return ranked.prefix(3).map { summary in
                 let name = UsageFormatter.modelDisplayName(summary.model)
-                return self.usageLine(title: name, totals: summary.totals, requests: summary.entryCount)
+                return self.usageLine(
+                    title: name,
+                    totals: summary.totals,
+                    requests: summary.entryCount,
+                    model: summary.model)
             }
         }
         return self.windowModelLines
@@ -2678,9 +2797,17 @@ private struct ProviderSidebarDetailView: View {
         }
     }
 
-    private func usageLine(title: String, totals: UsageLedgerTotals, requests: Int) -> String {
-        let tokens = UsageFormatter.tokenCountString(totals.totalTokens)
-        var parts = ["\(title)", "\(tokens) tok", "\(requests) req"]
+    private func usageLine(
+        title: String,
+        totals: UsageLedgerTotals,
+        requests: Int,
+        model: String? = nil) -> String
+    {
+        let tokens = UsageFormatter.tokenSummaryString(totals)
+        var parts = ["\(title)", "\(tokens)", "\(requests) req"]
+        if let model, let context = UsageFormatter.modelContextLabel(for: model) {
+            parts.append(context)
+        }
         if let cost = totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
         }

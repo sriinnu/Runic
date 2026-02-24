@@ -265,7 +265,10 @@ struct CostComparativeChartMenuView: View {
         }
 
         let tokens = UsageFormatter.tokenCountString(data.totalTokens)
-        let secondary = "\(tokens) tokens · \(relativeText)"
+        var secondary = "\(tokens) tokens · \(relativeText)"
+        if let context = UsageFormatter.modelContextLabel(for: data.modelName) {
+            secondary += " · \(context)"
+        }
 
         return (primary, secondary)
     }

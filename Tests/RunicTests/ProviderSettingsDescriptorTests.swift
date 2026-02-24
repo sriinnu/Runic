@@ -139,4 +139,64 @@ struct ProviderSettingsDescriptorTests {
         settings.claudeUsageDataSource = .oauth
         #expect(settings.claudeWebExtrasEnabled == false)
     }
+
+    @Test
+    func extraProvidersExposeExpectedSettingsFields() {
+        let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-extra-fields")!
+        defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-extra-fields")
+        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
+
+        let expectedFields: [UsageProvider: Set<String>] = [
+            .kimi: ["kimi-api-token"],
+            .auggie: ["auggie-api-token"],
+            .openrouter: ["openrouter-api-token"],
+            .bedrock: ["bedrock-region", "bedrock-aws-profile", "bedrock-model-id"],
+        ]
+
+        for (provider, expected) in expectedFields {
+            guard let impl = ProviderCatalog.implementation(for: provider) else {
+                #expect(Bool(false), "Missing provider implementation for \(provider.rawValue).")
+                continue
+            }
+            let context = self.makeSettingsContext(provider: provider, settings: settings, store: store)
+            let visibleFields = impl.settingsFields(context: context).filter { $0.isVisible?() ?? true }
+            let fieldIDs = Set(visibleFields.map(\.id))
+            #expect(fieldIDs.isSuperset(of: expected))
+            #expect(!visibleFields.isEmpty)
+        }
+    }
+
+    @Test
+    func allProvidersHaveAppSideImplementation() {
+        for provider in UsageProvider.allCases {
+            #expect(ProviderCatalog.implementation(for: provider) != nil)
+        }
+    }
+
+    private func makeSettingsContext(
+        provider: UsageProvider,
+        settings: SettingsStore,
+        store: UsageStore) -> ProviderSettingsContext
+    {
+        ProviderSettingsContext(
+            provider: provider,
+            settings: settings,
+            store: store,
+            boolBinding: { keyPath in
+                Binding(
+                    get: { settings[keyPath: keyPath] },
+                    set: { settings[keyPath: keyPath] = $0 })
+            },
+            stringBinding: { keyPath in
+                Binding(
+                    get: { settings[keyPath: keyPath] },
+                    set: { settings[keyPath: keyPath] = $0 })
+            },
+            statusText: { _ in nil },
+            setStatusText: { _, _ in },
+            lastAppActiveRunAt: { _ in nil },
+            setLastAppActiveRunAt: { _, _ in },
+            requestConfirmation: { _ in })
+    }
 }

@@ -343,10 +343,38 @@ struct UsageTimelineChartMenuView: View {
             details.append("Cache: \(UsageFormatter.tokenCountString(cacheTotal))")
         }
         if !summary.modelsUsed.isEmpty {
-            details.append("\(summary.modelsUsed.count) model\(summary.modelsUsed.count == 1 ? "" : "s")")
+            if let models = Self.modelsDetailText(from: summary.modelsUsed) {
+                details.append("Models: \(models)")
+            }
         }
 
         let secondary = details.isEmpty ? nil : details.joined(separator: " · ")
         return (primary, secondary)
+    }
+
+    private static func modelsDetailText(from modelsUsed: [String]) -> String? {
+        var seen: Set<String> = []
+        let deduplicated = modelsUsed.filter { model in
+            let inserted = seen.insert(model).inserted
+            return inserted
+        }
+
+        guard !deduplicated.isEmpty else { return nil }
+
+        let maxShown = 3
+        let shown = deduplicated.prefix(maxShown)
+        let rendered = shown.map { model in
+            if let context = UsageFormatter.modelContextLabel(for: model) {
+                return "\(UsageFormatter.modelDisplayName(model)) \(context)"
+            }
+            return UsageFormatter.modelDisplayName(model)
+        }
+
+        var detail = rendered.joined(separator: " · ")
+        let extra = deduplicated.count - shown.count
+        if extra > 0 {
+            detail += " · +\(extra) more"
+        }
+        return detail
     }
 }

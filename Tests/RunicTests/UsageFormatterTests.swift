@@ -77,4 +77,36 @@ struct UsageFormatterTests {
     func cleanPlanMapsOAuthToOllama() {
         #expect(UsageFormatter.cleanPlanName("oauth") == "Ollama")
     }
+
+    @Test
+    func modelContextFromKnownModel() {
+        #expect(UsageFormatter.modelContextLabel(for: "gpt-4o") == "ctx 128K")
+        #expect(UsageFormatter.modelContextLabel(for: "claude-opus-4-5") == "ctx 200K")
+        #expect(UsageFormatter.modelContextLabel(for: "gpt-5") == "ctx 400K")
+        #expect(UsageFormatter.modelContextLabel(for: "gpt-5.2") == "ctx 400K")
+        #expect(UsageFormatter.modelContextLabel(for: "claude-opus-4-6") == "ctx 1M")
+        #expect(UsageFormatter.modelContextLabel(for: "claude-sonnet-4-6") == "ctx 1M")
+    }
+
+    @Test
+    func modelContextFromNameSuffix() {
+        #expect(UsageFormatter.modelContextWindow(for: "qwen2.5-128k-instruct") == 128_000)
+        #expect(UsageFormatter.modelContextLabel(for: "provider/qwen2.5-2m-long-context") == "ctx 2M")
+    }
+
+    @Test
+    func modelContextUnknownReturnsNil() {
+        #expect(UsageFormatter.modelContextWindow(for: "unknown-custom-model-v1") == nil)
+    }
+
+    @Test
+    func tokenSummaryIncludesBreakdown() {
+        let totals = UsageLedgerTotals(
+            inputTokens: 1000,
+            outputTokens: 200,
+            cacheCreationTokens: 300,
+            cacheReadTokens: 50,
+            costUSD: nil)
+        #expect(UsageFormatter.tokenSummaryString(totals) == "1.6K tok (in 1K, out 200, cache 350)")
+    }
 }
