@@ -2805,8 +2805,10 @@ private struct ProviderSidebarDetailView: View {
         }
         if let topModel = self.store.ledgerTopModel(for: self.provider) {
             let modelName = UsageFormatter.modelDisplayName(topModel.model)
-            let tokens = UsageFormatter.tokenCountString(topModel.totals.totalTokens)
-            var value = "\(modelName) · \(tokens) tok"
+            var value = self.modelLineValue(
+                title: modelName,
+                totals: topModel.totals,
+                requests: topModel.entryCount)
             if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
                 value += " · \(context)"
             }
@@ -2823,6 +2825,15 @@ private struct ProviderSidebarDetailView: View {
                 title: "Top model",
                 value: "\(modelName) · \(used)% used",
                 helpText: "Most constrained model/category from live quota windows."))
+        }
+        if let topProject = self.store.ledgerTopProject(for: self.provider) {
+            let project = self.projectDisplay(topProject)
+            let value = self.topProjectSummaryValue(topProject)
+            items.append(QuickMetricItem(
+                id: "top-project",
+                title: "Top project",
+                value: "\(project.title) · \(value)",
+                helpText: "Highest token usage project in the active insights window."))
         }
         if let coverage = metadata.usageCoverage.summaryLabel {
             let value = coverage.replacingOccurrences(of: "usage: ", with: "")
@@ -2898,11 +2909,46 @@ private struct ProviderSidebarDetailView: View {
     {
         let tokens = UsageFormatter.tokenSummaryString(totals)
         var parts = ["\(title)", "\(tokens)", "\(requests) req"]
+        if let cost = totals.costUSD {
+            parts.append(UsageFormatter.usdString(cost))
+            if let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: totals.totalTokens) {
+                parts.append("~\(per1K)")
+            }
+            if let perReq = UsageFormatter.usdPerRequestString(costUSD: cost, requestCount: requests) {
+                parts.append("~\(perReq)")
+            }
+        }
         if let model, let context = UsageFormatter.modelContextLabel(for: model) {
             parts.append(context)
         }
+        return parts.joined(separator: " · ")
+    }
+
+    private func topProjectSummaryValue(_ summary: UsageLedgerProjectSummary) -> String {
+        var parts: [String] = []
+        parts.append(UsageFormatter.tokenSummaryString(summary.totals))
+        parts.append("\(summary.entryCount) req")
+        if let cost = summary.totals.costUSD {
+            parts.append(UsageFormatter.usdString(cost))
+            if let perReq = UsageFormatter.usdPerRequestString(costUSD: cost, requestCount: summary.entryCount) {
+                parts.append("~\(perReq)")
+            }
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func modelLineValue(title: String, totals: UsageLedgerTotals, requests: Int) -> String {
+        var parts: [String] = [title]
+        parts.append(UsageFormatter.tokenSummaryString(totals))
+        parts.append("\(requests) req")
         if let cost = totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
+            if let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: totals.totalTokens) {
+                parts.append("~\(per1K)")
+            }
+            if let perReq = UsageFormatter.usdPerRequestString(costUSD: cost, requestCount: requests) {
+                parts.append("~\(perReq)")
+            }
         }
         return parts.joined(separator: " · ")
     }
