@@ -248,6 +248,12 @@ private enum ProviderInsightsComposer {
         }
         if let cost = summary.totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
+            if let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: summary.totals.totalTokens) {
+                parts.append("~\(per1K)")
+            }
+            if let perReq = UsageFormatter.usdPerRequestString(costUSD: cost, requestCount: summary.entryCount) {
+                parts.append("~\(perReq)")
+            }
         }
         return parts.joined(separator: " · ")
     }
@@ -258,6 +264,12 @@ private enum ProviderInsightsComposer {
         var parts = [project, "\(tokens) tok", "\(summary.entryCount) req"]
         if let cost = summary.totals.costUSD {
             parts.append(UsageFormatter.usdString(cost))
+            if let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: summary.totals.totalTokens) {
+                parts.append("~\(per1K)")
+            }
+            if let perReq = UsageFormatter.usdPerRequestString(costUSD: cost, requestCount: summary.entryCount) {
+                parts.append("~\(perReq)")
+            }
         }
         return parts.joined(separator: " · ")
     }
@@ -2059,7 +2071,7 @@ private struct ProviderSidebarDetailView: View {
                                 HStack(alignment: .top, spacing: RunicSpacing.md) {
                                     if !topModelLines.isEmpty {
                                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                            Text("Models")
+                                            Text(self.modelSectionTitle)
                                                 .font(.caption2.weight(.semibold))
                                                 .foregroundStyle(.secondary)
                                             ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
@@ -2790,6 +2802,7 @@ private struct ProviderSidebarDetailView: View {
         let snapshot = self.store.snapshot(for: self.provider)
         let tokenSnapshot = self.store.tokenSnapshot(for: self.provider)
         let metadata = self.store.metadata(for: self.provider)
+        let hasModelBreakdown = metadata.usageCoverage.supportsModelBreakdown
 
         if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
             items.append(QuickMetricItem(id: "today", title: "Today", value: today, helpText: "Session cost and tokens."))
@@ -2822,9 +2835,11 @@ private struct ProviderSidebarDetailView: View {
             let used = Int(windowModel.window.usedPercent.rounded())
             items.append(QuickMetricItem(
                 id: "top-model-window",
-                title: "Top model",
+                title: hasModelBreakdown ? "Top model" : "Top window",
                 value: "\(modelName) · \(used)% used",
-                helpText: "Most constrained model/category from live quota windows."))
+                helpText: hasModelBreakdown ?
+                    "Most constrained model/category from live quota windows."
+                    : "Top quota window from live fetch response."))
         }
         if let topProject = self.store.ledgerTopProject(for: self.provider) {
             let project = self.projectDisplay(topProject)
@@ -2869,6 +2884,8 @@ private struct ProviderSidebarDetailView: View {
     }
 
     private var topModelLines: [String] {
+        let metadata = self.store.metadata(for: self.provider)
+        let coverage = metadata.usageCoverage
         let ranked = self.store.ledgerModelBreakdown(for: self.provider).sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
                 return UsageFormatter.modelDisplayName(lhs.model) < UsageFormatter.modelDisplayName(rhs.model)
@@ -2876,6 +2893,9 @@ private struct ProviderSidebarDetailView: View {
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         if !ranked.isEmpty {
+            guard coverage.supportsModelBreakdown else {
+                return []
+            }
             return ranked.prefix(3).map { summary in
                 let name = UsageFormatter.modelDisplayName(summary.model)
                 return self.usageLine(
@@ -2885,7 +2905,14 @@ private struct ProviderSidebarDetailView: View {
                     model: summary.model)
             }
         }
+        guard !coverage.supportsModelBreakdown else {
+            return []
+        }
         return self.windowModelLines
+    }
+
+    private var modelSectionTitle: String {
+        self.store.metadata(for: self.provider).usageCoverage.supportsModelBreakdown ? "Models" : "Quota windows"
     }
 
     private var topProjectLines: [String] {

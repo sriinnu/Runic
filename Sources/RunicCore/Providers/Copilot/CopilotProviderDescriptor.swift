@@ -24,7 +24,7 @@ public enum CopilotProviderDescriptor {
                 dashboardURL: "https://github.com/settings/copilot",
                 statusPageURL: "https://www.githubstatus.com/",
                 usageCoverage: ProviderUsageCoverage(
-                    supportsModelBreakdown: true,
+                    supportsModelBreakdown: false,
                     supportsTokenMetrics: false,
                     supportsProjectAttribution: false)),
             branding: ProviderBranding(
