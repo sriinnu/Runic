@@ -390,6 +390,7 @@ private func loadFromKeychain(key: String) -> Data? {
         kSecAttrService as String: "com.sriinnu.athena.Runic",
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
+        kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
         kSecReturnData as String: true
     ]
     let authContext = LAContext()

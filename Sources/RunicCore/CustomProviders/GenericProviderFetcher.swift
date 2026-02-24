@@ -254,6 +254,7 @@ public actor GenericProviderFetcher {
             kSecAttrService as String: keychainService,
             kSecAttrAccount as String: account,
             kSecUseDataProtectionKeychain as String: true,
+            kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
