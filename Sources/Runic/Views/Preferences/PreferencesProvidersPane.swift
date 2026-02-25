@@ -113,13 +113,17 @@ private enum ProviderInsightsComposer {
         let topProject = store.ledgerTopProject(for: provider)
         let modelBreakdown = store.ledgerModelBreakdown(for: provider)
         let projectBreakdown = store.ledgerProjectBreakdown(for: provider)
-        let coverage = store.metadata(for: provider).usageCoverage
+        let coverage = Self.effectiveCoverage(
+            provider: provider,
+            metadataCoverage: store.metadata(for: provider).usageCoverage,
+            topModel: topModel,
+            topProject: topProject,
+            modelBreakdown: modelBreakdown,
+            projectBreakdown: projectBreakdown,
+            snapshot: snapshot,
+            tokenSnapshot: tokenSnapshot)
         let hasModelBreakdown = coverage.supportsModelBreakdown
-            || (topModel?.provider == provider)
-            || !modelBreakdown.isEmpty
         let hasProjectAttribution = coverage.supportsProjectAttribution
-            || (topProject?.provider == provider)
-            || !projectBreakdown.isEmpty
 
         if let who = self.actorValue(identity: identity) {
             rows.append(ProviderInsightLine(id: "actor", label: "Who", value: who))
@@ -240,6 +244,58 @@ private enum ProviderInsightsComposer {
             return rows
         }
         return Array(rows.prefix(maxRows))
+    }
+
+    static func coverageSummaryLabel(for provider: UsageProvider, store: UsageStore) -> String? {
+        Self.effectiveCoverage(for: provider, store: store).summaryLabel
+    }
+
+    static func effectiveCoverage(
+        for provider: UsageProvider,
+        store: UsageStore) -> ProviderUsageCoverage
+    {
+        Self.effectiveCoverage(
+            provider: provider,
+            metadataCoverage: store.metadata(for: provider).usageCoverage,
+            topModel: store.ledgerTopModel(for: provider),
+            topProject: store.ledgerTopProject(for: provider),
+            modelBreakdown: store.ledgerModelBreakdown(for: provider),
+            projectBreakdown: store.ledgerProjectBreakdown(for: provider),
+            snapshot: store.snapshot(for: provider),
+            tokenSnapshot: store.tokenSnapshot(for: provider))
+    }
+
+    private static func effectiveCoverage(
+        provider: UsageProvider,
+        metadataCoverage: ProviderUsageCoverage,
+        topModel: UsageLedgerModelSummary?,
+        topProject: UsageLedgerProjectSummary?,
+        modelBreakdown: [UsageLedgerModelSummary],
+        projectBreakdown: [UsageLedgerProjectSummary],
+        snapshot: UsageSnapshot?,
+        tokenSnapshot: CostUsageTokenSnapshot?) -> ProviderUsageCoverage
+    {
+        let hasModelBreakdown =
+            metadataCoverage.supportsModelBreakdown
+            || (topModel?.provider == provider)
+            || !modelBreakdown.isEmpty
+
+        let hasProjectAttribution =
+            metadataCoverage.supportsProjectAttribution
+            || (topProject?.provider == provider)
+            || !projectBreakdown.isEmpty
+
+        let hasTokenMetrics = metadataCoverage.supportsTokenMetrics
+            || snapshot?.providerCost != nil
+            || tokenSnapshot?.sessionTokens != nil
+            || tokenSnapshot?.sessionCostUSD != nil
+            || tokenSnapshot?.last30DaysTokens != nil
+            || tokenSnapshot?.last30DaysCostUSD != nil
+
+        return ProviderUsageCoverage(
+            supportsModelBreakdown: hasModelBreakdown,
+            supportsTokenMetrics: hasTokenMetrics,
+            supportsProjectAttribution: hasProjectAttribution)
     }
 
     private static func actorValue(identity: ProviderIdentitySnapshot?) -> String? {
@@ -857,7 +913,9 @@ struct ProvidersPane: View {
     private func providerSubtitle(_ provider: UsageProvider) -> String {
         let meta = self.store.metadata(for: provider)
         let cliName = meta.cliName
-        let coverageSuffix = meta.usageCoverage.summaryLabel.map { " • \($0)" } ?? ""
+        let coverageSuffix = ProviderInsightsComposer.coverageSummaryLabel(
+            for: provider,
+            store: self.store).map { " • \($0)" } ?? ""
         let version = self.store.version(for: provider)
         var versionText = version ?? "not detected"
         if provider == .claude, let parenRange = versionText.range(of: "(") {
@@ -2855,7 +2913,6 @@ private struct ProviderSidebarDetailView: View {
         var items: [QuickMetricItem] = []
         let snapshot = self.store.snapshot(for: self.provider)
         let tokenSnapshot = self.store.tokenSnapshot(for: self.provider)
-        let metadata = self.store.metadata(for: self.provider)
         let hasModelBreakdown = self.hasModelBreakdown
         let hasProjectAttribution = self.hasProjectAttribution
 
@@ -2905,7 +2962,7 @@ private struct ProviderSidebarDetailView: View {
                 value: "\(project.title) · \(value)",
                 helpText: "Highest token usage project in the active insights window."))
         }
-        if let coverage = metadata.usageCoverage.summaryLabel {
+        if let coverage = ProviderInsightsComposer.coverageSummaryLabel(for: self.provider, store: self.store) {
             let value = coverage.replacingOccurrences(of: "usage: ", with: "")
             items.append(QuickMetricItem(
                 id: "coverage",
@@ -2968,24 +3025,16 @@ private struct ProviderSidebarDetailView: View {
         self.hasModelBreakdown ? "Models" : "Quota windows"
     }
 
-    private var metadataSupportsModelBreakdown: Bool {
-        self.store.metadata(for: self.provider).usageCoverage.supportsModelBreakdown
+    private var effectiveUsageCoverage: ProviderUsageCoverage {
+        ProviderInsightsComposer.effectiveCoverage(for: self.provider, store: self.store)
     }
 
     private var hasModelBreakdown: Bool {
-        self.metadataSupportsModelBreakdown
-            || self.store.ledgerTopModel(for: self.provider)?.provider == self.provider
-            || !self.store.ledgerModelBreakdown(for: self.provider).isEmpty
-    }
-
-    private var metadataSupportsProjectAttribution: Bool {
-        self.store.metadata(for: self.provider).usageCoverage.supportsProjectAttribution
+        self.effectiveUsageCoverage.supportsModelBreakdown
     }
 
     private var hasProjectAttribution: Bool {
-        self.metadataSupportsProjectAttribution
-            || self.store.ledgerTopProject(for: self.provider)?.provider == self.provider
-            || !self.store.ledgerProjectBreakdown(for: self.provider).isEmpty
+        self.effectiveUsageCoverage.supportsProjectAttribution
     }
 
     private var topProjectLines: [String] {
