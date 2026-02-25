@@ -862,7 +862,7 @@ struct ProvidersPane: View {
     // MARK: - Sidebar layout
 
     private var sidebarLayout: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .top, spacing: 0) {
             ScrollView(.vertical, showsIndicators: true) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     if self.providers.isEmpty {
@@ -888,7 +888,7 @@ struct ProvidersPane: View {
                 }
                 .padding(ProviderListMetrics.sidebarContentGap)
             }
-            .frame(minWidth: 180, idealWidth: 220, maxWidth: 260)
+            .frame(minWidth: 180, idealWidth: 220, maxWidth: 260, minHeight: 0)
             .background(
                 RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
                     .fill(Color(nsColor: .windowBackgroundColor))
@@ -923,10 +923,11 @@ struct ProvidersPane: View {
                     Text("Select a provider")
                         .font(.title3)
                         .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(maxWidth: .infinity)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 0)
+            .layoutPriority(1)
             .padding(ProviderListMetrics.sidebarContentGap)
             .background(Color(nsColor: .windowBackgroundColor))
         }
@@ -2353,7 +2354,8 @@ private struct ProviderSidebarDetailView: View {
             }
             .padding(RunicSpacing.lg)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 0, alignment: .topLeading)
+        .clipped()
         .task(id: self.historyTaskID) {
             guard self.selectedSubview == .history else { return }
             await self.loadHistoryMonth()
