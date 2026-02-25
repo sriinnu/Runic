@@ -109,9 +109,17 @@ private enum ProviderInsightsComposer {
         let anomaly = store.ledgerAnomalySummary(for: provider)
         let spendForecast = store.ledgerSpendForecast(for: provider)
         let topProjectSpendForecast = store.ledgerTopProjectSpendForecast(for: provider)
+        let topModel = store.ledgerTopModel(for: provider)
+        let topProject = store.ledgerTopProject(for: provider)
         let modelBreakdown = store.ledgerModelBreakdown(for: provider)
         let projectBreakdown = store.ledgerProjectBreakdown(for: provider)
         let coverage = store.metadata(for: provider).usageCoverage
+        let hasModelBreakdown = coverage.supportsModelBreakdown
+            || (topModel?.provider == provider)
+            || !modelBreakdown.isEmpty
+        let hasProjectAttribution = coverage.supportsProjectAttribution
+            || (topProject?.provider == provider)
+            || !projectBreakdown.isEmpty
 
         if let who = self.actorValue(identity: identity) {
             rows.append(ProviderInsightLine(id: "actor", label: "Who", value: who))
@@ -148,12 +156,12 @@ private enum ProviderInsightsComposer {
                 help: self.costAnomalyHelpText(anomaly)))
         }
 
-        if let topModel = store.ledgerTopModel(for: provider), topModel.provider == provider, coverage.supportsModelBreakdown {
+        if hasModelBreakdown, let topModel, topModel.provider == provider {
             rows.append(ProviderInsightLine(
                 id: "top-model",
                 label: "Top model",
                 value: self.topModelValue(topModel)))
-        } else if !coverage.supportsModelBreakdown, let windowModels = self.windowModelsValue(snapshot) {
+        } else if !hasModelBreakdown, let windowModels = self.windowModelsValue(snapshot) {
             rows.append(ProviderInsightLine(
                 id: "models",
                 label: "Quota windows",
@@ -161,8 +169,8 @@ private enum ProviderInsightsComposer {
                 help: "Live quota windows grouped by provider response window IDs."))
         }
 
-        if coverage.supportsProjectAttribution,
-           let topProject = store.ledgerTopProject(for: provider),
+        if hasProjectAttribution,
+           let topProject,
            topProject.provider == provider
         {
             rows.append(ProviderInsightLine(
@@ -172,11 +180,11 @@ private enum ProviderInsightsComposer {
                 help: self.projectIdentityHelpText(topProject)))
         }
 
-        if coverage.supportsModelBreakdown, let modelMix = self.modelMixValue(modelBreakdown) {
+        if hasModelBreakdown, let modelMix = self.modelMixValue(modelBreakdown) {
             rows.append(ProviderInsightLine(id: "model-mix", label: "Model mix", value: modelMix))
         }
 
-        if coverage.supportsProjectAttribution, let projectMix = self.projectMixValue(projectBreakdown) {
+        if hasProjectAttribution, let projectMix = self.projectMixValue(projectBreakdown) {
             rows.append(ProviderInsightLine(
                 id: "project-mix",
                 label: "Project mix",
@@ -205,7 +213,7 @@ private enum ProviderInsightsComposer {
                 value: budget,
                 help: self.budgetHelpText(spendForecast)))
         }
-        if coverage.supportsProjectAttribution, let projectBudget = self.projectBudgetValue(topProjectSpendForecast) {
+        if hasProjectAttribution, let projectBudget = self.projectBudgetValue(topProjectSpendForecast) {
             rows.append(ProviderInsightLine(
                 id: "project-budget",
                 label: "Prj budget",
@@ -2472,14 +2480,14 @@ private struct ProviderSidebarDetailView: View {
                             }
                         }
 
-                        if self.supportsModelBreakdown, let topModel = selected.topModel {
+                        if self.hasModelBreakdown, let topModel = selected.topModel {
                             Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
                         }
 
-                        if self.supportsProjectAttribution, let topProject = selected.topProject {
+                        if self.hasProjectAttribution, let topProject = selected.topProject {
                             let project = self.projectDisplay(topProject)
                             Text("Top project: \(project.title)")
                                 .font(.caption)
@@ -2490,7 +2498,7 @@ private struct ProviderSidebarDetailView: View {
                     }
 
                     if self.historyDayDetailMode == .models {
-                        if self.supportsModelBreakdown, !selected.modelSummaries.isEmpty {
+                        if self.hasModelBreakdown, !selected.modelSummaries.isEmpty {
                             Text("Models used")
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
@@ -2501,20 +2509,20 @@ private struct ProviderSidebarDetailView: View {
                                     .textSelection(.enabled)
                                     .help(self.historyModelLine(summary))
                             }
-                        } else if self.supportsModelBreakdown, !selected.modelsUsed.isEmpty {
+                        } else if self.hasModelBreakdown, !selected.modelsUsed.isEmpty {
                             Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                                 .textSelection(.enabled)
                         } else {
-                            Text(self.supportsModelBreakdown ? "No models recorded for this day." : "Model attribution is not available for this provider.")
+                            Text(self.hasModelBreakdown ? "No models recorded for this day." : "Model attribution is not available for this provider.")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
 
                     if self.historyDayDetailMode == .projects {
-                        if self.supportsProjectAttribution, !selected.projectSummaries.isEmpty {
+                        if self.hasProjectAttribution, !selected.projectSummaries.isEmpty {
                             Text("Top projects")
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
@@ -2527,7 +2535,7 @@ private struct ProviderSidebarDetailView: View {
                                     .help(project.helpText ?? "")
                             }
                         } else {
-                            Text(self.supportsProjectAttribution ? "No projects recorded for this day." : "Project attribution is not available for this provider.")
+                            Text(self.hasProjectAttribution ? "No projects recorded for this day." : "Project attribution is not available for this provider.")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
@@ -2633,14 +2641,14 @@ private struct ProviderSidebarDetailView: View {
         if let spend = summary.totals.costUSD {
             lines.append("Spend: \(UsageFormatter.usdString(spend))")
         }
-        if self.supportsModelBreakdown, let topModel = summary.topModel {
+        if self.hasModelBreakdown, let topModel = summary.topModel {
             var modelLine = "Top model: \(UsageFormatter.modelDisplayName(topModel.model))"
             if let context = UsageFormatter.modelContextLabel(for: topModel.model) {
                 modelLine += " · \(context)"
             }
             lines.append(modelLine)
         }
-        if self.supportsModelBreakdown, !summary.modelSummaries.isEmpty {
+        if self.hasModelBreakdown, !summary.modelSummaries.isEmpty {
             let modelCount = min(3, summary.modelSummaries.count)
             for summary in summary.modelSummaries.prefix(modelCount) {
                 var line = "Model: \(UsageFormatter.modelDisplayName(summary.model)) · \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tok"
@@ -2650,7 +2658,7 @@ private struct ProviderSidebarDetailView: View {
                 lines.append(line)
             }
         }
-        if self.supportsProjectAttribution, let topProject = summary.topProject {
+        if self.hasProjectAttribution, let topProject = summary.topProject {
             var projectLine = "Top project: \(self.projectDisplay(topProject).title)"
             if let cost = topProject.totals.costUSD {
                 projectLine += " · \(UsageFormatter.usdString(cost))"
@@ -2848,8 +2856,8 @@ private struct ProviderSidebarDetailView: View {
         let snapshot = self.store.snapshot(for: self.provider)
         let tokenSnapshot = self.store.tokenSnapshot(for: self.provider)
         let metadata = self.store.metadata(for: self.provider)
-        let hasModelBreakdown = metadata.usageCoverage.supportsModelBreakdown
-        let hasProjectAttribution = metadata.usageCoverage.supportsProjectAttribution
+        let hasModelBreakdown = self.hasModelBreakdown
+        let hasProjectAttribution = self.hasProjectAttribution
 
         if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
             items.append(QuickMetricItem(id: "today", title: "Today", value: today, helpText: "Session cost and tokens."))
@@ -2931,8 +2939,6 @@ private struct ProviderSidebarDetailView: View {
     }
 
     private var topModelLines: [String] {
-        let metadata = self.store.metadata(for: self.provider)
-        let coverage = metadata.usageCoverage
         let ranked = self.store.ledgerModelBreakdown(for: self.provider).sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
                 return UsageFormatter.modelDisplayName(lhs.model) < UsageFormatter.modelDisplayName(rhs.model)
@@ -2940,7 +2946,7 @@ private struct ProviderSidebarDetailView: View {
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         if !ranked.isEmpty {
-            guard coverage.supportsModelBreakdown else {
+            guard self.hasModelBreakdown else {
                 return []
             }
             return ranked.prefix(3).map { summary in
@@ -2952,26 +2958,38 @@ private struct ProviderSidebarDetailView: View {
                     model: summary.model)
             }
         }
-        guard !coverage.supportsModelBreakdown else {
+        guard !self.hasModelBreakdown else {
             return []
         }
         return self.windowModelLines
     }
 
     private var modelSectionTitle: String {
-        self.store.metadata(for: self.provider).usageCoverage.supportsModelBreakdown ? "Models" : "Quota windows"
+        self.hasModelBreakdown ? "Models" : "Quota windows"
     }
 
-    private var supportsModelBreakdown: Bool {
+    private var metadataSupportsModelBreakdown: Bool {
         self.store.metadata(for: self.provider).usageCoverage.supportsModelBreakdown
     }
 
-    private var supportsProjectAttribution: Bool {
+    private var hasModelBreakdown: Bool {
+        self.metadataSupportsModelBreakdown
+            || self.store.ledgerTopModel(for: self.provider)?.provider == self.provider
+            || !self.store.ledgerModelBreakdown(for: self.provider).isEmpty
+    }
+
+    private var metadataSupportsProjectAttribution: Bool {
         self.store.metadata(for: self.provider).usageCoverage.supportsProjectAttribution
     }
 
+    private var hasProjectAttribution: Bool {
+        self.metadataSupportsProjectAttribution
+            || self.store.ledgerTopProject(for: self.provider)?.provider == self.provider
+            || !self.store.ledgerProjectBreakdown(for: self.provider).isEmpty
+    }
+
     private var topProjectLines: [String] {
-        guard self.supportsProjectAttribution else {
+        guard self.hasProjectAttribution else {
             return []
         }
         let ranked = self.store.ledgerProjectBreakdown(for: self.provider).sorted { lhs, rhs in
