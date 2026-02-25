@@ -367,6 +367,9 @@ private enum ProviderInsightsComposer {
         let rendered = ranked.prefix(2).map { item in
             let name = UsageFormatter.modelDisplayName(item.model)
             let tokens = UsageFormatter.tokenCountString(item.tokens)
+            if let context = UsageFormatter.modelContextLabel(for: item.model) {
+                return "\(name) \(context) \(tokens)"
+            }
             return "\(name) \(tokens)"
         }
         var value = rendered.joined(separator: " · ")

@@ -19,6 +19,35 @@ import Foundation
 
 /// Main entry point for the models command
 public enum ModelsCommand {
+    private struct EnrichedModelSummary: Codable {
+        let provider: UsageProvider
+        let projectKey: String?
+        let projectID: String?
+        let projectName: String?
+        let projectNameConfidence: UsageLedgerProjectNameConfidence?
+        let projectNameSource: UsageLedgerProjectNameSource?
+        let projectNameProvenance: String?
+        let model: String
+        let modelContextWindow: Int?
+        let modelContextLabel: String?
+        let entryCount: Int
+        let totals: UsageLedgerTotals
+
+        init(summary: UsageLedgerModelSummary) {
+            self.provider = summary.provider
+            self.projectKey = summary.projectKey
+            self.projectID = summary.projectID
+            self.projectName = summary.projectName
+            self.projectNameConfidence = summary.projectNameConfidence
+            self.projectNameSource = summary.projectNameSource
+            self.projectNameProvenance = summary.projectNameProvenance
+            self.model = summary.model
+            self.modelContextWindow = UsageFormatter.modelContextWindow(for: summary.model)
+            self.modelContextLabel = UsageFormatter.modelContextLabel(for: summary.model)
+            self.entryCount = summary.entryCount
+            self.totals = summary.totals
+        }
+    }
 
     /// Command signature defining available options and flags
     public static var signature: CommandSignature {
@@ -189,7 +218,9 @@ public enum ModelsCommand {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         }
 
-        guard let data = try? encoder.encode(summaries),
+        let enriched = summaries.map(EnrichedModelSummary.init)
+
+        guard let data = try? encoder.encode(enriched),
               let text = String(data: data, encoding: .utf8) else {
             print("[]")
             return
@@ -210,16 +241,23 @@ public enum ModelsCommand {
         // Calculate column widths
         let maxModelWidth = summaries.map { $0.model.count }.max() ?? 20
         let modelWidth = min(max(maxModelWidth, 15), 40)
+        let contextWidth = 11
 
         // Print table header
-        let header = String(format: "%-\(modelWidth)s  %-12s  %-15s  %-12s  %-10s",
-                           "MODEL", "PROVIDER", "TOKENS", "REQUESTS", "COST")
+        let header = String(
+            format: "%-\(modelWidth)s  %-12s  %-15s  %-12s  %-10s  %-\(contextWidth)s",
+            "MODEL",
+            "PROVIDER",
+            "TOKENS",
+            "REQUESTS",
+            "COST",
+            "CONTEXT")
         if useColor {
             print(ansi("1;37", header))
-            print(String(repeating: "-", count: modelWidth + 55))
+            print(String(repeating: "-", count: modelWidth + 58))
         } else {
             print(header)
-            print(String(repeating: "-", count: modelWidth + 55))
+            print(String(repeating: "-", count: modelWidth + 58))
         }
 
         var totalTokens = 0
@@ -232,9 +270,11 @@ public enum ModelsCommand {
             let tokens = formatNumber(summary.totals.totalTokens)
             let requests = "\(summary.entryCount)"
             let cost = formatCost(summary.totals.costUSD)
+            let context = UsageFormatter.modelContextLabel(for: summary.model) ?? "n/a"
 
-            let line = String(format: "%-\(modelWidth)s  %-12s  %15s  %12s  %10s",
-                             model, provider, tokens, requests, cost)
+            let line = String(
+                format: "%-\(modelWidth)s  %-12s  %15s  %12s  %10s  %-\(contextWidth)s",
+                model, provider, tokens, requests, cost, context)
 
             if useColor {
                 print(colorizeByUsage(line, tokens: summary.totals.totalTokens))
@@ -250,10 +290,11 @@ public enum ModelsCommand {
         }
 
         // Print totals
-        print(String(repeating: "-", count: modelWidth + 55))
-        let totalLine = String(format: "%-\(modelWidth)s  %-12s  %15s  %12s  %10s",
-                              "TOTAL", "", formatNumber(totalTokens), "\(totalRequests)",
-                              formatCost(totalCost > 0 ? totalCost : nil))
+        print(String(repeating: "-", count: modelWidth + 58))
+        let totalLine = String(
+            format: "%-\(modelWidth)s  %-12s  %15s  %12s  %10s  %-\(contextWidth)s",
+            "TOTAL", "", formatNumber(totalTokens), "\(totalRequests)",
+                              formatCost(totalCost > 0 ? totalCost : nil), " ")
 
         if useColor {
             print(ansi("1;36", totalLine))
