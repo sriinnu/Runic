@@ -863,22 +863,38 @@ struct ProvidersPane: View {
 
     private var sidebarLayout: some View {
         HStack(spacing: 0) {
-            List(selection: self.$sidebarSelection) {
-                ForEach(self.providers, id: \.self) { provider in
-                    ProviderSidebarRow(
-                        provider: provider,
-                        store: self.store,
-                        isEnabled: self.binding(for: provider).wrappedValue)
-                        .tag(provider)
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    if self.providers.isEmpty {
+                        Text("No providers configured")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, RunicSpacing.md)
+                    } else {
+                        ForEach(self.providers, id: \.self) { provider in
+                            Button {
+                                self.sidebarSelection = provider
+                            } label: {
+                                ProviderSidebarRow(
+                                    provider: provider,
+                                    store: self.store,
+                                    isEnabled: self.binding(for: provider).wrappedValue,
+                                    isSelected: self.sidebarSelection == provider)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Provider \(self.store.metadata(for: provider).displayName)")
+                        }
+                    }
                 }
-                .onMove { fromOffsets, toOffset in
-                    self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
-                }
+                .padding(ProviderListMetrics.sidebarContentGap)
             }
-            .listStyle(.sidebar)
-            .frame(minWidth: 160, idealWidth: 180)
-            .scrollContentBackground(.hidden)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.15))
+            .frame(minWidth: 180, idealWidth: 220, maxWidth: 260)
+            .background(
+                RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                    .fill(Color(nsColor: .windowBackgroundColor))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                            .stroke(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)))
             .onAppear {
                 self.normalizeSidebarSelection()
             }
@@ -1842,6 +1858,7 @@ private struct ProviderSidebarRow: View {
     let provider: UsageProvider
     @Bindable var store: UsageStore
     let isEnabled: Bool
+    let isSelected: Bool
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
@@ -1861,7 +1878,20 @@ private struct ProviderSidebarRow: View {
                 .font(.body)
                 .foregroundStyle(self.isEnabled ? .primary : .secondary)
                 .lineLimit(1)
+                .layoutPriority(1)
         }
+        .padding(.horizontal, RunicSpacing.xs)
+        .padding(.vertical, RunicSpacing.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.isSelected ? Color.accentColor.opacity(0.14) : .clear))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(
+                    self.isSelected ? Color.accentColor.opacity(0.45) : Color.clear,
+                    lineWidth: 1))
+        .contentShape(Rectangle())
         .opacity(self.isEnabled ? 1 : 0.6)
     }
 }
