@@ -928,7 +928,7 @@ struct ProvidersPane: View {
 
         // Cursor is web-based, no CLI version to detect
         if provider == .cursor || provider == .minimax {
-            return "web"
+            return "web\(coverageSuffix)"
         }
         let apiBackedProviders: Set<UsageProvider> = [
             .zai,
