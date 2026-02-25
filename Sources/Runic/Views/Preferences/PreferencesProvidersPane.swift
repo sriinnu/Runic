@@ -862,74 +862,51 @@ struct ProvidersPane: View {
     // MARK: - Sidebar layout
 
     private var sidebarLayout: some View {
-        HStack(alignment: .top, spacing: 0) {
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                    if self.providers.isEmpty {
-                        Text("No providers configured")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, RunicSpacing.md)
-                    } else {
-                        ForEach(self.providers, id: \.self) { provider in
-                            Button {
-                                self.sidebarSelection = provider
-                            } label: {
-                                ProviderSidebarRow(
-                                    provider: provider,
-                                    store: self.store,
-                                    isEnabled: self.binding(for: provider).wrappedValue,
-                                    isSelected: self.sidebarSelection == provider)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Provider \(self.store.metadata(for: provider).displayName)")
-                        }
-                    }
+        NavigationSplitView {
+            List(selection: self.$sidebarSelection) {
+                ForEach(self.providers, id: \.self) { provider in
+                    ProviderSidebarRow(
+                        provider: provider,
+                        store: self.store,
+                        isEnabled: self.binding(for: provider).wrappedValue,
+                        isSelected: self.sidebarSelection == provider)
+                        .tag(provider)
                 }
-                .padding(ProviderListMetrics.sidebarContentGap)
+                .onMove { fromOffsets, toOffset in
+                    self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
+                }
             }
-            .frame(minWidth: 180, idealWidth: 220, maxWidth: 260, minHeight: 0)
-            .background(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                    .fill(Color(nsColor: .windowBackgroundColor))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                            .stroke(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)))
+            .listStyle(.sidebar)
+            .frame(minWidth: 160, idealWidth: 180)
+            .scrollContentBackground(.hidden)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.15))
             .onAppear {
                 self.normalizeSidebarSelection()
             }
             .onChange(of: self.providers) { _, _ in
                 self.normalizeSidebarSelection()
             }
-
-            Divider()
-
-            Group {
-                if let selected = self.sidebarSelection {
-                    ProviderSidebarDetailView(
-                        provider: selected,
-                        store: self.store,
-                        isEnabled: self.binding(for: selected),
-                        subtitle: self.providerSubtitle(selected),
-                        usageStatus: self.providerUsageStatus(selected),
-                        sourceLabel: self.providerSourceLabel(selected),
-                        statusLabel: self.providerStatusLabel(selected),
-                        settingsToggles: self.extraSettingsToggles(for: selected),
-                        settingsFields: self.extraSettingsFields(for: selected),
-                        errorDisplay: self.providerErrorDisplay(selected),
-                        isErrorExpanded: self.expandedBinding(for: selected),
-                        onCopyError: { text in self.copyToPasteboard(text) })
-                } else {
-                    Text("Select a provider")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                }
+        } detail: {
+            if let selected = self.sidebarSelection {
+                ProviderSidebarDetailView(
+                    provider: selected,
+                    store: self.store,
+                    isEnabled: self.binding(for: selected),
+                    subtitle: self.providerSubtitle(selected),
+                    usageStatus: self.providerUsageStatus(selected),
+                    sourceLabel: self.providerSourceLabel(selected),
+                    statusLabel: self.providerStatusLabel(selected),
+                    settingsToggles: self.extraSettingsToggles(for: selected),
+                    settingsFields: self.extraSettingsFields(for: selected),
+                    errorDisplay: self.providerErrorDisplay(selected),
+                    isErrorExpanded: self.expandedBinding(for: selected),
+                    onCopyError: { text in self.copyToPasteboard(text) })
+            } else {
+                Text("Select a provider")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, minHeight: 0)
-            .layoutPriority(1)
-            .padding(ProviderListMetrics.sidebarContentGap)
-            .background(Color(nsColor: .windowBackgroundColor))
         }
     }
 
