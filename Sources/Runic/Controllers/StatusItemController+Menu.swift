@@ -125,10 +125,16 @@ extension StatusItemController {
                     guard let self, let menu else { return }
                     self.selectedMenuProvider = provider
                     self.lastMenuProvider = provider
-                    self.populateMenu(menu, provider: provider)
-                    self.markMenuFresh(menu)
-                    self.refreshMenuCardHeights(in: menu)
-                    self.applyIcon(phase: nil)
+                    // Defer repopulation to avoid reentrancy: the SwiftUI button
+                    // that triggered this closure lives inside the menu item that
+                    // populateMenu will destroy via removeAllItems().
+                    Task { @MainActor [weak self, weak menu] in
+                        guard let self, let menu else { return }
+                        self.populateMenu(menu, provider: provider)
+                        self.markMenuFresh(menu)
+                        self.refreshMenuCardHeights(in: menu)
+                        self.applyIcon(phase: nil)
+                    }
                 })
         } else {
             nil
