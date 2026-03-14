@@ -90,21 +90,25 @@ struct ProviderSidebarMenuCardView<Content: View>: View {
         let sidebarWidth = style.width
         let contentWidth = max(0, self.totalWidth - sidebarWidth)
 
-        HStack(spacing: 0) {
-            ProviderSidebarRailView(
-                providers: self.providers,
-                selected: self.selected,
-                showIcons: self.showIcons,
-                style: style,
-                iconProvider: self.iconProvider,
-                weeklyRemainingProvider: self.weeklyRemainingProvider,
-                onSelect: self.onSelect)
-                .frame(width: sidebarWidth, alignment: .topLeading)
-
-            self.content(contentWidth)
-                .frame(width: contentWidth, alignment: .leading)
-        }
-        .frame(width: self.totalWidth, alignment: .leading)
+        // Content is the primary view that determines the height.
+        // The rail is placed as a background so its Rectangle fills
+        // stretch to match the content height instead of expanding
+        // to infinity during sizeThatFits measurement.
+        self.content(contentWidth)
+            .frame(width: contentWidth, alignment: .leading)
+            .padding(.leading, sidebarWidth)
+            .frame(width: self.totalWidth, alignment: .leading)
+            .background(alignment: .topLeading) {
+                ProviderSidebarRailView(
+                    providers: self.providers,
+                    selected: self.selected,
+                    showIcons: self.showIcons,
+                    style: style,
+                    iconProvider: self.iconProvider,
+                    weeklyRemainingProvider: self.weeklyRemainingProvider,
+                    onSelect: self.onSelect)
+                    .frame(width: sidebarWidth, alignment: .topLeading)
+            }
     }
 }
 

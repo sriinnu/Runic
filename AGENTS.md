@@ -223,6 +223,11 @@ swiftlint --strict
 - Explicit `self` is intentional
 - Use ` MARK:` sections
 
+### Maintainability Constraints
+- No file in the repository should grow beyond 450 lines of code without a follow-up split in the same PR.
+- Keep every public surface documented with `///` comments, and add inline comments where behavior is non-obvious.
+- Prefer `MARK:` groups in large files and move helper-only logic into extensions when practical.
+
 ### File Organization
 ```
 Sources/RunicCore/

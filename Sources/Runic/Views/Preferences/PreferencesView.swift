@@ -68,8 +68,10 @@ struct PreferencesView: View {
 
             // MARK: - Providers (Built-in + Custom)
 
-            VStack(spacing: 0) {
-                HStack(spacing: RunicSpacing.xs) {
+            ZStack {
+                LiquidMeshBackground().ignoresSafeArea().opacity(0.3)
+                VStack(spacing: 0) {
+                    HStack(spacing: RunicSpacing.xs) {
                     Picker("", selection: self.$providersSection) {
                         ForEach(ProvidersSubSection.allCases) { section in
                             Text(section.label).tag(section)
@@ -96,6 +98,7 @@ struct PreferencesView: View {
                 case .custom:
                     CustomProvidersPane(settings: self.settings, store: self.store)
                 }
+                }
             }
             .tabItem {
                 Label("Providers", systemImage: "square.grid.2x2")
@@ -120,22 +123,25 @@ struct PreferencesView: View {
 
             // MARK: - Performance (Monitoring + Refresh/Safety)
 
-            VStack(spacing: 0) {
-                Picker("", selection: self.$performanceSection) {
-                    ForEach(PerformanceSubSection.allCases) { section in
-                        Text(section.label).tag(section)
+            ZStack {
+                LiquidMeshBackground().ignoresSafeArea().opacity(0.3)
+                VStack(spacing: 0) {
+                    Picker("", selection: self.$performanceSection) {
+                        ForEach(PerformanceSubSection.allCases) { section in
+                            Text(section.label).tag(section)
+                        }
                     }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-                .padding(.top, RunicSpacing.sm)
-                .padding(.bottom, RunicSpacing.xs)
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                    .padding(.top, RunicSpacing.sm)
+                    .padding(.bottom, RunicSpacing.xs)
 
-                switch self.performanceSection {
-                case .monitoring:
-                    PerformancePane(settings: self.settings, store: self.store)
-                case .refresh:
-                    AdvancedPane(settings: self.settings, store: self.store)
+                    switch self.performanceSection {
+                    case .monitoring:
+                        PerformancePane(settings: self.settings, store: self.store)
+                    case .refresh:
+                        AdvancedPane(settings: self.settings, store: self.store)
+                    }
                 }
             }
             .tabItem {

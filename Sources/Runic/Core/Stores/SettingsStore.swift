@@ -744,7 +744,7 @@ final class SettingsStore {
         if sessionQuotaNotificationsDefault == nil {
             self.userDefaults.set(true, forKey: "sessionQuotaNotificationsEnabled")
         }
-        self.usageBarsShowUsed = userDefaults.object(forKey: "usageBarsShowUsed") as? Bool ?? false
+        self.usageBarsShowUsed = userDefaults.object(forKey: "usageBarsShowUsed") as? Bool ?? true
         let metricDisplayRaw = userDefaults.string(forKey: "usageMetricDisplayMode")
         self.usageMetricDisplayMode = UsageMetricDisplayMode(rawValue: metricDisplayRaw ?? "") ?? .barsAndPercent
         let menuModeRaw = userDefaults.string(forKey: "menuMode")
@@ -761,7 +761,7 @@ final class SettingsStore {
             forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
         self.menuBarVibrantIconEnabled = userDefaults.object(
             forKey: "menuBarVibrantIconEnabled") as? Bool ?? true
-        self.costUsageEnabled = userDefaults.object(forKey: "tokenCostUsageEnabled") as? Bool ?? false
+        self.costUsageEnabled = userDefaults.object(forKey: "tokenCostUsageEnabled") as? Bool ?? true
         self.insightsMenuMaxItems = userDefaults.object(forKey: "insightsMenuMaxItems") as? Int ?? 4
         self.insightsReportDays = userDefaults.object(forKey: "insightsReportDays") as? Int ?? 7
         self.randomBlinkEnabled = userDefaults.object(forKey: "randomBlinkEnabled") as? Bool ?? false
@@ -783,7 +783,7 @@ final class SettingsStore {
         self.mergeIcons = userDefaults.object(forKey: "mergeIcons") as? Bool ?? true
         self.switcherShowsIcons = userDefaults.object(forKey: "switcherShowsIcons") as? Bool ?? true
         let layoutRaw = userDefaults.string(forKey: "providerSwitcherLayout")
-        self.providerSwitcherLayout = ProviderSwitcherLayout(rawValue: layoutRaw ?? "") ?? .sidebar
+        self.providerSwitcherLayout = ProviderSwitcherLayout(rawValue: layoutRaw ?? "") ?? .top
         let iconSizeRaw = userDefaults.string(forKey: "providerSwitcherIconSize")
         self.providerSwitcherIconSize = ProviderSwitcherIconSize(rawValue: iconSizeRaw ?? "") ?? .medium
         self.providersPaneSidebar = userDefaults.object(forKey: "providersPaneSidebar") as? Bool ?? false

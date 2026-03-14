@@ -10,6 +10,7 @@
     "check": "swiftformat Sources Tests --lint && swiftlint --strict",
     "docs:list": "node Scripts/docs-list.mjs",
     "build": "swift build",
+    "build:open": "./Scripts/compile_and_run.sh",
     "test": "swift test",
     "test:tty": "swift test --filter TTYIntegrationTests",
     "test:live": "LIVE_TEST=1 swift test --filter LiveAccountTests",

@@ -20,6 +20,7 @@ struct PerformancePane: View {
     @State private var isClearingData = false
     @State private var vacuumStatus: String?
     @State private var clearDataStatus: String?
+    @State private var appeared = false
 
     enum QualityRatingFrequency: String, CaseIterable, Identifiable {
         case every = "every"
@@ -38,13 +39,8 @@ struct PerformancePane: View {
     }
 
     var body: some View {
-        PreferencesPane {
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Performance Monitoring")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
+        LiquidPreferencesPane {
+            LiquidSection(title: "Performance Monitoring") {
                 PreferenceToggleRow(
                     title: "Enable performance tracking",
                     subtitle: "Records latency, quality ratings, and error events for all AI requests.",
@@ -57,15 +53,9 @@ struct PerformancePane: View {
                         .padding(.vertical, RunicSpacing.xs)
                 }
             }
+            .liquidEntrance(appeared: self.appeared, index: 0)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Data Retention")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
+            LiquidSection(title: "Data Retention") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Raw metrics retention")
@@ -102,15 +92,9 @@ struct PerformancePane: View {
                     }
                 }
             }
+            .liquidEntrance(appeared: self.appeared, index: 1)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Quality Rating Prompts")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
+            LiquidSection(title: "Quality Rating Prompts") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     PreferenceToggleRow(
                         title: "Show rating prompts",
@@ -145,15 +129,9 @@ struct PerformancePane: View {
                     }
                 }
             }
+            .liquidEntrance(appeared: self.appeared, index: 2)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Database Management")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
+            LiquidSection(title: "Database Management") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     HStack {
                         Text("Current database size:")
@@ -217,15 +195,9 @@ struct PerformancePane: View {
                         .foregroundStyle(.tertiary)
                 }
             }
+            .liquidEntrance(appeared: self.appeared, index: 3)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Privacy")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
+            LiquidSection(title: "Privacy") {
                 PreferenceToggleRow(
                     title: "Share anonymous usage statistics",
                     subtitle: "Helps improve Runic by sharing aggregated performance metrics (no personal data).",
@@ -238,9 +210,12 @@ struct PerformancePane: View {
                         .padding(.vertical, RunicSpacing.xs)
                 }
             }
+            .liquidEntrance(appeared: self.appeared, index: 4)
         }
         .onAppear {
             self.calculateDatabaseSize()
+            guard !self.appeared else { return }
+            withAnimation(.easeOut(duration: 0.6)) { self.appeared = true }
         }
     }
 

@@ -48,12 +48,12 @@ struct CopilotAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveToken(context: context) != nil
+        true
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
         guard let selection = Self.resolveToken(context: context), !selection.token.isEmpty else {
-            throw URLError(.userAuthenticationRequired)
+            throw CopilotUsageFetchError.missingCredentials(details: Self.missingTokenGuidance())
         }
         let fetcher = CopilotUsageFetcher(token: selection.token, tokenSourceLabel: selection.sourceLabel)
         let snap = try await fetcher.fetch()
@@ -91,5 +91,10 @@ struct CopilotAPIFetchStrategy: ProviderFetchStrategy {
         case .vscode:
             return sourceKey ?? "vscode"
         }
+    }
+
+    private static func missingTokenGuidance() -> String {
+        "Add one of COPILOT_API_TOKEN/GITHUB_TOKEN/GH_TOKEN, configure GitHub CLI token storage (`~/.config/gh/hosts.yml`), " +
+            "or sign in / re-import from VS Code in Runic settings."
     }
 }

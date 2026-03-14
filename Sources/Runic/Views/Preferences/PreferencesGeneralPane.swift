@@ -6,28 +6,19 @@ import SwiftUI
 struct GeneralPane: View {
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
+    @State private var appeared = false
 
     var body: some View {
-        PreferencesPane {
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("System")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
+        LiquidPreferencesPane {
+            LiquidSection(title: "System") {
                 PreferenceToggleRow(
                     title: "Start at Login",
                     subtitle: "Automatically opens Runic when you start your Mac.",
                     binding: self.$settings.launchAtLogin)
             }
+            .liquidEntrance(appeared: self.appeared, index: 0)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Usage")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
+            LiquidSection(title: "Usage") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.costUsageEnabled) {
@@ -65,14 +56,9 @@ struct GeneralPane: View {
                     }
                 }
             }
+            .liquidEntrance(appeared: self.appeared, index: 1)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Status")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
+            LiquidSection(title: "Status") {
                 PreferenceToggleRow(
                     title: "Check provider status",
                     subtitle: "Polls OpenAI/Claude status pages and Google Workspace for " +
@@ -83,29 +69,18 @@ struct GeneralPane: View {
                     subtitle: "Uses a data-reactive color ramp to show usage pressure at a glance.",
                     binding: self.$settings.menuBarVibrantIconEnabled)
             }
+            .liquidEntrance(appeared: self.appeared, index: 2)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Notifications")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
+            LiquidSection(title: "Notifications") {
                 PreferenceToggleRow(
                     title: "Session quota notifications",
                     subtitle: "Notifies when the 5-hour session quota hits 0% and when it becomes " +
                         "available again.",
                     binding: self.$settings.sessionQuotaNotificationsEnabled)
             }
+            .liquidEntrance(appeared: self.appeared, index: 3)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Display Settings")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
+            LiquidSection(title: "Display Settings") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Menu refresh rate")
@@ -190,17 +165,19 @@ struct GeneralPane: View {
                     }
                 }
             }
+            .liquidEntrance(appeared: self.appeared, index: 4)
 
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                HStack {
-                    Spacer()
-                    Button("Quit Runic") { NSApp.terminate(nil) }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                }
+            HStack {
+                Spacer()
+                Button("Quit Runic") { NSApp.terminate(nil) }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
             }
+            .liquidEntrance(appeared: self.appeared, index: 5)
+        }
+        .onAppear {
+            guard !self.appeared else { return }
+            withAnimation(.easeOut(duration: 0.6)) { self.appeared = true }
         }
     }
 
