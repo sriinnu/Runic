@@ -178,8 +178,8 @@ private struct LiquidGlassCore: ViewModifier {
                 GeometryReader { geo in
                     CursorSpotlight(
                         cursorPoint: UnitPoint(
-                            x: geo.size.width > 0 ? self.cursorUnit.x : 0.5,
-                            y: geo.size.height > 0 ? self.cursorUnit.y : 0.5),
+                            x: geo.size.width > 0 ? self.cursorUnit.x / geo.size.width : 0.5,
+                            y: geo.size.height > 0 ? self.cursorUnit.y / geo.size.height : 0.5),
                         isActive: self.hovering)
                 }
             }
@@ -190,15 +190,21 @@ private struct LiquidGlassCore: ViewModifier {
             }
             .scaleEffect(self.hovering && !self.reduceMotion ? 1.01 : 1.0)
             .animation(.spring(response: 0.35, dampingFraction: 0.72), value: self.hovering)
-            .onContinuousHover { phase in
-                switch phase {
-                case .active(let pt):
-                    self.hovering = true
-                    self.cursorUnit = UnitPoint(x: pt.x, y: pt.y)
-                case .ended:
-                    self.hovering = false
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onContinuousHover { phase in
+                            switch phase {
+                            case .active(let pt):
+                                self.hovering = true
+                                self.cursorUnit = UnitPoint(x: pt.x, y: pt.y)
+                            case .ended:
+                                self.hovering = false
+                            }
+                        }
+                        .frame(width: geo.size.width, height: geo.size.height)
                 }
-            }
+            )
     }
 }
 

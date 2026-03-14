@@ -35,8 +35,10 @@ struct KeychainKimiTokenStore: KimiTokenStoring {
         // Migrate from the old Data Protection keychain if present.
         if let token = try self.readToken(dataProtection: true) {
             Self.log.info("Migrating Kimi token from Data Protection keychain")
-            try? self.deleteToken(dataProtection: true)
-            try? self.storeToken(token)
+            // Store first, delete old only on success — prevents data loss.
+            if (try? self.storeToken(token)) != nil {
+                try? self.deleteToken(dataProtection: true)
+            }
             return token
         }
         return nil

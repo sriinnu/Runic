@@ -585,6 +585,7 @@ private struct AnalyticsRuleEditorSheet: View {
                         severity: self.severity,
                         notifyWebhook: self.notifyWebhook,
                         webhookURL: self.webhookURL.isEmpty ? nil : self.webhookURL,
+                        enabled: self.rule?.enabled ?? true,
                         createdAt: self.rule?.createdAt ?? Date()
                     )
                     self.onSave(newRule)

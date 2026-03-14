@@ -24,7 +24,7 @@ public enum OpenRouterProviderDescriptor {
                 dashboardURL: "https://openrouter.ai/account",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
-                    supportsModelBreakdown: true,
+                    supportsModelBreakdown: false,
                     supportsTokenMetrics: false,
                     supportsProjectAttribution: false)),
             branding: ProviderBranding(
