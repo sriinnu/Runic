@@ -35,8 +35,10 @@ struct KeychainMiniMaxGroupIDStore: MiniMaxGroupIDStoring {
         // Migrate from the old Data Protection keychain if present.
         if let groupID = try self.readGroupID(dataProtection: true) {
             Self.log.info("Migrating MiniMax group ID from Data Protection keychain")
-            try? self.deleteGroupID(dataProtection: true)
-            try? self.storeGroupID(groupID)
+            // Store first, delete old only on success — prevents data loss.
+            if (try? self.storeGroupID(groupID)) != nil {
+                try? self.deleteGroupID(dataProtection: true)
+            }
             return groupID
         }
         return nil

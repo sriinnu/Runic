@@ -35,8 +35,10 @@ struct KeychainMiniMaxCookieHeaderStore: MiniMaxCookieHeaderStoring {
         // Migrate from the old Data Protection keychain if present.
         if let header = try self.readHeader(dataProtection: true) {
             Self.log.info("Migrating MiniMax cookie header from Data Protection keychain")
-            try? self.deleteHeader(dataProtection: true)
-            try? self.storeHeader(header)
+            // Store first, delete old only on success — prevents data loss.
+            if (try? self.storeHeader(header)) != nil {
+                try? self.deleteHeader(dataProtection: true)
+            }
             return header
         }
         return nil
