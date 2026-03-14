@@ -9,6 +9,7 @@ public enum CopilotUsageFetchError: LocalizedError, Sendable {
     case invalidResponse(details: String)
     case noQuotaData
     case allAttemptsFailed(details: [String])
+    case missingCredentials(details: String)
 
     public var errorDescription: String? {
         switch self {
@@ -37,6 +38,11 @@ public enum CopilotUsageFetchError: LocalizedError, Sendable {
                 return "GitHub Copilot usage fetch failed after multiple attempts."
             }
             return "GitHub Copilot usage fetch failed after multiple attempts. \(compact)"
+        case let .missingCredentials(details):
+            if details.isEmpty {
+                return "GitHub Copilot credentials are missing."
+            }
+            return "GitHub Copilot credentials are missing. \(details)"
         }
     }
 }

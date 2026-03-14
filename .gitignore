@@ -24,6 +24,7 @@ Icon.iconset
 .DS_Store
 .runic.local.env
 .claude/
+.chitragupta/
 .swiftpm/
 Packages/*/.build/
 Packages/*/.swiftpm/
