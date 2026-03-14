@@ -56,10 +56,10 @@ struct OpenRouterAPIFetchStrategy: ProviderFetchStrategy {
         guard let apiKey = Self.resolveToken(environment: context.env) else {
             throw OpenRouterSettingsError.missingToken
         }
-        let usage = try await OpenRouterUsageFetcher.fetchCredits(apiKey: apiKey)
+        let (credits, keyInfo) = try await OpenRouterUsageFetcher.fetchAll(apiKey: apiKey)
         return self.makeResult(
-            usage: usage.toUsageSnapshot(),
-            credits: usage.toCreditsSnapshot(),
+            usage: credits.toUsageSnapshot(keyInfo: keyInfo),
+            credits: credits.toCreditsSnapshot(),
             sourceLabel: "api")
     }
 

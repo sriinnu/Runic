@@ -31,8 +31,10 @@ struct AnalyticsPane: View {
     @State private var newAlertThreshold = "80"
     @State private var budgetErrorMessage: String?
 
+    @State private var appeared = false
+
     var body: some View {
-        PreferencesPane {
+        LiquidPreferencesPane {
             // MARK: - Display section
 
             DisclosureGroup("Display", isExpanded: self.$displayExpanded) {
@@ -127,8 +129,8 @@ struct AnalyticsPane: View {
                 .padding(.top, RunicSpacing.xs)
             }
             .disclosureGroupStyle(AnalyticsSectionDisclosureStyle())
-
-            PreferencesDivider()
+            .liquidGlass()
+            .liquidEntrance(appeared: self.appeared, index: 0)
 
             // MARK: - Insights section
 
@@ -152,8 +154,8 @@ struct AnalyticsPane: View {
                 .padding(.top, RunicSpacing.xs)
             }
             .disclosureGroupStyle(AnalyticsSectionDisclosureStyle())
-
-            PreferencesDivider()
+            .liquidGlass()
+            .liquidEntrance(appeared: self.appeared, index: 1)
 
             // MARK: - Alerts section
 
@@ -195,8 +197,8 @@ struct AnalyticsPane: View {
                 .padding(.top, RunicSpacing.xs)
             }
             .disclosureGroupStyle(AnalyticsSectionDisclosureStyle())
-
-            PreferencesDivider()
+            .liquidGlass()
+            .liquidEntrance(appeared: self.appeared, index: 2)
 
             // MARK: - Budgets section
 
@@ -252,10 +254,13 @@ struct AnalyticsPane: View {
                 .padding(.top, RunicSpacing.xs)
             }
             .disclosureGroupStyle(AnalyticsSectionDisclosureStyle())
+            .liquidGlass()
+            .liquidEntrance(appeared: self.appeared, index: 3)
         }
         .onAppear {
             self.alertsData = AlertRuleStore.load()
             self.budgets = ProjectBudgetStore.getAllBudgets()
+            if !self.appeared { withAnimation(.easeOut(duration: 0.6)) { self.appeared = true } }
         }
         .sheet(isPresented: self.$showingAddRule) {
             AnalyticsRuleEditorSheet(

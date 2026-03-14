@@ -39,6 +39,37 @@
 
 ## 🆕 Recent Updates
 
+### v2.2.0 (March 14, 2026)
+
+**Liquid UI Design System:**
+- ✅ **Ambient Mesh Backgrounds**: Organic drifting blobs across all preference tabs
+- ✅ **Glass Morphism Cards**: `.ultraThinMaterial` sections with gradient border strokes
+- ✅ **Magic Card Borders**: Rotating conic gradient on hover (cyan → blue → purple cycle)
+- ✅ **Cursor Spotlight**: Radial glow follows mouse position on glass cards
+- ✅ **Shimmer Sweeps**: Periodic light band across glass surfaces
+- ✅ **Staggered Entrance**: Spring-based fade+slide+scale on tab load
+- ✅ **Reduce Motion**: All animations respect `accessibilityReduceMotion`
+
+**Z.ai Provider Enhancement:**
+- ✅ **Fixed Auth**: Removed incorrect Bearer prefix (token passed directly)
+- ✅ **3 API Endpoints**: quota/limit + model-usage (24h) + tool-usage (24h)
+- ✅ **16-Model Pricing Table**: Cost estimation for all GLM models ($0.06–$2.30/1M tokens)
+- ✅ **Rich Menu Submenu**: Per-model tokens, prompts, estimated cost, MCP tool call counts
+
+**OpenRouter Enhancement:**
+- ✅ **Credits + Key Info**: Fetches total_credits, total_usage, balance, rate limits in parallel
+- ✅ **Usage Percentage**: Progress bar fills based on actual spend-to-credit ratio
+
+**Keychain Security (19 Token Stores):**
+- ✅ **No More Password Dialogs**: Removed `kSecUseDataProtectionKeychain` + `LAContext` restrictions
+- ✅ **SecAccess ACL**: Grants calling app permanent no-prompt access
+- ✅ **DPK Migration**: Auto-migrates tokens from old Data Protection keychain
+
+**Other Fixes:**
+- ✅ **Sidebar Layout**: Fixed infinite height bug + reentrancy crash in menu sidebar
+- ✅ **Provider Icons**: Modern tinting, branded letter fallback for providers without SVGs
+- ✅ **Better Defaults**: Usage bars show "used" by default, cost tracking enabled
+
 ### v2.1.0 (January 31, 2026)
 
 **Major UI/UX Improvements:**
@@ -46,17 +77,6 @@
 - ✅ **Accessibility**: Added comprehensive VoiceOver/TalkBack support
 - ✅ **Loading States**: Professional skeleton screens with shimmer effects
 - ✅ **Error Messages**: Actionable error messages with retry buttons and error codes
-
-**Performance Optimizations:**
-- ✅ **60% Faster Menu Rendering**: 500ms → 200ms
-- ✅ **75% CPU Reduction**: Animation CPU usage 8% → 2%
-- ✅ **Consistent 60 FPS**: FlatList virtualization for smooth scrolling
-- ✅ **30% Memory Reduction**: Optimized React Native components
-
-**Security Enhancements:**
-- ✅ **Security Audit Passed**: Zero token leakage, 5/5 security score
-- ✅ **No Keychain Popups**: Optimized token access patterns
-- ✅ **Verified Safe**: Comprehensive security verification report
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
@@ -125,11 +145,12 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - Concurrent request optimization (max 3)
 
 ### 6. **UI/UX Excellence** 🆕
-- **Accessibility**: Full VoiceOver/TalkBack support, 44pt touch targets
-- **Loading States**: Skeleton screens with 1.5s shimmer animation
+- **Liquid Design System**: Animated mesh backgrounds, glass morphism cards, cursor-tracking spotlight
+- **Accessibility**: Full VoiceOver support, respects Reduce Motion, WCAG 2.1 AA
+- **Loading States**: Skeleton screens with shimmer animation
 - **Error Handling**: Actionable error messages with retry buttons
-- **Consistent Design**: 4pt grid system, theme-based spacing
-- **Smooth Animations**: 60 FPS transitions, optimized performance
+- **Consistent Design**: 4pt grid system, design tokens for spacing/color/animation
+- **Smooth Animations**: TimelineView-based, auto-pauses when not visible
 
 ---
 

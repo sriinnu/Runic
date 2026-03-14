@@ -58,12 +58,13 @@ enum ProviderBrandIcon {
 
     private static func tintedImage(_ image: NSImage, color: NSColor, size: NSSize) -> NSImage {
         let rect = NSRect(origin: .zero, size: size)
-        let tinted = NSImage(size: size)
-        tinted.lockFocus()
-        color.setFill()
-        rect.fill()
-        image.draw(in: rect, from: .zero, operation: .destinationIn, fraction: 1.0)
-        tinted.unlockFocus()
+        // Use drawingHandler instead of deprecated lockFocus/unlockFocus.
+        let tinted = NSImage(size: size, flipped: false) { _ in
+            color.setFill()
+            rect.fill()
+            image.draw(in: rect, from: .zero, operation: .destinationIn, fraction: 1.0)
+            return true
+        }
         tinted.isTemplate = false
         return tinted
     }

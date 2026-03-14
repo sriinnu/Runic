@@ -1220,19 +1220,31 @@ private struct ProviderListBrandIcon: View {
     let provider: UsageProvider
 
     var body: some View {
-        if let brand = ProviderBrandIcon.image(for: self.provider, size: ProviderListMetrics.iconSize) {
-            Image(nsImage: brand)
-                .resizable()
-                .scaledToFit()
+        Group {
+            if let brand = ProviderBrandIcon.image(for: self.provider, size: ProviderListMetrics.iconSize) {
+                Image(nsImage: brand)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: ProviderListMetrics.iconSize, height: ProviderListMetrics.iconSize)
+            } else {
+                let descriptor = ProviderDescriptorRegistry.descriptor(for: self.provider)
+                let initial = String(descriptor.metadata.displayName.prefix(1)).uppercased()
+                let brandColor = Color(
+                    red: Double(descriptor.branding.color.red),
+                    green: Double(descriptor.branding.color.green),
+                    blue: Double(descriptor.branding.color.blue))
+                ZStack {
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        .fill(brandColor.opacity(0.18))
+                    Text(initial)
+                        .font(.system(size: ProviderListMetrics.iconSize * 0.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(brandColor)
+                }
                 .frame(width: ProviderListMetrics.iconSize, height: ProviderListMetrics.iconSize)
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-        } else {
-            Image(systemName: "circle.dotted")
-                .font(.system(size: ProviderListMetrics.iconSize, weight: .regular))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
+            }
         }
+        .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+        .accessibilityHidden(true)
     }
 }
 

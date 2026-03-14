@@ -31,24 +31,28 @@ struct SyncPane: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Sub-section picker
-            Picker("", selection: self.$selectedSection) {
-                ForEach(SyncSection.allCases) { section in
-                    Label(section.label, systemImage: section.icon).tag(section)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-            .padding(.top, PreferencesLayoutMetrics.paneVertical)
-            .padding(.bottom, RunicSpacing.sm)
+        ZStack {
+            LiquidMeshBackground()
+                .ignoresSafeArea()
+                .opacity(0.3)
 
-            // Content
-            switch self.selectedSection {
-            case .integrations:
-                IntegrationsPane(settings: self.settings, store: self.store)
-            case .teams:
-                TeamManagementView(settings: self.settings, store: self.store)
+            VStack(spacing: 0) {
+                Picker("", selection: self.$selectedSection) {
+                    ForEach(SyncSection.allCases) { section in
+                        Label(section.label, systemImage: section.icon).tag(section)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                .padding(.top, PreferencesLayoutMetrics.paneVertical)
+                .padding(.bottom, RunicSpacing.sm)
+
+                switch self.selectedSection {
+                case .integrations:
+                    IntegrationsPane(settings: self.settings, store: self.store)
+                case .teams:
+                    TeamManagementView(settings: self.settings, store: self.store)
+                }
             }
         }
     }
