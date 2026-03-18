@@ -5,15 +5,26 @@ import SwiftUI
 @MainActor
 struct UsageTimelineChartMenuView: View {
     enum TimeRange: String, CaseIterable {
+        case oneHour = "1h"
+        case sixHours = "6h"
+        case oneDay = "1d"
         case sevenDays = "7d"
-        case fourteenDays = "14d"
         case thirtyDays = "30d"
 
-        var days: Int {
+        var cutoffInterval: TimeInterval {
             switch self {
-            case .sevenDays: return 7
-            case .fourteenDays: return 14
-            case .thirtyDays: return 30
+            case .oneHour: return -3600
+            case .sixHours: return -21600
+            case .oneDay: return -86400
+            case .sevenDays: return -604800
+            case .thirtyDays: return -2592000
+            }
+        }
+
+        var usesHourlyData: Bool {
+            switch self {
+            case .oneHour, .sixHours, .oneDay: return true
+            default: return false
             }
         }
 
@@ -24,31 +35,45 @@ struct UsageTimelineChartMenuView: View {
         let id: String
         let date: Date
         let totalTokens: Int
+        let key: String
 
-        init(date: Date, totalTokens: Int) {
+        init(date: Date, totalTokens: Int, key: String) {
             self.date = date
             self.totalTokens = totalTokens
-            self.id = "\(Int(date.timeIntervalSince1970))-\(totalTokens)"
+            self.key = key
+            self.id = key
         }
     }
 
     private let dailySummaries: [UsageLedgerDailySummary]
+    private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
-    @State private var selectedTimeRange: TimeRange = .fourteenDays
-    @State private var selectedDateKey: String?
-    @State private var scrollOffset: CGFloat = 0
+    @State private var selectedTimeRange: TimeRange = .oneDay
+    @State private var selectedKey: String?
 
-    init(dailySummaries: [UsageLedgerDailySummary], width: CGFloat) {
+    init(
+        dailySummaries: [UsageLedgerDailySummary],
+        hourlySummaries: [UsageLedgerHourlySummary] = [],
+        width: CGFloat)
+    {
         self.dailySummaries = dailySummaries
+        self.hourlySummaries = hourlySummaries
         self.width = width
     }
 
+    private static let lineColor = Color(red: 0.26, green: 0.55, blue: 0.96)
+    private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
+
     var body: some View {
-        let model = Self.makeModel(from: self.dailySummaries, timeRange: self.selectedTimeRange)
+        let model = self.selectedTimeRange.usesHourlyData
+            ? Self.makeHourlyModel(from: self.hourlySummaries, timeRange: self.selectedTimeRange)
+            : Self.makeDailyModel(from: self.dailySummaries, timeRange: self.selectedTimeRange)
+
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+            // Header with range picker
             HStack {
-                Text("Token Usage Timeline")
-                    .font(.headline)
+                Text("Usage Timeline")
+                    .font(.system(.headline, design: .rounded))
                     .fontWeight(.semibold)
                 Spacer()
                 Picker("Range", selection: self.$selectedTimeRange) {
@@ -57,65 +82,74 @@ struct UsageTimelineChartMenuView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 160)
+                .frame(width: 240)
             }
 
             if model.points.isEmpty {
-                Text("No timeline data for selected range.")
-                    .font(.footnote)
+                Text("No data for selected range.")
+                    .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(.secondary)
+                    .frame(height: 100)
             } else {
+                // Line chart
                 Chart {
                     ForEach(model.points) { point in
                         AreaMark(
-                            x: .value("Date", point.date, unit: .day),
+                            x: .value("Time", point.date),
                             y: .value("Tokens", point.totalTokens))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [
-                                        Color(red: 0.26, green: 0.55, blue: 0.96).opacity(0.3),
-                                        Color(red: 0.26, green: 0.55, blue: 0.96).opacity(0.05),
+                                        Self.lineColor.opacity(0.25),
+                                        Self.lineColor.opacity(0.03),
                                     ],
                                     startPoint: .top,
                                     endPoint: .bottom))
+                            .interpolationMethod(.catmullRom)
                         LineMark(
-                            x: .value("Date", point.date, unit: .day),
+                            x: .value("Time", point.date),
                             y: .value("Tokens", point.totalTokens))
-                            .foregroundStyle(Color(red: 0.26, green: 0.55, blue: 0.96))
+                            .foregroundStyle(Self.lineColor)
                             .lineStyle(StrokeStyle(lineWidth: 2))
+                            .interpolationMethod(.catmullRom)
                     }
                     if let peak = model.peakPoint {
                         PointMark(
-                            x: .value("Date", peak.date, unit: .day),
+                            x: .value("Time", peak.date),
                             y: .value("Tokens", peak.totalTokens))
                             .foregroundStyle(Color(nsColor: .systemYellow))
-                            .symbolSize(80)
+                            .symbolSize(60)
+                            .annotation(position: .top, spacing: 4) {
+                                Text("Peak")
+                                    .font(.system(.caption2, design: .rounded))
+                                    .foregroundStyle(Color(nsColor: .systemYellow))
+                            }
                     }
                 }
                 .chartYAxis {
-                    AxisMarks { value in
-                        AxisGridLine()
-                        AxisTick()
+                    AxisMarks(position: .trailing) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
+                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.5))
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(.caption2)
+                                    .font(.system(.caption2, design: .rounded))
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: model.axisDates) { value in
-                        AxisGridLine()
-                        AxisTick()
-                        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(.caption2)
+                    AxisMarks(values: .automatic(desiredCount: model.desiredAxisCount)) { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
+                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
+                        AxisValueLabel(format: model.xAxisFormat)
+                            .font(.system(.caption2, design: .rounded))
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
                 .chartLegend(.hidden)
-                .frame(height: 180)
+                .frame(height: RunicSpacing.chartHeight + 30)
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
@@ -135,78 +169,130 @@ struct UsageTimelineChartMenuView: View {
                     }
                 }
 
-                let detail = self.detailLines(model: model)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(detail.primary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(height: 16, alignment: .leading)
-                    Text(detail.secondary ?? " ")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(height: 16, alignment: .leading)
-                        .opacity(detail.secondary == nil ? 0 : 1)
-                }
+                // Detail line
+                let detail = self.detailText(model: model)
+                Text(detail)
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(height: 16, alignment: .leading)
 
-                // Stats
+                // Stats row
                 HStack(spacing: RunicSpacing.md) {
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
-                        Text("Total")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(UsageFormatter.tokenCountString(model.totalTokens))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
-                        Text("Avg/day")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(UsageFormatter.tokenCountString(model.averagePerDay))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
-                        Text("Peak")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(UsageFormatter.tokenCountString(model.peakTokens))
-                            .font(.caption)
-                            .fontWeight(.medium)
+                    StatCell(label: "Total", value: UsageFormatter.tokenCountString(model.totalTokens))
+                    StatCell(
+                        label: self.selectedTimeRange.usesHourlyData ? "Avg/hr" : "Avg/day",
+                        value: UsageFormatter.tokenCountString(model.averagePerPeriod))
+                    StatCell(label: "Peak", value: UsageFormatter.tokenCountString(model.peakTokens))
+                    if let cost = model.totalCostUSD, cost > 0 {
+                        StatCell(label: "Cost", value: UsageFormatter.usdString(cost))
                     }
                 }
             }
         }
-        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
-        .padding(.vertical, RunicSpacing.xs)
-        .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
+        .chartPanelStyle(width: self.width)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Usage timeline chart showing \(model.points.count) data points over \(self.selectedTimeRange.label)")
     }
+
+    // MARK: - Stat cell
+
+    private struct StatCell: View {
+        let label: String
+        let value: String
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+                Text(self.label)
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                Text(self.value)
+                    .font(.system(.caption, design: .rounded))
+                    .fontWeight(.medium)
+            }
+        }
+    }
+
+    // MARK: - Model
 
     private struct Model {
         let points: [Point]
-        let summariesByDateKey: [String: UsageLedgerDailySummary]
+        let pointsByKey: [String: Point]
         let dateKeys: [(key: String, date: Date)]
-        let axisDates: [Date]
         let peakPoint: Point?
         let totalTokens: Int
-        let averagePerDay: Int
+        let averagePerPeriod: Int
         let peakTokens: Int
+        let totalCostUSD: Double?
+        let desiredAxisCount: Int
+        let xAxisFormat: Date.FormatStyle
+        let isHourly: Bool
     }
 
-    private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
+    // MARK: - Daily model
 
-    private static func makeModel(from summaries: [UsageLedgerDailySummary], timeRange: TimeRange) -> Model {
+    private static func makeDailyModel(from summaries: [UsageLedgerDailySummary], timeRange: TimeRange) -> Model {
         let now = Date()
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -timeRange.days, to: now) ?? now
+        let cutoffDate = now.addingTimeInterval(timeRange.cutoffInterval)
         let filtered = summaries.filter { $0.dayStart >= cutoffDate }
         let sorted = filtered.sorted { $0.dayStart < $1.dayStart }
 
         var points: [Point] = []
-        var summariesByKey: [String: UsageLedgerDailySummary] = [:]
+        var pointsByKey: [String: Point] = [:]
+        var dateKeys: [(key: String, date: Date)] = []
+        var peak: Point?
+        var totalTokens = 0
+        var totalCost: Double = 0
+        var hasCost = false
+
+        for summary in sorted {
+            let tokens = summary.totals.totalTokens
+            totalTokens += tokens
+            if let cost = summary.totals.costUSD {
+                totalCost += cost
+                hasCost = true
+            }
+            let point = Point(date: summary.dayStart, totalTokens: tokens, key: summary.dayKey)
+            points.append(point)
+            pointsByKey[summary.dayKey] = point
+            dateKeys.append((summary.dayKey, summary.dayStart))
+
+            if peak == nil || tokens > (peak?.totalTokens ?? 0) {
+                peak = point
+            }
+        }
+
+        let desiredAxisCount: Int = switch timeRange {
+        case .oneHour, .sixHours, .oneDay: 4
+        case .sevenDays: 5
+        case .thirtyDays: 6
+        }
+
+        return Model(
+            points: points,
+            pointsByKey: pointsByKey,
+            dateKeys: dateKeys,
+            peakPoint: peak,
+            totalTokens: totalTokens,
+            averagePerPeriod: points.isEmpty ? 0 : totalTokens / max(1, points.count),
+            peakTokens: peak?.totalTokens ?? 0,
+            totalCostUSD: hasCost ? totalCost : nil,
+            desiredAxisCount: desiredAxisCount,
+            xAxisFormat: .dateTime.month(.abbreviated).day(),
+            isHourly: false)
+    }
+
+    // MARK: - Hourly model
+
+    private static func makeHourlyModel(from summaries: [UsageLedgerHourlySummary], timeRange: TimeRange) -> Model {
+        let now = Date()
+        let cutoffDate = now.addingTimeInterval(timeRange.cutoffInterval)
+        let filtered = summaries.filter { $0.hourStart >= cutoffDate }
+        let sorted = filtered.sorted { $0.hourStart < $1.hourStart }
+
+        var points: [Point] = []
+        var pointsByKey: [String: Point] = [:]
         var dateKeys: [(key: String, date: Date)] = []
         var peak: Point?
         var totalTokens = 0
@@ -214,42 +300,41 @@ struct UsageTimelineChartMenuView: View {
         for summary in sorted {
             let tokens = summary.totals.totalTokens
             totalTokens += tokens
-            let point = Point(date: summary.dayStart, totalTokens: tokens)
+            let point = Point(date: summary.hourStart, totalTokens: tokens, key: summary.hourKey)
             points.append(point)
-            summariesByKey[summary.dayKey] = summary
-            dateKeys.append((summary.dayKey, summary.dayStart))
+            pointsByKey[summary.hourKey] = point
+            dateKeys.append((summary.hourKey, summary.hourStart))
 
-            if let currentPeak = peak {
-                if tokens > currentPeak.totalTokens {
-                    peak = point
-                }
-            } else {
+            if peak == nil || tokens > (peak?.totalTokens ?? 0) {
                 peak = point
             }
         }
 
-        let axisDates: [Date] = {
-            guard let first = dateKeys.first?.date, let last = dateKeys.last?.date else { return [] }
-            if Calendar.current.isDate(first, inSameDayAs: last) { return [first] }
-            return [first, last]
-        }()
-
-        let averagePerDay = points.isEmpty ? 0 : totalTokens / max(1, points.count)
-        let peakTokens = peak?.totalTokens ?? 0
+        let desiredAxisCount: Int = switch timeRange {
+        case .oneHour: 4
+        case .sixHours: 6
+        case .oneDay: 8
+        default: 6
+        }
 
         return Model(
             points: points,
-            summariesByDateKey: summariesByKey,
+            pointsByKey: pointsByKey,
             dateKeys: dateKeys,
-            axisDates: axisDates,
             peakPoint: peak,
             totalTokens: totalTokens,
-            averagePerDay: averagePerDay,
-            peakTokens: peakTokens)
+            averagePerPeriod: points.isEmpty ? 0 : totalTokens / max(1, points.count),
+            peakTokens: peak?.totalTokens ?? 0,
+            totalCostUSD: nil,
+            desiredAxisCount: desiredAxisCount,
+            xAxisFormat: .dateTime.hour(.defaultDigits(amPM: .abbreviated)),
+            isHourly: true)
     }
 
+    // MARK: - Interaction
+
     private func selectionBandRect(model: Model, proxy: ChartProxy, geo: GeometryProxy) -> CGRect? {
-        guard let key = self.selectedDateKey else { return nil }
+        guard let key = self.selectedKey else { return nil }
         guard let plotAnchor = proxy.plotFrame else { return nil }
         let plotFrame = geo[plotAnchor]
         guard let index = model.dateKeys.firstIndex(where: { $0.key == key }) else { return nil }
@@ -292,7 +377,7 @@ struct UsageTimelineChartMenuView: View {
         geo: GeometryProxy)
     {
         guard let location else {
-            if self.selectedDateKey != nil { self.selectedDateKey = nil }
+            if self.selectedKey != nil { self.selectedKey = nil }
             return
         }
 
@@ -302,79 +387,33 @@ struct UsageTimelineChartMenuView: View {
 
         let xInPlot = location.x - plotFrame.origin.x
         guard let date: Date = proxy.value(atX: xInPlot) else { return }
-        guard let nearest = self.nearestDateKey(to: date, model: model) else { return }
 
-        if self.selectedDateKey != nearest {
-            self.selectedDateKey = nearest
-        }
-    }
-
-    private func nearestDateKey(to date: Date, model: Model) -> String? {
-        guard !model.dateKeys.isEmpty else { return nil }
-        var best: (key: String, distance: TimeInterval)?
+        var bestKey: String?
+        var bestDistance: TimeInterval = .greatestFiniteMagnitude
         for entry in model.dateKeys {
             let dist = abs(entry.date.timeIntervalSince(date))
-            if let cur = best {
-                if dist < cur.distance { best = (entry.key, dist) }
-            } else {
-                best = (entry.key, dist)
+            if dist < bestDistance {
+                bestDistance = dist
+                bestKey = entry.key
             }
         }
-        return best?.key
+
+        if let bestKey, self.selectedKey != bestKey {
+            self.selectedKey = bestKey
+        }
     }
 
-    private func detailLines(model: Model) -> (primary: String, secondary: String?) {
-        guard let key = self.selectedDateKey,
-              let summary = model.summariesByDateKey[key]
-        else {
-            return ("Hover the chart for details", nil)
+    private func detailText(model: Model) -> String {
+        guard let key = self.selectedKey, let point = model.pointsByKey[key] else {
+            return "Hover for details"
         }
-
-        let dayLabel = summary.dayStart.formatted(.dateTime.month(.abbreviated).day())
-        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
-        let primary = "\(dayLabel): \(tokens) tokens"
-
-        var details: [String] = []
-        if let cost = summary.totals.costUSD {
-            details.append(UsageFormatter.usdString(cost))
+        let tokens = UsageFormatter.tokenCountString(point.totalTokens)
+        if model.isHourly {
+            let timeLabel = point.date.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute())
+            return "\(timeLabel): \(tokens) tokens"
+        } else {
+            let dayLabel = point.date.formatted(.dateTime.month(.abbreviated).day())
+            return "\(dayLabel): \(tokens) tokens"
         }
-        let cacheTotal = summary.totals.cacheCreationTokens + summary.totals.cacheReadTokens
-        if cacheTotal > 0 {
-            details.append("Cache: \(UsageFormatter.tokenCountString(cacheTotal))")
-        }
-        if !summary.modelsUsed.isEmpty {
-            if let models = Self.modelsDetailText(from: summary.modelsUsed) {
-                details.append("Models: \(models)")
-            }
-        }
-
-        let secondary = details.isEmpty ? nil : details.joined(separator: " · ")
-        return (primary, secondary)
-    }
-
-    private static func modelsDetailText(from modelsUsed: [String]) -> String? {
-        var seen: Set<String> = []
-        let deduplicated = modelsUsed.filter { model in
-            let inserted = seen.insert(model).inserted
-            return inserted
-        }
-
-        guard !deduplicated.isEmpty else { return nil }
-
-        let maxShown = 3
-        let shown = deduplicated.prefix(maxShown)
-        let rendered = shown.map { model in
-            if let context = UsageFormatter.modelContextLabel(for: model) {
-                return "\(UsageFormatter.modelDisplayName(model)) \(context)"
-            }
-            return UsageFormatter.modelDisplayName(model)
-        }
-
-        var detail = rendered.joined(separator: " · ")
-        let extra = deduplicated.count - shown.count
-        if extra > 0 {
-            detail += " · +\(extra) more"
-        }
-        return detail
     }
 }

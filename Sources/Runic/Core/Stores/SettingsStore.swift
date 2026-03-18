@@ -253,6 +253,13 @@ final class SettingsStore {
         }
     }
 
+    /// When enabled, post macOS notifications when spend forecasts breach project budgets.
+    var budgetNotificationsEnabled: Bool {
+        didSet {
+            self.userDefaults.set(self.budgetNotificationsEnabled, forKey: "budgetNotificationsEnabled")
+        }
+    }
+
     /// When enabled, progress bars show "percent used" instead of "percent left".
     var usageBarsShowUsed: Bool {
         didSet { self.userDefaults.set(self.usageBarsShowUsed, forKey: "usageBarsShowUsed") }
@@ -283,7 +290,10 @@ final class SettingsStore {
     }
 
     var theme: Theme {
-        didSet { self.userDefaults.set(self.theme.rawValue, forKey: "theme") }
+        didSet {
+            self.userDefaults.set(self.theme.rawValue, forKey: "theme")
+            RunicApp.applyTheme(self.theme)
+        }
     }
 
     /// Optional: use provider branding icons with a percentage in the menu bar.
@@ -388,17 +398,32 @@ final class SettingsStore {
 
     /// z.ai API token (stored in Keychain).
     var zaiAPIToken: String {
-        didSet { self.schedulePersistZaiAPIToken() }
+        didSet {
+            self.schedulePersistZaiAPIToken()
+            if !zaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "zai")
+            }
+        }
     }
 
     /// MiniMax API token (stored in Keychain).
     var minimaxAPIToken: String {
-        didSet { self.schedulePersistMiniMaxAPIToken() }
+        didSet {
+            self.schedulePersistMiniMaxAPIToken()
+            if !minimaxAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "minimax")
+            }
+        }
     }
 
     /// MiniMax manual Cookie header (stored in Keychain).
     var minimaxCookieHeader: String {
-        didSet { self.schedulePersistMiniMaxCookieHeader() }
+        didSet {
+            self.schedulePersistMiniMaxCookieHeader()
+            if !minimaxCookieHeader.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "minimax")
+            }
+        }
     }
 
     /// MiniMax Group ID (stored in Keychain).
@@ -408,72 +433,152 @@ final class SettingsStore {
 
     /// Copilot API token (stored in Keychain).
     var copilotAPIToken: String {
-        didSet { self.schedulePersistCopilotAPIToken() }
+        didSet {
+            self.schedulePersistCopilotAPIToken()
+            if !copilotAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "copilot")
+            }
+        }
     }
 
     /// OpenRouter API key (stored in Keychain).
     var openRouterAPIToken: String {
-        didSet { self.schedulePersistOpenRouterAPIToken() }
+        didSet {
+            self.schedulePersistOpenRouterAPIToken()
+            if !openRouterAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "openrouter")
+            }
+        }
     }
 
     /// Groq API key (stored in Keychain).
     var groqAPIToken: String {
-        didSet { self.schedulePersistGroqAPIToken() }
+        didSet {
+            self.schedulePersistGroqAPIToken()
+            if !groqAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "groq")
+            }
+        }
     }
 
     /// DeepSeek API key (stored in Keychain).
     var deepSeekAPIToken: String {
-        didSet { self.schedulePersistDeepSeekAPIToken() }
+        didSet {
+            self.schedulePersistDeepSeekAPIToken()
+            if !deepSeekAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "deepseek")
+            }
+        }
     }
 
     /// Fireworks API key (stored in Keychain).
     var fireworksAPIToken: String {
-        didSet { self.schedulePersistFireworksAPIToken() }
+        didSet {
+            self.schedulePersistFireworksAPIToken()
+            if !fireworksAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "fireworks")
+            }
+        }
     }
 
     /// Mistral API key (stored in Keychain).
     var mistralAPIToken: String {
-        didSet { self.schedulePersistMistralAPIToken() }
+        didSet {
+            self.schedulePersistMistralAPIToken()
+            if !mistralAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "mistral")
+            }
+        }
     }
 
     /// Perplexity API key (stored in Keychain).
     var perplexityAPIToken: String {
-        didSet { self.schedulePersistPerplexityAPIToken() }
+        didSet {
+            self.schedulePersistPerplexityAPIToken()
+            if !perplexityAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "perplexity")
+            }
+        }
     }
 
     /// Kimi API key (stored in Keychain).
     var kimiAPIToken: String {
-        didSet { self.schedulePersistKimiAPIToken() }
+        didSet {
+            self.schedulePersistKimiAPIToken()
+            if !kimiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "kimi")
+            }
+        }
     }
 
     /// Auggie API token (stored in Keychain).
     var auggieAPIToken: String {
-        didSet { self.schedulePersistAuggieAPIToken() }
+        didSet {
+            self.schedulePersistAuggieAPIToken()
+            if !auggieAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "auggie")
+            }
+        }
     }
 
     /// Together API key (stored in Keychain).
     var togetherAPIToken: String {
-        didSet { self.schedulePersistTogetherAPIToken() }
+        didSet {
+            self.schedulePersistTogetherAPIToken()
+            if !togetherAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "together")
+            }
+        }
     }
 
     /// Cohere API key (stored in Keychain).
     var cohereAPIToken: String {
-        didSet { self.schedulePersistCohereAPIToken() }
+        didSet {
+            self.schedulePersistCohereAPIToken()
+            if !cohereAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "cohere")
+            }
+        }
     }
 
     /// xAI API key (stored in Keychain).
     var xaiAPIToken: String {
-        didSet { self.schedulePersistXAiAPIToken() }
+        didSet {
+            self.schedulePersistXAiAPIToken()
+            if !xaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "xai")
+            }
+        }
     }
 
     /// Cerebras API key (stored in Keychain).
     var cerebrasAPIToken: String {
-        didSet { self.schedulePersistCerebrasAPIToken() }
+        didSet {
+            self.schedulePersistCerebrasAPIToken()
+            if !cerebrasAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "cerebras")
+            }
+        }
+    }
+
+    /// Qwen DashScope API key (stored in Keychain).
+    var qwenAPIToken: String {
+        didSet {
+            self.schedulePersistQwenAPIToken()
+            if !qwenAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "qwen")
+            }
+        }
     }
 
     /// SambaNova API key (stored in Keychain).
     var sambaNovaAPIToken: String {
-        didSet { self.schedulePersistSambaNovaAPIToken() }
+        didSet {
+            self.schedulePersistSambaNovaAPIToken()
+            if !sambaNovaAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "sambanova")
+            }
+        }
     }
 
     /// Azure OpenAI endpoint URL (stored in UserDefaults).
@@ -493,7 +598,12 @@ final class SettingsStore {
 
     /// Azure OpenAI API key (stored in Keychain).
     var azureOpenAIAPIToken: String {
-        didSet { self.schedulePersistAzureOpenAIAPIToken() }
+        didSet {
+            self.schedulePersistAzureOpenAIAPIToken()
+            if !azureOpenAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "azure")
+            }
+        }
     }
 
     /// Amazon Bedrock region (stored in UserDefaults).
@@ -509,6 +619,16 @@ final class SettingsStore {
     /// Optional model filter for Amazon Bedrock (stored in UserDefaults).
     var bedrockModelID: String {
         didSet { self.userDefaults.set(self.bedrockModelID, forKey: "bedrockModelID") }
+    }
+
+    /// Google Cloud project for Vertex AI (stored in UserDefaults).
+    var vertexaiProject: String {
+        didSet { self.userDefaults.set(self.vertexaiProject, forKey: "vertexaiProject") }
+    }
+
+    /// Google Cloud location/region for Vertex AI (stored in UserDefaults).
+    var vertexaiLocation: String {
+        didSet { self.userDefaults.set(self.vertexaiLocation, forKey: "vertexaiLocation") }
     }
 
     private var selectedMenuProviderRaw: String? {
@@ -606,6 +726,7 @@ final class SettingsStore {
         _ = self.cohereAPIToken
         _ = self.xaiAPIToken
         _ = self.cerebrasAPIToken
+        _ = self.qwenAPIToken
         _ = self.sambaNovaAPIToken
         _ = self.azureOpenAIEndpoint
         _ = self.azureOpenAIDeployment
@@ -614,6 +735,8 @@ final class SettingsStore {
         _ = self.bedrockRegion
         _ = self.bedrockAWSProfile
         _ = self.bedrockModelID
+        _ = self.vertexaiProject
+        _ = self.vertexaiLocation
         _ = self.debugLoadingPattern
         _ = self.selectedMenuProvider
         _ = self.providerToggleRevision
@@ -662,6 +785,8 @@ final class SettingsStore {
     @ObservationIgnored private var cerebrasTokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let sambaNovaTokenStore: any SambaNovaTokenStoring
     @ObservationIgnored private var sambaNovaTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let qwenTokenStore: any QwenTokenStoring
+    @ObservationIgnored private var qwenTokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let azureOpenAITokenStore: any AzureOpenAITokenStoring
     @ObservationIgnored private var azureOpenAITokenPersistTask: Task<Void, Never>?
     // Cache enablement so tight UI loops (menu bar animations) don't hit UserDefaults each tick.
@@ -695,6 +820,7 @@ final class SettingsStore {
         xaiTokenStore: any XAITokenStoring = KeychainXAITokenStore(),
         cerebrasTokenStore: any CerebrasTokenStoring = KeychainCerebrasTokenStore(),
         sambaNovaTokenStore: any SambaNovaTokenStoring = KeychainSambaNovaTokenStore(),
+        qwenTokenStore: any QwenTokenStoring = KeychainQwenTokenStore(),
         azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore())
     {
         self.userDefaults = userDefaults
@@ -716,6 +842,7 @@ final class SettingsStore {
         self.xaiTokenStore = xaiTokenStore
         self.cerebrasTokenStore = cerebrasTokenStore
         self.sambaNovaTokenStore = sambaNovaTokenStore
+        self.qwenTokenStore = qwenTokenStore
         self.azureOpenAITokenStore = azureOpenAITokenStore
         self.providerOrderRaw = userDefaults.stringArray(forKey: "providerOrder") ?? []
         let raw = userDefaults.string(forKey: "refreshFrequency") ?? RefreshFrequency.manual.rawValue
@@ -744,6 +871,8 @@ final class SettingsStore {
         if sessionQuotaNotificationsDefault == nil {
             self.userDefaults.set(true, forKey: "sessionQuotaNotificationsEnabled")
         }
+        self.budgetNotificationsEnabled = userDefaults.object(
+            forKey: "budgetNotificationsEnabled") as? Bool ?? false
         self.usageBarsShowUsed = userDefaults.object(forKey: "usageBarsShowUsed") as? Bool ?? true
         let metricDisplayRaw = userDefaults.string(forKey: "usageMetricDisplayMode")
         self.usageMetricDisplayMode = UsageMetricDisplayMode(rawValue: metricDisplayRaw ?? "") ?? .barsAndPercent
@@ -794,6 +923,8 @@ final class SettingsStore {
         self.bedrockRegion = userDefaults.string(forKey: "bedrockRegion") ?? ""
         self.bedrockAWSProfile = userDefaults.string(forKey: "bedrockAWSProfile") ?? ""
         self.bedrockModelID = userDefaults.string(forKey: "bedrockModelID") ?? ""
+        self.vertexaiProject = userDefaults.string(forKey: "vertexaiProject") ?? ""
+        self.vertexaiLocation = userDefaults.string(forKey: "vertexaiLocation") ?? ""
         self.zaiAPIToken = (try? zaiTokenStore.loadToken()) ?? ""
         self.minimaxAPIToken = (try? minimaxTokenStore.loadToken()) ?? ""
         self.minimaxCookieHeader = (try? minimaxCookieHeaderStore.loadHeader()) ?? ""
@@ -812,6 +943,7 @@ final class SettingsStore {
         self.xaiAPIToken = (try? xaiTokenStore.loadToken()) ?? ""
         self.cerebrasAPIToken = (try? cerebrasTokenStore.loadToken()) ?? ""
         self.sambaNovaAPIToken = (try? sambaNovaTokenStore.loadToken()) ?? ""
+        self.qwenAPIToken = (try? qwenTokenStore.loadToken()) ?? ""
         self.azureOpenAIAPIToken = (try? azureOpenAITokenStore.loadToken()) ?? ""
         self.selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
         self.providerDetectionCompleted = userDefaults.object(
@@ -880,6 +1012,16 @@ final class SettingsStore {
 
     func rerunProviderDetection() {
         self.runInitialProviderDetectionIfNeeded(force: true)
+    }
+
+    /// Auto-enable a provider when the user enters a non-empty API token.
+    private func autoEnableProviderIfNeeded(cliName: String) {
+        let toggles = (self.userDefaults.dictionary(forKey: "providerToggles") as? [String: Bool]) ?? [:]
+        guard toggles[cliName] == nil else { return }
+        var updated = toggles
+        updated[cliName] = true
+        self.userDefaults.set(updated, forKey: "providerToggles")
+        self.providerToggleRevision &+= 1
     }
 
     // MARK: - Private
@@ -1516,6 +1658,31 @@ final class SettingsStore {
             if let error {
                 RunicLog.logger("azure-openai-token-store")
                     .error("Failed to persist Azure OpenAI token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistQwenAPIToken() {
+        self.qwenTokenPersistTask?.cancel()
+        let token = self.qwenAPIToken
+        let tokenStore = self.qwenTokenStore
+        self.qwenTokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("qwen-token-store").error("Failed to persist Qwen token: \(error)")
             }
         }
     }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Qwen / Tongyi Qianwen - stylized Q with neural spark -->
+  <!-- Main circle (Q body) -->
+  <circle cx="50" cy="46" r="32" stroke="black" stroke-width="8" fill="none"/>
+  <!-- Q tail extending down-right -->
+  <path d="M68 64L86 86" stroke="black" stroke-width="8" stroke-linecap="round"/>
+  <!-- Inner spark/star (AI element) -->
+  <path d="M50 32L53 42L62 38L56 46L66 46L56 50L62 58L53 52L50 62L47 52L38 58L44 50L34 46L44 46L38 38L47 42Z" fill="black"/>
+</svg>

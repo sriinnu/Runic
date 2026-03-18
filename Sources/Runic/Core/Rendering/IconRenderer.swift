@@ -182,7 +182,9 @@ enum IconRenderer {
         case sambanova
         case azure
         case bedrock
+        case vertexai
         case zai
+        case qwen
         case combined
     }
 
@@ -287,6 +289,8 @@ enum IconRenderer {
         case .sambanova: return .sambanova
         case .azure: return .azure
         case .bedrock: return .bedrock
+        case .vertexai: return .vertexai
+        case .qwen: return .qwen
         case .combined: return .combined
         }
     }
@@ -725,6 +729,14 @@ enum IconRenderer {
             bottom.line(to: point(x: centerXPx - 2, y: centerYPx))
             bottom.close()
             bottom.fill()
+        case .vertexai:
+            let diamond = NSBezierPath()
+            diamond.move(to: point(x: centerXPx, y: centerYPx + 6))
+            diamond.line(to: point(x: centerXPx + 5, y: centerYPx))
+            diamond.line(to: point(x: centerXPx, y: centerYPx - 6))
+            diamond.line(to: point(x: centerXPx - 5, y: centerYPx))
+            diamond.close()
+            diamond.fill()
         case .zai:
             let slashGapPx = 3
             let slashWidthPx = 2
@@ -743,6 +755,25 @@ enum IconRenderer {
             rightPath.close()
             leftPath.fill()
             rightPath.fill()
+        case .qwen:
+            // Stylised "Q" ring -- outer circle punch with inner cutout.
+            let ringOuter = 5
+            let ringInner = 3
+            let outerRect = Self.grid.rect(
+                x: centerXPx - ringOuter,
+                y: centerYPx - ringOuter,
+                w: ringOuter * 2,
+                h: ringOuter * 2)
+            let innerRect = Self.grid.rect(
+                x: centerXPx - ringInner,
+                y: centerYPx - ringInner,
+                w: ringInner * 2,
+                h: ringInner * 2)
+            NSBezierPath(ovalIn: outerRect).fill()
+            ctx.setBlendMode(.normal)
+            NSGraphicsContext.current?.cgContext.setFillColor(NSColor.clear.cgColor)
+            ctx.setBlendMode(.clear)
+            NSBezierPath(ovalIn: innerRect).fill()
         case .combined:
             let diamondRadiusPx = 4
             let cx = Self.grid.pt(centerXPx)
@@ -916,6 +947,8 @@ enum IconRenderer {
         case .sambanova: 21
         case .azure: 22
         case .bedrock: 23
+        case .vertexai: 24
+        case .qwen: 25
         case .combined: 99
         }
     }

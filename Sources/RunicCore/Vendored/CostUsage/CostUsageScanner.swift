@@ -92,6 +92,10 @@ enum CostUsageScanner {
             return CostUsageDailyReport(data: [], summary: nil)
         case .bedrock:
             return CostUsageDailyReport(data: [], summary: nil)
+        case .vertexai:
+            return CostUsageDailyReport(data: [], summary: nil)
+        case .qwen:
+            return CostUsageDailyReport(data: [], summary: nil)
         }
     }
 

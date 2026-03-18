@@ -47,6 +47,7 @@ public enum ProviderTokenResolver {
     private static let cerebrasAccount = "cerebras-api-token"
     private static let sambanovaAccount = "sambanova-api-token"
     private static let azureOpenAIAccount = "azure-openai-api-token"
+    private static let qwenAccount = "qwen-api-token"
 
     public static func zaiToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.zaiResolution(environment: environment)?.token
@@ -146,6 +147,10 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
         self.azureOpenAIResolution(environment: environment)?.token
+    }
+
+    public static func qwenToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.qwenResolution(environment: environment)?.token
     }
 
     public static func zaiResolution(
@@ -409,6 +414,18 @@ public enum ProviderTokenResolver {
         return nil
     }
 
+    public static func qwenResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.qwenAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = QwenSettingsReader.apiToken(environment: environment) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
     private static func cleaned(_ raw: String?) -> String? {
         guard var value = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
             return nil
@@ -427,16 +444,34 @@ public enum ProviderTokenResolver {
 
     private static func keychainToken(service: String, account: String) -> String? {
         #if canImport(Security)
+        // Token stores write to the standard keychain (dataProtection: false),
+        // so try it first.  Fall back to the Data Protection keychain for
+        // pre-migration items that haven't been moved yet.
+        if let token = self.keychainRead(service: service, account: account, dataProtection: false) {
+            return token
+        }
+        return self.keychainRead(service: service, account: account, dataProtection: true)
+        #else
+        _ = service
+        _ = account
+        return nil
+        #endif
+    }
+
+    #if canImport(Security)
+    private static func keychainRead(service: String, account: String, dataProtection: Bool) -> String? {
         var result: CFTypeRef?
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecUseDataProtectionKeychain as String: true,
             kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
+        if dataProtection {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
 #if canImport(LocalAuthentication)
         let authContext = LAContext()
         authContext.interactionNotAllowed = true
@@ -444,10 +479,7 @@ public enum ProviderTokenResolver {
 #endif
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound {
-            return nil
-        }
-        if status == errSecInteractionNotAllowed {
+        if status == errSecItemNotFound || status == errSecInteractionNotAllowed {
             return nil
         }
         guard status == errSecSuccess else {
@@ -464,10 +496,6 @@ public enum ProviderTokenResolver {
         }
 
         return cleaned
-        #else
-        _ = service
-        _ = account
-        return nil
-        #endif
     }
+    #endif
 }

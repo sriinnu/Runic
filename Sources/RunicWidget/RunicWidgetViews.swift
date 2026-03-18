@@ -281,6 +281,8 @@ private struct ProviderSwitchChip: View {
         case .sambanova: "SambaNova"
         case .azure: "Azure"
         case .bedrock: "Bedrock"
+        case .vertexai: "Vertex"
+        case .qwen: "Qwen"
         }
     }
 }
@@ -623,6 +625,10 @@ enum WidgetColors {
             Color(red: 0 / 255, green: 120 / 255, blue: 212 / 255)
         case .bedrock:
             Color(red: 255 / 255, green: 153 / 255, blue: 0 / 255)
+        case .vertexai:
+            Color(red: 66 / 255, green: 133 / 255, blue: 244 / 255)
+        case .qwen:
+            Color(red: 98 / 255, green: 52 / 255, blue: 227 / 255)
         }
     }
 }

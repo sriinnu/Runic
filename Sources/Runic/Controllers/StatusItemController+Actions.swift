@@ -1,5 +1,6 @@
 import AppKit
 import RunicCore
+import UniformTypeIdentifiers
 
 extension StatusItemController {
     // MARK: - Actions reachable from menus
@@ -67,6 +68,39 @@ extension StatusItemController {
         let urlString = meta.statusPageURL ?? meta.statusLinkURL
         guard let urlString, let url = URL(string: urlString) else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    @objc func exportUsageCSV(_ sender: NSMenuItem) {
+        self.exportUsage(format: .csv)
+    }
+
+    @objc func exportUsageJSON(_ sender: NSMenuItem) {
+        self.exportUsage(format: .json)
+    }
+
+    private func exportUsage(format: UsageExporter.Format) {
+        let provider = self.lastMenuProvider
+            ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
+            ?? .codex
+        let content = UsageExporter.export(store: self.store, provider: provider, format: format)
+
+        let panel = NSSavePanel()
+        panel.title = "Export Usage Data"
+        panel.nameFieldStringValue = "runic-\(provider.rawValue)-usage.\(format.rawValue)"
+        panel.allowedContentTypes = format == .csv
+            ? [.commaSeparatedText]
+            : [.json]
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try content.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Export failed"
+            alert.informativeText = error.localizedDescription
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
     }
 
     @objc func openInsightsReport(_ sender: NSMenuItem) {
