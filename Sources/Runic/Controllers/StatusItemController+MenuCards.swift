@@ -213,7 +213,7 @@ extension StatusItemController {
         let hourlySummaries = self.store.ledgerHourlySummary(for: provider)
         let allDaily = self.store.ledgerAllDailySummary(for: provider)
 
-        // Hero today stat with provider icon
+        // Hero today stat with provider icon (staggered entrance index 0)
         if let daily, daily.totals.totalTokens > 0 {
             let providerIcon = ProviderBrandIcon.image(for: provider, size: 28)
             let heroView = self.menuCardContent(width: width, sidebar: sidebar, showIcons: true) {
@@ -222,17 +222,19 @@ extension StatusItemController {
                     tokenCount: daily.totals.totalTokens,
                     costUSD: daily.totals.costUSD,
                     width: $0)
+                    .menuCardEntrance(index: 0)
             }
             menu.addItem(self.makeMenuCardItem(heroView, id: "heroTodayStat", width: width))
         }
 
-        // Inline usage line chart (directly in the menu, not a submenu)
+        // Inline usage line chart (staggered entrance index 1)
         if !allDaily.isEmpty || !hourlySummaries.isEmpty {
             let chartView = self.menuCardContent(width: width, sidebar: sidebar, showIcons: true) {
                 InlineUsageChartView(
                     dailySummaries: allDaily,
                     hourlySummaries: hourlySummaries,
                     width: $0)
+                    .menuCardEntrance(index: 1)
             }
             menu.addItem(self.makeMenuCardItem(chartView, id: "inlineUsageChart", width: width))
         }
@@ -295,6 +297,7 @@ extension StatusItemController {
                     weekTotalTokens: UsageFormatter.tokenCountString(weekTotal),
                     dailySparkline: dailySparkline,
                     width: $0)
+                    .menuCardEntrance(index: 2)
             }
             menu.addItem(self.makeMenuCardItem(cardsView, id: "glassStatCards", width: width))
         }
@@ -308,6 +311,7 @@ extension StatusItemController {
         if let updatedAt {
             let timestampView = self.menuCardContent(width: width, sidebar: sidebar, showIcons: true) {
                 UpdatedTimestampView(updatedAt: updatedAt, width: $0)
+                    .menuCardEntrance(index: 3)
             }
             menu.addItem(self.makeMenuCardItem(timestampView, id: "updatedTimestamp", width: width))
         }

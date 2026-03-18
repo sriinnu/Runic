@@ -193,7 +193,14 @@ else
   fi
 fi
 
-# 4) Launch the packaged app.
+# 4) Copy to /Applications for easy access.
+log "==> install to /Applications"
+if [[ -d "${APP_BUNDLE}" ]]; then
+  rm -rf /Applications/Runic.app 2>/dev/null || true
+  cp -R "${APP_BUNDLE}" /Applications/Runic.app && log "OK: Installed to /Applications/Runic.app"
+fi
+
+# 5) Launch the packaged app.
 log "==> launch app"
 if ! open "${APP_BUNDLE}"; then
   log "WARN: launch app returned non-zero; falling back to direct binary launch."

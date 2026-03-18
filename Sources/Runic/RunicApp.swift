@@ -32,8 +32,9 @@ struct RunicApp: App {
         _preferencesSelection = State(wrappedValue: preferencesSelection)
         self.account = account
 
-        // Apply theme (dark/light/system)
-        Self.applyTheme(settings.theme)
+        // Defer theme application until NSApp is available.
+        let savedTheme = settings.theme
+        DispatchQueue.main.async { RunicApp.applyTheme(savedTheme) }
         self.appDelegate.configure(
             store: store,
             settings: settings,
@@ -62,13 +63,14 @@ struct RunicApp: App {
     }
 
     static func applyTheme(_ theme: Theme) {
+        guard let app = NSApp else { return }
         switch theme {
         case .system:
-            NSApp.appearance = nil
+            app.appearance = nil
         case .light:
-            NSApp.appearance = NSAppearance(named: .aqua)
+            app.appearance = NSAppearance(named: .aqua)
         case .dark:
-            NSApp.appearance = NSAppearance(named: .darkAqua)
+            app.appearance = NSAppearance(named: .darkAqua)
         }
     }
 

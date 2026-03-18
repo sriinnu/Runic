@@ -42,4 +42,12 @@ enum RunicAnimation {
 
     /// Fade animation for chart interaction hints.
     static let chartHintFade: Animation = .easeOut(duration: 0.4)
+
+    // MARK: - Menu Card Entrance
+
+    /// Staggered spring entrance for menu card sections.
+    static let cardEntrance: Animation = .spring(response: 0.45, dampingFraction: 0.82)
+
+    /// Base delay between staggered card section entrances.
+    static let cardEntranceStagger: Double = 0.06
 }
