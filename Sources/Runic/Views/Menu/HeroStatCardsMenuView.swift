@@ -130,6 +130,7 @@ private struct GlassStatCard: View {
                 .stroke(Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.medium), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+        .glassShimmer()
     }
 }
 

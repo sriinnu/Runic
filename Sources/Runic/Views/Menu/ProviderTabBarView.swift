@@ -62,7 +62,7 @@ struct ProviderTabBarView: View {
                             color: tab.isSelected ? tab.brandColor.opacity(0.15) : .clear,
                             radius: 4, y: 1)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TabButtonStyle())
                 }
             }
             .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -71,5 +71,18 @@ struct ProviderTabBarView: View {
         .frame(minWidth: self.width, maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Provider tabs")
+    }
+}
+
+/// Button style with subtle hover scale feedback.
+private struct TabButtonStyle: ButtonStyle {
+    @State private var isHovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : (self.isHovered ? 1.03 : 1.0))
+            .animation(RunicAnimation.hoverFeedback, value: configuration.isPressed)
+            .animation(RunicAnimation.hoverFeedback, value: self.isHovered)
+            .onHover { self.isHovered = $0 }
     }
 }
