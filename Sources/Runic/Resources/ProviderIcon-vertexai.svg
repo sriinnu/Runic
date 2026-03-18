@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Google Cloud Vertex AI - hexagonal AI chip inspired -->
+  <!-- Outer hexagon -->
+  <path d="M50 8L88 29V71L50 92L12 71V29L50 8Z" fill="black" fill-opacity="0.9"/>
+  <!-- Inner hexagon cutout -->
+  <path d="M50 22L76 37V67L50 82L24 67V37L50 22Z" fill="white"/>
+  <!-- Neural node center -->
+  <circle cx="50" cy="52" r="10" fill="black"/>
+  <!-- Connection lines radiating out -->
+  <line x1="50" y1="42" x2="50" y2="28" stroke="black" stroke-width="3" stroke-linecap="round"/>
+  <line x1="58.66" y1="57" x2="70" y2="64" stroke="black" stroke-width="3" stroke-linecap="round"/>
+  <line x1="41.34" y1="57" x2="30" y2="64" stroke="black" stroke-width="3" stroke-linecap="round"/>
+  <!-- Outer nodes -->
+  <circle cx="50" cy="28" r="4" fill="black"/>
+  <circle cx="70" cy="64" r="4" fill="black"/>
+  <circle cx="30" cy="64" r="4" fill="black"/>
+</svg>

@@ -59,6 +59,8 @@ extension UsageStore {
         _ = self.customProviderSnapshots
         _ = self.customProviderErrors
         _ = self.ledgerDailySummaries
+        _ = self.ledgerAllDailySummaries
+        _ = self.ledgerHourlySummaries
         _ = self.ledgerActiveBlocks
         _ = self.ledgerTopModels
         _ = self.ledgerTopProjects
@@ -556,6 +558,8 @@ final class UsageStore {
     private(set) var tokenErrors: [UsageProvider: String] = [:]
     private(set) var tokenRefreshInFlight: Set<UsageProvider> = []
     private(set) var ledgerDailySummaries: [UsageProvider: UsageLedgerDailySummary] = [:]
+    private(set) var ledgerAllDailySummaries: [UsageProvider: [UsageLedgerDailySummary]] = [:]
+    private(set) var ledgerHourlySummaries: [UsageProvider: [UsageLedgerHourlySummary]] = [:]
     private(set) var ledgerActiveBlocks: [UsageProvider: UsageLedgerBlockSummary] = [:]
     private(set) var ledgerTopModels: [UsageProvider: UsageLedgerModelSummary] = [:]
     private(set) var ledgerTopProjects: [UsageProvider: UsageLedgerProjectSummary] = [:]
@@ -727,6 +731,8 @@ final class UsageStore {
         case .sambanova: nil
         case .azure: nil
         case .bedrock: nil
+        case .vertexai: nil
+        case .qwen: nil
         }
     }
 
@@ -893,6 +899,14 @@ final class UsageStore {
 
     func ledgerDailySummary(for provider: UsageProvider) -> UsageLedgerDailySummary? {
         self.ledgerDailySummaries[provider]
+    }
+
+    func ledgerAllDailySummary(for provider: UsageProvider) -> [UsageLedgerDailySummary] {
+        self.ledgerAllDailySummaries[provider] ?? []
+    }
+
+    func ledgerHourlySummary(for provider: UsageProvider) -> [UsageLedgerHourlySummary] {
+        self.ledgerHourlySummaries[provider] ?? []
     }
 
     func ledgerActiveBlock(for provider: UsageProvider) -> UsageLedgerBlockSummary? {
@@ -1665,6 +1679,18 @@ final class UsageStore {
                         self.ledgerDailySummaries.removeValue(forKey: provider)
                     }
 
+                    if let allDaily = result.allDailySummariesByProvider[provider], !allDaily.isEmpty {
+                        self.ledgerAllDailySummaries[provider] = allDaily
+                    } else {
+                        self.ledgerAllDailySummaries.removeValue(forKey: provider)
+                    }
+
+                    if let hourly = result.hourlySummariesByProvider[provider], !hourly.isEmpty {
+                        self.ledgerHourlySummaries[provider] = hourly
+                    } else {
+                        self.ledgerHourlySummaries.removeValue(forKey: provider)
+                    }
+
                     if let block = result.activeBlocksByProvider[provider] {
                         self.ledgerActiveBlocks[provider] = block
                     } else {
@@ -1724,6 +1750,13 @@ final class UsageStore {
 
                     self.ledgerUpdatedAt[provider] = result.updatedAt
                 }
+
+                // Budget breach notifications
+                if self.settings.budgetNotificationsEnabled {
+                    BudgetNotificationManager.shared.checkAndNotify(
+                        forecasts: self.ledgerProjectSpendForecasts,
+                        settings: self.settings)
+                }
             }
         }
     }
@@ -1770,6 +1803,8 @@ final class UsageStore {
 
     private struct LedgerRefreshResult: Sendable {
         let dailyByProvider: [UsageProvider: UsageLedgerDailySummary]
+        let allDailySummariesByProvider: [UsageProvider: [UsageLedgerDailySummary]]
+        let hourlySummariesByProvider: [UsageProvider: [UsageLedgerHourlySummary]]
         let activeBlocksByProvider: [UsageProvider: UsageLedgerBlockSummary]
         let topModelsByProvider: [UsageProvider: UsageLedgerModelSummary]
         let topProjectsByProvider: [UsageProvider: UsageLedgerProjectSummary]
@@ -1812,6 +1847,8 @@ final class UsageStore {
         guard !sources.isEmpty else {
         return LedgerRefreshResult(
             dailyByProvider: [:],
+            allDailySummariesByProvider: [:],
+            hourlySummariesByProvider: [:],
             activeBlocksByProvider: [:],
             topModelsByProvider: [:],
             topProjectsByProvider: [:],
@@ -1872,8 +1909,21 @@ final class UsageStore {
             timeZone: timeZone,
             groupByProject: false)
         var dailyByProvider: [UsageProvider: UsageLedgerDailySummary] = [:]
-        for summary in dailySummaries where summary.dayStart == todayStart {
-            dailyByProvider[summary.provider] = summary
+        var allDailySummariesByProvider: [UsageProvider: [UsageLedgerDailySummary]] = [:]
+        for summary in dailySummaries {
+            allDailySummariesByProvider[summary.provider, default: []].append(summary)
+            if summary.dayStart == todayStart {
+                dailyByProvider[summary.provider] = summary
+            }
+        }
+
+        let hourlySummaries = UsageLedgerAggregator.hourlySummaries(
+            entries: entries,
+            timeZone: timeZone,
+            groupByProject: false)
+        var hourlySummariesByProvider: [UsageProvider: [UsageLedgerHourlySummary]] = [:]
+        for summary in hourlySummaries {
+            hourlySummariesByProvider[summary.provider, default: []].append(summary)
         }
 
         let blocks = UsageLedgerAggregator.blockSummaries(entries: entries, blockHours: 5, now: now)
@@ -1954,6 +2004,8 @@ final class UsageStore {
 
         return LedgerRefreshResult(
             dailyByProvider: dailyByProvider,
+            allDailySummariesByProvider: allDailySummariesByProvider,
+            hourlySummariesByProvider: hourlySummariesByProvider,
         activeBlocksByProvider: activeByProvider,
         topModelsByProvider: topModelsByProvider,
         topProjectsByProvider: topProjectsByProvider,
@@ -2723,7 +2775,12 @@ extension UsageStore {
                     profile: self.settings.bedrockAWSProfile.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? nil : self.settings.bedrockAWSProfile,
                     modelID: self.settings.bedrockModelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.bedrockModelID))
+                        ? nil : self.settings.bedrockModelID),
+                vertexai: ProviderSettingsSnapshot.VertexAIProviderSettings(
+                    project: self.settings.vertexaiProject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.vertexaiProject,
+                    location: self.settings.vertexaiLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? nil : self.settings.vertexaiLocation))
         }
 
         let debugContext = ProviderFetchContext(
@@ -3015,6 +3072,24 @@ extension UsageStore {
                 }
                 await MainActor.run { self.probeLogs[.bedrock] = text }
                 return text
+            case .vertexai:
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .vertexai,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
+                await MainActor.run { self.probeLogs[.vertexai] = text }
+                return text
+            case .qwen:
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .qwen,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
+                await MainActor.run { self.probeLogs[.qwen] = text }
+                return text
             }
         }.value
     }
@@ -3109,6 +3184,13 @@ extension UsageStore {
                 "bedrock.profile=\(self.debugFieldValue(settings.bedrock?.profile))",
                 "bedrock.model_filter=\(self.debugFieldValue(settings.bedrock?.modelID))",
             ]
+        case .vertexai:
+            return [
+                "vertexai.project=\(self.debugFieldValue(settings.vertexai?.project))",
+                "vertexai.location=\(self.debugFieldValue(settings.vertexai?.location))",
+            ]
+        case .qwen:
+            return [self.debugTokenSummary(provider: "qwen", resolution: ProviderTokenResolver.qwenResolution())]
         case .gemini:
             return [
                 "gemini.authType=\(GeminiStatusProbe.currentAuthType().rawValue)",

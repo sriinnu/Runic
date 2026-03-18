@@ -50,6 +50,10 @@ struct ProviderRegistry {
                             in: .whitespacesAndNewlines)
                         let cleanedBedrockModel = settings.bedrockModelID.trimmingCharacters(
                             in: .whitespacesAndNewlines)
+                        let cleanedVertexAIProject = settings.vertexaiProject.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedVertexAILocation = settings.vertexaiLocation.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
                         return ProviderSettingsSnapshot(
                             debugMenuEnabled: settings.debugMenuEnabled,
                             codex: ProviderSettingsSnapshot.CodexProviderSettings(
@@ -68,7 +72,10 @@ struct ProviderRegistry {
                             bedrock: ProviderSettingsSnapshot.BedrockProviderSettings(
                                 region: cleanedBedrockRegion.isEmpty ? nil : cleanedBedrockRegion,
                                 profile: cleanedBedrockProfile.isEmpty ? nil : cleanedBedrockProfile,
-                                modelID: cleanedBedrockModel.isEmpty ? nil : cleanedBedrockModel))
+                                modelID: cleanedBedrockModel.isEmpty ? nil : cleanedBedrockModel),
+                            vertexai: ProviderSettingsSnapshot.VertexAIProviderSettings(
+                                project: cleanedVertexAIProject.isEmpty ? nil : cleanedVertexAIProject,
+                                location: cleanedVertexAILocation.isEmpty ? nil : cleanedVertexAILocation))
                     }
                     let context = ProviderFetchContext(
                         runtime: .app,

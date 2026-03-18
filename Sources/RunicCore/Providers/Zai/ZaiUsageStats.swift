@@ -316,12 +316,23 @@ extension ZaiUsageSnapshot {
 // MARK: - Private API response models
 
 private struct ZaiQuotaLimitResponse: Decodable {
-    let code: Int
-    let msg: String
-    let data: ZaiQuotaLimitData
-    let success: Bool
+    let code: Int?
+    let msg: String?
+    let data: ZaiQuotaLimitData?
+    let success: Bool?
 
-    var isSuccess: Bool { self.success && self.code == 200 }
+    var isSuccess: Bool { (self.success ?? (self.code == 200)) && (self.code ?? 200) == 200 }
+
+    var errorMessage: String {
+        self.msg ?? self.message ?? "Unknown API error (code: \(self.code ?? -1))"
+    }
+
+    // Some responses use "message" instead of "msg".
+    private let message: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case code, msg, data, success, message
+    }
 }
 
 private struct ZaiQuotaLimitData: Decodable {
@@ -336,6 +347,7 @@ private struct ZaiQuotaLimitData: Decodable {
             container.decodeIfPresent(String.self, forKey: .plan),
             container.decodeIfPresent(String.self, forKey: .planType),
             container.decodeIfPresent(String.self, forKey: .packageName),
+            container.decodeIfPresent(String.self, forKey: .level),
         ].compactMap(\.self).first
         let trimmed = rawPlan?.trimmingCharacters(in: .whitespacesAndNewlines)
         self.planName = (trimmed?.isEmpty ?? true) ? nil : trimmed
@@ -347,32 +359,36 @@ private struct ZaiQuotaLimitData: Decodable {
         case plan
         case planType = "plan_type"
         case packageName
+        case level
     }
 }
 
 private struct ZaiLimitRaw: Codable {
     let type: String
-    let unit: Int
-    let number: Int
-    let usage: Int
-    let currentValue: Int
-    let remaining: Int
-    let percentage: Int
+    let unit: Int?
+    let number: Int?
+    let usage: Int?
+    let currentValue: Int?
+    let remaining: Int?
+    let percentage: Int?
     let usageDetails: [ZaiUsageDetail]?
     let nextResetTime: Int?
 
     func toLimitEntry() -> ZaiLimitEntry? {
         guard let limitType = ZaiLimitType(rawValue: type) else { return nil }
-        let limitUnit = ZaiLimitUnit(rawValue: unit) ?? .unknown
+        let limitUnit = ZaiLimitUnit(rawValue: unit ?? 0) ?? .unknown
+        let resolvedUsage = self.usage ?? 0
+        let resolvedCurrent = self.currentValue ?? 0
+        let resolvedRemaining = self.remaining ?? max(0, resolvedUsage - resolvedCurrent)
         let nextReset = self.nextResetTime.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) }
         return ZaiLimitEntry(
             type: limitType,
             unit: limitUnit,
-            number: self.number,
-            usage: self.usage,
-            currentValue: self.currentValue,
-            remaining: self.remaining,
-            percentage: Double(self.percentage),
+            number: self.number ?? 0,
+            usage: resolvedUsage,
+            currentValue: resolvedCurrent,
+            remaining: resolvedRemaining,
+            percentage: Double(self.percentage ?? 0),
             usageDetails: self.usageDetails ?? [],
             nextResetTime: nextReset)
     }
@@ -492,7 +508,7 @@ public struct ZaiUsageFetcher: Sendable {
     // MARK: - Quota endpoint (required)
 
     private static func fetchQuota(apiKey: String) async throws -> (ZaiLimitEntry?, ZaiLimitEntry?, String?) {
-        let request = self.makeRequest(url: quotaAPIURL, apiKey: apiKey)
+        let request = try self.makeRequest(url: quotaAPIURL, apiKey: apiKey)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -508,14 +524,24 @@ public struct ZaiUsageFetcher: Sendable {
             Self.log.debug("z.ai quota response: \(jsonString)")
         }
 
-        let apiResponse = try JSONDecoder().decode(ZaiQuotaLimitResponse.self, from: data)
+        let apiResponse: ZaiQuotaLimitResponse
+        do {
+            apiResponse = try JSONDecoder().decode(ZaiQuotaLimitResponse.self, from: data)
+        } catch {
+            let body = String(data: data, encoding: .utf8) ?? "<binary>"
+            Self.log.error("z.ai quota parse failed: \(error) — body: \(body)")
+            throw ZaiUsageError.parseFailed(error.localizedDescription)
+        }
         guard apiResponse.isSuccess else {
-            throw ZaiUsageError.apiError(apiResponse.msg)
+            throw ZaiUsageError.apiError(apiResponse.errorMessage)
+        }
+        guard let quotaData = apiResponse.data else {
+            throw ZaiUsageError.apiError("API returned success but no data")
         }
 
         var tokenLimit: ZaiLimitEntry?
         var timeLimit: ZaiLimitEntry?
-        for limit in apiResponse.data.limits {
+        for limit in quotaData.limits {
             if let entry = limit.toLimitEntry() {
                 switch entry.type {
                 case .tokensLimit: tokenLimit = entry
@@ -523,7 +549,7 @@ public struct ZaiUsageFetcher: Sendable {
                 }
             }
         }
-        return (tokenLimit, timeLimit, apiResponse.data.planName)
+        return (tokenLimit, timeLimit, quotaData.planName)
     }
 
     // MARK: - Model usage endpoint (best-effort)
@@ -540,7 +566,7 @@ public struct ZaiUsageFetcher: Sendable {
     private static func fetchModelUsage(apiKey: String) async throws -> ZaiModelUsageSummary {
         let (startTime, endTime) = self.rolling24hWindow()
         let urlString = "\(modelUsageAPIURL)?startTime=\(startTime)&endTime=\(endTime)"
-        let request = self.makeRequest(url: urlString, apiKey: apiKey)
+        let request = try self.makeRequest(url: urlString, apiKey: apiKey)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
@@ -602,7 +628,7 @@ public struct ZaiUsageFetcher: Sendable {
     private static func fetchToolUsage(apiKey: String) async throws -> ZaiToolUsageSummary {
         let (startTime, endTime) = self.rolling24hWindow()
         let urlString = "\(toolUsageAPIURL)?startTime=\(startTime)&endTime=\(endTime)"
-        let request = self.makeRequest(url: urlString, apiKey: apiKey)
+        let request = try self.makeRequest(url: urlString, apiKey: apiKey)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
@@ -632,10 +658,20 @@ public struct ZaiUsageFetcher: Sendable {
 
     // MARK: - Helpers
 
-    private static func makeRequest(url: String, apiKey: String) -> URLRequest {
-        var request = URLRequest(url: URL(string: url)!)
+    private static func makeRequest(url: String, apiKey: String) throws -> URLRequest {
+        guard let requestURL = URL(string: url) else {
+            throw ZaiUsageError.networkError("Invalid URL: \(url)")
+        }
+        var request = URLRequest(url: requestURL)
         request.httpMethod = "GET"
-        request.setValue(apiKey, forHTTPHeaderField: "Authorization")
+        // z.ai expects "Bearer <token>" — add prefix if the user didn't include it.
+        let authValue: String
+        if apiKey.lowercased().hasPrefix("bearer ") {
+            authValue = "Bearer \(apiKey.dropFirst(7).trimmingCharacters(in: .whitespaces))"
+        } else {
+            authValue = "Bearer \(apiKey)"
+        }
+        request.setValue(authValue, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("en-US,en", forHTTPHeaderField: "Accept-Language")

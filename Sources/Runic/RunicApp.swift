@@ -31,6 +31,9 @@ struct RunicApp: App {
         _store = State(wrappedValue: store)
         _preferencesSelection = State(wrappedValue: preferencesSelection)
         self.account = account
+
+        // Apply theme (dark/light/system)
+        Self.applyTheme(settings.theme)
         self.appDelegate.configure(
             store: store,
             settings: settings,
@@ -56,6 +59,17 @@ struct RunicApp: App {
                 selection: self.preferencesSelection)
         }
         .defaultSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
+    }
+
+    static func applyTheme(_ theme: Theme) {
+        switch theme {
+        case .system:
+            NSApp.appearance = nil
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
     }
 
     private func openSettings(tab: PreferencesTab) {

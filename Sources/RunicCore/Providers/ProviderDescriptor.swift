@@ -78,6 +78,8 @@ public enum ProviderDescriptorRegistry {
         _ = ProviderDescriptorRegistry.register(SambaNovaProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(AzureProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(BedrockProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(VertexAIProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(QwenProviderDescriptor.descriptor)
     }()
 
     private static func ensureBootstrapped() {

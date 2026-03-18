@@ -59,6 +59,8 @@ enum ProviderChoice: String, AppEnum {
         case .sambanova: return nil // SambaNova not yet supported in widgets
         case .azure: return nil // Azure OpenAI not yet supported in widgets
         case .bedrock: return nil // Amazon Bedrock not yet supported in widgets
+        case .vertexai: return nil // Vertex AI not yet supported in widgets
+        case .qwen: return nil // Qwen not yet supported in widgets
         }
     }
 }

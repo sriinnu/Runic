@@ -33,7 +33,9 @@ enum UsageLedgerSourceFactory {
             .cerebras,
             .sambanova,
             .azure,
-            .bedrock:
+            .bedrock,
+            .vertexai,
+            .qwen:
             return Self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:
             return nil

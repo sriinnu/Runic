@@ -27,6 +27,8 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case sambanova
     case azure
     case bedrock
+    case vertexai
+    case qwen
 }
 
 // swiftformat:enable sortDeclarations
@@ -56,6 +58,8 @@ public enum IconStyle: Sendable {
     case sambanova
     case azure
     case bedrock
+    case vertexai
+    case qwen
     case combined
 }
 

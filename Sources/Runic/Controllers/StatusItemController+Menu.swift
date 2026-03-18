@@ -141,11 +141,29 @@ extension StatusItemController {
         }
 
         if self.shouldMergeIcons, enabledProviders.count > 1, !useSidebarSwitcher {
-            let switcherItem = self.makeProviderSwitcherItem(
+            // Provider tab bar (Feature 6) — replaces plain switcher when available
+            let tabBarView = self.makeProviderTabBar(
                 providers: enabledProviders,
                 selected: selectedProvider,
+                width: menuWidth,
                 menu: menu)
-            menu.addItem(switcherItem)
+            if let tabBarView {
+                let hosting = MenuHostingView(rootView: tabBarView)
+                let controller = NSHostingController(rootView: tabBarView)
+                let size = controller.sizeThatFits(in: CGSize(width: menuWidth, height: .greatestFiniteMagnitude))
+                hosting.frame = NSRect(origin: .zero, size: NSSize(width: menuWidth, height: size.height))
+                let tabItem = NSMenuItem()
+                tabItem.view = hosting
+                tabItem.isEnabled = false
+                tabItem.representedObject = "providerTabBar"
+                menu.addItem(tabItem)
+            } else {
+                let switcherItem = self.makeProviderSwitcherItem(
+                    providers: enabledProviders,
+                    selected: selectedProvider,
+                    menu: menu)
+                menu.addItem(switcherItem)
+            }
             menu.addItem(.separator())
         }
 
@@ -190,12 +208,30 @@ extension StatusItemController {
             menu.addItem(.separator())
         }
 
+        // Timeline & activity chart submenus
+        let hasTimeline = self.addUsageTimelineSubmenu(to: menu, provider: currentProvider)
+        let hasHourly = self.addHourlyActivitySubmenu(to: menu, provider: currentProvider)
+        let hasWeekly = self.addWeeklyActivitySubmenu(to: menu, provider: currentProvider)
+        if hasTimeline || hasHourly || hasWeekly {
+            menu.addItem(.separator())
+        }
+
+        // Utilization & window comparison chart submenus
+        let hasUtilization = self.addSubscriptionUtilizationSubmenu(to: menu, provider: currentProvider)
+        let hasWindowComparison = self.addUsageWindowComparisonSubmenu(to: menu, provider: currentProvider)
+        if hasUtilization || hasWindowComparison {
+            menu.addItem(.separator())
+        }
+
         // Project & model breakdown submenus
         let hasProjectBreakdown = self.addProjectBreakdownSubmenu(to: menu, provider: currentProvider)
         let hasModelBreakdown = self.addModelBreakdownSubmenu(to: menu, provider: currentProvider)
         if hasProjectBreakdown || hasModelBreakdown {
             menu.addItem(.separator())
         }
+
+        // Export Usage submenu
+        self.addExportUsageSubmenu(to: menu)
 
         // Custom providers section
         self.addCustomProvidersSection(to: menu)
@@ -295,6 +331,72 @@ extension StatusItemController {
         item.view = view
         item.isEnabled = false
         return item
+    }
+
+    private func makeProviderTabBar(
+        providers: [UsageProvider],
+        selected: UsageProvider?,
+        width: CGFloat,
+        menu: NSMenu) -> ProviderTabBarView?
+    {
+        guard providers.count > 1 else { return nil }
+        let overviewColor = Color(nsColor: .controlAccentColor)
+
+        var tabs: [ProviderTabBarView.TabItem] = [
+            ProviderTabBarView.TabItem(
+                id: "overview",
+                label: "Overview",
+                icon: nil,
+                provider: nil,
+                isSelected: selected == nil,
+                brandColor: overviewColor),
+        ]
+
+        for provider in providers {
+            let meta = self.store.metadata(for: provider)
+            let icon = ProviderBrandIcon.image(for: provider, size: 18)
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            let brandColor = Color(
+                red: Double(descriptor.branding.color.red),
+                green: Double(descriptor.branding.color.green),
+                blue: Double(descriptor.branding.color.blue))
+            tabs.append(ProviderTabBarView.TabItem(
+                id: provider.rawValue,
+                label: Self.abbreviatedProviderName(meta.displayName),
+                icon: icon,
+                provider: provider,
+                isSelected: selected == provider,
+                brandColor: brandColor))
+        }
+
+        return ProviderTabBarView(
+            tabs: tabs,
+            width: width,
+            onSelect: { [weak self, weak menu] provider in
+                guard let self, let menu else { return }
+                self.selectedMenuProvider = provider
+                self.lastMenuProvider = provider
+                Task { @MainActor [weak self, weak menu] in
+                    guard let self, let menu else { return }
+                    self.populateMenu(menu, provider: provider)
+                    self.markMenuFresh(menu)
+                    self.refreshMenuCardHeights(in: menu)
+                    self.applyIcon(phase: nil)
+                }
+            })
+    }
+
+    private static func abbreviatedProviderName(_ name: String) -> String {
+        if name.count <= 8 { return name }
+        // Abbreviate long names
+        let abbreviations: [String: String] = [
+            "Antigravity": "AntiG",
+            "OpenRouter": "ORouter",
+            "Perplexity": "Perplx",
+            "SambaNova": "SambaN",
+            "Azure OpenAI": "Azure",
+        ]
+        return abbreviations[name] ?? String(name.prefix(6))
     }
 
     private func resolvedMenuProvider() -> UsageProvider? {
@@ -424,6 +526,31 @@ extension StatusItemController {
             return window.usedPercent
         }
         return window.remainingPercent
+    }
+
+    private func addExportUsageSubmenu(to menu: NSMenu) {
+        let exportItem = NSMenuItem(title: "Export Usage\u{2026}", action: nil, keyEquivalent: "")
+        if let image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Export") {
+            image.isTemplate = true
+            image.size = NSSize(width: 16, height: 16)
+            exportItem.image = image
+        }
+        let submenu = NSMenu(title: "Export Usage")
+        let csvItem = NSMenuItem(
+            title: "Export as CSV\u{2026}",
+            action: #selector(self.exportUsageCSV(_:)),
+            keyEquivalent: "")
+        csvItem.target = self
+        let jsonItem = NSMenuItem(
+            title: "Export as JSON\u{2026}",
+            action: #selector(self.exportUsageJSON(_:)),
+            keyEquivalent: "")
+        jsonItem.target = self
+        submenu.addItem(csvItem)
+        submenu.addItem(jsonItem)
+        exportItem.submenu = submenu
+        menu.addItem(exportItem)
+        menu.addItem(.separator())
     }
 
     private func selector(for action: MenuDescriptor.MenuAction) -> (Selector, Any?) {

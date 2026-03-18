@@ -57,6 +57,16 @@ public struct ProviderSettingsSnapshot: Sendable {
         }
     }
 
+    public struct VertexAIProviderSettings: Sendable {
+        public let project: String?
+        public let location: String?
+
+        public init(project: String?, location: String?) {
+            self.project = project
+            self.location = location
+        }
+    }
+
     public let debugMenuEnabled: Bool
     public let codex: CodexProviderSettings?
     public let claude: ClaudeProviderSettings?
@@ -64,6 +74,7 @@ public struct ProviderSettingsSnapshot: Sendable {
     public let copilot: CopilotProviderSettings?
     public let azure: AzureProviderSettings?
     public let bedrock: BedrockProviderSettings?
+    public let vertexai: VertexAIProviderSettings?
 
     public init(
         debugMenuEnabled: Bool,
@@ -72,7 +83,8 @@ public struct ProviderSettingsSnapshot: Sendable {
         zai: ZaiProviderSettings?,
         copilot: CopilotProviderSettings?,
         azure: AzureProviderSettings?,
-        bedrock: BedrockProviderSettings?)
+        bedrock: BedrockProviderSettings?,
+        vertexai: VertexAIProviderSettings? = nil)
     {
         self.debugMenuEnabled = debugMenuEnabled
         self.codex = codex
@@ -81,5 +93,6 @@ public struct ProviderSettingsSnapshot: Sendable {
         self.copilot = copilot
         self.azure = azure
         self.bedrock = bedrock
+        self.vertexai = vertexai
     }
 }
