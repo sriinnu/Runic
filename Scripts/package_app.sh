@@ -218,7 +218,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>CFBundleIconFile</key><string>Icon</string>
-    <key>NSHumanReadableCopyright</key><string>© 2026 Srinivas Pendela (hello@srinivas.dev). MIT License.</string>
+    <key>NSHumanReadableCopyright</key><string>© 2025-2026 Srinivas Pendela. MIT License.</string>
     <key>SUFeedURL</key><string>${FEED_URL}</string>
     <key>SUPublicEDKey</key><string>1Ay3r9lgXQtyOjzVSCjlT5dvQuRlJghNKa8Goqvhfz4=</string>
     <key>SUEnableAutomaticChecks</key><${AUTO_CHECKS}/>
