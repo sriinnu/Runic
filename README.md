@@ -74,13 +74,15 @@ Runic sits in your menubar and shows how much of your AI subscription you've use
 
 ## Install
 
+**Download** the latest release from [GitHub Releases](https://github.com/sriinnu/Runic/releases/latest), unzip, and drag `Runic.app` to Applications. Signed and notarized — no Gatekeeper warnings.
+
+**Or build from source:**
+
 ```bash
 git clone https://github.com/sriinnu/Runic.git
 cd Runic
 ./Scripts/compile_and_run.sh
 ```
-
-Builds the app, signs it, installs to `/Applications`, and launches. The infinity icon appears in your menubar.
 
 ## Configure
 
