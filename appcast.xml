@@ -3,6 +3,28 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>1.0.0</title>
+            <pubDate>Sat, 22 Mar 2026 18:00:00 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>48</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 1.0.0</h2>
+<ul>
+<li>26 AI providers including Vertex AI and Qwen/DashScope</li>
+<li>Inline line charts (1h/6h/1d/7d/30d), hourly/weekly bar charts</li>
+<li>Provider tab bar with brand icons and Overview tab</li>
+<li>Hero stat, glassmorphism cards with sparklines</li>
+<li>Subscription utilization and usage window comparison charts</li>
+<li>Export usage as CSV or JSON</li>
+<li>Budget breach notifications</li>
+<li>Dark/Light/System theme</li>
+<li>Liquid UI animations</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v1.0.0/Runic-1.0.0.zip" length="30772430" type="application/octet-stream" sparkle:edSignature="a065lJa+Gwv2mH8DcniAxFW4tHB2JD4ZnT39+tXWs0k4p+Zq61WKi699aowEf8HakfgnSU7OQ3YdL5X0XYn7CQ=="/>
+        </item>
+        <item>
             <title>0.16.0</title>
             <pubDate>Mon, 29 Dec 2025 19:03:57 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
