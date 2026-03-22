@@ -167,6 +167,23 @@ extension StatusItemController {
             menu.addItem(.separator())
         }
 
+        // Overview tab — show all providers at a glance
+        if selectedProvider == nil, enabledProviders.count > 1 {
+            let overviewView = self.makeOverviewView(
+                providers: enabledProviders,
+                width: menuWidth)
+            let hosting = MenuHostingView(rootView: overviewView)
+            let controller = NSHostingController(rootView: overviewView)
+            let size = controller.sizeThatFits(in: CGSize(width: menuWidth, height: .greatestFiniteMagnitude))
+            hosting.frame = NSRect(origin: .zero, size: NSSize(width: menuWidth, height: size.height))
+            let overviewItem = NSMenuItem()
+            overviewItem.view = hosting
+            overviewItem.isEnabled = false
+            overviewItem.representedObject = "overviewCard"
+            menu.addItem(overviewItem)
+            menu.addItem(.separator())
+        }
+
         if let model = self.menuCardModel(for: selectedProvider) {
             if hasOpenAIWebMenuItems, !useSidebarSwitcher {
                 let webItems = OpenAIWebMenuItems(
@@ -384,6 +401,67 @@ extension StatusItemController {
                     self.applyIcon(phase: nil)
                 }
             })
+    }
+
+    private func makeOverviewView(
+        providers: [UsageProvider],
+        width: CGFloat) -> OverviewMenuView
+    {
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: Date())
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: todayStart) ?? todayStart
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+
+        var summaries: [OverviewMenuView.ProviderSummary] = []
+        var chartPoints: [OverviewMenuView.DailyPoint] = []
+        var totalToday = 0
+
+        for provider in providers {
+            let meta = self.store.metadata(for: provider)
+            let snapshot = self.store.snapshot(for: provider)
+            let icon = ProviderBrandIcon.image(for: provider, size: 16)
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            let brandColor = Color(
+                red: Double(descriptor.branding.color.red),
+                green: Double(descriptor.branding.color.green),
+                blue: Double(descriptor.branding.color.blue))
+            let usedPercent = snapshot?.primary.usedPercent ?? 0
+            let todayTokens = self.store.ledgerDailySummary(for: provider)?.totals.totalTokens ?? 0
+            totalToday += todayTokens
+
+            let resetDesc = snapshot?.primary.resetDescription
+
+            summaries.append(OverviewMenuView.ProviderSummary(
+                id: provider.rawValue,
+                provider: provider,
+                name: meta.displayName,
+                icon: icon,
+                usedPercent: usedPercent,
+                todayTokens: todayTokens,
+                brandColor: brandColor,
+                resetDescription: resetDesc))
+
+            // Chart data — last 7 days
+            let dailySummaries = self.store.ledgerAllDailySummary(for: provider)
+            for summary in dailySummaries where summary.dayStart >= weekAgo {
+                chartPoints.append(OverviewMenuView.DailyPoint(
+                    id: "\(provider.rawValue)-\(summary.dayKey)",
+                    date: summary.dayStart,
+                    tokens: summary.totals.totalTokens,
+                    provider: meta.displayName))
+            }
+        }
+
+        // Only show providers with data
+        let activeSummaries = summaries.filter { $0.usedPercent > 0 || $0.todayTokens > 0 }
+
+        return OverviewMenuView(
+            summaries: activeSummaries.isEmpty ? summaries : activeSummaries,
+            chartPoints: chartPoints,
+            totalTodayTokens: totalToday,
+            width: width)
     }
 
     private static func abbreviatedProviderName(_ name: String) -> String {
