@@ -1,21 +1,36 @@
 {
-  "name": "runic",
-  "private": true,
+  "name": "@sriinnu/runic",
+  "version": "1.0.0",
+  "description": "AI usage monitoring for your Mac menubar. Track usage, costs, and quotas across 26 AI providers.",
+  "author": "Srinivas Pendela <sriinnu@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sriinnu/Runic.git"
+  },
+  "homepage": "https://github.com/sriinnu/Runic",
+  "keywords": [
+    "ai",
+    "usage",
+    "monitoring",
+    "menubar",
+    "macos",
+    "claude",
+    "openai",
+    "tokens",
+    "quota",
+    "swift"
+  ],
   "scripts": {
     "start": "./Scripts/compile_and_run.sh",
-    "start:debug": "./Scripts/compile_and_run.sh",
-    "start:release": "sh -c './Scripts/package_app.sh release && (pkill -x Runic || pkill -f Runic.app || true) && cd /Users/srinivaspendela/Sriinnu/AI/Runic && open -n /Users/srinivaspendela/Sriinnu/AI/Runic/builds/latest/Runic.app'",
-    "lint": "swiftlint --strict",
-    "format": "swiftformat Sources Tests",
-    "check": "swiftformat Sources Tests --lint && swiftlint --strict",
-    "docs:list": "node Scripts/docs-list.mjs",
     "build": "swift build",
+    "build:release": "swift build -c release --target Runic",
+    "build:cli": "swift build --target RunicCLI",
     "build:open": "./Scripts/compile_and_run.sh",
     "test": "swift test",
-    "test:tty": "swift test --filter TTYIntegrationTests",
-    "test:live": "LIVE_TEST=1 swift test --filter LiveAccountTests",
+    "lint": "swiftlint --strict",
+    "format": "swiftformat Sources Tests",
     "release": "./Scripts/package_app.sh release",
-    "restart": "pnpm start",
     "stop": "pkill -x Runic || pkill -f Runic.app || true"
   }
 }
