@@ -25,7 +25,7 @@ struct WeeklyActivityChartMenuView: View {
     }
 
     private static let barColor = Color(nsColor: .systemGray).opacity(0.4)
-    private static let todayColor = Color(red: 0.34, green: 0.56, blue: 1.0)
+    private static let todayColor = RunicColors.chartColor(at: 0)
 
     var body: some View {
         let model = Self.makeModel(from: self.dailySummaries)
@@ -33,7 +33,7 @@ struct WeeklyActivityChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Last 7 Days")
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.subheadline, design: .rounded))
                     .fontWeight(.semibold)
                 Spacer()
                 if model.bars.count > 1 {

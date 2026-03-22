@@ -38,7 +38,7 @@ struct SubscriptionUtilizationChartMenuView: View {
         self.width = width
     }
 
-    private static let barColor = Color(red: 0.34, green: 0.65, blue: 0.65)
+    private static let barColor = RunicColors.chartColor(at: 4)  // teal
     private static let wastedColor = Color(nsColor: .systemGray).opacity(0.2)
 
     var body: some View {
@@ -48,20 +48,17 @@ struct SubscriptionUtilizationChartMenuView: View {
             currentUsedPercent: self.currentUsedPercent,
             todayTokens: self.todayTokens)
 
-        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-            HStack {
-                Text("Subscription Utilization")
-                    .font(.system(.headline, design: .rounded))
-                    .fontWeight(.semibold)
-                Spacer()
-                Picker("Period", selection: self.$selectedPeriod) {
-                    ForEach(Period.allCases, id: \.self) { period in
-                        Text(period.rawValue).tag(period)
-                    }
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            Text("Utilization")
+                .font(.system(.subheadline, design: .rounded))
+                .fontWeight(.semibold)
+
+            Picker("", selection: self.$selectedPeriod) {
+                ForEach(Period.allCases, id: \.self) { period in
+                    Text(period.rawValue).tag(period)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 200)
             }
+            .pickerStyle(.segmented)
 
             if model.bars.isEmpty {
                 Text("No utilization data available.")

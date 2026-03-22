@@ -28,7 +28,7 @@ struct HourlyActivityChartMenuView: View {
         self.width = width
     }
 
-    private static let barColor = Color(red: 0.34, green: 0.56, blue: 1.0)
+    private static let barColor = RunicColors.chartColor(at: 0)
     private static let peakColor = Color(nsColor: .systemYellow)
 
     var body: some View {
@@ -38,7 +38,7 @@ struct HourlyActivityChartMenuView: View {
             // Header
             HStack(alignment: .firstTextBaseline) {
                 Text("Today by Hour")
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.subheadline, design: .rounded))
                     .fontWeight(.semibold)
                 Spacer()
                 if let peak = model.peakHour {
