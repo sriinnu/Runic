@@ -178,11 +178,20 @@ struct AboutPane: View {
                 }
             }
 
-            Text("May your tokens never run out—\nkeep agent limits in view.")
-                .font(.system(size: 12.5, weight: .regular, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
+            VStack(spacing: RunicSpacing.xs) {
+                Text("पूर्णमदः पूर्णमिदं पूर्णात् पूर्णमुदच्यते")
+                    .font(.system(size: 12, weight: .regular, design: .serif))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Text("From fullness comes fullness.\nWhen fullness is taken from fullness,\nfullness alone remains.")
+                    .font(.system(size: 11.5, weight: .regular, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                Text("— Isha Upanishad")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.quaternary)
+            }
         }
         .frame(maxWidth: .infinity)
         .opacity(self.appeared ? 1 : 0)
