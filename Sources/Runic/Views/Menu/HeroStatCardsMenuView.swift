@@ -75,7 +75,7 @@ struct GlassmorphismStatCardsView: View {
                 value: self.peakHourLabel,
                 detail: self.peakHourTokens,
                 sparkline: self.hourlySparkline,
-                sparkColor: Color(red: 0.34, green: 0.56, blue: 1.0),
+                sparkColor: RunicColors.chartColor(at: 0),
                 isHighlighted: self.isHighlighted)
             GlassStatCard(
                 title: "This Week",

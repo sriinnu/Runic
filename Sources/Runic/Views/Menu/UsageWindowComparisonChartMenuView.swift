@@ -36,8 +36,8 @@ struct UsageWindowComparisonChartMenuView: View {
         self.width = width
     }
 
-    private static let primaryColor = Color(red: 0.26, green: 0.55, blue: 0.96)
-    private static let secondaryColor = Color(red: 0.95, green: 0.55, blue: 0.25)
+    private static let primaryColor = RunicColors.chartColor(at: 0)
+    private static let secondaryColor = RunicColors.chartColor(at: 1)
 
     var body: some View {
         let model = Self.makeModel(
@@ -47,9 +47,9 @@ struct UsageWindowComparisonChartMenuView: View {
             primaryPercent: self.primaryPercent,
             secondaryPercent: self.secondaryPercent)
 
-        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-            Text("Usage Windows")
-                .font(.system(.headline, design: .rounded))
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            Text("Windows")
+                .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.semibold)
 
             if model.points.isEmpty {

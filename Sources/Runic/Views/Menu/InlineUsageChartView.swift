@@ -43,7 +43,7 @@ struct InlineUsageChartView: View {
     @State private var selectedRange: TimeRange = .oneDay
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
-    private static let lineColor = Color(red: 0.26, green: 0.55, blue: 0.96)
+    private static let lineColor = RunicColors.chartColor(at: 0)
 
     var body: some View {
         let points = self.selectedRange.usesHourlyData

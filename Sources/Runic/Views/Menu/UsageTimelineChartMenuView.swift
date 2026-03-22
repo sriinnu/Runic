@@ -61,7 +61,7 @@ struct UsageTimelineChartMenuView: View {
         self.width = width
     }
 
-    private static let lineColor = Color(red: 0.26, green: 0.55, blue: 0.96)
+    private static let lineColor = RunicColors.chartColor(at: 0)
     private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
 
     var body: some View {
@@ -69,21 +69,19 @@ struct UsageTimelineChartMenuView: View {
             ? Self.makeHourlyModel(from: self.hourlySummaries, timeRange: self.selectedTimeRange)
             : Self.makeDailyModel(from: self.dailySummaries, timeRange: self.selectedTimeRange)
 
-        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-            // Header with range picker
-            HStack {
-                Text("Usage Timeline")
-                    .font(.system(.headline, design: .rounded))
-                    .fontWeight(.semibold)
-                Spacer()
-                Picker("Range", selection: self.$selectedTimeRange) {
-                    ForEach(TimeRange.allCases, id: \.self) { range in
-                        Text(range.label).tag(range)
-                    }
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            // Header on its own line
+            Text("Timeline")
+                .font(.system(.subheadline, design: .rounded))
+                .fontWeight(.semibold)
+
+            // Range picker on its own line
+            Picker("", selection: self.$selectedTimeRange) {
+                ForEach(TimeRange.allCases, id: \.self) { range in
+                    Text(range.label).tag(range)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 240)
             }
+            .pickerStyle(.segmented)
 
             if model.points.isEmpty {
                 Text("No data for selected range.")
@@ -327,7 +325,7 @@ struct UsageTimelineChartMenuView: View {
             peakTokens: peak?.totalTokens ?? 0,
             totalCostUSD: nil,
             desiredAxisCount: desiredAxisCount,
-            xAxisFormat: .dateTime.hour(.defaultDigits(amPM: .abbreviated)),
+            xAxisFormat: .dateTime.hour(.defaultDigits(amPM: .narrow)),
             isHourly: true)
     }
 
