@@ -3,6 +3,23 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>1.1.0</title>
+            <pubDate>Sun, 23 Mar 2026 00:00:00 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>49</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 1.1.0</h2>
+<ul>
+<li>Overview dashboard with activity ring, context windows, reset countdowns</li>
+<li>Context windows from config file (no recompile needed)</li>
+<li>Parallel provider refresh (concurrent instead of sequential)</li>
+<li>Keychain ACL fix (no more password prompts on relaunch)</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v1.1.0/Runic-1.1.0.zip" length="30807384" type="application/octet-stream" sparkle:edSignature="hXMeE/CLrSDV+kbFythUA6w84WQ7u0YpvXK6uI58QHfBAn2FpH98xWERNfyL55gxBULdMASXzpv1UxmjtRFjCg=="/>
+        </item>
+        <item>
             <title>1.0.0</title>
             <pubDate>Sat, 22 Mar 2026 18:00:00 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
