@@ -24,51 +24,60 @@ Runic sits in your menubar and shows how much of your AI subscription you've use
 
 | | | |
 |---|---|---|
-| Claude | Codex | Cursor |
-| Gemini | Copilot | z.ai |
-| OpenRouter | Groq | DeepSeek |
-| Fireworks | Mistral | Perplexity |
-| Kimi | Together | Cohere |
-| xAI | Cerebras | SambaNova |
+| Claude (1M ctx) | Codex (400K ctx) | Cursor (128K ctx) |
+| Gemini (1M ctx) | Copilot (128K ctx) | z.ai (205K ctx) |
+| OpenRouter | Groq (128K ctx) | DeepSeek (64K ctx) |
+| Fireworks (128K ctx) | Mistral (128K ctx) | Perplexity (128K ctx) |
+| Kimi (128K ctx) | Together (128K ctx) | Cohere (128K ctx) |
+| xAI (128K ctx) | Cerebras (128K ctx) | SambaNova (128K ctx) |
 | Azure OpenAI | Bedrock | Vertex AI |
-| Qwen | MiniMax | Auggie |
+| Qwen (128K ctx) | MiniMax | Auggie |
 | Antigravity | Factory (Droid) | |
+
+Context windows are configurable via `Resources/provider-context-windows.json`.
 
 ## Features
 
-**Menu dropdown**
-- Provider tab bar with brand icons
-- Hero stat with today's token count and cost
-- Inline line chart (1h / 6h / 1d / 7d / 30d)
-- Glassmorphism stat cards with sparklines
-- Usage progress bars with sheen animation
+**Overview dashboard**
+- All providers at a glance with brand icons and progress bars
+- Activity ring showing average usage across providers
+- Context window, reset countdown, and usage window per provider
+- Combined 7-day stacked bar chart
+
+**Per-provider view**
+- Hero stat with provider icon, today's token count and cost
+- Inline line chart with 1h / 6h / 1d / 7d / 30d range picker
+- Glassmorphism stat cards (Peak Hour, This Week) with sparklines
+- Usage progress bars with sheen animation and glow effects
 - Live "Updated Xs ago" timestamp
 
-**Charts**
-- Usage timeline (area + line)
-- Today by hour (24-bar)
-- Last 7 days (weekly bars)
+**Charts** (submenus)
+- Usage timeline (area + line, Catmull-Rom interpolated)
+- Today by hour (24-bar chart with peak highlight)
+- Last 7 days (weekly bar chart)
 - Subscription utilization (Daily / Weekly / Monthly)
-- Usage window comparison (session vs weekly)
-- Model breakdown (donut)
-- Project breakdown (bar)
+- Usage window comparison (dual-line session vs weekly)
+- Model breakdown (donut chart)
+- Project breakdown (horizontal bar chart)
 
 **Analytics**
-- Token usage (input, output, cache)
+- Token usage tracking (input, output, cache)
 - Cost estimation with per-model pricing
-- Spend forecasting and budget alerts
+- Spend forecasting with budget breach detection
 - Project and model attribution
+- Anomaly detection
 
 **Export & Notifications**
 - Export as CSV or JSON
 - Budget breach alerts via macOS notifications
-- macOS widgets
+- macOS widgets (usage, history, compact, switcher)
 - CLI tool (`RunicCLI`)
 
 **Design**
 - Dark / Light / System theme
 - Liquid UI with glass materials and animated progress bars
-- SF Rounded typography
+- Staggered entrance animations and glass shimmer effects
+- SF Rounded typography with design tokens
 - VoiceOver accessible
 - Sparkle auto-updates
 
@@ -88,11 +97,11 @@ cd Runic
 
 Open **Preferences** from the menubar. Each provider has its own settings:
 
-- **API-based** (Groq, Mistral, z.ai, etc.): Paste your API key
-- **CLI-based** (Claude, Codex): Detected automatically
+- **API-based** (Groq, Mistral, z.ai, etc.): Paste your API key — provider auto-enables
+- **CLI-based** (Claude, Codex): Detected automatically from local CLI
 - **Cloud** (Bedrock, Vertex AI): Set environment variables
 
-All tokens stored in macOS Keychain — no password prompts.
+All tokens stored in macOS Keychain with no password prompts.
 
 ## Privacy
 

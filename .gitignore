@@ -29,6 +29,7 @@ Icon.iconset
 Packages/*/.build/
 Packages/*/.swiftpm/
 Runic.app
+RELEASE.md
 
 # Environment and secrets
 .env
