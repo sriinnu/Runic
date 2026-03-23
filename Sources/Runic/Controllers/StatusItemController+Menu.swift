@@ -432,6 +432,13 @@ extension StatusItemController {
             totalToday += todayTokens
 
             let resetDesc = snapshot?.primary.resetDescription
+            let windowLabel = snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let topModel = self.store.ledgerTopModel(for: provider)
+            let topModelContext: String? = if let model = topModel?.model {
+                UsageFormatter.modelContextLabel(for: model)
+            } else {
+                Self.defaultContextLabel(for: provider)
+            }
 
             summaries.append(OverviewMenuView.ProviderSummary(
                 id: provider.rawValue,
@@ -441,7 +448,9 @@ extension StatusItemController {
                 usedPercent: usedPercent,
                 todayTokens: todayTokens,
                 brandColor: brandColor,
-                resetDescription: resetDesc))
+                resetDescription: resetDesc,
+                windowLabel: windowLabel,
+                topModelContext: topModelContext))
 
             // Chart data — last 7 days
             let dailySummaries = self.store.ledgerAllDailySummary(for: provider)
@@ -450,7 +459,8 @@ extension StatusItemController {
                     id: "\(provider.rawValue)-\(summary.dayKey)",
                     date: summary.dayStart,
                     tokens: summary.totals.totalTokens,
-                    provider: meta.displayName))
+                    provider: meta.displayName,
+                    color: brandColor))
             }
         }
 
@@ -461,6 +471,7 @@ extension StatusItemController {
             summaries: activeSummaries.isEmpty ? summaries : activeSummaries,
             chartPoints: chartPoints,
             totalTodayTokens: totalToday,
+            totalProviders: UsageProvider.allCases.count,
             width: width)
     }
 
@@ -475,6 +486,23 @@ extension StatusItemController {
             "Azure OpenAI": "Azure",
         ]
         return abbreviations[name] ?? String(name.prefix(6))
+    }
+
+    /// Default flagship model context window per provider, loaded from
+    /// `Resources/provider-context-windows.json`. Update the JSON to add/change
+    /// context windows without recompiling.
+    private static let defaultContextWindows: [String: Int] = {
+        struct Entry: Decodable { let contextK: Int }
+        guard let url = Bundle.main.url(forResource: "provider-context-windows", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let dict = try? JSONDecoder().decode([String: Entry].self, from: data)
+        else { return [:] }
+        return dict.mapValues(\.contextK)
+    }()
+
+    private static func defaultContextLabel(for provider: UsageProvider) -> String? {
+        guard let k = self.defaultContextWindows[provider.rawValue] else { return nil }
+        return k >= 1_000 ? "ctx \(k / 1_000)M" : "ctx \(k)K"
     }
 
     private func resolvedMenuProvider() -> UsageProvider? {

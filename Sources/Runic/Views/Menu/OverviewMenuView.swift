@@ -3,7 +3,8 @@ import Charts
 import RunicCore
 import SwiftUI
 
-/// Overview showing all enabled providers at a glance — usage bars, today's tokens, and a combined chart.
+/// Overview dashboard showing all enabled providers at a glance.
+/// Inspired by Apple Activity app rings, Awwwards dashboard layouts, and Tokex stat cards.
 @MainActor
 struct OverviewMenuView: View {
     struct ProviderSummary: Identifiable {
@@ -15,6 +16,8 @@ struct OverviewMenuView: View {
         let todayTokens: Int
         let brandColor: Color
         let resetDescription: String?
+        let windowLabel: String?       // e.g. "5h" or "Weekly"
+        let topModelContext: String?    // e.g. "200K ctx"
     }
 
     struct DailyPoint: Identifiable {
@@ -22,82 +25,95 @@ struct OverviewMenuView: View {
         let date: Date
         let tokens: Int
         let provider: String
+        let color: Color
     }
 
     let summaries: [ProviderSummary]
     let chartPoints: [DailyPoint]
     let totalTodayTokens: Int
+    let totalProviders: Int
     let width: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-            // Header
-            HStack(alignment: .firstTextBaseline) {
-                Text("Overview")
-                    .font(.system(.title3, design: .rounded))
-                    .fontWeight(.bold)
+            // MARK: - Hero header
+            HStack(alignment: .center, spacing: RunicSpacing.xs) {
+                // Ring indicator showing overall usage
+                ZStack {
+                    Circle()
+                        .stroke(Color(nsColor: .separatorColor).opacity(0.15), lineWidth: 3)
+                    Circle()
+                        .trim(from: 0, to: min(1, self.averageUsedPercent / 100))
+                        .stroke(
+                            AngularGradient(
+                                colors: [RunicColors.chartColor(at: 4), RunicColors.chartColor(at: 0)],
+                                center: .center),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }
+                .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(UsageFormatter.tokenCountString(self.totalTodayTokens))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                    Text("\(self.summaries.count) of \(self.totalProviders) active")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                }
+
                 Spacer()
-                if self.totalTodayTokens > 0 {
-                    Text("\(UsageFormatter.tokenCountString(self.totalTodayTokens)) today")
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("today")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                    Text("\(Int(self.averageUsedPercent))% avg")
                         .font(.system(.caption, design: .rounded))
+                        .fontWeight(.medium)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            // Provider rows
+            Divider().opacity(0.5)
+
+            // MARK: - Provider cards
             if self.summaries.isEmpty {
-                Text("No providers enabled.")
+                Text("No active providers.")
                     .font(.system(.footnote, design: .rounded))
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, RunicSpacing.md)
             } else {
-                VStack(spacing: RunicSpacing.xs) {
+                VStack(spacing: RunicSpacing.compact) {
                     ForEach(self.summaries) { summary in
-                        HStack(spacing: RunicSpacing.xs) {
-                            // Provider icon
-                            if let icon = summary.icon {
-                                Image(nsImage: icon)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 16, height: 16)
-                            }
-
-                            // Name
-                            Text(summary.name)
-                                .font(.system(.caption, design: .rounded))
-                                .fontWeight(.medium)
-                                .frame(width: 60, alignment: .leading)
-                                .lineLimit(1)
-
-                            // Mini progress bar
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule()
-                                        .fill(Color(nsColor: .separatorColor).opacity(0.2))
-                                    Capsule()
-                                        .fill(summary.brandColor)
-                                        .frame(width: max(0, geo.size.width * min(1, summary.usedPercent / 100)))
-                                }
-                            }
-                            .frame(height: 6)
-
-                            // Percentage
-                            Text("\(Int(summary.usedPercent))%")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 30, alignment: .trailing)
-                        }
+                        ProviderRow(summary: summary)
                     }
                 }
             }
 
-            // Combined 7-day chart
+            // MARK: - Combined 7-day chart
             if !self.chartPoints.isEmpty {
-                Divider()
-                    .padding(.vertical, RunicSpacing.xxxs)
+                Divider().opacity(0.5)
 
-                Text("Last 7 days")
-                    .font(.system(.caption2, design: .rounded))
-                    .foregroundStyle(.tertiary)
+                HStack {
+                    Text("7-day activity")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    // Mini legend dots
+                    HStack(spacing: RunicSpacing.xxs) {
+                        ForEach(self.summaries.prefix(4)) { s in
+                            Circle()
+                                .fill(s.brandColor)
+                                .frame(width: 5, height: 5)
+                        }
+                        if self.summaries.count > 4 {
+                            Text("+\(self.summaries.count - 4)")
+                                .font(.system(size: 8, design: .rounded))
+                                .foregroundStyle(.quaternary)
+                        }
+                    }
+                }
 
                 Chart {
                     ForEach(self.chartPoints) { point in
@@ -105,12 +121,15 @@ struct OverviewMenuView: View {
                             x: .value("Date", point.date, unit: .day),
                             y: .value("Tokens", point.tokens))
                             .foregroundStyle(by: .value("Provider", point.provider))
+                            .cornerRadius(2)
                     }
                 }
                 .chartForegroundStyleScale(range: self.chartColors)
                 .chartLegend(.hidden)
                 .chartYAxis {
                     AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
+                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
@@ -121,13 +140,13 @@ struct OverviewMenuView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
-                        AxisValueLabel(format: .dateTime.weekday(.short))
-                            .font(.system(size: 8, design: .rounded))
+                    AxisMarks(values: .automatic(desiredCount: 7)) { _ in
+                        AxisValueLabel(format: .dateTime.weekday(.narrow))
+                            .font(.system(size: 8, weight: .medium, design: .rounded))
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
-                .frame(height: 70)
+                .frame(height: 80)
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -135,7 +154,125 @@ struct OverviewMenuView: View {
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
     }
 
+    private var averageUsedPercent: Double {
+        let active = self.summaries.filter { $0.usedPercent > 0 }
+        guard !active.isEmpty else { return 0 }
+        return active.reduce(0) { $0 + $1.usedPercent } / Double(active.count)
+    }
+
     private var chartColors: [Color] {
         self.summaries.map(\.brandColor)
+    }
+}
+
+// MARK: - Provider row
+
+private struct ProviderRow: View {
+    let summary: OverviewMenuView.ProviderSummary
+
+    var body: some View {
+        HStack(spacing: RunicSpacing.xs) {
+            // Icon with brand tint
+            if let icon = self.summary.icon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 14, height: 14)
+            }
+
+            // Name
+            Text(self.summary.name)
+                .font(.system(.caption, design: .rounded))
+                .fontWeight(.medium)
+                .frame(width: 58, alignment: .leading)
+                .lineLimit(1)
+
+            // Progress bar with gradient fill
+            GeometryReader { geo in
+                let fillWidth = max(0, geo.size.width * min(1, self.summary.usedPercent / 100))
+                ZStack(alignment: .leading) {
+                    // Track
+                    Capsule()
+                        .fill(Color(nsColor: .separatorColor).opacity(0.12))
+
+                    // Fill with gradient
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    self.summary.brandColor.opacity(0.9),
+                                    self.summary.brandColor,
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing))
+                        .frame(width: fillWidth)
+
+                    // Gloss overlay on fill
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .white.opacity(0.2), location: 0),
+                                    .init(color: .clear, location: 0.5),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom))
+                        .frame(width: fillWidth)
+                }
+            }
+            .frame(height: 7)
+
+            // Percentage
+            Text("\(Int(self.summary.usedPercent))%")
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundStyle(self.summary.usedPercent > 80 ? .primary : .secondary)
+                .frame(width: 28, alignment: .trailing)
+
+            // Today's tokens (if any)
+            if self.summary.todayTokens > 0 {
+                Text(UsageFormatter.tokenCountString(self.summary.todayTokens))
+                    .font(.system(size: 8, design: .rounded))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 32, alignment: .trailing)
+            }
+        }
+
+        // Second line: window + reset + context
+        let hasSecondLine = self.summary.windowLabel != nil ||
+            self.summary.resetDescription != nil ||
+            self.summary.topModelContext != nil
+
+        if hasSecondLine {
+            HStack(spacing: RunicSpacing.xxs) {
+                // Spacer for icon + name width
+                Color.clear.frame(width: 14 + 58 + RunicSpacing.xs * 2, height: 0)
+
+                if let window = self.summary.windowLabel {
+                    InfoPill(text: window)
+                }
+                if let reset = self.summary.resetDescription {
+                    InfoPill(text: reset)
+                }
+                if let ctx = self.summary.topModelContext {
+                    InfoPill(text: ctx)
+                }
+                Spacer()
+            }
+        }
+    }
+}
+
+private struct InfoPill: View {
+    let text: String
+
+    var body: some View {
+        Text(self.text)
+            .font(.system(size: 8, weight: .medium, design: .rounded))
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.subtle)))
     }
 }

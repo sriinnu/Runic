@@ -1,0 +1,20 @@
+{
+  "claude": { "model": "Claude Opus 4.6", "contextK": 1000 },
+  "codex": { "model": "GPT-5 Codex", "contextK": 400 },
+  "cursor": { "model": "GPT-4o", "contextK": 128 },
+  "gemini": { "model": "Gemini 2.5 Pro", "contextK": 1000 },
+  "copilot": { "model": "GPT-4o", "contextK": 128 },
+  "zai": { "model": "GLM-4.6", "contextK": 205 },
+  "groq": { "model": "Llama 3.3 70B", "contextK": 128 },
+  "deepseek": { "model": "DeepSeek Chat", "contextK": 64 },
+  "fireworks": { "model": "Llama 3.1 70B", "contextK": 128 },
+  "mistral": { "model": "Mistral Large", "contextK": 128 },
+  "perplexity": { "model": "Sonar", "contextK": 128 },
+  "kimi": { "model": "Moonshot v1", "contextK": 128 },
+  "together": { "model": "Llama 3.1", "contextK": 128 },
+  "cohere": { "model": "Command R+", "contextK": 128 },
+  "xai": { "model": "Grok 2", "contextK": 128 },
+  "cerebras": { "model": "Llama 3.3 70B", "contextK": 128 },
+  "sambanova": { "model": "Llama 3.1 70B", "contextK": 128 },
+  "qwen": { "model": "Qwen 2.5 72B", "contextK": 128 }
+}

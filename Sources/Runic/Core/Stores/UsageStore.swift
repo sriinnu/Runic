@@ -1783,13 +1783,17 @@ final class UsageStore {
                     self?.tokenRefreshSequenceTask = nil
                 }
             }
-            for provider in UsageProvider.allCases {
-                if Task.isCancelled { break }
-                await self.refreshTokenUsage(
-                    provider,
-                    force: force,
-                    trigger: trigger,
-                    inactiveProviders: inactiveProviders)
+            await withTaskGroup(of: Void.self) { group in
+                for provider in UsageProvider.allCases {
+                    group.addTask {
+                        guard !Task.isCancelled else { return }
+                        await self.refreshTokenUsage(
+                            provider,
+                            force: force,
+                            trigger: trigger,
+                            inactiveProviders: inactiveProviders)
+                    }
+                }
             }
         }
     }
