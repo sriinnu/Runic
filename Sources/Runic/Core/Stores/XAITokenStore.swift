@@ -53,23 +53,16 @@ struct KeychainXAITokenStore: XAITokenStoring {
         }
 
         let data = cleaned!.data(using: .utf8)!
-        let query = self.baseQuery(dataProtection: false)
-        let attributes: [String: Any] = [
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-        ]
 
-        // Try update first.
-        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if updateStatus == errSecSuccess { return }
+        // Always delete-then-add to ensure SecAccess ACL is set.
+        // SecItemUpdate does NOT update the ACL, so existing items with
+        // missing or stale ACLs would continue to prompt for passwords.
+        try? self.deleteToken(dataProtection: false)
+        try? self.deleteToken(dataProtection: true)
 
-        if updateStatus != errSecItemNotFound {
-            // Item exists but update failed — delete and re-add to reset ACL.
-            try? self.deleteToken(dataProtection: false)
-        }
-
-        var addQuery = query
-        for (key, value) in attributes { addQuery[key] = value }
+        var addQuery = self.baseQuery(dataProtection: false)
+        addQuery[kSecValueData as String] = data
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
         // Grant the calling app permanent access so macOS never shows a
         // Keychain password dialog for this item.
