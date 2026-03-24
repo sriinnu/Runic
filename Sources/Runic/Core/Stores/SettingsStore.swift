@@ -953,7 +953,8 @@ final class SettingsStore {
         self.sambaNovaAPIToken = (try? sambaNovaTokenStore.loadToken()) ?? ""
         self.qwenAPIToken = (try? qwenTokenStore.loadToken()) ?? ""
         self.azureOpenAIAPIToken = (try? azureOpenAITokenStore.loadToken()) ?? ""
-        self.selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
+        // Always start on Overview tab.
+        self.selectedMenuProviderRaw = nil
         self.providerDetectionCompleted = userDefaults.object(
             forKey: "providerDetectionCompleted") as? Bool ?? false
         self.toggleStore = ProviderToggleStore(userDefaults: userDefaults)

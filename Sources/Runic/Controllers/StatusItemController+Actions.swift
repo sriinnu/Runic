@@ -6,7 +6,16 @@ extension StatusItemController {
     // MARK: - Actions reachable from menus
 
     @objc func refreshNow() {
-        Task { await self.store.refresh(trigger: .manual, forceTokenUsage: true) }
+        let provider = self.selectedMenuProvider
+        if let provider {
+            // Single provider selected — only refresh that one.
+            Task {
+                await self.store.refreshSingleProvider(provider)
+            }
+        } else {
+            // Overview — refresh all.
+            Task { await self.store.refresh(trigger: .manual, forceTokenUsage: true) }
+        }
     }
 
     @objc func installUpdate() {
