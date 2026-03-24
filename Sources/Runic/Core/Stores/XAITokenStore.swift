@@ -64,11 +64,6 @@ struct KeychainXAITokenStore: XAITokenStoring {
         addQuery[kSecValueData as String] = data
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
-        // Grant the calling app permanent access so macOS never shows a
-        // Keychain password dialog for this item.
-        if let access = Self.createSelfAccess() {
-            addQuery[kSecAttrAccess as String] = access
-        }
 
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
@@ -84,6 +79,7 @@ struct KeychainXAITokenStore: XAITokenStoring {
         var query = self.baseQuery(dataProtection: dataProtection)
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         query[kSecReturnData as String] = true
+        query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound || status == errSecInteractionNotAllowed {
@@ -120,17 +116,4 @@ struct KeychainXAITokenStore: XAITokenStoring {
         return q
     }
 
-    /// Creates a SecAccess that grants the calling application permanent
-    /// read/write access without triggering the macOS Keychain password dialog.
-    private static func createSelfAccess() -> SecAccess? {
-        var trustedSelf: SecTrustedApplication?
-        guard SecTrustedApplicationCreateFromPath(nil, &trustedSelf) == errSecSuccess,
-              let trustedSelf else { return nil }
-        var access: SecAccess?
-        guard SecAccessCreate(
-            "Runic API Token" as CFString,
-            [trustedSelf] as CFArray,
-            &access) == errSecSuccess else { return nil }
-        return access
-    }
 }
