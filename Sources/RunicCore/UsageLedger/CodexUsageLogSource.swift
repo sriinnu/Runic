@@ -87,15 +87,27 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     public func loadEntries() async throws -> [UsageLedgerEntry] {
         let root = try self.resolveSessionsRoot()
         let minDate = self.minDate()
-        let files = self.listSessionFiles(root: root, minDate: minDate)
-        if files.isEmpty {
+
+        // Incremental scan: only parse files modified since our last scan.
+        let cache = LedgerCache.shared
+        let lastScan = await cache.lastScanDate(provider: "codex")
+        let incrementalCutoff = lastScan ?? minDate ?? self.now.addingTimeInterval(-86400)
+        let todayStart = Calendar.current.startOfDay(for: self.now)
+
+        let allFiles = self.listSessionFiles(root: root, minDate: minDate)
+        let filesToScan = allFiles.filter { file in
+            guard let modDate = file.modifiedAt else { return true }
+            return modDate >= incrementalCutoff || modDate >= todayStart
+        }
+
+        if filesToScan.isEmpty {
             return []
         }
 
         var entries: [UsageLedgerEntry] = []
         var seenKeys = Set<String>()
 
-        for file in files {
+        for file in filesToScan {
             do {
                 try self.parseFile(file, minDate: minDate, seenKeys: &seenKeys, entries: &entries)
             } catch {
@@ -105,6 +117,40 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 ])
             }
         }
+
+        // Aggregate into daily summaries and persist to cache.
+        let dailyFormatter = DateFormatter()
+        dailyFormatter.dateFormat = "yyyy-MM-dd"
+        dailyFormatter.timeZone = .current
+
+        var dailyBuckets: [String: (input: Int, output: Int, cacheCreate: Int, cacheRead: Int, cost: Double, requests: Int, models: Set<String>)] = [:]
+        for entry in entries {
+            let key = dailyFormatter.string(from: entry.timestamp)
+            var bucket = dailyBuckets[key] ?? (0, 0, 0, 0, 0, 0, [])
+            bucket.input += entry.inputTokens
+            bucket.output += entry.outputTokens
+            bucket.cacheCreate += entry.cacheCreationTokens
+            bucket.cacheRead += entry.cacheReadTokens
+            bucket.cost += entry.costUSD ?? 0
+            bucket.requests += 1
+            if let model = entry.model { bucket.models.insert(model) }
+            dailyBuckets[key] = bucket
+        }
+
+        let cachedDailies = dailyBuckets.map { key, bucket in
+            CachedDaily(
+                dayKey: key,
+                inputTokens: bucket.input,
+                outputTokens: bucket.output,
+                cacheCreationTokens: bucket.cacheCreate,
+                cacheReadTokens: bucket.cacheRead,
+                costUSD: bucket.cost > 0 ? bucket.cost : nil,
+                requestCount: bucket.requests,
+                modelsUsed: Array(bucket.models))
+        }
+
+        let todayKey = await LedgerCache.dayKey(for: self.now)
+        await cache.mergeDailies(provider: "codex", newDailies: cachedDailies, scanDate: self.now, todayKey: todayKey)
 
         return entries
     }

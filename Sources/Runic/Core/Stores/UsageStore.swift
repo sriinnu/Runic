@@ -635,7 +635,7 @@ final class UsageStore {
     @ObservationIgnored private let tokenFetchTTL: TimeInterval = 60 * 60
     @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
     @ObservationIgnored private let ledgerRefreshTTL: TimeInterval = 90
-    @ObservationIgnored private let ledgerMaxAgeDays: Int = 3
+    @ObservationIgnored private var ledgerMaxAgeDays: Int { self.settings.ledgerMaxAgeDays }
     @ObservationIgnored private let providerHistoryCacheTTL: TimeInterval = 90
     @ObservationIgnored private let providerHistoryMaxScanDays: Int = 180
     @ObservationIgnored nonisolated(unsafe) private let performanceStorage: PerformanceStorageImpl?
@@ -1332,7 +1332,7 @@ final class UsageStore {
             await self.refreshCreditsIfNeeded()
         }
 
-        self.scheduleLedgerRefresh(force: forceTokenUsage, inactiveProviders: inactiveProviders)
+        self.scheduleLedgerRefresh(force: true, inactiveProviders: inactiveProviders)
 
         // Refresh custom providers
         await self.refreshCustomProviders()
@@ -1659,6 +1659,34 @@ final class UsageStore {
             if !shouldRefresh { return }
         }
         if self.ledgerRefreshTask != nil { return }
+
+        // Immediately populate from cache so the UI has data before the background scan.
+        let providersToCache = providers.filter { self.ledgerAllDailySummaries[$0] == nil || self.ledgerAllDailySummaries[$0]?.isEmpty == true }
+        if !providersToCache.isEmpty {
+            Task {
+                let cache = LedgerCache.shared
+                for provider in providersToCache {
+                    let providerKey = provider.rawValue
+                    guard let cached = await cache.loadCachedDailies(provider: providerKey) else { continue }
+                    let summaries = cached.dailies.compactMap { $0.toLedgerDailySummary(provider: provider) }
+                    if !summaries.isEmpty {
+                        await MainActor.run { [weak self] in
+                            guard let self else { return }
+                            if self.ledgerAllDailySummaries[provider] == nil || self.ledgerAllDailySummaries[provider]?.isEmpty == true {
+                                self.ledgerAllDailySummaries[provider] = summaries
+                                // Also populate today's summary from cache.
+                                let todayStart = Calendar.current.startOfDay(for: now)
+                                if self.ledgerDailySummaries[provider] == nil,
+                                   let todaySummary = summaries.first(where: { $0.dayStart == todayStart })
+                                {
+                                    self.ledgerDailySummaries[provider] = todaySummary
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         self.ledgerRefreshTask = Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }

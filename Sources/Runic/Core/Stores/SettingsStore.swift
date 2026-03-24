@@ -325,6 +325,12 @@ final class SettingsStore {
         didSet { self.userDefaults.set(self.insightsReportDays, forKey: "insightsReportDays") }
     }
 
+    /// How many days of usage history to scan for ledger data (charts, breakdowns).
+    /// Options: 3, 7, 30, 365. Default: 30.
+    var ledgerMaxAgeDays: Int {
+        didSet { self.userDefaults.set(self.ledgerMaxAgeDays, forKey: "ledgerMaxAgeDays") }
+    }
+
     var randomBlinkEnabled: Bool {
         didSet { self.userDefaults.set(self.randomBlinkEnabled, forKey: "randomBlinkEnabled") }
     }
@@ -699,6 +705,7 @@ final class SettingsStore {
         _ = self.costUsageEnabled
         _ = self.insightsMenuMaxItems
         _ = self.insightsReportDays
+        _ = self.ledgerMaxAgeDays
         _ = self.randomBlinkEnabled
         _ = self.claudeWebExtrasEnabled
         _ = self.showOptionalCreditsAndExtraUsage
@@ -893,6 +900,7 @@ final class SettingsStore {
         self.costUsageEnabled = userDefaults.object(forKey: "tokenCostUsageEnabled") as? Bool ?? true
         self.insightsMenuMaxItems = userDefaults.object(forKey: "insightsMenuMaxItems") as? Int ?? 4
         self.insightsReportDays = userDefaults.object(forKey: "insightsReportDays") as? Int ?? 7
+        self.ledgerMaxAgeDays = userDefaults.object(forKey: "ledgerMaxAgeDays") as? Int ?? 30
         self.randomBlinkEnabled = userDefaults.object(forKey: "randomBlinkEnabled") as? Bool ?? false
         self.claudeWebExtrasEnabled = userDefaults.object(forKey: "claudeWebExtrasEnabled") as? Bool ?? false
         let creditsExtrasDefault = userDefaults.object(forKey: "showOptionalCreditsAndExtraUsage") as? Bool
