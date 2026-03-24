@@ -1289,6 +1289,15 @@ final class UsageStore {
         }
     }
 
+    /// Refresh a single provider (used when user clicks Ping on a specific provider tab).
+    func refreshSingleProvider(_ provider: UsageProvider) async {
+        self.isRefreshing = true
+        defer { self.isRefreshing = false }
+        await self.refreshProvider(provider, trigger: .manual)
+        await self.refreshStatus(provider, trigger: .manual)
+        self.scheduleLedgerRefresh(force: true, inactiveProviders: [])
+    }
+
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
         guard !self.isRefreshing else { return }
         let now = Date()
