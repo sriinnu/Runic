@@ -5,28 +5,23 @@ import SwiftUI
 @MainActor
 struct UsageTimelineChartMenuView: View {
     enum TimeRange: String, CaseIterable {
-        case oneHour = "1h"
-        case sixHours = "6h"
-        case oneDay = "1d"
+        case threeDays = "3d"
         case sevenDays = "7d"
         case thirtyDays = "30d"
+        case quarter = "90d"
+        case year = "1y"
 
         var cutoffInterval: TimeInterval {
             switch self {
-            case .oneHour: return -3600
-            case .sixHours: return -21600
-            case .oneDay: return -86400
+            case .threeDays: return -259200
             case .sevenDays: return -604800
             case .thirtyDays: return -2592000
+            case .quarter: return -7776000
+            case .year: return -31536000
             }
         }
 
-        var usesHourlyData: Bool {
-            switch self {
-            case .oneHour, .sixHours, .oneDay: return true
-            default: return false
-            }
-        }
+        var usesHourlyData: Bool { false }
 
         var label: String { self.rawValue }
     }
@@ -48,7 +43,7 @@ struct UsageTimelineChartMenuView: View {
     private let dailySummaries: [UsageLedgerDailySummary]
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
-    @State private var selectedTimeRange: TimeRange = .oneDay
+    @State private var selectedTimeRange: TimeRange = .sevenDays
     @State private var selectedKey: String?
 
     init(
@@ -65,9 +60,7 @@ struct UsageTimelineChartMenuView: View {
     private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
 
     var body: some View {
-        let model = self.selectedTimeRange.usesHourlyData
-            ? Self.makeHourlyModel(from: self.hourlySummaries, timeRange: self.selectedTimeRange)
-            : Self.makeDailyModel(from: self.dailySummaries, timeRange: self.selectedTimeRange)
+        let model = Self.makeDailyModel(from: self.dailySummaries, timeRange: self.selectedTimeRange)
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Header on its own line
@@ -262,9 +255,11 @@ struct UsageTimelineChartMenuView: View {
         }
 
         let desiredAxisCount: Int = switch timeRange {
-        case .oneHour, .sixHours, .oneDay: 4
+        case .threeDays: 3
         case .sevenDays: 5
         case .thirtyDays: 6
+        case .quarter: 6
+        case .year: 6
         }
 
         return Model(
@@ -279,54 +274,6 @@ struct UsageTimelineChartMenuView: View {
             desiredAxisCount: desiredAxisCount,
             xAxisFormat: .dateTime.month(.abbreviated).day(),
             isHourly: false)
-    }
-
-    // MARK: - Hourly model
-
-    private static func makeHourlyModel(from summaries: [UsageLedgerHourlySummary], timeRange: TimeRange) -> Model {
-        let now = Date()
-        let cutoffDate = now.addingTimeInterval(timeRange.cutoffInterval)
-        let filtered = summaries.filter { $0.hourStart >= cutoffDate }
-        let sorted = filtered.sorted { $0.hourStart < $1.hourStart }
-
-        var points: [Point] = []
-        var pointsByKey: [String: Point] = [:]
-        var dateKeys: [(key: String, date: Date)] = []
-        var peak: Point?
-        var totalTokens = 0
-
-        for summary in sorted {
-            let tokens = summary.totals.totalTokens
-            totalTokens += tokens
-            let point = Point(date: summary.hourStart, totalTokens: tokens, key: summary.hourKey)
-            points.append(point)
-            pointsByKey[summary.hourKey] = point
-            dateKeys.append((summary.hourKey, summary.hourStart))
-
-            if peak == nil || tokens > (peak?.totalTokens ?? 0) {
-                peak = point
-            }
-        }
-
-        let desiredAxisCount: Int = switch timeRange {
-        case .oneHour: 4
-        case .sixHours: 6
-        case .oneDay: 8
-        default: 6
-        }
-
-        return Model(
-            points: points,
-            pointsByKey: pointsByKey,
-            dateKeys: dateKeys,
-            peakPoint: peak,
-            totalTokens: totalTokens,
-            averagePerPeriod: points.isEmpty ? 0 : totalTokens / max(1, points.count),
-            peakTokens: peak?.totalTokens ?? 0,
-            totalCostUSD: nil,
-            desiredAxisCount: desiredAxisCount,
-            xAxisFormat: .dateTime.hour(.defaultDigits(amPM: .narrow)),
-            isHourly: true)
     }
 
     // MARK: - Interaction

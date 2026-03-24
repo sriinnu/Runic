@@ -7,28 +7,23 @@ import SwiftUI
 @MainActor
 struct InlineUsageChartView: View {
     enum TimeRange: String, CaseIterable {
-        case oneHour = "1h"
-        case sixHours = "6h"
-        case oneDay = "1d"
+        case threeDays = "3d"
         case sevenDays = "7d"
         case thirtyDays = "30d"
+        case quarter = "90d"
+        case year = "1y"
 
         var cutoffInterval: TimeInterval {
             switch self {
-            case .oneHour: return -3600
-            case .sixHours: return -21600
-            case .oneDay: return -86400
+            case .threeDays: return -259200
             case .sevenDays: return -604800
             case .thirtyDays: return -2592000
+            case .quarter: return -7776000
+            case .year: return -31536000
             }
         }
 
-        var usesHourlyData: Bool {
-            switch self {
-            case .oneHour, .sixHours, .oneDay: return true
-            default: return false
-            }
-        }
+        var usesHourlyData: Bool { false }
     }
 
     private struct ChartPoint: Identifiable {
@@ -40,15 +35,13 @@ struct InlineUsageChartView: View {
     let dailySummaries: [UsageLedgerDailySummary]
     let hourlySummaries: [UsageLedgerHourlySummary]
     let width: CGFloat
-    @State private var selectedRange: TimeRange = .oneDay
+    @State private var selectedRange: TimeRange = .sevenDays
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     private static let lineColor = RunicColors.chartColor(at: 0)
 
     var body: some View {
-        let points = self.selectedRange.usesHourlyData
-            ? Self.hourlyPoints(from: self.hourlySummaries, range: self.selectedRange)
-            : Self.dailyPoints(from: self.dailySummaries, range: self.selectedRange)
+        let points = Self.dailyPoints(from: self.dailySummaries, range: self.selectedRange)
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Time range picker
