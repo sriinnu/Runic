@@ -3,6 +3,24 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>1.2.0</title>
+            <pubDate>Tue, 25 Mar 2026 21:00:00 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>50</sparkle:version>
+            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 1.2.0</h2>
+<ul>
+<li>14 security fixes (HTTPS enforcement, log redaction, file permissions, keychain hardening)</li>
+<li>Ledger cache for instant display on menu open</li>
+<li>Clean project names (AI/Runic instead of full directory paths)</li>
+<li>Parallel provider refresh</li>
+<li>Overview dashboard with context windows</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v1.2.0/Runic-1.2.0.zip" length="31042134" type="application/octet-stream" sparkle:edSignature="L8UpDLPKB4QSgpCddUUe5u4aQQjqpW2r2lUbYnKmK+pBtIFMg74m3mMgEP5v1fTYjMGzPVRj7W9AFovNUAY7Dg=="/>
+        </item>
+        <item>
             <title>1.1.0</title>
             <pubDate>Sun, 23 Mar 2026 00:00:00 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
