@@ -464,6 +464,7 @@ public actor FactorySessionStore {
             return
         }
         try? data.write(to: self.fileURL)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: self.fileURL.path)
     }
 
     private func loadFromDisk() {

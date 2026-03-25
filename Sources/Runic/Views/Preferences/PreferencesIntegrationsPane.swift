@@ -324,9 +324,10 @@ struct IntegrationsPane: View {
             // Migrate any existing value out of UserDefaults
             let defaults = UserDefaults.standard
             if let legacyKey = defaults.string(forKey: "vaayuAPIKey"), !legacyKey.isEmpty {
-                VaayuKeychainHelper.save(legacyKey)
-                self.vaayuAPIKey = legacyKey
-                defaults.removeObject(forKey: "vaayuAPIKey")
+                if VaayuKeychainHelper.save(legacyKey) {
+                    self.vaayuAPIKey = legacyKey
+                    defaults.removeObject(forKey: "vaayuAPIKey")
+                }
             }
         }
         .onChange(of: self.vaayuAPIKey) { _, newValue in

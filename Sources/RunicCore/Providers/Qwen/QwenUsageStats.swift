@@ -218,9 +218,7 @@ public struct QwenUsageFetcher: Sendable {
             throw QwenUsageError.apiError("HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
-        if let jsonString = String(data: data, encoding: .utf8) {
-            Self.log.debug("DashScope usage response: \(jsonString)")
-        }
+        Self.log.debug("DashScope usage response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         let apiResponse = try JSONDecoder().decode(QwenUsageResponse.self, from: data)
         guard apiResponse.isSuccess else {

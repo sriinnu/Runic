@@ -520,9 +520,7 @@ public struct ZaiUsageFetcher: Sendable {
             throw ZaiUsageError.apiError("HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
-        if let jsonString = String(data: data, encoding: .utf8) {
-            Self.log.debug("z.ai quota response: \(jsonString)")
-        }
+        Self.log.debug("z.ai quota response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         let apiResponse: ZaiQuotaLimitResponse
         do {
@@ -573,9 +571,7 @@ public struct ZaiUsageFetcher: Sendable {
             throw ZaiUsageError.apiError("model-usage endpoint returned non-200")
         }
 
-        if let jsonString = String(data: data, encoding: .utf8) {
-            Self.log.debug("z.ai model-usage response: \(jsonString)")
-        }
+        Self.log.debug("z.ai model-usage response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         let raw = try JSONDecoder().decode(ZaiModelUsageResponse.self, from: data)
         let models = raw.data?.models ?? []
@@ -635,9 +631,7 @@ public struct ZaiUsageFetcher: Sendable {
             throw ZaiUsageError.apiError("tool-usage endpoint returned non-200")
         }
 
-        if let jsonString = String(data: data, encoding: .utf8) {
-            Self.log.debug("z.ai tool-usage response: \(jsonString)")
-        }
+        Self.log.debug("z.ai tool-usage response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         let raw = try JSONDecoder().decode(ZaiToolUsageResponse.self, from: data)
         let tools = raw.data?.tools ?? []

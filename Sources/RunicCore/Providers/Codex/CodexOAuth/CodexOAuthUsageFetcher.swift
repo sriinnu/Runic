@@ -206,6 +206,7 @@ public enum CodexOAuthUsageFetcher {
     }
 
     private static func isAllowedHost(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "https" else { return false }
         guard let host = url.host?.lowercased() else { return false }
         return allowedHostSuffixes.contains { host == $0 || host.hasSuffix("." + $0) }
     }
