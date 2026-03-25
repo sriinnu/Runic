@@ -133,6 +133,7 @@ public enum CodexOAuthCredentialsStore {
         let directory = url.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try data.write(to: url, options: .atomic)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
     private static func parseLastRefresh(from raw: Any?) -> Date? {

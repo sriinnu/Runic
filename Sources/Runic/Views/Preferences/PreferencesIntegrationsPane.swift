@@ -1,5 +1,6 @@
 import AppKit
 import RunicCore
+import Security
 import SwiftUI
 
 @MainActor
@@ -9,7 +10,7 @@ struct IntegrationsPane: View {
 
     @AppStorage("vaayuAPIServerEnabled") private var vaayuAPIServerEnabled = false
     @AppStorage("vaayuAPIServerPort") private var vaayuAPIServerPort = 3000
-    @AppStorage("vaayuAPIKey") private var vaayuAPIKey = ""
+    @State private var vaayuAPIKey = ""
     @AppStorage("defaultWebhookURL") private var defaultWebhookURL = ""
     @AppStorage("webhookFormat") private var webhookFormat = "slack"
     @AppStorage("githubIntegrationEnabled") private var githubIntegrationEnabled = false
@@ -319,6 +320,21 @@ struct IntegrationsPane: View {
         }
         .onAppear {
             self.loadMCPServers()
+            self.vaayuAPIKey = VaayuKeychainHelper.load() ?? ""
+            // Migrate any existing value out of UserDefaults
+            let defaults = UserDefaults.standard
+            if let legacyKey = defaults.string(forKey: "vaayuAPIKey"), !legacyKey.isEmpty {
+                VaayuKeychainHelper.save(legacyKey)
+                self.vaayuAPIKey = legacyKey
+                defaults.removeObject(forKey: "vaayuAPIKey")
+            }
+        }
+        .onChange(of: self.vaayuAPIKey) { _, newValue in
+            if newValue.isEmpty {
+                VaayuKeychainHelper.delete()
+            } else {
+                VaayuKeychainHelper.save(newValue)
+            }
         }
         .sheet(isPresented: self.$showingAddServerSheet) {
             AddMCPServerSheet(
@@ -493,5 +509,58 @@ private struct AddMCPServerSheet: View {
         .padding(RunicSpacing.lg)
         .frame(width: 420)
         .onAppear { self.isNameFocused = true }
+    }
+}
+
+// MARK: - Vaayu API Key Keychain Helper
+
+private enum VaayuKeychainHelper {
+    private static let service = "com.sriinnu.athena.Runic"
+    private static let account = "vaayu-api-key"
+
+    static func load() -> String? {
+        var result: CFTypeRef?
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecReturnData as String: true,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
+        ]
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let token = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !token.isEmpty
+        else {
+            return nil
+        }
+        return token
+    }
+
+    @discardableResult
+    static func save(_ value: String) -> Bool {
+        delete()
+        let data = Data(value.utf8)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+    }
+
+    @discardableResult
+    static func delete() -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 }

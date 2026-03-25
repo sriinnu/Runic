@@ -42,17 +42,17 @@ struct OSLogLogHandler: LogHandler {
 
         switch level {
         case .trace:
-            self.logger.debug("\(msg, privacy: .public)")
+            self.logger.debug("\(msg, privacy: .auto)")
         case .debug:
-            self.logger.debug("\(msg, privacy: .public)")
+            self.logger.debug("\(msg, privacy: .auto)")
         case .info, .notice:
-            self.logger.info("\(msg, privacy: .public)")
+            self.logger.info("\(msg, privacy: .auto)")
         case .warning:
-            self.logger.warning("\(msg, privacy: .public)")
+            self.logger.warning("\(msg, privacy: .auto)")
         case .error:
-            self.logger.error("\(msg, privacy: .public)")
+            self.logger.error("\(msg, privacy: .auto)")
         case .critical:
-            self.logger.fault("\(msg, privacy: .public)")
+            self.logger.fault("\(msg, privacy: .auto)")
         }
     }
 

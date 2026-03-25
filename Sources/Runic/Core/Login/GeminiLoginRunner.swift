@@ -45,11 +45,8 @@ enum GeminiLoginRunner {
             }
 
             // Create a temporary shell script that runs gemini (auto-prompts for auth when no creds)
-            let scriptContent = """
-            #!/bin/bash
-            cd ~
-            "\(binary)"
-            """
+            let escaped = binary.replacingOccurrences(of: "'", with: "'\\''")
+            let scriptContent = "#!/bin/bash\ncd ~\n'\(escaped)'\n"
 
             let tempDir = FileManager.default.temporaryDirectory
             let scriptURL = tempDir.appendingPathComponent("gemini_login_\(UUID().uuidString).command")
