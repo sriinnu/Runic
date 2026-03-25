@@ -619,6 +619,7 @@ public struct GeminiStatusProbe: Sendable {
 
         let updatedData = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted])
         try updatedData.write(to: credsURL, options: .atomic)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: credsURL.path)
     }
 
     private static func loadCredentials(homeDirectory: String) throws -> OAuthCredentials {

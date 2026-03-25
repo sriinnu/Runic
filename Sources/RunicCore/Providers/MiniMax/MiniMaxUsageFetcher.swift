@@ -119,10 +119,7 @@ public struct MiniMaxUsageFetcher: Sendable {
             throw MiniMaxUsageError.apiError("HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
-        // Log raw response for debugging
-        if let jsonString = String(data: data, encoding: .utf8) {
-            Self.log.debug("MiniMax API response: \(jsonString)")
-        }
+        Self.log.debug("MiniMax API response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         let decoder = JSONDecoder()
         do {
