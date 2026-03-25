@@ -94,6 +94,8 @@ struct AzureUsageFetcher {
         if !normalized.contains("://") {
             normalized = "https://\(normalized)"
         }
+        // Enforce HTTPS — reject http:// to prevent cleartext token leakage.
+        guard normalized.lowercased().hasPrefix("https://") else { return nil }
         guard let baseURL = URL(string: normalized),
               var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
         else {
