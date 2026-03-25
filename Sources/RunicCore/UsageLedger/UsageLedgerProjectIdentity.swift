@@ -149,6 +149,30 @@ public enum UsageLedgerProjectIdentityResolver {
 
     private static func inferredPathTail(from value: String?) -> String? {
         guard let value else { return nil }
+
+        // Claude Code uses dash-separated path IDs like "-Users-srinivaspendela-Sriinnu-AI-Runic".
+        // Extract the last meaningful segment(s) as the project name.
+        if value.hasPrefix("-Users-") || value.hasPrefix("-home-") {
+            let parts = value.split(separator: "-").map(String.init)
+            // Find the last non-user-path segment — skip Users, username, common dirs
+            let skipPrefixes: Set<String> = ["Users", "home", "Documents", "Desktop", "Projects", "Personal", "repos", "code", "src", "dev", "Work", "Sites"]
+            var meaningful: [String] = []
+            var pastUserPath = false
+            for part in parts where !part.isEmpty {
+                if !pastUserPath {
+                    if skipPrefixes.contains(part) || part.count <= 2 { continue }
+                    pastUserPath = true
+                }
+                meaningful.append(part)
+            }
+            // Take the last 1-2 segments as the project name
+            if meaningful.count >= 2 {
+                return meaningful.suffix(2).joined(separator: "/")
+            } else if let last = meaningful.last {
+                return last
+            }
+        }
+
         let separators = CharacterSet(charactersIn: "/\\")
         guard value.rangeOfCharacter(from: separators) != nil else { return nil }
 
