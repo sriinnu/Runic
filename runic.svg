@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 400" fill="none">
+  <!-- Infinity symbol with usage bars — Runic logo -->
+  <!-- Main infinity (teal) -->
+  <path d="M256 160c-40-56-80-88-120-88-66 0-120 54-120 120s54 120 120 120c40 0 80-32 120-88 40 56 80 88 120 88 66 0 120-54 120-120s-54-120-120-120c-40 0-80 32-120 88z" fill="#2BA8A0"/>
+  <path d="M256 160c-40-56-80-88-120-88-66 0-120 54-120 120s54 120 120 120c40 0 80-32 120-88" fill="#35B8A8"/>
+  <!-- Inner cutouts for the infinity holes -->
+  <ellipse cx="148" cy="192" rx="44" ry="48" fill="white" fill-opacity="0"/>
+  <ellipse cx="364" cy="192" rx="44" ry="48" fill="white" fill-opacity="0"/>
+  <!-- Usage bars at center -->
+  <rect x="240" y="156" width="10" height="50" rx="4" fill="#1A7A72"/>
+  <rect x="254" y="146" width="10" height="70" rx="4" fill="#1A7A72"/>
+  <rect x="268" y="162" width="10" height="40" rx="4" fill="#1A7A72"/>
+  <!-- Light reflection infinity (subtle, below) -->
+  <path d="M256 320c-24-34-48-52-72-52-40 0-72 32-72 72s32 72 72 72c24 0 48-18 72-52 24 34 48 52 72 52 40 0 72-32 72-72s-32-72-72-72c-24 0-48 18-72 52z" fill="#2BA8A0" fill-opacity="0.15"/>
+</svg>

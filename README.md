@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="runic.png" alt="Runic — infinity symbol with usage bars" width="160" />
+<img src="runic.svg" alt="Runic — infinity symbol with usage bars" width="160" />
 
 **AI usage monitoring for your Mac menubar.**
 
