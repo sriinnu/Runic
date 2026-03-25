@@ -144,6 +144,10 @@ public actor GenericProviderFetcher {
             throw FetchError.invalidURL(urlString)
         }
 
+        guard url.scheme?.lowercased() == "https" else {
+            throw FetchError.insecureURL(urlString)
+        }
+
         return url
     }
 
@@ -562,6 +566,7 @@ public enum FetchError: LocalizedError, Sendable {
     case missingToken(String)
     case invalidDateRange
     case extractionFailed(String)
+    case insecureURL(String)
 
     public var errorDescription: String? {
         switch self {
@@ -583,6 +588,8 @@ public enum FetchError: LocalizedError, Sendable {
             return "Failed to calculate date range for URL template"
         case .extractionFailed(let field):
             return "Failed to extract field '\(field)' from response"
+        case .insecureURL(let url):
+            return "Only HTTPS URLs are allowed. Got: \(url)"
         }
     }
 
@@ -596,6 +603,8 @@ public enum FetchError: LocalizedError, Sendable {
             return "The response is not valid JSON or has unexpected structure"
         case .extractionFailed(let field):
             return "The field '\(field)' was not found in the response or has wrong type"
+        case .insecureURL:
+            return "The URL scheme is not HTTPS"
         default:
             return nil
         }
@@ -615,6 +624,8 @@ public enum FetchError: LocalizedError, Sendable {
             return "You have been rate limited. Try again later."
         case .invalidJSON:
             return "Check the API endpoint URL and response mapping configuration"
+        case .insecureURL:
+            return "Change the provider URL to use HTTPS (e.g., https://api.example.com)"
         default:
             return nil
         }

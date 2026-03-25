@@ -192,12 +192,22 @@ public enum CodexOAuthUsageFetcher {
         self.resolveUsageURL(env: ProcessInfo.processInfo.environment, configContents: nil)
     }
 
+    private static let allowedHostSuffixes = ["openai.com", "chatgpt.com"]
+
     private static func resolveUsageURL(env: [String: String], configContents: String?) -> URL {
         let baseURL = self.resolveChatGPTBaseURL(env: env, configContents: configContents)
         let normalized = self.normalizeChatGPTBaseURL(baseURL)
         let path = normalized.contains("/backend-api") ? Self.chatGPTUsagePath : Self.codexUsagePath
         let full = normalized + path
-        return URL(string: full) ?? URL(string: Self.defaultChatGPTBaseURL + Self.chatGPTUsagePath)!
+        guard let url = URL(string: full), self.isAllowedHost(url) else {
+            return URL(string: Self.defaultChatGPTBaseURL + Self.chatGPTUsagePath)!
+        }
+        return url
+    }
+
+    private static func isAllowedHost(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return allowedHostSuffixes.contains { host == $0 || host.hasSuffix("." + $0) }
     }
 
     private static func resolveChatGPTBaseURL(env: [String: String], configContents: String?) -> String {

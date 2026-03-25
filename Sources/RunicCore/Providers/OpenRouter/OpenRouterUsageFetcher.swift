@@ -91,9 +91,7 @@ struct OpenRouterUsageFetcher {
             throw OpenRouterAPIError.httpError(statusCode: httpResponse.statusCode)
         }
 
-        if let json = String(data: data, encoding: .utf8) {
-            Self.log.debug("OpenRouter credits response: \(json)")
-        }
+        Self.log.debug("OpenRouter credits response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         return try JSONDecoder().decode(OpenRouterCreditsResponse.self, from: data)
     }
@@ -122,9 +120,7 @@ struct OpenRouterUsageFetcher {
             throw OpenRouterAPIError.httpError(statusCode: httpResponse.statusCode)
         }
 
-        if let json = String(data: data, encoding: .utf8) {
-            Self.log.debug("OpenRouter key info response: \(json)")
-        }
+        Self.log.debug("OpenRouter key info response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         return try JSONDecoder().decode(OpenRouterKeyInfoResponse.self, from: data)
     }
