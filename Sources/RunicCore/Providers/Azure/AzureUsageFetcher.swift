@@ -1,7 +1,7 @@
 import Foundation
 
 struct AzureOpenAIDeploymentsResponse: Decodable {
-    struct Deployment: Decodable, Sendable {
+    struct Deployment: Decodable {
         let id: String?
         let model: String?
         let status: String?
@@ -77,7 +77,7 @@ struct AzureUsageFetcher {
             throw AzureAPIError.invalidResponse
         }
 
-        guard (200 ..< 300).contains(httpResponse.statusCode) else {
+        guard (200..<300).contains(httpResponse.statusCode) else {
             let body = String(data: data, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             throw AzureAPIError.httpError(
@@ -167,7 +167,7 @@ extension AzureOpenAIDeploymentsResponse {
     }
 }
 
-enum AzureAPIError: LocalizedError, Sendable {
+enum AzureAPIError: LocalizedError {
     case invalidEndpoint(String)
     case invalidResponse
     case httpError(statusCode: Int, body: String?)

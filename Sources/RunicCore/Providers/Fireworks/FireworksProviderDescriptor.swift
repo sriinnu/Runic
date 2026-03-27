@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct FireworksAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum FireworksSettingsError: LocalizedError, Sendable {
+enum FireworksSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

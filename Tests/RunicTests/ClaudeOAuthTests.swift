@@ -1,11 +1,10 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 
-@Suite
 struct ClaudeOAuthTests {
     @Test
-    func parsesOAuthCredentials() throws {
+    func `parses O auth credentials`() throws {
         let json = """
         {
           "claudeAiOauth": {
@@ -26,7 +25,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func missingAccessTokenThrows() {
+    func `missing access token throws`() {
         let json = """
         {
           "claudeAiOauth": {
@@ -42,7 +41,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func missingOAuthBlockThrows() {
+    func `missing O auth block throws`() {
         let json = """
         { "other": { "accessToken": "nope" } }
         """
@@ -52,7 +51,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func treatsMissingExpiryAsExpired() {
+    func `treats missing expiry as expired`() {
         let creds = ClaudeOAuthCredentials(
             accessToken: "token",
             refreshToken: nil,
@@ -63,7 +62,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func mapsOAuthUsageToSnapshot() throws {
+    func `maps O auth usage to snapshot`() throws {
         let json = """
         {
           "five_hour": { "utilization": 12.5, "resets_at": "2025-12-25T12:00:00.000Z" },
@@ -83,7 +82,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func mapsOAuthExtraUsage() throws {
+    func `maps O auth extra usage`() throws {
         let json = """
         {
           "five_hour": { "utilization": 1, "resets_at": "2025-12-25T12:00:00.000Z" },
@@ -101,7 +100,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func prefersOpusWhenSonnetMissing() throws {
+    func `prefers opus when sonnet missing`() throws {
         let json = """
         {
           "five_hour": { "utilization": 10, "resets_at": "2025-12-25T12:00:00.000Z" },
@@ -113,7 +112,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func skipsExtraUsageWhenDisabled() throws {
+    func `skips extra usage when disabled`() throws {
         let json = """
         {
           "five_hour": { "utilization": 1, "resets_at": "2025-12-25T12:00:00.000Z" },
@@ -131,7 +130,7 @@ struct ClaudeOAuthTests {
     // MARK: - Scope-based strategy resolution
 
     @Test
-    func oauthRequiresUserProfileScope() {
+    func `oauth requires user profile scope`() {
         // With user:profile scope, OAuth should be selected.
         let withProfile = ClaudeProviderDescriptor.resolveUsageStrategy(
             debugMenuEnabled: false,
@@ -152,7 +151,7 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func fallsBackToCLIWhenNoWebOrOAuth() {
+    func `falls back to CLI when no web or O auth`() {
         let strategy = ClaudeProviderDescriptor.resolveUsageStrategy(
             debugMenuEnabled: false,
             selectedDataSource: .oauth,

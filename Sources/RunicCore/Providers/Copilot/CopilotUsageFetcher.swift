@@ -158,7 +158,8 @@ public struct CopilotUsageFetcher: Sendable {
         guard httpResponse.statusCode == 200 else {
             let body = self.errorSnippet(from: data)
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-                throw CopilotUsageFetchError.unauthorized(details: "token exchange HTTP \(httpResponse.statusCode). \(body)")
+                throw CopilotUsageFetchError
+                    .unauthorized(details: "token exchange HTTP \(httpResponse.statusCode). \(body)")
             }
             throw CopilotUsageFetchError.invalidResponse(
                 details: "token exchange HTTP \(httpResponse.statusCode). \(body)")
@@ -253,7 +254,9 @@ public struct CopilotUsageFetcher: Sendable {
             .replacingOccurrences(of: "-", with: " ")
     }
 
-    private func orderedQuotaSnapshots(_ snapshots: CopilotUsageResponse.QuotaSnapshots?) -> [CopilotUsageResponse.QuotaSnapshot] {
+    private func orderedQuotaSnapshots(_ snapshots: CopilotUsageResponse
+        .QuotaSnapshots?) -> [CopilotUsageResponse.QuotaSnapshot]
+    {
         guard let snapshots else { return [] }
         let candidates = [snapshots.premiumInteractions, snapshots.completions, snapshots.chat]
         var ordered: [CopilotUsageResponse.QuotaSnapshot] = []
@@ -287,5 +290,4 @@ public struct CopilotUsageFetcher: Sendable {
         let end = text.index(text.startIndex, offsetBy: 220)
         return "\(text[..<end])…"
     }
-
 }

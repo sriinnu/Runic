@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - Example Usage of Runic Sync Infrastructure
 
-/// This file demonstrates how to integrate and use the Runic sync infrastructure
-/// in your macOS/iOS application. These examples are for documentation purposes.
+// This file demonstrates how to integrate and use the Runic sync infrastructure
+// in your macOS/iOS application. These examples are for documentation purposes.
 
 #if DEBUG
 
@@ -16,8 +16,7 @@ func setupSyncExample() async {
     // Create background sync manager with default configuration
     let syncManager = BackgroundSyncManager(
         syncEngine: syncEngine,
-        config: .default
-    )
+        config: .default)
 
     // Start automatic background sync
     await syncManager.start()
@@ -30,19 +29,17 @@ func setupSyncExample() async {
 func customConfigurationExample() async {
     // Create custom sync configuration
     let config = SyncConfiguration(
-        activeSyncInterval: 180,      // 3 minutes when app is active
+        activeSyncInterval: 180, // 3 minutes when app is active
         backgroundSyncInterval: 1800, // 30 minutes in background
-        syncOnForeground: true,       // Sync when app comes to foreground
-        syncOnBackground: true,       // Sync when app goes to background
+        syncOnForeground: true, // Sync when app comes to foreground
+        syncOnBackground: true, // Sync when app goes to background
         defaultSyncOptions: SyncOptions(
             forceFullSync: false,
             batchSize: 50,
             conflictStrategy: .lastWriteWins,
             backgroundMode: true,
             timeout: 30.0,
-            encryptSensitiveData: true
-        )
-    )
+            encryptSensitiveData: true))
 
     let syncEngine = iCloudSyncEngine()
     let syncManager = BackgroundSyncManager(syncEngine: syncEngine, config: config)
@@ -59,15 +56,14 @@ func syncUsageDataExample() async {
     let usageRecord = UsageSnapshotSyncRecord(
         providerID: "claude",
         primaryUsed: 75000,
-        primaryLimit: 100000,
+        primaryLimit: 100_000,
         secondaryUsed: 50,
         secondaryLimit: 100,
         costUSD: 3.75,
         accountEmail: "user@example.com",
         updatedAt: Date(),
         deviceName: "MacBook Pro",
-        platform: "macOS"
-    )
+        platform: "macOS")
 
     // Queue for high-priority sync
     await syncEngine.enqueue(usageRecord, priority: .high)
@@ -76,9 +72,9 @@ func syncUsageDataExample() async {
     let result = await syncEngine.push(records: [usageRecord])
 
     switch result {
-    case .success(let recordIDs):
+    case let .success(recordIDs):
         print("Successfully synced \(recordIDs.count) records")
-    case .failure(let error):
+    case let .failure(error):
         print("Sync failed: \(error.localizedDescription)")
     }
 }
@@ -95,8 +91,7 @@ func syncPreferencesExample() async {
         notificationsEnabled: true,
         autoRefreshEnabled: true,
         theme: "dark",
-        displayFormat: "detailed"
-    )
+        displayFormat: "detailed")
 
     // Push to CloudKit
     let result = await syncEngine.push(records: [preferences])
@@ -104,7 +99,7 @@ func syncPreferencesExample() async {
     switch result {
     case .success:
         print("Preferences synced successfully")
-    case .failure(let error):
+    case let .failure(error):
         print("Failed to sync preferences: \(error)")
     }
 }
@@ -117,11 +112,10 @@ func syncAlertConfigExample() async {
     // Create alert configuration for Claude
     let alertConfig = AlertConfigurationSyncRecord(
         providerID: "claude",
-        warningThreshold: 0.75,      // Warn at 75%
-        criticalThreshold: 0.90,     // Critical at 90%
+        warningThreshold: 0.75, // Warn at 75%
+        criticalThreshold: 0.90, // Critical at 90%
         notificationChannels: ["system", "email"],
-        enabled: true
-    )
+        enabled: true)
 
     await syncEngine.enqueue(alertConfig, priority: .normal)
 }
@@ -135,21 +129,20 @@ func manualSyncExample() async {
     // Perform manual sync with custom options
     let options = SyncOptions(
         forceFullSync: true,
-        conflictStrategy: .lastWriteWins
-    )
+        conflictStrategy: .lastWriteWins)
 
     let result = await syncManager.syncNow(options: options)
 
     switch result {
-    case .success(let syncResult):
+    case let .success(syncResult):
         print("""
-            Sync completed:
-            - Pushed: \(syncResult.pushedCount)
-            - Fetched: \(syncResult.fetchedCount)
-            - Conflicts resolved: \(syncResult.conflictsResolved)
-            - Duration: \(syncResult.duration)s
-            """)
-    case .failure(let error):
+        Sync completed:
+        - Pushed: \(syncResult.pushedCount)
+        - Fetched: \(syncResult.fetchedCount)
+        - Conflicts resolved: \(syncResult.conflictsResolved)
+        - Duration: \(syncResult.duration)s
+        """)
+    case let .failure(error):
         print("Sync failed: \(error)")
     }
 }
@@ -165,7 +158,8 @@ func conflictResolutionExample() async {
     // Register custom merge handler for usage snapshots
     await resolver.registerMergeHandler(for: CloudKitRecordType.usageSnapshot) { local, remote in
         guard let localUsage = local as? UsageSnapshotSyncRecord,
-              let remoteUsage = remote as? UsageSnapshotSyncRecord else {
+              let remoteUsage = remote as? UsageSnapshotSyncRecord
+        else {
             return local
         }
 
@@ -196,10 +190,10 @@ final class SyncProgressObserver: SyncObserver {
 
     func syncDidComplete(result: SyncResult) {
         print("""
-            ✅ Sync completed successfully:
-               - Duration: \(String(format: "%.2f", result.duration))s
-               - Records synced: \(result.pushedCount + result.fetchedCount)
-            """)
+        ✅ Sync completed successfully:
+           - Duration: \(String(format: "%.2f", result.duration))s
+           - Records synced: \(result.pushedCount + result.fetchedCount)
+        """)
     }
 
     func syncDidFail(error: SyncError) {
@@ -232,15 +226,15 @@ func statisticsExample() async {
     let stats = await syncManager.statistics
 
     print("""
-        Sync Statistics:
-        ================
-        Total syncs: \(stats.totalSyncs)
-        Successful: \(stats.successfulSyncs)
-        Failed: \(stats.failedSyncs)
-        Success rate: \(String(format: "%.1f%%", stats.successRate))
-        Average duration: \(String(format: "%.2f", stats.averageDuration))s
-        Last sync: \(stats.lastSyncDate?.description ?? "Never")
-        """)
+    Sync Statistics:
+    ================
+    Total syncs: \(stats.totalSyncs)
+    Successful: \(stats.successfulSyncs)
+    Failed: \(stats.failedSyncs)
+    Success rate: \(String(format: "%.1f%%", stats.successRate))
+    Average duration: \(String(format: "%.2f", stats.averageDuration))s
+    Last sync: \(stats.lastSyncDate?.description ?? "Never")
+    """)
 
     // Check pending operations
     let pendingCount = await syncEngine.pendingOperationCount
@@ -255,7 +249,7 @@ func errorHandlingExample() async {
     let result = await syncEngine.sync(options: SyncOptions())
 
     switch result {
-    case .success(let syncResult):
+    case let .success(syncResult):
         // Check for warnings
         if !syncResult.warnings.isEmpty {
             print("⚠️ Sync completed with warnings:")
@@ -264,7 +258,7 @@ func errorHandlingExample() async {
             }
         }
 
-    case .failure(let error):
+    case let .failure(error):
         // Handle specific errors
         switch error {
         case .iCloudAccountUnavailable:
@@ -279,10 +273,10 @@ func errorHandlingExample() async {
         case .timeout:
             print("Sync timed out. Please try again.")
 
-        case .conflictResolutionFailed(let details):
+        case let .conflictResolutionFailed(details):
             print("Conflict resolution failed: \(details)")
 
-        case .cloudKitError(let ckError):
+        case let .cloudKitError(ckError):
             print("CloudKit error: \(ckError.localizedDescription)")
 
         default:

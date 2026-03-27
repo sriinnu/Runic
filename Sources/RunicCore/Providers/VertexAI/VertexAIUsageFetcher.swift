@@ -1,7 +1,7 @@
 import Foundation
 
-struct VertexAIModelsResponse: Decodable, Sendable {
-    struct Model: Decodable, Sendable {
+struct VertexAIModelsResponse: Decodable {
+    struct Model: Decodable {
         let name: String?
         let displayName: String?
     }
@@ -117,7 +117,7 @@ extension VertexAIModelsResponse {
     }
 }
 
-enum VertexAICLIError: LocalizedError, Sendable {
+enum VertexAICLIError: LocalizedError {
     case gcloudNotFound
     case commandFailed(statusCode: Int, detail: String?)
     case commandTimedOut

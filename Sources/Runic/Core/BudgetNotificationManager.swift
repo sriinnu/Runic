@@ -59,7 +59,8 @@ final class BudgetNotificationManager {
                 let title = "Budget Alert: \(projectName)"
                 let body = "Projected to exceed \(limitStr) limit by \(overshootStr) this month"
 
-                self.logger.info("posting budget breach notification",
+                self.logger.info(
+                    "posting budget breach notification",
                     metadata: [
                         "provider": provider.rawValue,
                         "project": projectKey,

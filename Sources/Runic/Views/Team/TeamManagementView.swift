@@ -18,7 +18,7 @@ struct TeamManagementView: View {
     @State private var editingMember: TeamMember?
     @State private var editingMemberTeamID: String?
     @State private var memberQuotaHasLimit = false
-    @State private var memberQuotaLimit = 10_000
+    @State private var memberQuotaLimit = 10000
     @State private var changingRoleMember: TeamMember?
     @State private var changingRoleTeamID: String?
     @State private var memberRoleSelection: TeamRole = .member
@@ -324,7 +324,7 @@ struct TeamManagementView: View {
         self.editingMember = member
         self.editingMemberTeamID = team.id
         self.memberQuotaHasLimit = member.quotaLimit != nil
-        self.memberQuotaLimit = member.quotaLimit ?? 10_000
+        self.memberQuotaLimit = member.quotaLimit ?? 10000
         self.showingQuotaSheet = true
     }
 
@@ -367,7 +367,7 @@ struct TeamManagementView: View {
         var updated = self.teams[teamIndex]
         guard let memberIndex = updated.members.firstIndex(where: { $0.id == memberID }) else { return }
         var member = updated.members[memberIndex]
-        member.quotaLimit = hasLimit ? max(1_000, limit) : nil
+        member.quotaLimit = hasLimit ? max(1000, limit) : nil
         updated.members[memberIndex] = member
         self.teams[teamIndex] = updated
         self.selectedTeam = updated
@@ -438,7 +438,8 @@ private struct TeamRowView: View {
                         .font(RunicFont.body.weight(.semibold))
                 }
 
-                Text("\(self.team.members.count) member\(self.team.members.count == 1 ? "" : "s") · \(self.team.usedQuota, format: .number) / \(self.team.totalQuota, format: .number) credits")
+                Text(
+                    "\(self.team.members.count) member\(self.team.members.count == 1 ? "" : "s") · \(self.team.usedQuota, format: .number) / \(self.team.totalQuota, format: .number) credits")
                     .font(RunicFont.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -605,7 +606,7 @@ private struct MemberQuotaSheet: View {
                     Text("Credits")
                         .font(RunicFont.footnote)
                         .foregroundStyle(.secondary)
-                    Stepper(value: self.$quotaLimit, in: 1_000...1_000_000, step: 1_000) {
+                    Stepper(value: self.$quotaLimit, in: 1000...1_000_000, step: 1000) {
                         TextField("", value: self.$quotaLimit, format: .number)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 140)
@@ -703,7 +704,6 @@ struct Team: Identifiable, Hashable, Codable {
         if percent >= 75 { return Color(nsColor: .systemOrange) }
         return Color(nsColor: .systemBlue)
     }
-
 }
 
 enum TeamRole: String, CaseIterable, Codable {
@@ -714,49 +714,49 @@ enum TeamRole: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .owner: return "Owner"
-        case .admin: return "Admin"
-        case .member: return "Member"
-        case .viewer: return "Viewer"
+        case .owner: "Owner"
+        case .admin: "Admin"
+        case .member: "Member"
+        case .viewer: "Viewer"
         }
     }
 
     var icon: String {
         switch self {
-        case .owner: return "crown.fill"
-        case .admin: return "star.fill"
-        case .member: return "person.fill"
-        case .viewer: return "eye.fill"
+        case .owner: "crown.fill"
+        case .admin: "star.fill"
+        case .member: "person.fill"
+        case .viewer: "eye.fill"
         }
     }
 
     var color: Color {
         switch self {
-        case .owner: return Color(nsColor: .systemYellow)
-        case .admin: return Color(nsColor: .systemBlue)
-        case .member: return Color(nsColor: .systemGreen)
-        case .viewer: return Color(nsColor: .systemGray)
+        case .owner: Color(nsColor: .systemYellow)
+        case .admin: Color(nsColor: .systemBlue)
+        case .member: Color(nsColor: .systemGreen)
+        case .viewer: Color(nsColor: .systemGray)
         }
     }
 
     var canInvite: Bool {
         switch self {
-        case .owner, .admin: return true
-        case .member, .viewer: return false
+        case .owner, .admin: true
+        case .member, .viewer: false
         }
     }
 
     var canEditQuota: Bool {
         switch self {
-        case .owner, .admin: return true
-        case .member, .viewer: return false
+        case .owner, .admin: true
+        case .member, .viewer: false
         }
     }
 
     var canRemoveMembers: Bool {
         switch self {
-        case .owner, .admin: return true
-        case .member, .viewer: return false
+        case .owner, .admin: true
+        case .member, .viewer: false
         }
     }
 }

@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct CohereAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum CohereSettingsError: LocalizedError, Sendable {
+enum CohereSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

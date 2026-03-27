@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Security
 
 protocol TogetherTokenStoring: Sendable {
@@ -64,7 +64,6 @@ struct KeychainTogetherTokenStore: TogetherTokenStoring {
         addQuery[kSecValueData as String] = data
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
-
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
             Self.log.error("Keychain add failed: \(addStatus)")
@@ -115,5 +114,4 @@ struct KeychainTogetherTokenStore: TogetherTokenStoring {
         }
         return q
     }
-
 }

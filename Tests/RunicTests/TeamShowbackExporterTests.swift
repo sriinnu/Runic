@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct TeamShowbackExporterTests {
     @Test
-    func buildsShowbackReportForTeamOwnedProjects() throws {
+    func `builds showback report for team owned projects`() throws {
         let period = DateInterval(
             start: self.date(year: 2026, month: 2, day: 1),
             end: self.date(year: 2026, month: 3, day: 1))
@@ -81,7 +79,7 @@ struct TeamShowbackExporterTests {
     }
 
     @Test
-    func exportsJsonAndCsvFromReport() throws {
+    func `exports json and csv from report`() throws {
         let period = DateInterval(
             start: self.date(year: 2026, month: 2, day: 1),
             end: self.date(year: 2026, month: 3, day: 1))

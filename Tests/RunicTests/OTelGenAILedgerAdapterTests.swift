@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct OTelGenAILedgerAdapterTests {
     @Test
-    func parsesFlatGenAIPayloadIntoLedgerEntry() throws {
+    func `parses flat gen AI payload into ledger entry`() throws {
         let payload = """
         {
           "timestamp": "2026-02-23T12:00:00Z",
@@ -40,7 +38,7 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
-    func parsesOTLPResourceSpansPayload() throws {
+    func `parses OTLP resource spans payload`() throws {
         let payload = """
         {
           "resourceSpans": [
@@ -86,7 +84,7 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
-    func featureFlagDisablesIngestion() throws {
+    func `feature flag disables ingestion`() throws {
         let payload = """
         {"attributes":{"gen_ai.system":"openai","gen_ai.request.model":"gpt-5","gen_ai.usage.input_tokens":1}}
         """
@@ -97,7 +95,7 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
-    func defaultProviderBackfillsUnknownProvider() throws {
+    func `default provider backfills unknown provider`() throws {
         let payload = """
         {"attributes":{"gen_ai.request.model":"custom-model-v1","gen_ai.usage.input_tokens":9}}
         """

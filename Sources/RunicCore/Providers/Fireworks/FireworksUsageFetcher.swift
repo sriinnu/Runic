@@ -8,7 +8,7 @@ struct FireworksModelsResponse: Decodable {
     }
 }
 
-struct FireworksUsageFetcher {
+enum FireworksUsageFetcher {
     static let apiURL = URL(string: "https://api.fireworks.ai/inference/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> FireworksModelsResponse {
@@ -57,7 +57,7 @@ extension FireworksModelsResponse {
     }
 }
 
-enum FireworksAPIError: LocalizedError, Sendable {
+enum FireworksAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

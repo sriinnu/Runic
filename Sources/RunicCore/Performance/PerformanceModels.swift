@@ -155,8 +155,8 @@ public struct ErrorEvent: Codable, Sendable, Identifiable {
 public struct DailyPerformanceStats: Codable, Sendable, Identifiable {
     /// Computed identifier from provider-model-date
     public var id: String {
-        let modelPart = model.map { "-\($0)" } ?? ""
-        return "\(provider)\(modelPart)-\(date)"
+        let modelPart = self.model.map { "-\($0)" } ?? ""
+        return "\(self.provider)\(modelPart)-\(self.date)"
     }
 
     /// Provider for these statistics
@@ -298,7 +298,7 @@ extension QualityRating {
 
     /// Validates that the rating is within acceptable bounds (1-5)
     public var isValid: Bool {
-        rating >= 1 && rating <= 5
+        self.rating >= 1 && self.rating <= 5
     }
 }
 
@@ -327,7 +327,7 @@ extension LatencyMetric {
 
     /// Computed duration in seconds
     public var durationSeconds: Double {
-        Double(durationMs) / 1000.0
+        Double(self.durationMs) / 1000.0
     }
 }
 

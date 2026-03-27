@@ -1,8 +1,8 @@
 import AppKit
-import RunicCore
 import KeyboardShortcuts
 import Observation
 import QuartzCore
+import RunicCore
 import Security
 import SwiftUI
 
@@ -95,7 +95,7 @@ protocol UpdaterProviding: AnyObject {
     func checkForUpdates(_ sender: Any?)
 }
 
-// No-op updater used for debug builds and non-bundled runs to suppress Sparkle dialogs.
+/// No-op updater used for debug builds and non-bundled runs to suppress Sparkle dialogs.
 final class DisabledUpdaterController: UpdaterProviding {
     var automaticallyChecksForUpdates: Bool = false
     var automaticallyDownloadsUpdates: Bool = false
@@ -151,7 +151,9 @@ final class SparkleUpdaterController: NSObject, UpdaterProviding, SPUUpdaterDele
         set { self.controller.updater.automaticallyDownloadsUpdates = newValue }
     }
 
-    var isAvailable: Bool { true }
+    var isAvailable: Bool {
+        true
+    }
 
     func checkForUpdates(_ sender: Any?) {
         self.controller.checkForUpdates(sender)
@@ -302,58 +304,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.refreshLifecycleObservers.append(center.addObserver(
             forName: NSWorkspace.willSleepNotification,
             object: nil,
-            queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.store?.handleAutoRefreshSystemPause(.systemSleep)
-                }
-            })
+            queue: .main)
+        { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.store?.handleAutoRefreshSystemPause(.systemSleep)
+            }
+        })
 
         self.refreshLifecycleObservers.append(center.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
-            queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.store?.setAutoRefreshSuspended(nil)
-                    await self?.store?.refresh(trigger: .resume)
-                }
-            })
+            queue: .main)
+        { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.store?.setAutoRefreshSuspended(nil)
+                await self?.store?.refresh(trigger: .resume)
+            }
+        })
 
         self.refreshLifecycleObservers.append(center.addObserver(
             forName: NSWorkspace.screensDidSleepNotification,
             object: nil,
-            queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.store?.handleAutoRefreshSystemPause(.screenSleep)
-                }
-            })
+            queue: .main)
+        { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.store?.handleAutoRefreshSystemPause(.screenSleep)
+            }
+        })
 
         self.refreshLifecycleObservers.append(center.addObserver(
             forName: NSWorkspace.screensDidWakeNotification,
             object: nil,
-            queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.store?.setAutoRefreshSuspended(nil)
-                    await self?.store?.refresh(trigger: .resume)
-                }
-            })
+            queue: .main)
+        { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.store?.setAutoRefreshSuspended(nil)
+                await self?.store?.refresh(trigger: .resume)
+            }
+        })
 
         self.refreshLifecycleObservers.append(center.addObserver(
             forName: NSWorkspace.sessionDidResignActiveNotification,
             object: nil,
-            queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.store?.handleAutoRefreshSystemPause(.sessionInactive)
-                }
-            })
+            queue: .main)
+        { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.store?.handleAutoRefreshSystemPause(.sessionInactive)
+            }
+        })
 
         self.refreshLifecycleObservers.append(center.addObserver(
             forName: NSWorkspace.sessionDidBecomeActiveNotification,
             object: nil,
-            queue: .main) { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.store?.setAutoRefreshSuspended(nil)
-                    await self?.store?.refresh(trigger: .resume)
-                }
-            })
+            queue: .main)
+        { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.store?.setAutoRefreshSuspended(nil)
+                await self?.store?.refresh(trigger: .resume)
+            }
+        })
     }
 }

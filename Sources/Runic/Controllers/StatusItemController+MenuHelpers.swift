@@ -36,16 +36,26 @@ extension StatusItemController {
     }
 
     final class MenuHostingView<Content: View>: NSHostingView<Content> {
-        override var allowsVibrancy: Bool { true }
-        override var isOpaque: Bool { false }
+        override var allowsVibrancy: Bool {
+            true
+        }
+
+        override var isOpaque: Bool {
+            false
+        }
     }
 
     @MainActor
     final class MenuCardItemHostingView<Content: View>: NSHostingView<Content>, MenuCardHighlighting,
     MenuCardMeasuring {
         private let highlightState: MenuCardHighlightState
-        override var allowsVibrancy: Bool { true }
-        override var isOpaque: Bool { false }
+        override var allowsVibrancy: Bool {
+            true
+        }
+
+        override var isOpaque: Bool {
+            false
+        }
 
         override var intrinsicContentSize: NSSize {
             let size = super.intrinsicContentSize
@@ -218,11 +228,11 @@ extension StatusItemController {
     // MARK: - Sidebar content builder
 
     @ViewBuilder
-    func menuCardContent<Content: View>(
+    func menuCardContent(
         width: CGFloat,
         sidebar: MenuCardSidebarConfig?,
         showIcons: Bool,
-        @ViewBuilder content: @escaping (CGFloat) -> Content) -> some View
+        @ViewBuilder content: @escaping (CGFloat) -> some View) -> some View
     {
         if let sidebar {
             ProviderSidebarMenuCardView(
@@ -326,8 +336,8 @@ extension StatusItemController {
         let image = NSImage(
             systemSymbolName: MenuDescriptor.MenuActionSystemImage.refresh.rawValue,
             accessibilityDescription: nil) ?? NSImage(
-                systemSymbolName: "arrow.triangle.2.circlepath",
-                accessibilityDescription: nil)
+            systemSymbolName: "arrow.triangle.2.circlepath",
+            accessibilityDescription: nil)
         image?.isTemplate = true
         image?.size = NSSize(width: 16, height: 16)
         let view = MenuActionButtonView(title: title, image: image) { [weak self] in

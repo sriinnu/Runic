@@ -1,24 +1,23 @@
-/// ProjectsCommand.swift
-/// Runic CLI - Project Usage Tracking
-///
-/// Lists projects and displays usage statistics for specific projects,
-/// helping you understand token consumption across different codebases.
-///
-/// Usage:
-///   runic projects [--list | --stats <project-id>] [--json] [--pretty] [--no-color]
-///
-/// Examples:
-///   runic projects --list                  # List all projects
-///   runic projects --stats my-project      # Show stats for specific project
-///   runic projects --json --pretty         # JSON output of all projects
+// ProjectsCommand.swift
+// Runic CLI - Project Usage Tracking
+//
+// Lists projects and displays usage statistics for specific projects,
+// helping you understand token consumption across different codebases.
+//
+// Usage:
+//   runic projects [--list | --stats <project-id>] [--json] [--pretty] [--no-color]
+//
+// Examples:
+//   runic projects --list                  # List all projects
+//   runic projects --stats my-project      # Show stats for specific project
+//   runic projects --json --pretty         # JSON output of all projects
 
-import RunicCore
-import Helix
 import Foundation
+import Helix
+import RunicCore
 
 /// Main entry point for the projects command
 public enum ProjectsCommand {
-
     /// Command signature defining available options and flags
     public static var signature: CommandSignature {
         CommandSignature(
@@ -97,7 +96,7 @@ public enum ProjectsCommand {
 
     /// Execute the projects command
     public static func run(_ invocation: CommandInvocation) async {
-        let config = parseConfiguration(invocation)
+        let config = self.parseConfiguration(invocation)
 
         do {
             let entries = try await loadUsageEntries(
@@ -105,16 +104,16 @@ public enum ProjectsCommand {
                 maxAgeDays: config.days)
 
             guard !entries.isEmpty else {
-                exitWithError("No project usage data found for the specified criteria.")
+                self.exitWithError("No project usage data found for the specified criteria.")
             }
 
             if let projectID = config.statsProjectID {
-                await showProjectStats(projectID, entries: entries, config: config)
+                await self.showProjectStats(projectID, entries: entries, config: config)
             } else {
-                await showProjectList(entries: entries, config: config)
+                await self.showProjectList(entries: entries, config: config)
             }
         } catch {
-            exitWithError("Failed to load usage data: \(error.localizedDescription)")
+            self.exitWithError("Failed to load usage data: \(error.localizedDescription)")
         }
     }
 
@@ -143,7 +142,7 @@ public enum ProjectsCommand {
         let sortByName = invocation.parsedValues.flags.contains("sortByName")
 
         let days = daysArg.flatMap(Int.init) ?? 30
-        let providers = resolveProviders(providerArg)
+        let providers = self.resolveProviders(providerArg)
 
         return Configuration(
             providers: providers,
@@ -165,7 +164,7 @@ public enum ProjectsCommand {
         }
 
         guard let provider = UsageProvider(rawValue: arg) else {
-            exitWithError("Unknown provider: \(arg)")
+            self.exitWithError("Unknown provider: \(arg)")
         }
 
         return [provider]
@@ -175,8 +174,8 @@ public enum ProjectsCommand {
 
     private static func loadUsageEntries(
         providers: [UsageProvider],
-        maxAgeDays: Int
-    ) async throws -> [UsageLedgerEntry] {
+        maxAgeDays: Int) async throws -> [UsageLedgerEntry]
+    {
         let now = Date()
         var allEntries: [UsageLedgerEntry] = []
 
@@ -196,33 +195,33 @@ public enum ProjectsCommand {
 
     private static func showProjectList(
         entries: [UsageLedgerEntry],
-        config: Configuration
-    ) async {
+        config: Configuration) async
+    {
         var summaries = UsageLedgerAggregator.projectSummaries(entries: entries)
 
         if config.sortByName {
-            summaries.sort { (lhs, rhs) in
+            summaries.sort { lhs, rhs in
                 (lhs.projectID ?? "unknown") < (rhs.projectID ?? "unknown")
             }
         }
 
         if config.isJSON {
-            outputJSON(summaries, pretty: config.isPretty)
+            self.outputJSON(summaries, pretty: config.isPretty)
         } else {
-            outputProjectListText(summaries, useColor: config.useColor)
+            self.outputProjectListText(summaries, useColor: config.useColor)
         }
     }
 
     private static func outputProjectListText(
         _ summaries: [UsageLedgerProjectSummary],
-        useColor: Bool
-    ) {
+        useColor: Bool)
+    {
         if summaries.isEmpty {
             print("No projects found.")
             return
         }
 
-        printHeader("Projects (\(summaries.count) total)", useColor: useColor)
+        self.printHeader("Projects (\(summaries.count) total)", useColor: useColor)
         print("")
 
         // Calculate column widths
@@ -230,10 +229,15 @@ public enum ProjectsCommand {
         let projectWidth = min(max(maxProjectWidth, 20), 50)
 
         // Print table header
-        let header = String(format: "%-\(projectWidth)s  %-12s  %-15s  %-12s  %-10s",
-                           "PROJECT ID", "PROVIDER", "TOKENS", "REQUESTS", "COST")
+        let header = String(
+            format: "%-\(projectWidth)s  %-12s  %-15s  %-12s  %-10s",
+            "PROJECT ID",
+            "PROVIDER",
+            "TOKENS",
+            "REQUESTS",
+            "COST")
         if useColor {
-            print(ansi("1;37", header))
+            print(self.ansi("1;37", header))
             print(String(repeating: "-", count: projectWidth + 55))
         } else {
             print(header)
@@ -245,17 +249,22 @@ public enum ProjectsCommand {
         var totalCost = 0.0
 
         for summary in summaries {
-            let projectID = truncate(summary.projectID ?? "unknown", maxWidth: projectWidth)
+            let projectID = self.truncate(summary.projectID ?? "unknown", maxWidth: projectWidth)
             let provider = summary.provider.rawValue
-            let tokens = formatNumber(summary.totals.totalTokens)
+            let tokens = self.formatNumber(summary.totals.totalTokens)
             let requests = "\(summary.entryCount)"
-            let cost = formatCost(summary.totals.costUSD)
+            let cost = self.formatCost(summary.totals.costUSD)
 
-            let line = String(format: "%-\(projectWidth)s  %-12s  %15s  %12s  %10s",
-                             projectID, provider, tokens, requests, cost)
+            let line = String(
+                format: "%-\(projectWidth)s  %-12s  %15s  %12s  %10s",
+                projectID,
+                provider,
+                tokens,
+                requests,
+                cost)
 
             if useColor {
-                print(colorizeByUsage(line, tokens: summary.totals.totalTokens))
+                print(self.colorizeByUsage(line, tokens: summary.totals.totalTokens))
             } else {
                 print(line)
             }
@@ -269,12 +278,16 @@ public enum ProjectsCommand {
 
         // Print totals
         print(String(repeating: "-", count: projectWidth + 55))
-        let totalLine = String(format: "%-\(projectWidth)s  %-12s  %15s  %12s  %10s",
-                              "TOTAL", "", formatNumber(totalTokens), "\(totalRequests)",
-                              formatCost(totalCost > 0 ? totalCost : nil))
+        let totalLine = String(
+            format: "%-\(projectWidth)s  %-12s  %15s  %12s  %10s",
+            "TOTAL",
+            "",
+            formatNumber(totalTokens),
+            "\(totalRequests)",
+            formatCost(totalCost > 0 ? totalCost : nil))
 
         if useColor {
-            print(ansi("1;36", totalLine))
+            print(self.ansi("1;36", totalLine))
         } else {
             print(totalLine)
         }
@@ -285,12 +298,12 @@ public enum ProjectsCommand {
     private static func showProjectStats(
         _ projectID: String,
         entries: [UsageLedgerEntry],
-        config: Configuration
-    ) async {
+        config: Configuration) async
+    {
         let projectEntries = entries.filter { $0.projectID == projectID }
 
         guard !projectEntries.isEmpty else {
-            exitWithError("No usage data found for project: \(projectID)")
+            self.exitWithError("No usage data found for project: \(projectID)")
         }
 
         let summaries = UsageLedgerAggregator.projectSummaries(entries: projectEntries)
@@ -307,9 +320,9 @@ public enum ProjectsCommand {
             dailySummaries: dailySummaries)
 
         if config.isJSON {
-            outputJSON(stats, pretty: config.isPretty)
+            self.outputJSON(stats, pretty: config.isPretty)
         } else {
-            outputProjectStatsText(stats, useColor: config.useColor)
+            self.outputProjectStatsText(stats, useColor: config.useColor)
         }
     }
 
@@ -321,7 +334,7 @@ public enum ProjectsCommand {
     }
 
     private static func outputProjectStatsText(_ stats: ProjectStats, useColor: Bool) {
-        printHeader("Project: \(stats.projectID)", useColor: useColor)
+        self.printHeader("Project: \(stats.projectID)", useColor: useColor)
         print("")
 
         // Overall stats
@@ -330,17 +343,17 @@ public enum ProjectsCommand {
         let totalCost = stats.summaries.reduce(0.0) { $0 + ($1.totals.costUSD ?? 0) }
 
         print("Overall Statistics:")
-        print("  Total Tokens:   \(formatNumber(totalTokens))")
+        print("  Total Tokens:   \(self.formatNumber(totalTokens))")
         print("  Total Requests: \(totalRequests)")
-        print("  Total Cost:     \(formatCost(totalCost > 0 ? totalCost : nil))")
+        print("  Total Cost:     \(self.formatCost(totalCost > 0 ? totalCost : nil))")
         print("")
 
         // Models used
         if !stats.modelSummaries.isEmpty {
             print("Models Used:")
             for model in stats.modelSummaries.prefix(10) {
-                let tokens = formatNumber(model.totals.totalTokens)
-                let cost = formatCost(model.totals.costUSD)
+                let tokens = self.formatNumber(model.totals.totalTokens)
+                let cost = self.formatCost(model.totals.costUSD)
                 print("  \(model.model): \(tokens) tokens, \(cost)")
             }
             if stats.modelSummaries.count > 10 {
@@ -353,8 +366,8 @@ public enum ProjectsCommand {
         if !stats.dailySummaries.isEmpty {
             print("Recent Activity (last 10 days):")
             for daily in stats.dailySummaries.suffix(10) {
-                let tokens = formatNumber(daily.totals.totalTokens)
-                let cost = formatCost(daily.totals.costUSD)
+                let tokens = self.formatNumber(daily.totals.totalTokens)
+                let cost = self.formatCost(daily.totals.costUSD)
                 print("  \(daily.dayKey): \(tokens) tokens, \(cost)")
             }
             print("")
@@ -363,7 +376,7 @@ public enum ProjectsCommand {
 
     // MARK: - Output Formatting
 
-    private static func outputJSON<T: Encodable>(_ data: T, pretty: Bool) {
+    private static func outputJSON(_ data: some Encodable, pretty: Bool) {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
 
@@ -372,7 +385,8 @@ public enum ProjectsCommand {
         }
 
         guard let jsonData = try? encoder.encode(data),
-              let text = String(data: jsonData, encoding: .utf8) else {
+              let text = String(data: jsonData, encoding: .utf8)
+        else {
             print("{}")
             return
         }
@@ -385,14 +399,14 @@ public enum ProjectsCommand {
     private static func formatNumber(_ n: Int) -> String {
         if n >= 1_000_000 {
             return String(format: "%.1fM", Double(n) / 1_000_000)
-        } else if n >= 1_000 {
-            return String(format: "%.1fK", Double(n) / 1_000)
+        } else if n >= 1000 {
+            return String(format: "%.1fK", Double(n) / 1000)
         }
         return "\(n)"
     }
 
     private static func formatCost(_ cost: Double?) -> String {
-        guard let cost = cost, cost > 0 else {
+        guard let cost, cost > 0 else {
             return "n/a"
         }
         return String(format: "$%.4f", cost)
@@ -408,7 +422,7 @@ public enum ProjectsCommand {
 
     private static func printHeader(_ text: String, useColor: Bool) {
         if useColor {
-            print(ansi("1;36", text))
+            print(self.ansi("1;36", text))
         } else {
             print(text)
         }
@@ -416,12 +430,12 @@ public enum ProjectsCommand {
 
     private static func colorizeByUsage(_ text: String, tokens: Int) -> String {
         let code = switch tokens {
-        case 1_000_000...: "35"  // magenta - very high
-        case 500_000...: "33"    // yellow - high
-        case 100_000...: "32"    // green - medium
-        default: "0"             // default
+        case 1_000_000...: "35" // magenta - very high
+        case 500_000...: "33" // yellow - high
+        case 100_000...: "32" // green - medium
+        default: "0" // default
         }
-        return ansi(code, text)
+        return self.ansi(code, text)
     }
 
     private static func ansi(_ code: String, _ text: String) -> String {

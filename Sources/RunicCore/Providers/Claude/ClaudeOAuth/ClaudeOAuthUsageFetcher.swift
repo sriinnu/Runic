@@ -82,7 +82,7 @@ enum ClaudeOAuthUsageFetcher {
     }
 }
 
-struct OAuthUsageResponse: Decodable, Sendable {
+struct OAuthUsageResponse: Decodable {
     let fiveHour: OAuthUsageWindow?
     let sevenDay: OAuthUsageWindow?
     let sevenDayOAuthApps: OAuthUsageWindow?
@@ -102,7 +102,7 @@ struct OAuthUsageResponse: Decodable, Sendable {
     }
 }
 
-struct OAuthUsageWindow: Decodable, Sendable {
+struct OAuthUsageWindow: Decodable {
     let utilization: Double?
     let resetsAt: String?
 
@@ -112,7 +112,7 @@ struct OAuthUsageWindow: Decodable, Sendable {
     }
 }
 
-struct OAuthExtraUsage: Decodable, Sendable {
+struct OAuthExtraUsage: Decodable {
     let isEnabled: Bool?
     let monthlyLimit: Double?
     let usedCredits: Double?

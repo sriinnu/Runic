@@ -1,49 +1,49 @@
 import AppKit
 import RunicCore
 
-/// **IconRenderer** - Generates menubar status item icons with usage visualization
-///
-/// **Purpose:**
-/// Creates pixel-perfect 18×18pt (36×36px @2x) template images for the macOS menubar.
-/// Renders usage bars, stale indicators, and provider status into the icon.
-///
-/// **Responsibilities:**
-/// - Generate icons showing session/weekly usage patterns
-/// - Apply stale data dimming when data is > 5 minutes old
-/// - Cache rendered icons for performance (64 icon cache, 512 morph cache)
-/// - Support template (adapts to menubar theme) and vibrant appearances
-/// - Render loading animations and error states
-///
-/// **Performance:**
-/// - **O(1) icon cache lookup** via IconCacheKey hash
-/// - **O(1) morph cache** for animation frames
-/// - Cap cache sizes via `PerformanceConstants`
-/// - All rendering happens off main thread in `dispatchPrecondition(condition: .notOnQueue(.main))`
-///
-/// **Dependencies:**
-/// - `PerformanceConstants` - Cache sizes and timing
-/// - `UsageProvider` - Provider-specific rendering
-/// - `AppKit/CoreGraphics` - Image generation
-///
-/// **Usage:**
-/// ```swift
-/// let icon = IconRenderer.render(
-///     state: .usage(snap, status),
-///     indicator: .none,
-///     appearance: .template,
-///     dataMode: .remaining
-/// )
-/// statusItem.button?.image = icon
-/// ```
+// **IconRenderer** - Generates menubar status item icons with usage visualization
+//
+// **Purpose:**
+// Creates pixel-perfect 18×18pt (36×36px @2x) template images for the macOS menubar.
+// Renders usage bars, stale indicators, and provider status into the icon.
+//
+// **Responsibilities:**
+// - Generate icons showing session/weekly usage patterns
+// - Apply stale data dimming when data is > 5 minutes old
+// - Cache rendered icons for performance (64 icon cache, 512 morph cache)
+// - Support template (adapts to menubar theme) and vibrant appearances
+// - Render loading animations and error states
+//
+// **Performance:**
+// - **O(1) icon cache lookup** via IconCacheKey hash
+// - **O(1) morph cache** for animation frames
+// - Cap cache sizes via `PerformanceConstants`
+// - All rendering happens off main thread in `dispatchPrecondition(condition: .notOnQueue(.main))`
+//
+// **Dependencies:**
+// - `PerformanceConstants` - Cache sizes and timing
+// - `UsageProvider` - Provider-specific rendering
+// - `AppKit/CoreGraphics` - Image generation
+//
+// **Usage:**
+// ```swift
+// let icon = IconRenderer.render(
+//     state: .usage(snap, status),
+//     indicator: .none,
+//     appearance: .template,
+//     dataMode: .remaining
+// )
+// statusItem.button?.image = icon
+// ```
 
-enum IconAppearance: Sendable {
-    case template   // Adapts to menubar theme (light/dark mode)
-    case vibrant    // Full color rendering
+enum IconAppearance {
+    case template // Adapts to menubar theme (light/dark mode)
+    case vibrant // Full color rendering
 }
 
-enum IconDataMode: Sendable {
-    case remaining  // Show remaining quota
-    case used       // Show used quota
+enum IconDataMode {
+    case remaining // Show remaining quota
+    case used // Show used quota
 }
 
 enum IconRenderer {
@@ -53,17 +53,18 @@ enum IconRenderer {
     private static let outputSize = NSSize(width: 38, height: 22)
     private static let outputScale: CGFloat = 2
     private static let canvasPx = Int(outputSize.width * outputScale)
-    
-    // Infinity symbol base template - loaded lazily from Resources
+
+    /// Infinity symbol base template - loaded lazily from Resources
     private static let waveLogoTemplate: NSImage? = {
         guard let url = Bundle.main.url(forResource: "RunicMenubarIcon", withExtension: "svg"),
-              let image = NSImage(contentsOf: url) else {
+              let image = NSImage(contentsOf: url)
+        else {
             return nil
         }
         return image
     }()
 
-    private struct PixelGrid: Sendable {
+    private struct PixelGrid {
         let scale: CGFloat
 
         func pt(_ px: Int) -> CGFloat {
@@ -142,14 +143,19 @@ enum IconRenderer {
         }
     }
 
-    private struct RectPx: Hashable, Sendable {
+    private struct RectPx: Hashable {
         let x: Int
         let y: Int
         let w: Int
         let h: Int
 
-        var midXPx: Int { self.x + self.w / 2 }
-        var midYPx: Int { self.y + self.h / 2 }
+        var midXPx: Int {
+            self.x + self.w / 2
+        }
+
+        var midYPx: Int {
+            self.y + self.h / 2
+        }
 
         func rect() -> CGRect {
             Self.grid.rect(x: self.x, y: self.y, w: self.w, h: self.h)
@@ -215,13 +221,13 @@ enum IconRenderer {
                     dataMode: dataMode)
                 let accentColor = Self.vibrantAccentColor(pressure: pressure, stale: stale)
                 let baseColor = appearance == .template ? NSColor.labelColor : accentColor
-                
+
                 // Disable blink effect to prevent flicker
                 let opacityMultiplier = 1.0
-                
+
                 let fillColor = baseColor.withAlphaComponent((stale ? 0.55 : 1.0) * opacityMultiplier)
                 let baseAlpha: CGFloat = (stale ? 0.18 : (appearance == .template ? 0.28 : 0.38)) * opacityMultiplier
-                
+
                 let fillPercent = Self.iconFillPercent(
                     primary: topValue,
                     weekly: bottomValue,
@@ -265,33 +271,33 @@ enum IconRenderer {
 
     private static func sigilStyle(for style: IconStyle) -> SigilStyle {
         switch style {
-        case .codex: return .codex
-        case .claude: return .claude
-        case .zai: return .zai
-        case .gemini: return .gemini
-        case .antigravity: return .antigravity
-        case .cursor: return .cursor
-        case .factory: return .factory
-        case .copilot: return .copilot
-        case .minimax: return .minimax
-        case .openrouter: return .openrouter
-        case .groq: return .groq
-        case .deepseek: return .deepseek
-        case .fireworks: return .fireworks
-        case .mistral: return .mistral
-        case .perplexity: return .perplexity
-        case .kimi: return .kimi
-        case .auggie: return .auggie
-        case .together: return .together
-        case .cohere: return .cohere
-        case .xai: return .xai
-        case .cerebras: return .cerebras
-        case .sambanova: return .sambanova
-        case .azure: return .azure
-        case .bedrock: return .bedrock
-        case .vertexai: return .vertexai
-        case .qwen: return .qwen
-        case .combined: return .combined
+        case .codex: .codex
+        case .claude: .claude
+        case .zai: .zai
+        case .gemini: .gemini
+        case .antigravity: .antigravity
+        case .cursor: .cursor
+        case .factory: .factory
+        case .copilot: .copilot
+        case .minimax: .minimax
+        case .openrouter: .openrouter
+        case .groq: .groq
+        case .deepseek: .deepseek
+        case .fireworks: .fireworks
+        case .mistral: .mistral
+        case .perplexity: .perplexity
+        case .kimi: .kimi
+        case .auggie: .auggie
+        case .together: .together
+        case .cohere: .cohere
+        case .xai: .xai
+        case .cerebras: .cerebras
+        case .sambanova: .sambanova
+        case .azure: .azure
+        case .bedrock: .bedrock
+        case .vertexai: .vertexai
+        case .qwen: .qwen
+        case .combined: .combined
         }
     }
 
@@ -515,7 +521,7 @@ enum IconRenderer {
             let barHeightPx = 6
             let totalWidth = barWidthPx * 3 + barGapPx * 2
             let startX = centerXPx - totalWidth / 2
-            for idx in 0 ..< 3 {
+            for idx in 0..<3 {
                 let x = startX + idx * (barWidthPx + barGapPx)
                 let rect = Self.grid.rect(
                     x: x,
@@ -835,7 +841,8 @@ enum IconRenderer {
         fillColor: NSColor)
     {
         guard let waveLogo = self.waveLogoTemplate,
-              let ctx = NSGraphicsContext.current?.cgContext else {
+              let ctx = NSGraphicsContext.current?.cgContext
+        else {
             return
         }
 
@@ -867,7 +874,7 @@ enum IconRenderer {
         credits: Double?,
         dataMode: IconDataMode) -> Double
     {
-        let values = [primary, weekly, credits].compactMap { $0 }
+        let values = [primary, weekly, credits].compactMap(\.self)
         guard !values.isEmpty else { return 0 }
         let normalized = values.map { max(0, min($0 / 100, 1)) }
         switch dataMode {
@@ -884,11 +891,10 @@ enum IconRenderer {
         let safe = NSColor(calibratedRed: 0.12, green: 0.86, blue: 0.78, alpha: 1)
         let warn = NSColor(calibratedRed: 1.00, green: 0.72, blue: 0.30, alpha: 1)
         let hot = NSColor(calibratedRed: 1.00, green: 0.31, blue: 0.44, alpha: 1)
-        let color: NSColor
-        if clamped <= 0.5 {
-            color = self.mixColor(safe, warn, p: clamped / 0.5)
+        let color: NSColor = if clamped <= 0.5 {
+            self.mixColor(safe, warn, p: clamped / 0.5)
         } else {
-            color = self.mixColor(warn, hot, p: (clamped - 0.5) / 0.5)
+            self.mixColor(warn, hot, p: (clamped - 0.5) / 0.5)
         }
         if stale {
             return color.withAlphaComponent(0.72)

@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -85,11 +85,11 @@ struct CopilotAPIFetchStrategy: ProviderFetchStrategy {
     private static func sourceLabel(from source: ProviderTokenSource, sourceKey: String?) -> String {
         switch source {
         case .keychain:
-            return sourceKey ?? "keychain"
+            sourceKey ?? "keychain"
         case .environment:
-            return sourceKey ?? "env"
+            sourceKey ?? "env"
         case .vscode:
-            return sourceKey ?? "vscode"
+            sourceKey ?? "vscode"
         }
     }
 

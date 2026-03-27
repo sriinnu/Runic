@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct AuggieAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum AuggieSettingsError: LocalizedError, Sendable {
+enum AuggieSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

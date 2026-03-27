@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct CostUsageScannerTests {
     @Test
-    func codexDailyReportParsesTokenCountsAndCaches() throws {
+    func `codex daily report parses token counts and caches`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -91,7 +89,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func claudeDailyReportParsesUsageAndCaches() throws {
+    func `claude daily report parses usage and caches`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -138,7 +136,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func claudeParsesLargeLinesWithUsageAtTail() throws {
+    func `claude parses large lines with usage at tail`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -183,7 +181,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func claudeDailyReportRefreshesWhenFileChanges() throws {
+    func `claude daily report refreshes when file changes`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -248,7 +246,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func codexIncrementalParsingUsesPreviousTotals() throws {
+    func `codex incremental parsing uses previous totals`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -327,7 +325,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func claudeIncrementalParsingReadsAppendedLinesOnly() throws {
+    func `claude incremental parsing reads appended lines only`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -387,7 +385,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func dayKeyFromTimestampMatchesISOParsing() {
+    func `day key from timestamp matches ISO parsing`() {
         let timestamps = [
             "2025-12-20T23:59:59Z",
             "2025-12-20T23:59:59+02:00",
@@ -401,7 +399,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func claudeDeduplicatesStreamingChunks() throws {
+    func `claude deduplicates streaming chunks`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -489,7 +487,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func claudeCountsEntriesWithoutIdsAsSeparate() throws {
+    func `claude counts entries without ids as separate`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 
@@ -553,7 +551,7 @@ struct CostUsageScannerTests {
     }
 
     @Test
-    func claudeCountsDifferentRequestIdsSeparately() throws {
+    func `claude counts different request ids separately`() throws {
         let env = try CostUsageTestEnvironment()
         defer { env.cleanup() }
 

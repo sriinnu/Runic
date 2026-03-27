@@ -1,14 +1,19 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 @testable import Runic
 
 @MainActor
-@Suite
 struct OpenAIWebAccountSwitchTests {
     @Test
-    func clearsDashboardWhenCodexEmailChanges() {
-        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+    func `clears dashboard when codex email changes`() {
+        let settings = SettingsStore(
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         settings.refreshFrequency = .manual
 
         let store = UsageStore(fetcher: UsageFetcher(), settings: settings)
@@ -30,8 +35,14 @@ struct OpenAIWebAccountSwitchTests {
     }
 
     @Test
-    func keepsDashboardWhenCodexEmailStaysSame() {
-        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+    func `keeps dashboard when codex email stays same`() {
+        let settings = SettingsStore(
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         settings.refreshFrequency = .manual
 
         let store = UsageStore(fetcher: UsageFetcher(), settings: settings)

@@ -1,10 +1,9 @@
 import Helix
 import Testing
 
-@Suite
 struct CLIArgumentParsingTests {
     @Test
-    func usageCommandParsesProviderAndJsonFlags() throws {
+    func `usage command parses provider and json flags`() throws {
         let signature = CommandSignature(
             options: [
                 OptionDefinition(label: "provider", names: [.long("provider")], help: nil),
@@ -25,7 +24,7 @@ struct CLIArgumentParsingTests {
     }
 
     @Test
-    func costCommandParsesRefreshFlag() throws {
+    func `cost command parses refresh flag`() throws {
         let signature = CommandSignature(
             options: [
                 OptionDefinition(label: "provider", names: [.long("provider")], help: nil),
@@ -41,7 +40,7 @@ struct CLIArgumentParsingTests {
     }
 
     @Test
-    func insightsCommandParsesViewAndBudgetFlags() throws {
+    func `insights command parses view and budget flags`() throws {
         let signature = CommandSignature(
             options: [
                 OptionDefinition(label: "view", names: [.long("view")], help: nil),

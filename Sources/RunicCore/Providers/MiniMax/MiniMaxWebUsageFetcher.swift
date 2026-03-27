@@ -225,13 +225,13 @@ public struct MiniMaxWebUsageFetcher: Sendable {
 
 // MARK: - Parsing helpers
 
-struct MiniMaxManualInput: Sendable {
+struct MiniMaxManualInput {
     let cookieHeader: String
     let accessToken: String?
     let groupID: String?
 }
 
-struct MiniMaxParsedUsage: Sendable {
+struct MiniMaxParsedUsage {
     let usedPercent: Double
     let windowMinutes: Int?
     let resetsAt: Date?
@@ -408,9 +408,9 @@ enum MiniMaxWebParsing {
         if let remaining = self.captureGroups(
             in: html,
             pattern: "(?i)Available usage[^0-9]*([0-9]+(?:\\.[0-9]+)?)")?.first,
-           let total = self.captureGroups(
-            in: html,
-            pattern: "(?i)Total usage[^0-9]*([0-9]+(?:\\.[0-9]+)?)")?.first
+            let total = self.captureGroups(
+                in: html,
+                pattern: "(?i)Total usage[^0-9]*([0-9]+(?:\\.[0-9]+)?)")?.first
         {
             let remainingValue = self.doubleValue(remaining) ?? 0
             let totalValue = self.doubleValue(total) ?? 0
@@ -613,7 +613,7 @@ enum MiniMaxWebParsing {
 }
 
 #if os(macOS)
-private struct MiniMaxWebSession: Sendable {
+private struct MiniMaxWebSession {
     let cookieHeader: String
     let accessToken: String?
     let groupID: String?
@@ -621,7 +621,7 @@ private struct MiniMaxWebSession: Sendable {
     let isManual: Bool
 }
 
-private struct MiniMaxCookieSession: Sendable {
+private struct MiniMaxCookieSession {
     let cookieHeader: String
     let sourceLabel: String
 }
@@ -674,7 +674,7 @@ private enum MiniMaxCookieImporter {
     }
 }
 
-private struct MiniMaxLocalStorageToken: Sendable {
+private struct MiniMaxLocalStorageToken {
     let accessToken: String
     let groupID: String?
     let sourceLabel: String
@@ -706,7 +706,7 @@ private enum MiniMaxLocalStorageImporter {
         return tokens
     }
 
-    private struct LocalStorageCandidate: Sendable {
+    private struct LocalStorageCandidate {
         let label: String
         let levelDBURL: URL
     }
@@ -789,7 +789,7 @@ private enum MiniMaxLocalStorageImporter {
         }
     }
 
-    private struct TokenMatch: Sendable {
+    private struct TokenMatch {
         let accessToken: String
         let groupID: String?
     }

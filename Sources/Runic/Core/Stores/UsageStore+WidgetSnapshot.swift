@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 #if canImport(WidgetKit)
 import WidgetKit
 #endif

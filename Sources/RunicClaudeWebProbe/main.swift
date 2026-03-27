@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 
 @main
 enum RunicClaudeWebProbe {

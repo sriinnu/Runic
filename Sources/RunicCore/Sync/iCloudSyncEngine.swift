@@ -1,5 +1,5 @@
-import Foundation
 import CloudKit
+import Foundation
 
 // MARK: - iCloud CloudKit Sync Engine
 
@@ -13,7 +13,6 @@ import CloudKit
 /// - Privacy-first encryption for sensitive data
 /// - Retry logic with exponential backoff
 public actor iCloudSyncEngine: SyncEngine {
-
     // MARK: - Properties
 
     /// CloudKit container for sync operations
@@ -50,21 +49,21 @@ public actor iCloudSyncEngine: SyncEngine {
     ///   - deviceID: Unique identifier for this device
     public init(
         containerIdentifier: String? = nil,
-        deviceID: String? = nil
-    ) {
+        deviceID: String? = nil)
+    {
         if let identifier = containerIdentifier {
             self.container = CKContainer(identifier: identifier)
         } else {
             self.container = CKContainer.default()
         }
 
-        self.database = container.privateCloudDatabase
+        self.database = self.container.privateCloudDatabase
         self.conflictResolver = SyncConflictResolver()
         self.deviceID = deviceID ?? Self.getDeviceIdentifier()
 
         // Register default merge handlers
         Task {
-            await conflictResolver.registerDefaultMergeHandlers()
+            await self.conflictResolver.registerDefaultMergeHandlers()
         }
     }
 
@@ -83,49 +82,59 @@ public actor iCloudSyncEngine: SyncEngine {
     // MARK: - SyncEngine Protocol Implementation
 
     public func sync(options: SyncOptions) async -> Result<SyncResult, SyncError> {
-        guard !isSyncing else {
-            return .failure(.unknown(NSError(domain: "SyncEngine", code: -1,
+        guard !self.isSyncing else {
+            return .failure(.unknown(NSError(
+                domain: "SyncEngine",
+                code: -1,
                 userInfo: [NSLocalizedDescriptionKey: "Sync already in progress"])))
         }
-        isSyncing = true
+        self.isSyncing = true
         defer { isSyncing = false }
 
         let startTime = Date()
-        guard await checkAccountStatus() else { return .failure(.iCloudAccountUnavailable) }
+        guard await self.checkAccountStatus() else { return .failure(.iCloudAccountUnavailable) }
 
         var pushedCount = 0
         var fetchedCount = 0
         var conflictsResolved = 0
         let warnings: [String] = []
 
-        if !pendingQueue.isEmpty {
-            if case .success(let count) = await processPendingQueue(options: options) {
+        if !self.pendingQueue.isEmpty {
+            if case let .success(count) = await processPendingQueue(options: options) {
                 pushedCount = count
             }
         }
 
-        let recordTypes = [CloudKitRecordType.usageSnapshot, CloudKitRecordType.userPreferences,
-                          CloudKitRecordType.alertConfiguration]
+        let recordTypes = [
+            CloudKitRecordType.usageSnapshot,
+            CloudKitRecordType.userPreferences,
+            CloudKitRecordType.alertConfiguration,
+        ]
 
-        switch await fetch(recordTypes: recordTypes) {
-        case .success(let records):
+        switch await self.fetch(recordTypes: recordTypes) {
+        case let .success(records):
             fetchedCount = records.count
             for record in records {
                 if let conflict = await detectConflict(record) {
                     let resolved = await conflictResolver.resolve(
                         local: conflict.local, remote: conflict.remote,
                         strategy: options.conflictStrategy)
-                    await applyResolvedRecord(resolved)
+                    await self.applyResolvedRecord(resolved)
                     conflictsResolved += 1
                 }
             }
-        case .failure(let error):
+        case let .failure(error):
             return .failure(error)
         }
 
-        return .success(SyncResult(pushedCount: pushedCount, fetchedCount: fetchedCount,
-            conflictsResolved: conflictsResolved, deletedCount: 0, completedAt: Date(),
-            duration: Date().timeIntervalSince(startTime), warnings: warnings))
+        return .success(SyncResult(
+            pushedCount: pushedCount,
+            fetchedCount: fetchedCount,
+            conflictsResolved: conflictsResolved,
+            deletedCount: 0,
+            completedAt: Date(),
+            duration: Date().timeIntervalSince(startTime),
+            warnings: warnings))
     }
 
     public func push(records: [SyncableRecord]) async -> Result<[String], SyncError> {
@@ -136,11 +145,10 @@ public actor iCloudSyncEngine: SyncEngine {
 
             let (savedRecords, _) = try await database.modifyRecords(
                 saving: ckRecords,
-                deleting: []
-            )
+                deleting: [])
 
-            recordIDs = savedRecords.compactMap { (recordID, result) -> String? in
-                if case .success(let record) = result {
+            recordIDs = savedRecords.compactMap { _, result -> String? in
+                if case let .success(record) = result {
                     return record.recordID.recordName
                 }
                 return nil
@@ -165,7 +173,7 @@ public actor iCloudSyncEngine: SyncEngine {
 
                 for (_, result) in results.matchResults {
                     switch result {
-                    case .success(let ckRecord):
+                    case let .success(ckRecord):
                         if let syncRecord = try? parseCKRecord(ckRecord) {
                             fetchedRecords.append(syncRecord)
                         }
@@ -189,10 +197,9 @@ public actor iCloudSyncEngine: SyncEngine {
 
             let (_, deletedIDs) = try await database.modifyRecords(
                 saving: [],
-                deleting: ckRecordIDs
-            )
+                deleting: ckRecordIDs)
 
-            let deletedNames = deletedIDs.compactMap { (recordID, result) -> String? in
+            let deletedNames = deletedIDs.compactMap { recordID, result -> String? in
                 if case .success = result {
                     return recordID.recordName
                 }
@@ -207,8 +214,8 @@ public actor iCloudSyncEngine: SyncEngine {
     }
 
     public func resetSync() async -> Result<Void, SyncError> {
-        changeToken = nil
-        pendingQueue.removeAll()
+        self.changeToken = nil
+        self.pendingQueue.removeAll()
         return .success(())
     }
 
@@ -219,15 +226,14 @@ public actor iCloudSyncEngine: SyncEngine {
         let operation = PendingSyncOperation(
             record: record,
             priority: priority,
-            createdAt: Date()
-        )
-        pendingQueue.append(operation)
-        pendingQueue.sort { $0.priority.rawValue > $1.priority.rawValue }
+            createdAt: Date())
+        self.pendingQueue.append(operation)
+        self.pendingQueue.sort { $0.priority.rawValue > $1.priority.rawValue }
     }
 
     /// Returns the number of pending sync operations
     public var pendingOperationCount: Int {
-        pendingQueue.count
+        self.pendingQueue.count
     }
 
     // MARK: - Private Helper Methods
@@ -244,21 +250,21 @@ public actor iCloudSyncEngine: SyncEngine {
 
     /// Processes the pending queue
     private func processPendingQueue(options: SyncOptions) async -> Result<Int, SyncError> {
-        let records = pendingQueue.map { $0.record }
+        let records = self.pendingQueue.map(\.record)
         let result = await push(records: records)
 
         if case .success = result {
-            pendingQueue.removeAll()
+            self.pendingQueue.removeAll()
         }
 
-        return result.map { $0.count }
+        return result.map(\.count)
     }
 
     /// Detects if a fetched record conflicts with local data
     private func detectConflict(_ remote: SyncableRecord) async -> ConflictPair? {
         // In a real implementation, this would query local storage
         // For now, we return nil (no conflict)
-        return nil
+        nil
     }
 
     /// Applies a resolved record to local storage
@@ -271,14 +277,14 @@ public actor iCloudSyncEngine: SyncEngine {
     private func handleCloudKitError(
         _ error: CKError,
         records: [SyncableRecord],
-        retryCount: Int = 0
-    ) async -> Result<[String], SyncError> {
+        retryCount: Int = 0) async -> Result<[String], SyncError>
+    {
         switch error.code {
         case .networkUnavailable, .networkFailure:
-            if retryCount < maxRetries {
-                let delay = retryBaseDelay * pow(2.0, Double(retryCount))
+            if retryCount < self.maxRetries {
+                let delay = self.retryBaseDelay * pow(2.0, Double(retryCount))
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                return await push(records: records)
+                return await self.push(records: records)
             }
             return .failure(.networkUnavailable)
 
@@ -330,4 +336,3 @@ private struct ConflictPair {
     let local: SyncableRecord
     let remote: SyncableRecord
 }
-

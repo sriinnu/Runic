@@ -10,7 +10,7 @@ struct TeamInviteSheet: View {
     @State private var email = ""
     @State private var selectedRole: TeamRole = .member
     @State private var hasQuotaLimit = false
-    @State private var quotaLimit = 10_000
+    @State private var quotaLimit = 10000
     @State private var emailError: String?
     @FocusState private var isEmailFieldFocused: Bool
 
@@ -79,8 +79,8 @@ struct TeamInviteSheet: View {
 
                             Stepper(
                                 value: self.$quotaLimit,
-                                in: 1_000...1_000_000,
-                                step: 1_000)
+                                in: 1000...1_000_000,
+                                step: 1000)
                             {
                                 TextField(
                                     "",
@@ -147,8 +147,8 @@ struct TeamInviteSheet: View {
 
     private var isValid: Bool {
         !self.email.trimmingCharacters(in: .whitespaces).isEmpty &&
-        self.email.contains("@") &&
-        self.email.contains(".")
+            self.email.contains("@") &&
+            self.email.contains(".")
     }
 
     private func sendInvitation() {

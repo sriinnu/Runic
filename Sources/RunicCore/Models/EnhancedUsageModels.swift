@@ -8,10 +8,10 @@ import Foundation
 /// Distinguishes between usage-based and subscription-based users
 public enum AccountType: String, Codable, Sendable {
     case usageBased = "usage_based"
-    case subscription = "subscription"
+    case subscription
     case freeTier = "free_tier"
-    case enterprise = "enterprise"
-    case unknown = "unknown"
+    case enterprise
+    case unknown
 }
 
 // MARK: - Usage Reset Information
@@ -24,21 +24,21 @@ public struct UsageResetInfo: Codable, Sendable, Hashable {
     public let resetsAutomatically: Bool
 
     public enum ResetType: String, Codable, Sendable {
-        case hourly = "hourly"
-        case daily = "daily"
-        case weekly = "weekly"
-        case monthly = "monthly"
+        case hourly
+        case daily
+        case weekly
+        case monthly
         case sessionBased = "session" // 5-hour windows, etc.
-        case manual = "manual"
-        case never = "never"
+        case manual
+        case never
     }
 
     public init(
         resetType: ResetType,
         resetAt: Date? = nil,
         windowDuration: TimeInterval? = nil,
-        resetsAutomatically: Bool = true
-    ) {
+        resetsAutomatically: Bool = true)
+    {
         self.resetType = resetType
         self.resetAt = resetAt
         self.windowDuration = windowDuration
@@ -67,7 +67,7 @@ public struct UsageResetInfo: Codable, Sendable, Hashable {
             }
         }
 
-        switch resetType {
+        switch self.resetType {
         case .hourly: return "Resets every hour"
         case .daily: return "Resets daily"
         case .weekly: return "Resets weekly"
@@ -93,26 +93,26 @@ public struct ModelUsageInfo: Codable, Sendable, Hashable {
         case gpt35 = "gpt-3.5"
         case claude3 = "claude-3"
         case claude4 = "claude-4"
-        case gemini = "gemini"
-        case codex = "codex"
-        case other = "other"
+        case gemini
+        case codex
+        case other
     }
 
     public enum ModelTier: String, Codable, Sendable {
-        case opus = "opus"          // Highest tier
-        case sonnet = "sonnet"      // Mid tier
-        case haiku = "haiku"        // Fast/cheap tier
-        case turbo = "turbo"
-        case standard = "standard"
-        case unknown = "unknown"
+        case opus // Highest tier
+        case sonnet // Mid tier
+        case haiku // Fast/cheap tier
+        case turbo
+        case standard
+        case unknown
     }
 
     public init(
         modelName: String,
         modelFamily: ModelFamily = .other,
         version: String? = nil,
-        tier: ModelTier = .unknown
-    ) {
+        tier: ModelTier = .unknown)
+    {
         self.modelName = modelName
         self.modelFamily = modelFamily
         self.version = version
@@ -121,9 +121,9 @@ public struct ModelUsageInfo: Codable, Sendable, Hashable {
 
     public var displayName: String {
         if let version {
-            return "\(modelName) (\(version))"
+            return "\(self.modelName) (\(version))"
         }
-        return modelName
+        return self.modelName
     }
 }
 
@@ -142,8 +142,8 @@ public struct ProjectInfo: Codable, Sendable, Hashable {
         projectName: String? = nil,
         workspacePath: String? = nil,
         repository: String? = nil,
-        tags: [String] = []
-    ) {
+        tags: [String] = [])
+    {
         self.projectID = projectID
         self.projectName = projectName
         self.workspacePath = workspacePath
@@ -152,7 +152,7 @@ public struct ProjectInfo: Codable, Sendable, Hashable {
     }
 
     public var displayName: String {
-        projectName ?? projectID
+        self.projectName ?? self.projectID
     }
 }
 
@@ -187,7 +187,7 @@ public struct EnhancedUsageSnapshot: Codable, Sendable {
     public let sessionID: String?
     public let sessionStartedAt: Date?
 
-    // Token usage breakdown
+    /// Token usage breakdown
     public let tokenUsage: DetailedTokenUsage?
 
     // Cost information
@@ -218,8 +218,8 @@ public struct EnhancedUsageSnapshot: Codable, Sendable {
         estimatedCost: Double? = nil,
         costCurrency: String = "USD",
         updatedAt: Date = Date(),
-        fetchSource: String = "unknown"
-    ) {
+        fetchSource: String = "unknown")
+    {
         self.provider = provider
         self.primary = primary
         self.secondary = secondary
@@ -251,8 +251,7 @@ public struct EnhancedUsageSnapshot: Codable, Sendable {
             tertiary: legacy.tertiary,
             accountEmail: legacy.identity?.accountEmail,
             accountOrganization: legacy.identity?.accountOrganization,
-            updatedAt: legacy.updatedAt
-        )
+            updatedAt: legacy.updatedAt)
     }
 }
 
@@ -266,10 +265,10 @@ public struct DetailedTokenUsage: Codable, Sendable, Hashable {
     public let cacheReadTokens: Int
     public let totalTokens: Int
 
-    // Per-model breakdown
+    /// Per-model breakdown
     public let modelBreakdown: [String: Int] // modelName -> token count
 
-    // Per-project breakdown
+    /// Per-project breakdown
     public let projectBreakdown: [String: Int] // projectID -> token count
 
     public init(
@@ -278,8 +277,8 @@ public struct DetailedTokenUsage: Codable, Sendable, Hashable {
         cacheCreationTokens: Int = 0,
         cacheReadTokens: Int = 0,
         modelBreakdown: [String: Int] = [:],
-        projectBreakdown: [String: Int] = [:]
-    ) {
+        projectBreakdown: [String: Int] = [:])
+    {
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
         self.cacheCreationTokens = cacheCreationTokens
@@ -306,10 +305,10 @@ public struct UsageAlert: Codable, Sendable, Identifiable {
     public let createdAt: Date
 
     public enum Severity: String, Codable, Sendable {
-        case info = "info"
-        case warning = "warning"
-        case critical = "critical"
-        case urgent = "urgent"
+        case info
+        case warning
+        case critical
+        case urgent
     }
 
     public init(
@@ -322,8 +321,8 @@ public struct UsageAlert: Codable, Sendable, Identifiable {
         currentUsage: Double,
         estimatedTimeToLimit: TimeInterval? = nil,
         recommendation: String,
-        createdAt: Date = Date()
-    ) {
+        createdAt: Date = Date())
+    {
         self.id = id
         self.provider = provider
         self.severity = severity
@@ -350,9 +349,9 @@ public struct SyncState: Codable, Sendable {
     public enum Platform: String, Codable, Sendable {
         case macOS = "macos"
         case iOS = "ios"
-        case android = "android"
-        case windows = "windows"
-        case cli = "cli"
+        case android
+        case windows
+        case cli
     }
 
     public init(
@@ -360,8 +359,8 @@ public struct SyncState: Codable, Sendable {
         deviceName: String,
         platform: Platform,
         lastSync: Date = Date(),
-        snapshots: [String: EnhancedUsageSnapshot] = [:]
-    ) {
+        snapshots: [String: EnhancedUsageSnapshot] = [:])
+    {
         self.deviceID = deviceID
         self.deviceName = deviceName
         self.platform = platform

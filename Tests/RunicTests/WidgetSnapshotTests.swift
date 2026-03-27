@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct WidgetSnapshotTests {
     @Test
-    func widgetSnapshotRoundTrip() throws {
+    func `widget snapshot round trip`() throws {
         let entry = WidgetSnapshot.ProviderEntry(
             provider: .codex,
             updatedAt: Date(),

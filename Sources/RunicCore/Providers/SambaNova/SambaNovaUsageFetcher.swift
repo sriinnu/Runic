@@ -8,7 +8,7 @@ struct SambaNovaModelsResponse: Decodable {
     }
 }
 
-struct SambaNovaUsageFetcher {
+enum SambaNovaUsageFetcher {
     static let apiURL = URL(string: "https://api.sambanova.ai/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> SambaNovaModelsResponse {
@@ -57,7 +57,7 @@ extension SambaNovaModelsResponse {
     }
 }
 
-enum SambaNovaAPIError: LocalizedError, Sendable {
+enum SambaNovaAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

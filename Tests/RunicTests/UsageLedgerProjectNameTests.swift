@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct UsageLedgerProjectNameTests {
     @Test
-    func projectSummariesPreferNonEmptyProjectName() {
+    func `project summaries prefer non empty project name`() {
         let now = Date()
         let entries = [
             UsageLedgerEntry(
@@ -53,7 +51,7 @@ struct UsageLedgerProjectNameTests {
     }
 
     @Test
-    func projectSummariesGroupByInferredNameWhenProjectIDIsMissing() {
+    func `project summaries group by inferred name when project ID is missing`() {
         let now = Date()
         let entries = [
             UsageLedgerEntry(
@@ -92,13 +90,13 @@ struct UsageLedgerProjectNameTests {
 
         let summaries = UsageLedgerAggregator.projectSummaries(entries: entries)
         #expect(summaries.count == 2)
-        let names = Set(summaries.map(\.projectName).compactMap { $0 })
+        let names = Set(summaries.map(\.projectName).compactMap(\.self))
         #expect(names.contains("Alpha Workspace"))
         #expect(names.contains("Beta Workspace"))
     }
 
     @Test
-    func projectSummariesInferProjectNameFromPathLikeIdentifier() {
+    func `project summaries infer project name from path like identifier`() {
         let now = Date()
         let entries = [
             UsageLedgerEntry(
@@ -127,7 +125,7 @@ struct UsageLedgerProjectNameTests {
     }
 
     @Test
-    func projectDisplayNameFallsBackToReadableIdentifier() {
+    func `project display name falls back to readable identifier`() {
         let summary = UsageLedgerProjectSummary(
             provider: .codex,
             projectID: "runic-core",
@@ -148,7 +146,7 @@ struct UsageLedgerProjectNameTests {
     }
 
     @Test
-    func projectDisplayNameKeepsOpaqueIdentifiersHidden() {
+    func `project display name keeps opaque identifiers hidden`() {
         let summary = UsageLedgerProjectSummary(
             provider: .codex,
             projectID: "8f189f6bb4e9fa93a9a4bf5cf97a0b4d",

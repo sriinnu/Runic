@@ -2,10 +2,9 @@ import Foundation
 import Testing
 @testable import Runic
 
-@Suite
 struct InstallOriginTests {
     @Test
-    func detectsHomebrewCaskroom() {
+    func `detects homebrew caskroom`() {
         #expect(
             InstallOrigin
                 .isHomebrewCask(

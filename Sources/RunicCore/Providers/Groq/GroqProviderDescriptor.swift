@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct GroqAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum GroqSettingsError: LocalizedError, Sendable {
+enum GroqSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

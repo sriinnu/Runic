@@ -18,7 +18,7 @@ public struct MiniMaxModelRemain: Decodable {
     public let modelName: String
     public let currentIntervalTotalCount: Int
     public let currentIntervalUsageCount: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case modelName = "model_name"
         case currentIntervalTotalCount = "current_interval_total_count"
@@ -62,9 +62,9 @@ extension MiniMaxUsageSnapshot {
         // But let's assume standard "usage" field naming means USED.
         // If the user reports it shows 100% when new, we invert it.
         // For now, let's map it as Used/Total.
-        
+
         let percent = self.total > 0 ? (Double(self.used) / Double(self.total)) * 100.0 : 0.0
-        
+
         let primary = RateWindow(
             usedPercent: percent,
             windowMinutes: 24 * 60,
@@ -77,7 +77,7 @@ extension MiniMaxUsageSnapshot {
             accountEmail: nil,
             accountOrganization: nil,
             loginMethod: "api-key")
-            
+
         return UsageSnapshot(
             primary: primary,
             secondary: nil,
@@ -126,11 +126,11 @@ public struct MiniMaxUsageFetcher: Sendable {
             let apiResponse = try decoder.decode(MiniMaxQuotaResponse.self, from: data)
 
             if apiResponse.baseResponse.statusCode != 0 {
-                 throw MiniMaxUsageError.apiError(apiResponse.baseResponse.statusMsg)
+                throw MiniMaxUsageError.apiError(apiResponse.baseResponse.statusMsg)
             }
 
             guard let firstModel = apiResponse.modelRemains?.first else {
-                 throw MiniMaxUsageError.parseFailed("No model quota found")
+                throw MiniMaxUsageError.parseFailed("No model quota found")
             }
 
             return MiniMaxUsageSnapshot(
@@ -138,7 +138,7 @@ public struct MiniMaxUsageFetcher: Sendable {
                 used: firstModel.currentIntervalUsageCount,
                 modelName: firstModel.modelName,
                 updatedAt: Date())
-                
+
         } catch {
             Self.log.error("MiniMax parsing error: \(error.localizedDescription)")
             throw MiniMaxUsageError.parseFailed(error.localizedDescription)

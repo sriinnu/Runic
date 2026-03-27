@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 
 struct ProviderToggleStore {
     private let userDefaults: UserDefaults

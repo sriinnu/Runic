@@ -36,8 +36,8 @@ public enum GitHubIntegration {
     {
         guard !entries.isEmpty else { return [] }
 
-        let gitDir = gitDirectory ?? defaultGitDirectory()
-        let commits = loadCommits(from: gitDir)
+        let gitDir = gitDirectory ?? self.defaultGitDirectory()
+        let commits = self.loadCommits(from: gitDir)
 
         guard !commits.isEmpty else {
             self.logger.debug("No git commits found, returning entries without commit info")
@@ -47,7 +47,7 @@ public enum GitHubIntegration {
         self.logger.debug("Linking \(entries.count) usage entries with \(commits.count) commits")
 
         return entries.map { entry in
-            let matchedCommit = findClosestCommit(for: entry, in: commits)
+            let matchedCommit = self.findClosestCommit(for: entry, in: commits)
             return UsageWithCommit(entry: entry, commit: matchedCommit)
         }
     }

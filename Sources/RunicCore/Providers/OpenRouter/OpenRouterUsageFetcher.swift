@@ -51,16 +51,30 @@ struct OpenRouterKeyInfoResponse: Decodable {
         }
     }
 
-    var keyUsage: Double { self.data?.usage ?? 0 }
-    var keyLimit: Double? { self.data?.limit }
-    var isFreeTier: Bool { self.data?.is_free_tier ?? false }
-    var rateLimitRequests: Int? { self.data?.rate_limit?.requests }
-    var rateLimitInterval: String? { self.data?.rate_limit?.interval }
+    var keyUsage: Double {
+        self.data?.usage ?? 0
+    }
+
+    var keyLimit: Double? {
+        self.data?.limit
+    }
+
+    var isFreeTier: Bool {
+        self.data?.is_free_tier ?? false
+    }
+
+    var rateLimitRequests: Int? {
+        self.data?.rate_limit?.requests
+    }
+
+    var rateLimitInterval: String? {
+        self.data?.rate_limit?.interval
+    }
 }
 
 // MARK: - Fetcher
 
-struct OpenRouterUsageFetcher {
+enum OpenRouterUsageFetcher {
     static let creditsURL = URL(string: "https://openrouter.ai/api/v1/credits")!
     static let keyInfoURL = URL(string: "https://openrouter.ai/api/v1/auth/key")!
     private static let requestTimeout: TimeInterval = 15
@@ -98,9 +112,9 @@ struct OpenRouterUsageFetcher {
 
     private static func fetchKeyInfoBestEffort(apiKey: String) async -> OpenRouterKeyInfoResponse? {
         do {
-            return try await Self.fetchKeyInfo(apiKey: apiKey)
+            return try await self.fetchKeyInfo(apiKey: apiKey)
         } catch {
-            Self.log.info("OpenRouter key info unavailable: \(error.localizedDescription)")
+            self.log.info("OpenRouter key info unavailable: \(error.localizedDescription)")
             return nil
         }
     }
@@ -124,7 +138,6 @@ struct OpenRouterUsageFetcher {
 
         return try JSONDecoder().decode(OpenRouterKeyInfoResponse.self, from: data)
     }
-
 }
 
 // MARK: - Snapshot conversion
@@ -185,7 +198,7 @@ extension OpenRouterCreditsResponse {
 
 // MARK: - Errors
 
-enum OpenRouterAPIError: LocalizedError, Sendable {
+enum OpenRouterAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int)
     case decodingError

@@ -8,7 +8,7 @@ struct TogetherModelsResponse: Decodable {
     }
 }
 
-struct TogetherUsageFetcher {
+enum TogetherUsageFetcher {
     static let apiURL = URL(string: "https://api.together.xyz/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> TogetherModelsResponse {
@@ -57,7 +57,7 @@ extension TogetherModelsResponse {
     }
 }
 
-enum TogetherAPIError: LocalizedError, Sendable {
+enum TogetherAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct KimiAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum KimiSettingsError: LocalizedError, Sendable {
+enum KimiSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

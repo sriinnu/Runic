@@ -1,11 +1,11 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 
-@Suite("Gemini Plan", .serialized)
+@Suite(.serialized)
 struct GeminiStatusProbePlanTests {
     @Test
-    func selectsProjectIdForQuotaRequests() async throws {
+    func `selects project id for quota requests`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -56,7 +56,7 @@ struct GeminiStatusProbePlanTests {
     }
 
     @Test
-    func detectsPaidFromStandardTier() async throws {
+    func `detects paid from standard tier`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -100,7 +100,7 @@ struct GeminiStatusProbePlanTests {
     }
 
     @Test
-    func detectsWorkspaceFromFreeTierWithHostedDomain() async throws {
+    func `detects workspace from free tier with hosted domain`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         let idToken = GeminiAPITestHelpers.makeIDToken(email: "user@company.com", hostedDomain: "company.com")
@@ -145,7 +145,7 @@ struct GeminiStatusProbePlanTests {
     }
 
     @Test
-    func detectsFreeFromFreeTierWithoutHostedDomain() async throws {
+    func `detects free from free tier without hosted domain`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         let idToken = GeminiAPITestHelpers.makeIDToken(email: "user@gmail.com")
@@ -190,7 +190,7 @@ struct GeminiStatusProbePlanTests {
     }
 
     @Test
-    func detectsLegacyFromLegacyTier() async throws {
+    func `detects legacy from legacy tier`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -234,7 +234,7 @@ struct GeminiStatusProbePlanTests {
     }
 
     @Test
-    func leavesBlankWhenLoadCodeAssistFails() async throws {
+    func `leaves blank when load code assist fails`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(

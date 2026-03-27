@@ -24,12 +24,14 @@ struct ModelBreakdownMenuView: View {
                     .foregroundStyle(.secondary)
             } else {
                 // MARK: - Title
+
                 Text("Models")
                     .font(RunicFont.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
                 // MARK: - Donut chart
+
                 Chart {
                     ForEach(model.chartItems) { item in
                         SectorMark(
@@ -45,6 +47,7 @@ struct ModelBreakdownMenuView: View {
                 .accessibilityLabel(Self.chartAccessibilityLabel(model: model))
 
                 // MARK: - Model list
+
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     ForEach(model.chartItems) { item in
                         Self.modelRow(item: item)
@@ -52,6 +55,7 @@ struct ModelBreakdownMenuView: View {
                 }
 
                 // MARK: - Overflow note
+
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
                         .font(RunicFont.caption2)
@@ -59,6 +63,7 @@ struct ModelBreakdownMenuView: View {
                 }
 
                 // MARK: - Cache hit rate
+
                 if let cacheRate = model.cacheHitRateText {
                     Divider()
                     HStack(spacing: RunicSpacing.xxs) {
@@ -74,6 +79,7 @@ struct ModelBreakdownMenuView: View {
                 }
 
                 // MARK: - Total summary
+
                 Divider()
                 Self.totalRow(model: model)
             }

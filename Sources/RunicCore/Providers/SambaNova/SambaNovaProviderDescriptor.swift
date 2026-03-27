@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct SambaNovaAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum SambaNovaSettingsError: LocalizedError, Sendable {
+enum SambaNovaSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

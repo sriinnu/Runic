@@ -4,11 +4,16 @@ import Testing
 @testable import Runic
 
 @MainActor
-@Suite
 struct StatusItemAnimationTests {
     @Test
-    func mergedIconLoadingAnimationTracksSelectedProviderOnly() {
-        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+    func `merged icon loading animation tracks selected provider only`() {
+        let settings = SettingsStore(
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         settings.statusChecksEnabled = false
         settings.refreshFrequency = .manual
         settings.mergeIcons = true

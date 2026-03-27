@@ -46,7 +46,7 @@ public enum UsageLedgerAggregator {
         timeZone: TimeZone,
         groupByProject: Bool = true) -> [UsageLedgerDailySummary]
     {
-        let calendar = calendarFor(timeZone)
+        let calendar = self.calendarFor(timeZone)
         var buckets: [DailyKey: AggregateAccumulator] = [:]
 
         for entry in entries {
@@ -59,7 +59,7 @@ public enum UsageLedgerAggregator {
         }
 
         return buckets.map { key, acc in
-            let dayKey = dayKeyString(from: key.dayStart, timeZone: timeZone)
+            let dayKey = self.dayKeyString(from: key.dayStart, timeZone: timeZone)
             return UsageLedgerDailySummary(
                 provider: key.provider,
                 projectID: key.projectID,
@@ -138,7 +138,10 @@ public enum UsageLedgerAggregator {
                 let isActive = now <= blockEnd && now.timeIntervalSince(lastTimestamp) <= blockDuration
                 let acc = AggregateAccumulator(entries: currentEntries)
                 let tokensPerMinute = isActive ? acc.tokensPerMinute(since: currentStart, now: now) : nil
-                let projected = isActive ? acc.projectedTotalTokens(since: currentStart, now: now, duration: blockDuration) : nil
+                let projected = isActive ? acc.projectedTotalTokens(
+                    since: currentStart,
+                    now: now,
+                    duration: blockDuration) : nil
                 summaries.append(UsageLedgerBlockSummary(
                     provider: key.provider,
                     sessionID: key.sessionID,
@@ -283,7 +286,7 @@ public enum UsageLedgerAggregator {
         groupByProject: Bool) -> [UsageLedgerSpendForecast]
     {
         guard projectionDays > 0 else { return [] }
-        let calendar = calendarFor(timeZone)
+        let calendar = self.calendarFor(timeZone)
         var buckets: [SpendForecastKey: SpendForecastAccumulator] = [:]
 
         for entry in entries {
@@ -334,7 +337,7 @@ public enum UsageLedgerAggregator {
 
     private static func dayKeyString(from date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
-        formatter.calendar = calendarFor(timeZone)
+        formatter.calendar = self.calendarFor(timeZone)
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd"
@@ -343,7 +346,7 @@ public enum UsageLedgerAggregator {
 
     private static func hourKeyString(from date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
-        formatter.calendar = calendarFor(timeZone)
+        formatter.calendar = self.calendarFor(timeZone)
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd'T'HH:00:00"
@@ -355,7 +358,7 @@ public enum UsageLedgerAggregator {
         timeZone: TimeZone,
         groupByProject: Bool = true) -> [UsageLedgerHourlySummary]
     {
-        let calendar = calendarFor(timeZone)
+        let calendar = self.calendarFor(timeZone)
         var buckets: [HourlyKey: AggregateAccumulator] = [:]
 
         for entry in entries {
@@ -371,7 +374,7 @@ public enum UsageLedgerAggregator {
         }
 
         return buckets.map { key, acc in
-            let hourKey = hourKeyString(from: key.hourStart, timeZone: timeZone)
+            let hourKey = self.hourKeyString(from: key.hourStart, timeZone: timeZone)
             return UsageLedgerHourlySummary(
                 provider: key.provider,
                 projectID: key.projectID,
@@ -445,7 +448,10 @@ private struct AggregateAccumulator {
         self.modelSet.sorted()
     }
 
-    private mutating func mergeProjectIdentity(from identity: UsageLedgerProjectIdentity?, fallbackEntry: UsageLedgerEntry) {
+    private mutating func mergeProjectIdentity(
+        from identity: UsageLedgerProjectIdentity?,
+        fallbackEntry: UsageLedgerEntry)
+    {
         if let key = identity?.key, self.projectKey == nil {
             self.projectKey = key
         }
@@ -468,17 +474,16 @@ private struct AggregateAccumulator {
         let candidateProvenance = identity?.provenance
 
         guard let candidateName, !candidateName.isEmpty else { return }
-        let shouldAdopt: Bool
-        if self.projectName == nil {
-            shouldAdopt = true
+        let shouldAdopt = if self.projectName == nil {
+            true
         } else if candidateConfidence.rank > self.projectNameConfidence.rank {
-            shouldAdopt = true
+            true
         } else if candidateConfidence.rank == self.projectNameConfidence.rank,
                   candidateName.count > (self.projectName?.count ?? 0)
         {
-            shouldAdopt = true
+            true
         } else {
-            shouldAdopt = false
+            false
         }
 
         if shouldAdopt {
@@ -586,7 +591,10 @@ private struct SpendForecastAccumulator {
         return lowerValue + ((upperValue - lowerValue) * weight)
     }
 
-    private mutating func mergeProjectIdentity(from identity: UsageLedgerProjectIdentity?, fallbackEntry: UsageLedgerEntry) {
+    private mutating func mergeProjectIdentity(
+        from identity: UsageLedgerProjectIdentity?,
+        fallbackEntry: UsageLedgerEntry)
+    {
         if self.projectID == nil {
             let preferredID = identity?.projectID?.trimmingCharacters(in: .whitespacesAndNewlines)
             if let preferredID, !preferredID.isEmpty {
@@ -605,17 +613,16 @@ private struct SpendForecastAccumulator {
         let candidateProvenance = identity?.provenance
 
         guard let candidateName, !candidateName.isEmpty else { return }
-        let shouldAdopt: Bool
-        if self.projectName == nil {
-            shouldAdopt = true
+        let shouldAdopt = if self.projectName == nil {
+            true
         } else if candidateConfidence.rank > self.projectNameConfidence.rank {
-            shouldAdopt = true
+            true
         } else if candidateConfidence.rank == self.projectNameConfidence.rank,
                   candidateName.count > (self.projectName?.count ?? 0)
         {
-            shouldAdopt = true
+            true
         } else {
-            shouldAdopt = false
+            false
         }
 
         if shouldAdopt {
@@ -654,7 +661,15 @@ private struct SessionAccumulator {
         }
     }
 
-    var totals: UsageLedgerTotals { self.aggregate.totals }
-    var models: [String] { self.modelSet.sorted() }
-    var versions: [String] { self.versionSet.sorted() }
+    var totals: UsageLedgerTotals {
+        self.aggregate.totals
+    }
+
+    var models: [String] {
+        self.modelSet.sorted()
+    }
+
+    var versions: [String] {
+        self.versionSet.sorted()
+    }
 }

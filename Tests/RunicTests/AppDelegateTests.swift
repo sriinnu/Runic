@@ -4,10 +4,9 @@ import Testing
 @testable import Runic
 
 @MainActor
-@Suite
 struct AppDelegateTests {
     @Test
-    func buildsStatusControllerAfterLaunch() {
+    func `builds status controller after launch`() {
         let appDelegate = AppDelegate()
         var factoryCalls = 0
 
@@ -18,7 +17,13 @@ struct AppDelegateTests {
         }
         defer { StatusItemController.factory = StatusItemController.defaultFactory }
 
-        let settings = SettingsStore(zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         let fetcher = UsageFetcher()
         let store = UsageStore(fetcher: fetcher, settings: settings)
         let account = fetcher.loadAccountInfo()

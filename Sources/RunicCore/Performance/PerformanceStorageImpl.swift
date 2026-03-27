@@ -3,7 +3,6 @@ import SQLite3
 
 /// Storage layer for performance metrics using SQLite
 public final class PerformanceStorageImpl {
-
     // MARK: - Properties
 
     private var db: OpaquePointer?
@@ -14,8 +13,7 @@ public final class PerformanceStorageImpl {
     public init() {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first!
+            in: .userDomainMask).first!
         let runicDir = appSupport.appendingPathComponent("Runic")
 
         // Ensure directory exists
@@ -25,7 +23,7 @@ public final class PerformanceStorageImpl {
     }
 
     deinit {
-        if let db = db {
+        if let db {
             sqlite3_close(db)
         }
     }
@@ -33,20 +31,20 @@ public final class PerformanceStorageImpl {
     // MARK: - Database Connection
 
     private func open() throws {
-        guard db == nil else { return }
+        guard self.db == nil else { return }
 
         let flags = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
-        let result = sqlite3_open_v2(dbPath.path, &db, flags, nil)
+        let result = sqlite3_open_v2(dbPath.path, &self.db, flags, nil)
 
         guard result == SQLITE_OK else {
-            throw StorageError.openFailed(message: String(cString: sqlite3_errmsg(db)))
+            throw StorageError.openFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
 
-        try createTablesIfNeeded()
+        try self.createTablesIfNeeded()
     }
 
     private func close() {
-        if let db = db {
+        if let db {
             sqlite3_close(db)
             self.db = nil
         }
@@ -120,18 +118,18 @@ public final class PerformanceStorageImpl {
             "CREATE INDEX IF NOT EXISTS idx_latency_created ON latency_metrics(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_quality_timestamp ON quality_ratings(timestamp)",
             "CREATE INDEX IF NOT EXISTS idx_error_timestamp ON error_events(timestamp)",
-            "CREATE INDEX IF NOT EXISTS idx_daily_stats_date ON daily_stats(date)"
+            "CREATE INDEX IF NOT EXISTS idx_daily_stats_date ON daily_stats(date)",
         ]
 
         for schema in schemas {
-            try execute(schema)
+            try self.execute(schema)
         }
     }
 
     // MARK: - Execute SQL
 
     private func execute(_ sql: String) throws {
-        guard let db = db else {
+        guard let db else {
             throw StorageError.notOpen
         }
 
@@ -148,24 +146,29 @@ public final class PerformanceStorageImpl {
     // MARK: - Save Metrics
 
     public func save(latency: LatencyMetric) async throws {
-        try open()
+        try self.open()
 
         let sql = """
-            INSERT OR REPLACE INTO latency_metrics
-            (id, request_id, provider, model, start_time, end_time, duration_ms, success, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
+        INSERT OR REPLACE INTO latency_metrics
+        (id, request_id, provider, model, start_time, end_time, duration_ms, success, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
 
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(db)))
+        guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
 
         sqlite3_bind_text(statement, 1, latency.id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
         sqlite3_bind_text(statement, 2, latency.requestID, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        sqlite3_bind_text(statement, 3, latency.provider.rawValue, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            statement,
+            3,
+            latency.provider.rawValue,
+            -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self))
 
         if let model = latency.model {
             sqlite3_bind_text(statement, 4, model, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
@@ -180,29 +183,34 @@ public final class PerformanceStorageImpl {
         sqlite3_bind_double(statement, 9, latency.createdAt.timeIntervalSince1970)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
-            throw StorageError.insertFailed(message: String(cString: sqlite3_errmsg(db)))
+            throw StorageError.insertFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
     }
 
     public func save(rating: QualityRating) async throws {
-        try open()
+        try self.open()
 
         let sql = """
-            INSERT OR REPLACE INTO quality_ratings
-            (id, request_id, provider, model, rating, comment, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """
+        INSERT OR REPLACE INTO quality_ratings
+        (id, request_id, provider, model, rating, comment, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
 
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(db)))
+        guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
 
         sqlite3_bind_text(statement, 1, rating.id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
         sqlite3_bind_text(statement, 2, rating.requestID, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        sqlite3_bind_text(statement, 3, rating.provider.rawValue, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            statement,
+            3,
+            rating.provider.rawValue,
+            -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self))
 
         if let model = rating.model {
             sqlite3_bind_text(statement, 4, model, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
@@ -221,29 +229,39 @@ public final class PerformanceStorageImpl {
         sqlite3_bind_double(statement, 7, rating.timestamp.timeIntervalSince1970)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
-            throw StorageError.insertFailed(message: String(cString: sqlite3_errmsg(db)))
+            throw StorageError.insertFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
     }
 
     public func save(error: ErrorEvent) async throws {
-        try open()
+        try self.open()
 
         let sql = """
-            INSERT OR REPLACE INTO error_events
-            (id, provider, error_type, error_message, retry_count, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """
+        INSERT OR REPLACE INTO error_events
+        (id, provider, error_type, error_message, retry_count, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """
 
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(db)))
+        guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
 
         sqlite3_bind_text(statement, 1, error.id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        sqlite3_bind_text(statement, 2, error.provider.rawValue, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        sqlite3_bind_text(statement, 3, error.errorType.rawValue, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            statement,
+            2,
+            error.provider.rawValue,
+            -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_text(
+            statement,
+            3,
+            error.errorType.rawValue,
+            -1,
+            unsafeBitCast(-1, to: sqlite3_destructor_type.self))
 
         if let message = error.errorMessage {
             sqlite3_bind_text(statement, 4, message, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
@@ -255,7 +273,7 @@ public final class PerformanceStorageImpl {
         sqlite3_bind_double(statement, 6, error.timestamp.timeIntervalSince1970)
 
         guard sqlite3_step(statement) == SQLITE_DONE else {
-            throw StorageError.insertFailed(message: String(cString: sqlite3_errmsg(db)))
+            throw StorageError.insertFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
     }
 
@@ -264,17 +282,17 @@ public final class PerformanceStorageImpl {
     public func fetchDailyStats(
         timeRange: Int,
         provider: UsageProvider? = nil,
-        model: String? = nil
-    ) async throws -> [DailyPerformanceStats] {
-        try open()
+        model: String? = nil) async throws -> [DailyPerformanceStats]
+    {
+        try self.open()
 
         var sql = "SELECT * FROM daily_stats WHERE date >= date('now', '-\(timeRange) days')"
 
-        if let provider = provider {
+        if let provider {
             sql += " AND provider = '\(provider.rawValue)'"
         }
 
-        if let model = model {
+        if let model {
             sql += " AND model = '\(model)'"
         }
 
@@ -283,8 +301,8 @@ public final class PerformanceStorageImpl {
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
 
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
-            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(db)))
+        guard sqlite3_prepare_v2(self.db, sql, -1, &statement, nil) == SQLITE_OK else {
+            throw StorageError.prepareFailed(message: String(cString: sqlite3_errmsg(self.db)))
         }
 
         var stats: [DailyPerformanceStats] = []
@@ -337,8 +355,7 @@ public final class PerformanceStorageImpl {
                 quotaCount: quotaCount,
                 networkCount: networkCount,
                 apiErrorCount: apiErrorCount,
-                createdAt: createdAt
-            )
+                createdAt: createdAt)
 
             stats.append(stat)
         }
@@ -349,12 +366,12 @@ public final class PerformanceStorageImpl {
     // MARK: - Database Maintenance
 
     public func vacuum() async throws {
-        try open()
-        try execute("VACUUM")
+        try self.open()
+        try self.execute("VACUUM")
     }
 
     public func deleteOldData(olderThan days: Int) async throws {
-        try open()
+        try self.open()
 
         let cutoffDate = Date().addingTimeInterval(-Double(days) * 24 * 60 * 60)
         let cutoffTimestamp = cutoffDate.timeIntervalSince1970
@@ -362,11 +379,11 @@ public final class PerformanceStorageImpl {
         let queries = [
             "DELETE FROM latency_metrics WHERE created_at < \(cutoffTimestamp)",
             "DELETE FROM quality_ratings WHERE timestamp < \(cutoffTimestamp)",
-            "DELETE FROM error_events WHERE timestamp < \(cutoffTimestamp)"
+            "DELETE FROM error_events WHERE timestamp < \(cutoffTimestamp)",
         ]
 
         for query in queries {
-            try execute(query)
+            try self.execute(query)
         }
     }
 
@@ -382,15 +399,15 @@ public final class PerformanceStorageImpl {
         public var errorDescription: String? {
             switch self {
             case .notOpen:
-                return "Database not open"
-            case .openFailed(let message):
-                return "Failed to open database: \(message)"
-            case .prepareFailed(let message):
-                return "Failed to prepare statement: \(message)"
-            case .executionFailed(let message):
-                return "Failed to execute statement: \(message)"
-            case .insertFailed(let message):
-                return "Failed to insert data: \(message)"
+                "Database not open"
+            case let .openFailed(message):
+                "Failed to open database: \(message)"
+            case let .prepareFailed(message):
+                "Failed to prepare statement: \(message)"
+            case let .executionFailed(message):
+                "Failed to execute statement: \(message)"
+            case let .insertFailed(message):
+                "Failed to insert data: \(message)"
             }
         }
     }
@@ -400,7 +417,7 @@ public final class PerformanceStorageImpl {
 
 extension String {
     fileprivate init(cString pointer: UnsafePointer<UInt8>?) {
-        guard let pointer = pointer else {
+        guard let pointer else {
             self = ""
             return
         }

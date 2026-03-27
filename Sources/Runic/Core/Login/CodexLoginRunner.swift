@@ -1,6 +1,6 @@
-import RunicCore
 import Darwin
 import Foundation
+import RunicCore
 
 struct CodexLoginRunner {
     struct Result {

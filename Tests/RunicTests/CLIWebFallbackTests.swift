@@ -2,7 +2,6 @@ import Testing
 @testable import RunicCLI
 @testable import RunicCore
 
-@Suite
 struct CLIWebFallbackTests {
     private func makeContext(sourceMode: ProviderSourceMode = .auto) -> ProviderFetchContext {
         ProviderFetchContext(
@@ -19,7 +18,7 @@ struct CLIWebFallbackTests {
     }
 
     @Test
-    func codexFallsBackWhenCookiesMissing() {
+    func `codex falls back when cookies missing`() {
         let context = self.makeContext()
         let strategy = CodexWebDashboardStrategy()
         #expect(strategy.shouldFallback(
@@ -40,7 +39,7 @@ struct CLIWebFallbackTests {
     }
 
     @Test
-    func codexDoesNotFallbackForDashboardDataErrors() {
+    func `codex does not fallback for dashboard data errors`() {
         let context = self.makeContext()
         let strategy = CodexWebDashboardStrategy()
         #expect(!strategy.shouldFallback(
@@ -49,7 +48,7 @@ struct CLIWebFallbackTests {
     }
 
     @Test
-    func claudeFallsBackWhenNoSessionKey() {
+    func `claude falls back when no session key`() {
         let context = self.makeContext()
         let strategy = ClaudeWebFetchStrategy()
         #expect(strategy.shouldFallback(on: ClaudeWebAPIFetcher.FetchError.noSessionKeyFound, context: context))

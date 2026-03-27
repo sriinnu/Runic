@@ -1,11 +1,10 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 
-@Suite
 struct UsagePaceTests {
     @Test
-    func weeklyPace_computesDeltaAndEta() {
+    func `weekly pace computes delta and eta`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 50,
@@ -26,7 +25,7 @@ struct UsagePaceTests {
     }
 
     @Test
-    func weeklyPace_marksLastsToResetWhenUsageIsLow() {
+    func `weekly pace marks lasts to reset when usage is low`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 5,
@@ -44,7 +43,7 @@ struct UsagePaceTests {
     }
 
     @Test
-    func weeklyPace_hidesWhenResetMissingOrOutsideWindow() {
+    func `weekly pace hides when reset missing or outside window`() {
         let now = Date(timeIntervalSince1970: 0)
         let missing = RateWindow(
             usedPercent: 10,
@@ -62,7 +61,7 @@ struct UsagePaceTests {
     }
 
     @Test
-    func weeklyPace_hidesWhenUsageExistsButNoElapsed() {
+    func `weekly pace hides when usage exists but no elapsed`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 12,

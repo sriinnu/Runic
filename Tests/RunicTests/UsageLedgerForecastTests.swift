@@ -1,14 +1,12 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct UsageLedgerForecastTests {
     private let utc = TimeZone(secondsFromGMT: 0)!
 
     @Test
-    func providerForecastUsesObservedDaysInCurrentMonth() {
+    func `provider forecast uses observed days in current month`() {
         let now = self.date(year: 2026, month: 2, day: 20)
         let entries = [
             self.entry(
@@ -50,7 +48,7 @@ struct UsageLedgerForecastTests {
     }
 
     @Test
-    func projectForecastsAreComputedPerProject() {
+    func `project forecasts are computed per project`() {
         let now = self.date(year: 2026, month: 2, day: 20)
         let entries = [
             self.entry(
@@ -91,7 +89,7 @@ struct UsageLedgerForecastTests {
     }
 
     @Test
-    func providerForecastIncludesConfidenceBandQuantilesWhenEnoughDailyHistoryExists() {
+    func `provider forecast includes confidence band quantiles when enough daily history exists`() {
         let now = self.date(year: 2026, month: 2, day: 20)
         let entries = [
             self.entry(
@@ -142,7 +140,7 @@ struct UsageLedgerForecastTests {
     }
 
     @Test
-    func budgetETAIsComputedOnlyWhenForecastBreachesBudget() {
+    func `budget ETA is computed only when forecast breaches budget`() {
         let base = UsageLedgerSpendForecast(
             provider: .codex,
             projectKey: "id:proj-a",

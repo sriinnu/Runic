@@ -5,38 +5,38 @@ enum UsageLedgerSourceFactory {
     static func source(
         for provider: UsageProvider,
         now: Date,
-        maxAgeDays: Int
-    ) -> (any UsageLedgerSource)? {
+        maxAgeDays: Int) -> (any UsageLedgerSource)?
+    {
         switch provider {
         case .claude:
             return ClaudeUsageLogSource(maxAgeDays: maxAgeDays, now: now)
         case .codex:
             return CodexUsageLogSource(maxAgeDays: maxAgeDays, now: now)
         case .copilot,
-            .gemini,
-            .antigravity,
-            .cursor,
-            .factory,
-            .zai,
-            .minimax,
-            .openrouter,
-            .groq,
-            .deepseek,
-            .fireworks,
-            .mistral,
-            .perplexity,
-            .kimi,
-            .auggie,
-            .together,
-            .cohere,
-            .xai,
-            .cerebras,
-            .sambanova,
-            .azure,
-            .bedrock,
-            .vertexai,
-            .qwen:
-            return Self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
+             .gemini,
+             .antigravity,
+             .cursor,
+             .factory,
+             .zai,
+             .minimax,
+             .openrouter,
+             .groq,
+             .deepseek,
+             .fireworks,
+             .mistral,
+             .perplexity,
+             .kimi,
+             .auggie,
+             .together,
+             .cohere,
+             .xai,
+             .cerebras,
+             .sambanova,
+             .azure,
+             .bedrock,
+             .vertexai,
+             .qwen:
+            return self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:
             return nil
         }
@@ -45,8 +45,8 @@ enum UsageLedgerSourceFactory {
     private static func otelHistorySource(
         provider: UsageProvider,
         now: Date,
-        maxAgeDays: Int
-    ) -> (any UsageLedgerSource)? {
+        maxAgeDays: Int) -> (any UsageLedgerSource)?
+    {
         let files = self.otelLedgerFiles(for: provider)
         guard !files.isEmpty else { return nil }
 
@@ -75,7 +75,7 @@ enum UsageLedgerSourceFactory {
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATH"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATH"]),
-        ].flatMap { $0 }
+        ].flatMap(\.self)
 
         let urls = candidatePaths.compactMap(Self.expandTildePath)
         return Self.discoverOTelLedgerFiles(from: urls)
@@ -135,8 +135,7 @@ enum UsageLedgerSourceFactory {
         guard let enumerator = FileManager.default.enumerator(
             at: directory,
             includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else { return [] }
+            options: [.skipsHiddenFiles]) else { return [] }
 
         var files: [URL] = []
         for case let file as URL in enumerator where Self.isSupportedOTelFile(file) {
@@ -145,7 +144,7 @@ enum UsageLedgerSourceFactory {
         return files
     }
 
-    private struct UsageLedgerProviderFilterSource: UsageLedgerSource, Sendable {
+    private struct UsageLedgerProviderFilterSource: UsageLedgerSource {
         private let source: any UsageLedgerSource
         private let provider: UsageProvider
         private let minTimestamp: Date?

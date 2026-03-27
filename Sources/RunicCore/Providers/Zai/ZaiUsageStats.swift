@@ -207,8 +207,8 @@ public enum ZaiModelPricing {
         "glm-4.7-thinking": Tier(inputPerMillion: 0.38, outputPerMillion: 1.75, contextWindow: 203_000),
         "glm-4.6": Tier(inputPerMillion: 0.39, outputPerMillion: 1.74, contextWindow: 205_000),
         "glm-4.6-thinking": Tier(inputPerMillion: 0.39, outputPerMillion: 1.74, contextWindow: 205_000),
-        "glm-4.5v": Tier(inputPerMillion: 0.60, outputPerMillion: 1.80, contextWindow: 66_000),
-        "glm-4.5v-thinking": Tier(inputPerMillion: 0.60, outputPerMillion: 1.80, contextWindow: 66_000),
+        "glm-4.5v": Tier(inputPerMillion: 0.60, outputPerMillion: 1.80, contextWindow: 66000),
+        "glm-4.5v-thinking": Tier(inputPerMillion: 0.60, outputPerMillion: 1.80, contextWindow: 66000),
         "glm-4.5": Tier(inputPerMillion: 0.60, outputPerMillion: 2.20, contextWindow: 131_000),
         "glm-4.5-thinking": Tier(inputPerMillion: 0.60, outputPerMillion: 2.20, contextWindow: 131_000),
         "glm-5": Tier(inputPerMillion: 0.72, outputPerMillion: 2.30, contextWindow: 203_000),
@@ -321,13 +321,15 @@ private struct ZaiQuotaLimitResponse: Decodable {
     let data: ZaiQuotaLimitData?
     let success: Bool?
 
-    var isSuccess: Bool { (self.success ?? (self.code == 200)) && (self.code ?? 200) == 200 }
+    var isSuccess: Bool {
+        (self.success ?? (self.code == 200)) && (self.code ?? 200) == 200
+    }
 
     var errorMessage: String {
         self.msg ?? self.message ?? "Unknown API error (code: \(self.code ?? -1))"
     }
 
-    // Some responses use "message" instead of "msg".
+    /// Some responses use "message" instead of "msg".
     private let message: String?
 
     private enum CodingKeys: String, CodingKey {
@@ -407,8 +409,13 @@ private struct ZaiModelUsageResponse: Decodable {
         let total_tokens: Int?
         let total_prompts: Int?
 
-        var resolvedTotalTokens: Int? { self.totalTokens ?? self.total_tokens }
-        var resolvedTotalPrompts: Int? { self.totalPrompts ?? self.total_prompts }
+        var resolvedTotalTokens: Int? {
+            self.totalTokens ?? self.total_tokens
+        }
+
+        var resolvedTotalPrompts: Int? {
+            self.totalPrompts ?? self.total_prompts
+        }
     }
 
     struct ZaiModelUsageRaw: Decodable {
@@ -420,9 +427,17 @@ private struct ZaiModelUsageResponse: Decodable {
         let prompts: Int?
         let calls: Int?
 
-        var resolvedModelCode: String? { self.modelCode ?? self.model_code ?? self.model }
-        var resolvedTokens: Int { self.tokens ?? self.usage ?? 0 }
-        var resolvedPrompts: Int { self.prompts ?? self.calls ?? 0 }
+        var resolvedModelCode: String? {
+            self.modelCode ?? self.model_code ?? self.model
+        }
+
+        var resolvedTokens: Int {
+            self.tokens ?? self.usage ?? 0
+        }
+
+        var resolvedPrompts: Int {
+            self.prompts ?? self.calls ?? 0
+        }
     }
 }
 
@@ -438,7 +453,10 @@ private struct ZaiToolUsageResponse: Decodable {
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: DynamicKey.self)
             var toolEntries: [ZaiToolUsageRaw] = []
-            if let tools = try? container.decodeIfPresent([ZaiToolUsageRaw].self, forKey: DynamicKey(stringValue: "tools")!) {
+            if let tools = try? container.decodeIfPresent(
+                [ZaiToolUsageRaw].self,
+                forKey: DynamicKey(stringValue: "tools")!)
+            {
                 toolEntries = tools
             } else {
                 // Fallback: try top-level keys as tool names with int values
@@ -458,15 +476,25 @@ private struct ZaiToolUsageResponse: Decodable {
         let count: Int?
         let usage: Int?
 
-        var resolvedName: String? { self.tool ?? self.name }
-        var resolvedCount: Int { self.count ?? self.usage ?? 0 }
+        var resolvedName: String? {
+            self.tool ?? self.name
+        }
+
+        var resolvedCount: Int {
+            self.count ?? self.usage ?? 0
+        }
     }
 
     struct DynamicKey: CodingKey {
         var stringValue: String
         var intValue: Int?
-        init?(stringValue: String) { self.stringValue = stringValue }
-        init?(intValue: Int) { self.stringValue = "\(intValue)"; self.intValue = intValue }
+        init?(stringValue: String) {
+            self.stringValue = stringValue
+        }
+
+        init?(intValue: Int) {
+            self.stringValue = "\(intValue)"; self.intValue = intValue
+        }
     }
 }
 
@@ -508,7 +536,7 @@ public struct ZaiUsageFetcher: Sendable {
     // MARK: - Quota endpoint (required)
 
     private static func fetchQuota(apiKey: String) async throws -> (ZaiLimitEntry?, ZaiLimitEntry?, String?) {
-        let request = try self.makeRequest(url: quotaAPIURL, apiKey: apiKey)
+        let request = try self.makeRequest(url: self.quotaAPIURL, apiKey: apiKey)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -556,7 +584,7 @@ public struct ZaiUsageFetcher: Sendable {
         do {
             return try await self.fetchModelUsage(apiKey: apiKey)
         } catch {
-            Self.log.info("z.ai model-usage endpoint unavailable: \(error.localizedDescription)")
+            self.log.info("z.ai model-usage endpoint unavailable: \(error.localizedDescription)")
             return nil
         }
     }
@@ -616,7 +644,7 @@ public struct ZaiUsageFetcher: Sendable {
         do {
             return try await self.fetchToolUsage(apiKey: apiKey)
         } catch {
-            Self.log.info("z.ai tool-usage endpoint unavailable: \(error.localizedDescription)")
+            self.log.info("z.ai tool-usage endpoint unavailable: \(error.localizedDescription)")
             return nil
         }
     }
@@ -659,11 +687,10 @@ public struct ZaiUsageFetcher: Sendable {
         var request = URLRequest(url: requestURL)
         request.httpMethod = "GET"
         // z.ai expects "Bearer <token>" — add prefix if the user didn't include it.
-        let authValue: String
-        if apiKey.lowercased().hasPrefix("bearer ") {
-            authValue = "Bearer \(apiKey.dropFirst(7).trimmingCharacters(in: .whitespaces))"
+        let authValue = if apiKey.lowercased().hasPrefix("bearer ") {
+            "Bearer \(apiKey.dropFirst(7).trimmingCharacters(in: .whitespaces))"
         } else {
-            authValue = "Bearer \(apiKey)"
+            "Bearer \(apiKey)"
         }
         request.setValue(authValue, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")

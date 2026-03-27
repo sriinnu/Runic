@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct CodexUsageLogSourceTests {
     @Test
-    func codexUsageFallsBackToWorkspacePathFromTurnContext() async throws {
+    func `codex usage falls back to workspace path from turn context`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
             .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)

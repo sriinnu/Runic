@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct TogetherAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum TogetherSettingsError: LocalizedError, Sendable {
+enum TogetherSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

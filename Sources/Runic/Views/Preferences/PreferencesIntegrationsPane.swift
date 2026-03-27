@@ -29,8 +29,13 @@ struct IntegrationsPane: View {
         var isRunning: Bool
         var port: Int
 
-        var statusIndicator: String { "●" }
-        var statusColor: Color { self.isRunning ? .green : .red }
+        var statusIndicator: String {
+            "●"
+        }
+
+        var statusColor: Color {
+            self.isRunning ? .green : .red
+        }
     }
 
     var body: some View {
@@ -523,8 +528,8 @@ private enum VaayuKeychainHelper {
         var result: CFTypeRef?
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: self.service,
+            kSecAttrAccount as String: self.account,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
             kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
@@ -542,12 +547,12 @@ private enum VaayuKeychainHelper {
 
     @discardableResult
     static func save(_ value: String) -> Bool {
-        delete()
+        self.delete()
         let data = Data(value.utf8)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: self.service,
+            kSecAttrAccount as String: self.account,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
         ]
@@ -558,8 +563,8 @@ private enum VaayuKeychainHelper {
     static func delete() -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: self.service,
+            kSecAttrAccount as String: self.account,
         ]
         let status = SecItemDelete(query as CFDictionary)
         return status == errSecSuccess || status == errSecItemNotFound

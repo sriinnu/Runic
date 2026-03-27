@@ -309,7 +309,7 @@ public struct AntigravityStatusProbe: Sendable {
 
     // MARK: - Port detection
 
-    private struct ProcessInfoResult: Sendable {
+    private struct ProcessInfoResult {
         let pid: Int
         let extensionPort: Int?
         let csrfToken: String
@@ -459,7 +459,7 @@ public struct AntigravityStatusProbe: Sendable {
         let body: [String: Any]
     }
 
-    private struct RequestContext: Sendable {
+    private struct RequestContext {
         let httpsPort: Int
         let httpPort: Int?
         let csrfToken: String

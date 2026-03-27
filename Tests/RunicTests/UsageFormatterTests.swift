@@ -1,18 +1,17 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 @testable import Runic
 
-@Suite
 struct UsageFormatterTests {
     @Test
-    func formatsUsageLine() {
+    func `formats usage line`() {
         let line = UsageFormatter.usageLine(remaining: 25, used: 75)
         #expect(line == "25% left")
     }
 
     @Test
-    func relativeUpdatedRecent() {
+    func `relative updated recent`() {
         let now = Date()
         let fiveHoursAgo = now.addingTimeInterval(-5 * 3600)
         let text = UsageFormatter.updatedString(from: fiveHoursAgo, now: now)
@@ -22,7 +21,7 @@ struct UsageFormatterTests {
     }
 
     @Test
-    func absoluteUpdatedOld() {
+    func `absolute updated old`() {
         let now = Date()
         let dayAgo = now.addingTimeInterval(-26 * 3600)
         let text = UsageFormatter.updatedString(from: dayAgo, now: now)
@@ -31,42 +30,42 @@ struct UsageFormatterTests {
     }
 
     @Test
-    func resetCountdown_minutes() {
+    func `reset countdown minutes`() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let reset = now.addingTimeInterval(10 * 60 + 1)
         #expect(UsageFormatter.resetCountdownDescription(from: reset, now: now) == "in 11m")
     }
 
     @Test
-    func resetCountdown_hoursAndMinutes() {
+    func `reset countdown hours and minutes`() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let reset = now.addingTimeInterval(3 * 3600 + 31 * 60)
         #expect(UsageFormatter.resetCountdownDescription(from: reset, now: now) == "in 3h 31m")
     }
 
     @Test
-    func resetCountdown_daysAndHours() {
+    func `reset countdown days and hours`() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let reset = now.addingTimeInterval((26 * 3600) + 10)
         #expect(UsageFormatter.resetCountdownDescription(from: reset, now: now) == "in 1d 2h")
     }
 
     @Test
-    func resetCountdown_exactHour() {
+    func `reset countdown exact hour`() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let reset = now.addingTimeInterval(60 * 60)
         #expect(UsageFormatter.resetCountdownDescription(from: reset, now: now) == "in 1h")
     }
 
     @Test
-    func resetCountdown_pastDate() {
+    func `reset countdown past date`() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let reset = now.addingTimeInterval(-10)
         #expect(UsageFormatter.resetCountdownDescription(from: reset, now: now) == "now")
     }
 
     @Test
-    func modelDisplayNameStripsTrailingDates() {
+    func `model display name strips trailing dates`() {
         #expect(UsageFormatter.modelDisplayName("claude-opus-4-5-20251101") == "claude-opus-4-5")
         #expect(UsageFormatter.modelDisplayName("gpt-4o-2024-08-06") == "gpt-4o")
         #expect(UsageFormatter.modelDisplayName("Claude Opus 4.5 2025 1101") == "Claude Opus 4.5")
@@ -74,12 +73,12 @@ struct UsageFormatterTests {
     }
 
     @Test
-    func cleanPlanMapsOAuthToOllama() {
+    func `clean plan maps O auth to ollama`() {
         #expect(UsageFormatter.cleanPlanName("oauth") == "Ollama")
     }
 
     @Test
-    func modelContextFromKnownModel() {
+    func `model context from known model`() {
         #expect(UsageFormatter.modelContextLabel(for: "gpt-4o") == "ctx 128K")
         #expect(UsageFormatter.modelContextLabel(for: "claude-opus-4-5") == "ctx 200K")
         #expect(UsageFormatter.modelContextLabel(for: "gpt-5") == "ctx 400K")
@@ -89,18 +88,18 @@ struct UsageFormatterTests {
     }
 
     @Test
-    func modelContextFromNameSuffix() {
+    func `model context from name suffix`() {
         #expect(UsageFormatter.modelContextWindow(for: "qwen2.5-128k-instruct") == 128_000)
         #expect(UsageFormatter.modelContextLabel(for: "provider/qwen2.5-2m-long-context") == "ctx 2M")
     }
 
     @Test
-    func modelContextUnknownReturnsNil() {
+    func `model context unknown returns nil`() {
         #expect(UsageFormatter.modelContextWindow(for: "unknown-custom-model-v1") == nil)
     }
 
     @Test
-    func tokenSummaryIncludesBreakdown() {
+    func `token summary includes breakdown`() {
         let totals = UsageLedgerTotals(
             inputTokens: 1000,
             outputTokens: 200,

@@ -5,7 +5,6 @@ import SwiftUI
 /// Performance monitoring dashboard with quality metrics, latency charts, and error tracking
 @MainActor
 struct PerformanceDashboardView: View {
-
     // MARK: - Types
 
     enum TimeRange: String, CaseIterable, Identifiable {
@@ -13,15 +12,19 @@ struct PerformanceDashboardView: View {
         case days7 = "7d"
         case days30 = "30d"
 
-        var id: String { self.rawValue }
+        var id: String {
+            self.rawValue
+        }
 
-        var displayName: String { self.rawValue }
+        var displayName: String {
+            self.rawValue
+        }
 
         var days: Int {
             switch self {
-            case .day24h: return 1
-            case .days7: return 7
-            case .days30: return 30
+            case .day24h: 1
+            case .days7: 7
+            case .days30: 30
             }
         }
     }
@@ -137,7 +140,7 @@ struct PerformanceDashboardView: View {
     }
 
     private var availableModels: [String] {
-        let models = self.stats.compactMap { $0.model }.filter { !$0.isEmpty }
+        let models = self.stats.compactMap(\.model).filter { !$0.isEmpty }
         return Array(Set(models)).sorted()
     }
 
@@ -402,12 +405,12 @@ struct PerformanceDashboardView: View {
 
     private func ratingCount(_ rating: Int, from aggregated: AggregatedStats) -> Int {
         switch rating {
-        case 1: return aggregated.rating1Count
-        case 2: return aggregated.rating2Count
-        case 3: return aggregated.rating3Count
-        case 4: return aggregated.rating4Count
-        case 5: return aggregated.rating5Count
-        default: return 0
+        case 1: aggregated.rating1Count
+        case 2: aggregated.rating2Count
+        case 3: aggregated.rating3Count
+        case 4: aggregated.rating4Count
+        case 5: aggregated.rating5Count
+        default: 0
         }
     }
 
@@ -468,8 +471,7 @@ struct PerformanceDashboardView: View {
             self.stats = try await storage.fetchDailyStats(
                 timeRange: self.selection.timeRange.days,
                 provider: self.selection.provider,
-                model: self.selection.model
-            )
+                model: self.selection.model)
         } catch {
             self.errorMessage = error.localizedDescription
         }

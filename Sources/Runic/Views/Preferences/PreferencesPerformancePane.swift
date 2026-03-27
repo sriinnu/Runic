@@ -23,17 +23,19 @@ struct PerformancePane: View {
     @State private var appeared = false
 
     enum QualityRatingFrequency: String, CaseIterable, Identifiable {
-        case every = "every"
+        case every
         case over1000 = "over_1000"
         case over5000 = "over_5000"
 
-        var id: String { self.rawValue }
+        var id: String {
+            self.rawValue
+        }
 
         var label: String {
             switch self {
-            case .every: return "After every response"
-            case .over1000: return "Only >1000 tokens"
-            case .over5000: return "Only >5000 tokens"
+            case .every: "After every response"
+            case .over1000: "Only >1000 tokens"
+            case .over5000: "Only >5000 tokens"
             }
         }
     }
@@ -47,7 +49,8 @@ struct PerformancePane: View {
                     binding: self.$performanceTrackingEnabled)
 
                 if !self.performanceTrackingEnabled {
-                    Text("Performance tracking is disabled. Historical data is preserved but new metrics won't be collected.")
+                    Text(
+                        "Performance tracking is disabled. Historical data is preserved but new metrics won't be collected.")
                         .font(RunicFont.footnote)
                         .foregroundStyle(.orange)
                         .padding(.vertical, RunicSpacing.xs)
@@ -204,7 +207,8 @@ struct PerformancePane: View {
                     binding: self.$anonymousUsageStatsEnabled)
 
                 if self.anonymousUsageStatsEnabled {
-                    Text("Only aggregate statistics are shared. Request IDs, prompts, and responses are never included.")
+                    Text(
+                        "Only aggregate statistics are shared. Request IDs, prompts, and responses are never included.")
                         .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, RunicSpacing.xs)
@@ -223,8 +227,7 @@ struct PerformancePane: View {
         Task {
             let appSupport = FileManager.default.urls(
                 for: .applicationSupportDirectory,
-                in: .userDomainMask
-            ).first!
+                in: .userDomainMask).first!
             let dbPath = appSupport.appendingPathComponent("Runic/performance.db")
 
             if let attributes = try? FileManager.default.attributesOfItem(atPath: dbPath.path),

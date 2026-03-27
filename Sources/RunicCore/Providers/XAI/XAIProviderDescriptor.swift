@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct XAIApiFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum XAISettingsError: LocalizedError, Sendable {
+enum XAISettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

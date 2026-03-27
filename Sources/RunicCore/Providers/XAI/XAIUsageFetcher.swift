@@ -8,7 +8,7 @@ struct XAIModelsResponse: Decodable {
     }
 }
 
-struct XAIUsageFetcher {
+enum XAIUsageFetcher {
     static let apiURL = URL(string: "https://api.x.ai/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> XAIModelsResponse {
@@ -57,7 +57,7 @@ extension XAIModelsResponse {
     }
 }
 
-enum XAIApiError: LocalizedError, Sendable {
+enum XAIApiError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

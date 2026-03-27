@@ -1,7 +1,7 @@
 import Foundation
 
-struct BedrockModelsResponse: Decodable, Sendable {
-    struct ModelSummary: Decodable, Sendable {
+struct BedrockModelsResponse: Decodable {
+    struct ModelSummary: Decodable {
         let modelID: String?
         let modelName: String?
         let providerName: String?
@@ -14,10 +14,6 @@ struct BedrockModelsResponse: Decodable, Sendable {
     }
 
     let modelSummaries: [ModelSummary]?
-
-    init(modelSummaries: [ModelSummary]?) {
-        self.modelSummaries = modelSummaries
-    }
 }
 
 struct BedrockUsageFetcher {
@@ -141,7 +137,7 @@ extension BedrockModelsResponse {
     }
 }
 
-enum BedrockCLIError: LocalizedError, Sendable {
+enum BedrockCLIError: LocalizedError {
     case awsCLINotFound
     case commandFailed(statusCode: Int, detail: String?)
     case commandTimedOut

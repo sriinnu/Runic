@@ -37,7 +37,7 @@ struct WeeklyActivityChartMenuView: View {
                     .fontWeight(.semibold)
                 Spacer()
                 if model.bars.count > 1 {
-                    let avg = model.totalTokens / max(1, model.bars.filter { $0.totalTokens > 0 }.count)
+                    let avg = model.totalTokens / max(1, model.bars.count(where: { $0.totalTokens > 0 }))
                     Text("\(UsageFormatter.tokenCountString(avg)) avg")
                         .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
@@ -60,7 +60,7 @@ struct WeeklyActivityChartMenuView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks { value in
+                    AxisMarks { _ in
                         AxisValueLabel()
                             .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))

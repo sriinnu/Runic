@@ -8,7 +8,7 @@ struct PerplexityModelsResponse: Decodable {
     }
 }
 
-struct PerplexityUsageFetcher {
+enum PerplexityUsageFetcher {
     static let apiURL = URL(string: "https://api.perplexity.ai/models")!
 
     static func fetchModels(apiKey: String) async throws -> PerplexityModelsResponse {
@@ -57,7 +57,7 @@ extension PerplexityModelsResponse {
     }
 }
 
-enum PerplexityAPIError: LocalizedError, Sendable {
+enum PerplexityAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

@@ -1,11 +1,9 @@
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct UsagePolicyEngineTests {
     @Test
-    func returnsNoneWhenNoRulesMatch() {
+    func `returns none when no rules match`() {
         let context = UsagePolicyContext(
             provider: .codex,
             observedSpendUSD: 45,
@@ -33,7 +31,7 @@ struct UsagePolicyEngineTests {
     }
 
     @Test
-    func selectsStrongestActionAcrossMatchedRules() {
+    func `selects strongest action across matched rules`() {
         let context = UsagePolicyContext(
             provider: .codex,
             observedSpendUSD: 120,
@@ -69,7 +67,7 @@ struct UsagePolicyEngineTests {
     }
 
     @Test
-    func projectedOverrunConditionRespectsThreshold() {
+    func `projected overrun condition respects threshold`() {
         let context = UsagePolicyContext(
             provider: .codex,
             observedSpendUSD: 80,

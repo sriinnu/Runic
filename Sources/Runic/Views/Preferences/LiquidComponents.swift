@@ -85,7 +85,13 @@ private struct ShimmerSweep: View {
         GeometryReader { geo in
             if !self.reduceMotion {
                 LinearGradient(
-                    colors: [.clear, Color.primary.opacity(0.04), Color.primary.opacity(0.07), Color.primary.opacity(0.04), .clear],
+                    colors: [
+                        .clear,
+                        Color.primary.opacity(0.04),
+                        Color.primary.opacity(0.07),
+                        Color.primary.opacity(0.04),
+                        .clear,
+                    ],
                     startPoint: .leading,
                     endPoint: .trailing)
                     .frame(width: geo.size.width * 0.35)
@@ -99,8 +105,8 @@ private struct ShimmerSweep: View {
             guard !self.reduceMotion else { return }
             withAnimation(
                 .easeInOut(duration: 2.8)
-                .repeatForever(autoreverses: false)
-                .delay(self.stableDelay))
+                    .repeatForever(autoreverses: false)
+                    .delay(self.stableDelay))
             {
                 self.offset = 1.4
             }
@@ -125,7 +131,7 @@ private struct RotatingGradientBorder: View {
     ]
 
     var body: some View {
-        if self.isActive && !self.reduceMotion {
+        if self.isActive, !self.reduceMotion {
             TimelineView(.animation(minimumInterval: 1 / 60.0, paused: !self.isActive)) { timeline in
                 let rotation = timeline.date.timeIntervalSinceReferenceDate * 72
                 RoundedRectangle(cornerRadius: self.cornerRadius, style: .continuous)
@@ -195,7 +201,7 @@ private struct LiquidGlassCore: ViewModifier {
                     Color.clear
                         .onContinuousHover { phase in
                             switch phase {
-                            case .active(let pt):
+                            case let .active(pt):
                                 self.hovering = true
                                 self.cursorUnit = UnitPoint(x: pt.x, y: pt.y)
                             case .ended:
@@ -203,8 +209,7 @@ private struct LiquidGlassCore: ViewModifier {
                             }
                         }
                         .frame(width: geo.size.width, height: geo.size.height)
-                }
-            )
+                })
     }
 }
 
@@ -237,11 +242,7 @@ struct LiquidSection<Content: View>: View {
 
 @MainActor
 struct GlassCard<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
+    @ViewBuilder let content: Content
 
     var body: some View {
         self.content
@@ -263,7 +264,7 @@ extension View {
             .scaleEffect(appeared ? 1 : 0.97, anchor: .top)
             .animation(
                 .spring(response: 0.5, dampingFraction: 0.78)
-                .delay(Double(index) * 0.07),
+                    .delay(Double(index) * 0.07),
                 value: appeared)
     }
 }

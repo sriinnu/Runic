@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct SubprocessRunnerTests {
     @Test
-    func readsLargeStdoutWithoutDeadlock() async throws {
+    func `reads large stdout without deadlock`() async throws {
         let result = try await SubprocessRunner.run(
             binary: "/usr/bin/python3",
             arguments: ["-c", "print('x' * 1_000_000)"],

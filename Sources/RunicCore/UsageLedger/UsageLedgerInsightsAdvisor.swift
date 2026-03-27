@@ -97,7 +97,7 @@ public enum UsageLedgerInsightsAdvisor {
             score -= 10
             signals.append("No project-level grouping is available.")
         } else {
-            let unknownProjects = projectBreakdown.filter { $0.displayProjectName == "Unknown project" }.count
+            let unknownProjects = projectBreakdown.count(where: { $0.displayProjectName == "Unknown project" })
             let unknownRatio = Double(unknownProjects) / Double(max(1, projectBreakdown.count))
             if unknownRatio > 0.40 {
                 score -= 10

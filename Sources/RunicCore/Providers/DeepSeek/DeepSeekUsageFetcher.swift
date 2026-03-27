@@ -25,7 +25,7 @@ struct DeepSeekBalanceResponse: Decodable {
     }
 }
 
-struct DeepSeekUsageFetcher {
+enum DeepSeekUsageFetcher {
     static let apiURL = URL(string: "https://api.deepseek.com/user/balance")!
 
     static func fetchBalance(apiKey: String) async throws -> DeepSeekBalanceResponse {
@@ -90,7 +90,7 @@ extension DeepSeekBalanceResponse {
     }
 }
 
-enum DeepSeekAPIError: LocalizedError, Sendable {
+enum DeepSeekAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

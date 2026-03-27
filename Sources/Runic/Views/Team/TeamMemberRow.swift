@@ -174,8 +174,8 @@ struct TeamMember: Identifiable, Hashable, Codable {
             name: "You",
             email: resolvedEmail,
             role: .owner,
-            quotaLimit: 50_000,
-            usedQuota: 12_500,
+            quotaLimit: 50000,
+            usedQuota: 12500,
             isCurrentUser: true)
     }
 }

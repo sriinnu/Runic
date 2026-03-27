@@ -1,6 +1,6 @@
-import Foundation
 import CloudKit
 import CryptoKit
+import Foundation
 import LocalAuthentication
 
 // MARK: - CloudKit Record Type Constants
@@ -18,7 +18,7 @@ extension CloudKitRecordType {
 ///
 /// Using a custom zone allows for atomic batch operations and better
 /// change tracking for team-related records.
-public struct TeamSyncZone {
+public enum TeamSyncZone {
     public static let zoneName = "TeamCollaborationZone"
     public static let ownerName = CKCurrentUserDefaultName
 
@@ -27,7 +27,7 @@ public struct TeamSyncZone {
     }
 
     public static func createZone() -> CKRecordZone {
-        CKRecordZone(zoneID: zoneID)
+        CKRecordZone(zoneID: self.zoneID)
     }
 }
 
@@ -72,8 +72,8 @@ public struct TeamRecord: SyncableRecord {
         updatedAt: Date = Date(),
         description: String? = nil,
         avatarURL: String? = nil,
-        isActive: Bool = true
-    ) {
+        isActive: Bool = true)
+    {
         self.recordID = recordID
         self.version = version
         self.modifiedAt = modifiedAt
@@ -93,26 +93,25 @@ public struct TeamRecord: SyncableRecord {
         let zoneID = TeamSyncZone.zoneID
         let record = CKRecord(
             recordType: recordType,
-            recordID: CKRecord.ID(recordName: recordID, zoneID: zoneID)
-        )
+            recordID: CKRecord.ID(recordName: self.recordID, zoneID: zoneID))
 
         // Sync metadata
-        record["version"] = version as CKRecordValue
-        record["modifiedAt"] = modifiedAt as CKRecordValue
-        record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
+        record["version"] = self.version as CKRecordValue
+        record["modifiedAt"] = self.modifiedAt as CKRecordValue
+        record["lastModifiedDeviceID"] = self.lastModifiedDeviceID as? CKRecordValue
 
         // Team data
-        record["teamID"] = teamID as CKRecordValue
-        record["name"] = name as CKRecordValue
-        record["ownerUserID"] = ownerUserID as CKRecordValue
-        record["totalQuota"] = totalQuota as CKRecordValue
-        record["createdAt"] = createdAt as CKRecordValue
-        record["updatedAt"] = updatedAt as CKRecordValue
-        record["isActive"] = (isActive ? 1 : 0) as CKRecordValue
+        record["teamID"] = self.teamID as CKRecordValue
+        record["name"] = self.name as CKRecordValue
+        record["ownerUserID"] = self.ownerUserID as CKRecordValue
+        record["totalQuota"] = self.totalQuota as CKRecordValue
+        record["createdAt"] = self.createdAt as CKRecordValue
+        record["updatedAt"] = self.updatedAt as CKRecordValue
+        record["isActive"] = (self.isActive ? 1 : 0) as CKRecordValue
 
         // Optional fields
-        record["description"] = description as? CKRecordValue
-        record["avatarURL"] = avatarURL as? CKRecordValue
+        record["description"] = self.description as? CKRecordValue
+        record["avatarURL"] = self.avatarURL as? CKRecordValue
 
         return record
     }
@@ -144,8 +143,7 @@ public struct TeamRecord: SyncableRecord {
             updatedAt: updatedAt,
             description: ckRecord["description"] as? String,
             avatarURL: ckRecord["avatarURL"] as? String,
-            isActive: isActiveInt == 1
-        )
+            isActive: isActiveInt == 1)
     }
 }
 
@@ -180,14 +178,14 @@ public struct TeamMembershipRecord: SyncableRecord {
     public let acceptedAt: Date?
     public let isActive: Bool
 
-    // Reference to parent team
+    /// Reference to parent team
     public let teamRecordName: String
 
     public enum TeamRole: String, Codable, Sendable {
-        case owner = "owner"
-        case admin = "admin"
-        case member = "member"
-        case viewer = "viewer"
+        case owner
+        case admin
+        case member
+        case viewer
     }
 
     public init(
@@ -206,8 +204,8 @@ public struct TeamMembershipRecord: SyncableRecord {
         invitedBy: String? = nil,
         acceptedAt: Date? = nil,
         isActive: Bool = true,
-        teamRecordName: String
-    ) {
+        teamRecordName: String)
+    {
         self.recordID = recordID
         self.version = version
         self.modifiedAt = modifiedAt
@@ -230,37 +228,35 @@ public struct TeamMembershipRecord: SyncableRecord {
         let zoneID = TeamSyncZone.zoneID
         let record = CKRecord(
             recordType: recordType,
-            recordID: CKRecord.ID(recordName: recordID, zoneID: zoneID)
-        )
+            recordID: CKRecord.ID(recordName: self.recordID, zoneID: zoneID))
 
         // Sync metadata
-        record["version"] = version as CKRecordValue
-        record["modifiedAt"] = modifiedAt as CKRecordValue
-        record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
+        record["version"] = self.version as CKRecordValue
+        record["modifiedAt"] = self.modifiedAt as CKRecordValue
+        record["lastModifiedDeviceID"] = self.lastModifiedDeviceID as? CKRecordValue
 
         // Membership data
-        record["membershipID"] = membershipID as CKRecordValue
-        record["teamID"] = teamID as CKRecordValue
-        record["userID"] = userID as CKRecordValue
-        record["role"] = role.rawValue as CKRecordValue
-        record["quotaLimit"] = quotaLimit as? CKRecordValue
-        record["joinedAt"] = joinedAt as CKRecordValue
-        record["isActive"] = (isActive ? 1 : 0) as CKRecordValue
+        record["membershipID"] = self.membershipID as CKRecordValue
+        record["teamID"] = self.teamID as CKRecordValue
+        record["userID"] = self.userID as CKRecordValue
+        record["role"] = self.role.rawValue as CKRecordValue
+        record["quotaLimit"] = self.quotaLimit as? CKRecordValue
+        record["joinedAt"] = self.joinedAt as CKRecordValue
+        record["isActive"] = (self.isActive ? 1 : 0) as CKRecordValue
 
         // Optional encrypted fields
-        if let email = email {
+        if let email {
             let encrypted = try encryptString(email)
             record["email"] = encrypted as CKRecordValue
         }
-        record["displayName"] = displayName as? CKRecordValue
-        record["invitedBy"] = invitedBy as? CKRecordValue
-        record["acceptedAt"] = acceptedAt as? CKRecordValue
+        record["displayName"] = self.displayName as? CKRecordValue
+        record["invitedBy"] = self.invitedBy as? CKRecordValue
+        record["acceptedAt"] = self.acceptedAt as? CKRecordValue
 
         // Reference to parent team
         let teamReference = CKRecord.Reference(
-            recordID: CKRecord.ID(recordName: teamRecordName, zoneID: zoneID),
-            action: .deleteSelf
-        )
+            recordID: CKRecord.ID(recordName: self.teamRecordName, zoneID: zoneID),
+            action: .deleteSelf)
         record["teamReference"] = teamReference as CKRecordValue
 
         return record
@@ -302,8 +298,7 @@ public struct TeamMembershipRecord: SyncableRecord {
             invitedBy: ckRecord["invitedBy"] as? String,
             acceptedAt: ckRecord["acceptedAt"] as? Date,
             isActive: isActiveInt == 1,
-            teamRecordName: teamReference.recordID.recordName
-        )
+            teamRecordName: teamReference.recordID.recordName)
     }
 }
 
@@ -337,14 +332,14 @@ public struct ProjectOwnershipRecord: SyncableRecord {
     public let tags: [String]
     public let isArchived: Bool
 
-    // Reference to team (if team-owned)
+    /// Reference to team (if team-owned)
     public let teamRecordName: String?
 
     public enum AccessLevel: String, Codable, Sendable {
-        case `private` = "private"
+        case `private`
         case teamReadOnly = "team_read_only"
         case teamReadWrite = "team_read_write"
-        case `public` = "public"
+        case `public`
     }
 
     public init(
@@ -362,8 +357,8 @@ public struct ProjectOwnershipRecord: SyncableRecord {
         projectDescription: String? = nil,
         tags: [String] = [],
         isArchived: Bool = false,
-        teamRecordName: String? = nil
-    ) {
+        teamRecordName: String? = nil)
+    {
         self.recordID = recordID
         self.version = version
         self.modifiedAt = modifiedAt
@@ -385,34 +380,32 @@ public struct ProjectOwnershipRecord: SyncableRecord {
         let zoneID = TeamSyncZone.zoneID
         let record = CKRecord(
             recordType: recordType,
-            recordID: CKRecord.ID(recordName: recordID, zoneID: zoneID)
-        )
+            recordID: CKRecord.ID(recordName: self.recordID, zoneID: zoneID))
 
         // Sync metadata
-        record["version"] = version as CKRecordValue
-        record["modifiedAt"] = modifiedAt as CKRecordValue
-        record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
+        record["version"] = self.version as CKRecordValue
+        record["modifiedAt"] = self.modifiedAt as CKRecordValue
+        record["lastModifiedDeviceID"] = self.lastModifiedDeviceID as? CKRecordValue
 
         // Project ownership data
-        record["projectID"] = projectID as CKRecordValue
-        record["teamID"] = teamID as? CKRecordValue
-        record["ownerUserID"] = ownerUserID as CKRecordValue
-        record["sharedWith"] = sharedWith as CKRecordValue
-        record["accessLevel"] = accessLevel.rawValue as CKRecordValue
-        record["createdAt"] = createdAt as CKRecordValue
-        record["isArchived"] = (isArchived ? 1 : 0) as CKRecordValue
+        record["projectID"] = self.projectID as CKRecordValue
+        record["teamID"] = self.teamID as? CKRecordValue
+        record["ownerUserID"] = self.ownerUserID as CKRecordValue
+        record["sharedWith"] = self.sharedWith as CKRecordValue
+        record["accessLevel"] = self.accessLevel.rawValue as CKRecordValue
+        record["createdAt"] = self.createdAt as CKRecordValue
+        record["isArchived"] = (self.isArchived ? 1 : 0) as CKRecordValue
 
         // Optional metadata
-        record["projectName"] = projectName as? CKRecordValue
-        record["projectDescription"] = projectDescription as? CKRecordValue
-        record["tags"] = tags as CKRecordValue
+        record["projectName"] = self.projectName as? CKRecordValue
+        record["projectDescription"] = self.projectDescription as? CKRecordValue
+        record["tags"] = self.tags as CKRecordValue
 
         // Reference to team (if team-owned)
-        if let teamRecordName = teamRecordName {
+        if let teamRecordName {
             let teamReference = CKRecord.Reference(
                 recordID: CKRecord.ID(recordName: teamRecordName, zoneID: zoneID),
-                action: .none
-            )
+                action: .none)
             record["teamReference"] = teamReference as CKRecordValue
         }
 
@@ -450,8 +443,7 @@ public struct ProjectOwnershipRecord: SyncableRecord {
             projectDescription: ckRecord["projectDescription"] as? String,
             tags: ckRecord["tags"] as? [String] ?? [],
             isArchived: isArchivedInt == 1,
-            teamRecordName: teamReference?.recordID.recordName
-        )
+            teamRecordName: teamReference?.recordID.recordName)
     }
 }
 
@@ -484,7 +476,7 @@ public struct TeamUsageSnapshotRecord: SyncableRecord {
     public let mostActiveUser: String?
     public let averageTokensPerMember: Double
 
-    // Reference to parent team
+    /// Reference to parent team
     public let teamRecordName: String
 
     public struct MemberUsageData: Codable, Sendable, Hashable {
@@ -515,8 +507,8 @@ public struct TeamUsageSnapshotRecord: SyncableRecord {
         primaryProvider: String? = nil,
         mostActiveUser: String? = nil,
         averageTokensPerMember: Double = 0.0,
-        teamRecordName: String
-    ) {
+        teamRecordName: String)
+    {
         self.recordID = recordID
         self.version = version
         self.modifiedAt = modifiedAt
@@ -537,36 +529,34 @@ public struct TeamUsageSnapshotRecord: SyncableRecord {
         let zoneID = TeamSyncZone.zoneID
         let record = CKRecord(
             recordType: recordType,
-            recordID: CKRecord.ID(recordName: recordID, zoneID: zoneID)
-        )
+            recordID: CKRecord.ID(recordName: self.recordID, zoneID: zoneID))
 
         // Sync metadata
-        record["version"] = version as CKRecordValue
-        record["modifiedAt"] = modifiedAt as CKRecordValue
-        record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
+        record["version"] = self.version as CKRecordValue
+        record["modifiedAt"] = self.modifiedAt as CKRecordValue
+        record["lastModifiedDeviceID"] = self.lastModifiedDeviceID as? CKRecordValue
 
         // Team usage data
-        record["teamID"] = teamID as CKRecordValue
-        record["date"] = date as CKRecordValue
-        record["totalTokens"] = totalTokens as CKRecordValue
-        record["totalCost"] = totalCost as CKRecordValue
-        record["quotaUsedPercent"] = quotaUsedPercent as CKRecordValue
+        record["teamID"] = self.teamID as CKRecordValue
+        record["date"] = self.date as CKRecordValue
+        record["totalTokens"] = self.totalTokens as CKRecordValue
+        record["totalCost"] = self.totalCost as CKRecordValue
+        record["quotaUsedPercent"] = self.quotaUsedPercent as CKRecordValue
 
         // Encode member usage as JSON
         let encoder = JSONEncoder()
-        let memberUsageData = try encoder.encode(memberUsage)
+        let memberUsageData = try encoder.encode(self.memberUsage)
         record["memberUsage"] = String(data: memberUsageData, encoding: .utf8) as? CKRecordValue
 
         // Optional metrics
-        record["primaryProvider"] = primaryProvider as? CKRecordValue
-        record["mostActiveUser"] = mostActiveUser as? CKRecordValue
-        record["averageTokensPerMember"] = averageTokensPerMember as CKRecordValue
+        record["primaryProvider"] = self.primaryProvider as? CKRecordValue
+        record["mostActiveUser"] = self.mostActiveUser as? CKRecordValue
+        record["averageTokensPerMember"] = self.averageTokensPerMember as CKRecordValue
 
         // Reference to parent team
         let teamReference = CKRecord.Reference(
-            recordID: CKRecord.ID(recordName: teamRecordName, zoneID: zoneID),
-            action: .deleteSelf
-        )
+            recordID: CKRecord.ID(recordName: self.teamRecordName, zoneID: zoneID),
+            action: .deleteSelf)
         record["teamReference"] = teamReference as CKRecordValue
 
         return record
@@ -588,7 +578,8 @@ public struct TeamUsageSnapshotRecord: SyncableRecord {
         // Decode member usage from JSON
         var memberUsage: [String: MemberUsageData] = [:]
         if let memberUsageJSON = ckRecord["memberUsage"] as? String,
-           let data = memberUsageJSON.data(using: .utf8) {
+           let data = memberUsageJSON.data(using: .utf8)
+        {
             let decoder = JSONDecoder()
             memberUsage = (try? decoder.decode([String: MemberUsageData].self, from: data)) ?? [:]
         }
@@ -607,8 +598,7 @@ public struct TeamUsageSnapshotRecord: SyncableRecord {
             primaryProvider: ckRecord["primaryProvider"] as? String,
             mostActiveUser: ckRecord["mostActiveUser"] as? String,
             averageTokensPerMember: ckRecord["averageTokensPerMember"] as? Double ?? 0.0,
-            teamRecordName: teamReference.recordID.recordName
-        )
+            teamRecordName: teamReference.recordID.recordName)
     }
 }
 
@@ -616,7 +606,6 @@ public struct TeamUsageSnapshotRecord: SyncableRecord {
 
 /// Helper methods for querying team-related records
 public enum TeamRecordQuery {
-
     /// Creates a predicate to query teams by owner
     public static func teamsByOwner(_ ownerUserID: String) -> NSPredicate {
         NSPredicate(format: "ownerUserID == %@", ownerUserID)
@@ -644,7 +633,11 @@ public enum TeamRecordQuery {
 
     /// Creates a predicate to query team usage snapshots by date range
     public static func teamUsageByDateRange(teamID: String, startDate: Date, endDate: Date) -> NSPredicate {
-        NSPredicate(format: "teamID == %@ AND date >= %@ AND date <= %@", teamID, startDate as NSDate, endDate as NSDate)
+        NSPredicate(
+            format: "teamID == %@ AND date >= %@ AND date <= %@",
+            teamID,
+            startDate as NSDate,
+            endDate as NSDate)
     }
 
     /// Creates a predicate to query latest team usage
@@ -748,7 +741,7 @@ private func saveToKeychain(key: String, data: Data) {
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
         kSecValueData as String: data,
-        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
     ]
     SecItemDelete(query as CFDictionary)
     SecItemAdd(query as CFDictionary, nil)
@@ -761,7 +754,7 @@ private func loadFromKeychain(key: String) -> Data? {
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
         kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
-        kSecReturnData as String: true
+        kSecReturnData as String: true,
     ]
     let authContext = LAContext()
     authContext.interactionNotAllowed = true

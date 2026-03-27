@@ -1,6 +1,6 @@
+import Foundation
 import RunicCore
 import RunicMacroSupport
-import Foundation
 
 @ProviderImplementationRegistration
 struct GeminiProviderImplementation: ProviderImplementation {

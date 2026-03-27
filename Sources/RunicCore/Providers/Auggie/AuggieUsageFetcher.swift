@@ -1,6 +1,6 @@
 import Foundation
 
-struct AuggieUsageMetrics: Sendable {
+struct AuggieUsageMetrics {
     let requestCount: Int?
     let totalTokens: Int?
     let inputTokens: Int?
@@ -46,7 +46,7 @@ struct AuggieUsageFetcher {
             URLQueryItem(name: "window", value: "day"),
             URLQueryItem(name: "days", value: "1"),
         ]
-        let url = components?.url ?? baseURL
+        let url = components?.url ?? self.baseURL
 
         var request = URLRequest(url: url)
         request.timeoutInterval = Self.requestTimeout
@@ -121,7 +121,7 @@ struct AuggieUsageFetcher {
     }
 }
 
-enum AuggieAPIError: LocalizedError, Sendable {
+enum AuggieAPIError: LocalizedError {
     case invalidResponse
     case decodingError
     case httpError(statusCode: Int, body: String?)

@@ -2,10 +2,9 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct OpenAIDashboardFetcherCreditsWaitTests {
     @Test
-    func waitsAfterScrollRequest() {
+    func `waits after scroll request`() {
         let now = Date()
         let shouldWait = OpenAIDashboardFetcher.shouldWaitForCreditsHistory(.init(
             now: now,
@@ -18,7 +17,7 @@ struct OpenAIDashboardFetcherCreditsWaitTests {
     }
 
     @Test
-    func waitsBrieflyWhenHeaderVisibleButTableEmpty() {
+    func `waits briefly when header visible but table empty`() {
         let now = Date()
         let visibleAt = now.addingTimeInterval(-1.0)
         let shouldWait = OpenAIDashboardFetcher.shouldWaitForCreditsHistory(.init(
@@ -32,7 +31,7 @@ struct OpenAIDashboardFetcherCreditsWaitTests {
     }
 
     @Test
-    func stopsWaitingAfterHeaderHasBeenVisibleLongEnough() {
+    func `stops waiting after header has been visible long enough`() {
         let now = Date()
         let visibleAt = now.addingTimeInterval(-3.0)
         let shouldWait = OpenAIDashboardFetcher.shouldWaitForCreditsHistory(.init(
@@ -46,7 +45,7 @@ struct OpenAIDashboardFetcherCreditsWaitTests {
     }
 
     @Test
-    func waitsBrieflyAfterFirstDashboardSignalEvenWhenHeaderNotPresentYet() {
+    func `waits briefly after first dashboard signal even when header not present yet`() {
         let now = Date()
         let startedAt = now.addingTimeInterval(-2.0)
         let shouldWait = OpenAIDashboardFetcher.shouldWaitForCreditsHistory(.init(
@@ -60,7 +59,7 @@ struct OpenAIDashboardFetcherCreditsWaitTests {
     }
 
     @Test
-    func stopsWaitingEventuallyWhenHeaderNeverAppears() {
+    func `stops waiting eventually when header never appears`() {
         let now = Date()
         let startedAt = now.addingTimeInterval(-7.0)
         let shouldWait = OpenAIDashboardFetcher.shouldWaitForCreditsHistory(.init(

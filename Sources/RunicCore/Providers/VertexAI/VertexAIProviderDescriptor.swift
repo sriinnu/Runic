@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -75,7 +75,7 @@ struct VertexAICLIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveProject(context: ProviderFetchContext) -> String? {
-        if let project = Self.cleaned(context.settings?.vertexai?.project) {
+        if let project = cleaned(context.settings?.vertexai?.project) {
             return project
         }
         if let project = Self.cleaned(context.env["VERTEX_AI_PROJECT"]) {
@@ -91,7 +91,7 @@ struct VertexAICLIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveLocation(context: ProviderFetchContext) -> String? {
-        if let location = Self.cleaned(context.settings?.vertexai?.location) {
+        if let location = cleaned(context.settings?.vertexai?.location) {
             return location
         }
         if let location = Self.cleaned(context.env["VERTEX_AI_LOCATION"]) {
@@ -110,13 +110,13 @@ struct VertexAICLIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum VertexAISettingsError: LocalizedError, Sendable {
+enum VertexAISettingsError: LocalizedError {
     case missingProject
 
     var errorDescription: String? {
         switch self {
         case .missingProject:
-            return "Google Cloud project not found. Set it in Preferences \u{2192} Providers \u{2192} Vertex AI or " +
+            "Google Cloud project not found. Set it in Preferences \u{2192} Providers \u{2192} Vertex AI or " +
                 "export VERTEX_AI_PROJECT."
         }
     }

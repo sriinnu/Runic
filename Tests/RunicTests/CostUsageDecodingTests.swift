@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct CostUsageDecodingTests {
     @Test
-    func decodesDailyReportTypeFormat() throws {
+    func `decodes daily report type format`() throws {
         let json = """
         {
           "type": "daily",
@@ -45,7 +43,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesDailyReportLegacyFormat() throws {
+    func `decodes daily report legacy format`() throws {
         let json = """
         {
           "daily": [
@@ -81,7 +79,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesLegacyCacheTokenKeys() throws {
+    func `decodes legacy cache token keys`() throws {
         let json = """
         {
           "type": "daily",
@@ -109,7 +107,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesDailyReportLegacyFormatWithModelMap() throws {
+    func `decodes daily report legacy format with model map`() throws {
         let json = """
         {
           "daily": [
@@ -143,7 +141,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesDailyReportLegacyFormatWithModelMapSorted() throws {
+    func `decodes daily report legacy format with model map sorted`() throws {
         let json = """
         {
           "daily": [
@@ -166,7 +164,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesDailyReportLegacyFormatWithEmptyModelMapAsNil() throws {
+    func `decodes daily report legacy format with empty model map as nil`() throws {
         let json = """
         {
           "daily": [
@@ -185,7 +183,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesDailyReportLegacyFormatPrefersModelsUsedListOverModelsMap() throws {
+    func `decodes daily report legacy format prefers models used list over models map`() throws {
         let json = """
         {
           "daily": [
@@ -207,7 +205,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesDailyReportLegacyFormatWithModelsList() throws {
+    func `decodes daily report legacy format with models list`() throws {
         let json = """
         {
           "daily": [
@@ -226,7 +224,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesDailyReportLegacyFormatWithInvalidModelsField() throws {
+    func `decodes daily report legacy format with invalid models field`() throws {
         let json = """
         {
           "daily": [
@@ -245,7 +243,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func decodesMonthlyReportLegacyFormat() throws {
+    func `decodes monthly report legacy format`() throws {
         let json = """
         {
           "monthly": [
@@ -270,7 +268,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func selectsMostRecentSession() throws {
+    func `selects most recent session`() throws {
         let json = """
         {
           "type": "session",
@@ -306,7 +304,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func tokenSnapshotSelectsMostRecentDay() throws {
+    func `token snapshot selects most recent day`() throws {
         let json = """
         {
           "type": "daily",
@@ -339,7 +337,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func tokenSnapshotUsesSummaryTotalCostWhenAvailable() throws {
+    func `token snapshot uses summary total cost when available`() throws {
         let json = """
         {
           "type": "daily",
@@ -359,7 +357,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func tokenSnapshotFallsBackToSummedEntriesWhenSummaryMissing() throws {
+    func `token snapshot falls back to summed entries when summary missing`() throws {
         let json = """
         {
           "type": "daily",
@@ -376,7 +374,7 @@ struct CostUsageDecodingTests {
     }
 
     @Test
-    func tokenSnapshotReturnsNilTotalWhenNoCostsPresent() throws {
+    func `token snapshot returns nil total when no costs present`() throws {
         let json = """
         {
           "type": "daily",

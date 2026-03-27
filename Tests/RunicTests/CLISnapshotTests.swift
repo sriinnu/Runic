@@ -3,10 +3,9 @@ import RunicCore
 import Testing
 @testable import RunicCLI
 
-@Suite
 struct CLISnapshotTests {
     @Test
-    func rendersCodexTextSnapshot() {
+    func `renders codex text snapshot`() {
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
             accountEmail: "user@example.com",
@@ -34,7 +33,7 @@ struct CLISnapshotTests {
     }
 
     @Test
-    func rendersClaudeSnapshotWithoutWeeklyWhenMissing() {
+    func `renders claude snapshot without weekly when missing`() {
         let snapshot = UsageSnapshot(
             primary: .init(usedPercent: 2, windowMinutes: nil, resetsAt: nil, resetDescription: "3pm (Europe/Vienna)"),
             secondary: nil,
@@ -52,7 +51,7 @@ struct CLISnapshotTests {
     }
 
     @Test
-    func appliesAnsiColorsWhenEnabled() {
+    func `applies ansi colors when enabled`() {
         let snapshot = UsageSnapshot(
             primary: .init(usedPercent: 95, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
             secondary: .init(usedPercent: 80, windowMinutes: 10080, resetsAt: nil, resetDescription: nil),

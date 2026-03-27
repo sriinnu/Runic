@@ -1,6 +1,6 @@
-import RunicCore
-import Helix
 import Foundation
+import Helix
+import RunicCore
 
 @main
 enum RunicCLI {
@@ -24,7 +24,10 @@ enum RunicCLI {
                 OptionDefinition(label: "format", names: [.long("format")], help: "Output format: text | json"),
             ],
             flags: [
-                FlagDefinition(label: "verbose", names: [.short("v"), .long("verbose")], help: "Enable verbose logging"),
+                FlagDefinition(
+                    label: "verbose",
+                    names: [.short("v"), .long("verbose")],
+                    help: "Enable verbose logging"),
                 FlagDefinition(label: "json", names: [.long("json")], help: "Output JSON format"),
                 FlagDefinition(label: "pretty", names: [.long("pretty")], help: "Pretty-print output"),
                 FlagDefinition(label: "noColor", names: [.long("no-color")], help: "Disable ANSI colors"),
@@ -36,7 +39,10 @@ enum RunicCLI {
                 OptionDefinition(label: "format", names: [.long("format")], help: "Output format: text | json"),
             ],
             flags: [
-                FlagDefinition(label: "verbose", names: [.short("v"), .long("verbose")], help: "Enable verbose logging"),
+                FlagDefinition(
+                    label: "verbose",
+                    names: [.short("v"), .long("verbose")],
+                    help: "Enable verbose logging"),
                 FlagDefinition(label: "json", names: [.long("json")], help: "Output JSON format"),
                 FlagDefinition(label: "pretty", names: [.long("pretty")], help: "Pretty-print output"),
                 FlagDefinition(label: "noColor", names: [.long("no-color")], help: "Disable ANSI colors"),
@@ -45,19 +51,37 @@ enum RunicCLI {
 
         let insightsSignature = CommandSignature(
             options: [
-                OptionDefinition(label: "provider", names: [.long("provider")], help: "Provider to analyze (claude, codex, or all)"),
-                OptionDefinition(label: "view", names: [.long("view")], help: "View: daily | session | blocks | models | projects | comparative | efficiency"),
+                OptionDefinition(
+                    label: "provider",
+                    names: [.long("provider")],
+                    help: "Provider to analyze (claude, codex, or all)"),
+                OptionDefinition(
+                    label: "view",
+                    names: [.long("view")],
+                    help: "View: daily | session | blocks | models | projects | comparative | efficiency"),
                 OptionDefinition(label: "project", names: [.long("project")], help: "Filter to a specific project"),
-                OptionDefinition(label: "timezone", names: [.long("timezone")], help: "Timezone identifier (defaults to local)"),
-                OptionDefinition(label: "granularity", names: [.long("granularity")], help: "Time granularity: hourly (for daily view)"),
-                OptionDefinition(label: "gitDirectory", names: [.long("git-directory")], help: "Path to .git directory (defaults to current directory)"),
+                OptionDefinition(
+                    label: "timezone",
+                    names: [.long("timezone")],
+                    help: "Timezone identifier (defaults to local)"),
+                OptionDefinition(
+                    label: "granularity",
+                    names: [.long("granularity")],
+                    help: "Time granularity: hourly (for daily view)"),
+                OptionDefinition(
+                    label: "gitDirectory",
+                    names: [.long("git-directory")],
+                    help: "Path to .git directory (defaults to current directory)"),
             ],
             flags: [
                 FlagDefinition(label: "json", names: [.long("json")], help: "Output JSON format"),
                 FlagDefinition(label: "pretty", names: [.long("pretty")], help: "Pretty-print output"),
                 FlagDefinition(label: "noColor", names: [.long("no-color")], help: "Disable ANSI colors"),
                 FlagDefinition(label: "budget", names: [.long("budget")], help: "Include budget tracking information"),
-                FlagDefinition(label: "withCommits", names: [.long("with-commits")], help: "Link usage entries to git commits"),
+                FlagDefinition(
+                    label: "withCommits",
+                    names: [.long("with-commits")],
+                    help: "Link usage entries to git commits"),
             ])
 
         let usageDescriptor = CommandDescriptor(
@@ -118,7 +142,7 @@ enum RunicCLI {
         }
 
         let fetcher = UsageFetcher()
-        var output: String = ""
+        var output = ""
 
         for provider in providers {
             do {
@@ -155,11 +179,14 @@ enum RunicCLI {
             }
         }
 
-        if isPretty && isJson {
+        if isPretty, isJson {
             if let data = output.data(using: .utf8),
                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let prettyData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
-               let pretty = String(data: prettyData, encoding: .utf8) {
+               let prettyData = try? JSONSerialization.data(
+                   withJSONObject: json,
+                   options: [.prettyPrinted, .sortedKeys]),
+               let pretty = String(data: prettyData, encoding: .utf8)
+            {
                 print(pretty)
             } else {
                 print(output)
@@ -183,7 +210,7 @@ enum RunicCLI {
             guard let p = UsageProvider(rawValue: providerName) else {
                 Self.exit(code: 1, message: "Unknown provider: \(providerName)")
             }
-            if p != .claude && p != .codex {
+            if p != .claude, p != .codex {
                 Self.exit(code: 1, message: "Cost is only supported for claude and codex")
             }
             providers = [p]
@@ -192,7 +219,7 @@ enum RunicCLI {
         }
 
         let fetcher = CostUsageFetcher()
-        var output: String = ""
+        var output = ""
 
         for provider in providers {
             do {
@@ -207,7 +234,7 @@ enum RunicCLI {
             }
         }
 
-        if isPretty && isJson {
+        if isPretty, isJson {
             print("{\"cost\": \"output available in text format\"}")
         } else {
             print(output)
@@ -365,7 +392,8 @@ enum RunicCLI {
         return summaries.map { summary in
             guard let projectID = summary.projectID,
                   let budget = budgetsData.budgets[projectID],
-                  budget.enabled else {
+                  budget.enabled
+            else {
                 return ProjectBudgetSummary(
                     provider: summary.provider,
                     projectID: summary.projectID,
@@ -468,7 +496,11 @@ enum RunicCLI {
         .sorted { $0.requestCount > $1.requestCount }
     }
 
-    private static func renderInsightsWithCommits(_ entriesWithCommits: [UsageWithCommit], isJson: Bool, isPretty: Bool) {
+    private static func renderInsightsWithCommits(
+        _ entriesWithCommits: [UsageWithCommit],
+        isJson: Bool,
+        isPretty: Bool)
+    {
         if isJson {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -504,7 +536,7 @@ enum RunicCLI {
         }
     }
 
-    private static func renderInsightsOutput<T: Encodable>(_ payload: T, isJson: Bool, isPretty: Bool) {
+    private static func renderInsightsOutput(_ payload: some Encodable, isJson: Bool, isPretty: Bool) {
         if isJson {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -525,7 +557,8 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print("\(summary.dayKey) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                print(
+                    "\(summary.dayKey) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
             }
             return
         }
@@ -534,7 +567,8 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print("\(summary.sessionID) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                print(
+                    "\(summary.sessionID) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
             }
             return
         }
@@ -543,7 +577,8 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print("\(summary.start) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                print(
+                    "\(summary.start) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
             }
             return
         }
@@ -552,7 +587,8 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print("\(summary.model) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                print(
+                    "\(summary.model) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
             }
             return
         }
@@ -562,7 +598,8 @@ enum RunicCLI {
                 let project = summary.projectID ?? "unknown"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
                 let models = summary.modelsUsed.isEmpty ? "no models" : summary.modelsUsed.joined(separator: ", ")
-                print("\(project) - \(summary.provider.rawValue) - \(summary.totals.totalTokens) tokens - \(costText) - \(models)")
+                print(
+                    "\(project) - \(summary.provider.rawValue) - \(summary.totals.totalTokens) tokens - \(costText) - \(models)")
             }
             return
         }
@@ -571,7 +608,8 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print("\(summary.hourKey) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText) - \(summary.requestCount) requests")
+                print(
+                    "\(summary.hourKey) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText) - \(summary.requestCount) requests")
             }
             return
         }
@@ -594,7 +632,8 @@ enum RunicCLI {
             for comparison in comparisons {
                 let costPerToken = String(format: "$%.6f", comparison.costPerToken)
                 let totalCost = String(format: "$%.2f", comparison.totalCost)
-                print("#\(comparison.rank ?? 0) \(comparison.model) - \(costPerToken)/token - Total: \(totalCost) - Tokens: \(comparison.totalTokens) - Requests: \(comparison.requestCount)")
+                print(
+                    "#\(comparison.rank ?? 0) \(comparison.model) - \(costPerToken)/token - Total: \(totalCost) - Tokens: \(comparison.totalTokens) - Requests: \(comparison.requestCount)")
             }
             return
         }
@@ -605,7 +644,8 @@ enum RunicCLI {
                 let costPerReq = metric.costPerRequest.map { String(format: "$%.4f", $0) } ?? "n/a"
                 let cacheHit = String(format: "%.1f%%", metric.cacheHitRate)
                 let totalCost = metric.totalCost.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print("\(metric.model) - \(metric.requestCount) reqs - \(tokensPerReq) tok/req - \(costPerReq)/req - Cache: \(cacheHit) - Total: \(totalCost)")
+                print(
+                    "\(metric.model) - \(metric.requestCount) reqs - \(tokensPerReq) tok/req - \(costPerReq)/req - Cache: \(cacheHit) - Total: \(totalCost)")
             }
             return
         }
@@ -727,8 +767,8 @@ enum RunicCLI {
     private static func creditsString(from remaining: Double) -> String {
         if remaining >= 1_000_000 {
             return String(format: "%.1fM", remaining / 1_000_000)
-        } else if remaining >= 1_000 {
-            return String(format: "%.1fK", remaining / 1_000)
+        } else if remaining >= 1000 {
+            return String(format: "%.1fK", remaining / 1000)
         }
         return String(format: "%.0f", remaining)
     }
@@ -736,8 +776,8 @@ enum RunicCLI {
     private static func formatNumber(_ n: Int) -> String {
         if n >= 1_000_000 {
             return String(format: "%.1fM", Double(n) / 1_000_000)
-        } else if n >= 1_000 {
-            return String(format: "%.1fK", Double(n) / 1_000)
+        } else if n >= 1000 {
+            return String(format: "%.1fK", Double(n) / 1000)
         }
         return "\(n)"
     }
@@ -788,7 +828,8 @@ enum RunicCLI {
             print("insights - Analyze local usage logs")
             print("  Options:")
             print("    --provider PROVIDER      Provider to analyze (claude, codex, all)")
-            print("    --view VIEW              daily | session | blocks | models | projects | comparative | efficiency")
+            print(
+                "    --view VIEW              daily | session | blocks | models | projects | comparative | efficiency")
             print("    --project PROJECT        Filter to a specific project")
             print("    --timezone TZ            Timezone identifier (defaults to local)")
             print("    --granularity GRAN       Time granularity: hourly (for daily view)")
@@ -808,7 +849,7 @@ enum RunicCLI {
             print("    comparative              Model cost-per-token comparison with rankings")
             print("    efficiency               Efficiency metrics (tokens/request, cost/request, cache hit rate)")
         }
-        if command != nil && command != "usage" && command != "cost" && command != "insights" {
+        if command != nil, command != "usage", command != "cost", command != "insights" {
             print("Unknown command: \(command ?? "")")
         }
         Foundation.exit(0)
@@ -820,7 +861,7 @@ enum RunicCLI {
     }
 
     private static func exit(code: Int32, message: String? = nil) -> Never {
-        if let message = message {
+        if let message {
             FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
         }
         Foundation.exit(code)
@@ -834,7 +875,7 @@ struct UsageCommand {
     var json: Bool = false
     var pretty: Bool = false
     var noColor: Bool = false
-    var provider: String? = nil
+    var provider: String?
     var format: String = "text"
 }
 
@@ -843,7 +884,7 @@ struct CostCommand {
     var json: Bool = false
     var pretty: Bool = false
     var noColor: Bool = false
-    var provider: String? = nil
+    var provider: String?
     var format: String = "text"
     var refresh: Bool = false
 }
@@ -852,12 +893,12 @@ struct InsightsCommand {
     var json: Bool = false
     var pretty: Bool = false
     var noColor: Bool = false
-    var provider: String? = nil
+    var provider: String?
     var view: String = "daily"
-    var project: String? = nil
-    var timezone: String? = nil
-    var granularity: String? = nil
-    var gitDirectory: String? = nil
+    var project: String?
+    var timezone: String?
+    var granularity: String?
+    var gitDirectory: String?
     var budget: Bool = false
     var withCommits: Bool = false
 }

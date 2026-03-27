@@ -2,11 +2,14 @@ import Foundation
 import RunicCore
 
 /// Storage for project budget limits and alert thresholds
-public struct ProjectBudgetStore {
+public enum ProjectBudgetStore {
     // MARK: - Types
 
     public struct ProjectBudget: Codable, Sendable, Identifiable {
-        public var id: String { projectID }
+        public var id: String {
+            self.projectID
+        }
+
         public let projectID: String
         public var projectName: String?
         public var monthlyLimit: Double
@@ -20,8 +23,8 @@ public struct ProjectBudgetStore {
             monthlyLimit: Double,
             alertThreshold: Double = 0.8,
             enabled: Bool = true,
-            createdAt: Date = Date()
-        ) {
+            createdAt: Date = Date())
+        {
             self.projectID = projectID
             self.projectName = projectName
             self.monthlyLimit = monthlyLimit
@@ -53,7 +56,7 @@ public struct ProjectBudgetStore {
     // MARK: - Public Methods
 
     public static func load() -> BudgetsData {
-        guard FileManager.default.fileExists(atPath: storageURL.path) else {
+        guard FileManager.default.fileExists(atPath: self.storageURL.path) else {
             return BudgetsData()
         }
 
@@ -74,26 +77,26 @@ public struct ProjectBudgetStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
         let data = try encoder.encode(budgetsData)
-        try data.write(to: storageURL, options: .atomic)
+        try data.write(to: self.storageURL, options: .atomic)
     }
 
     public static func getBudget(projectID: String) -> ProjectBudget? {
-        load().budgets[projectID]
+        self.load().budgets[projectID]
     }
 
     public static func setBudget(_ budget: ProjectBudget) throws {
-        var data = load()
+        var data = self.load()
         data.budgets[budget.projectID] = budget
-        try save(data)
+        try self.save(data)
     }
 
     public static func removeBudget(projectID: String) throws {
-        var data = load()
+        var data = self.load()
         data.budgets.removeValue(forKey: projectID)
-        try save(data)
+        try self.save(data)
     }
 
     public static func getAllBudgets() -> [ProjectBudget] {
-        Array(load().budgets.values).sorted { $0.createdAt < $1.createdAt }
+        Array(self.load().budgets.values).sorted { $0.createdAt < $1.createdAt }
     }
 }

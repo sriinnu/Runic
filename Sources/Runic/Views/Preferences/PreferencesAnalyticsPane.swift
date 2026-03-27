@@ -311,10 +311,9 @@ struct AnalyticsPane: View {
                     updatedRule.enabled = enabled
                     try? AlertRuleStore.updateRule(updatedRule)
                     self.alertsData = AlertRuleStore.load()
-                }
-            ))
-            .toggleStyle(.switch)
-            .controlSize(.small)
+                }))
+                .toggleStyle(.switch)
+                .controlSize(.small)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 HStack(spacing: RunicSpacing.xs) {
@@ -398,13 +397,11 @@ struct AnalyticsPane: View {
     // MARK: - Helpers
 
     private func severityBadge(_ severity: AlertRuleStore.AlertSeverity) -> some View {
-        let color: Color = {
-            switch severity {
-            case .info: return .blue
-            case .warning: return .orange
-            case .critical: return .red
-            }
-        }()
+        let color: Color = switch severity {
+        case .info: .blue
+        case .warning: .orange
+        case .critical: .red
+        }
 
         return Text(severity.rawValue.uppercased())
             .font(RunicFont.caption2.weight(.semibold))
@@ -417,10 +414,10 @@ struct AnalyticsPane: View {
 
     private func alertTypeLabel(_ type: AlertRuleStore.AlertType) -> String {
         switch type {
-        case .projectBudget: return "Project Budget"
-        case .usageVelocity: return "Usage Velocity"
-        case .costAnomaly: return "Cost Anomaly"
-        case .quotaThreshold: return "Quota Threshold"
+        case .projectBudget: "Project Budget"
+        case .usageVelocity: "Usage Velocity"
+        case .costAnomaly: "Cost Anomaly"
+        case .quotaThreshold: "Quota Threshold"
         }
     }
 
@@ -586,8 +583,7 @@ private struct AnalyticsRuleEditorSheet: View {
                         notifyWebhook: self.notifyWebhook,
                         webhookURL: self.webhookURL.isEmpty ? nil : self.webhookURL,
                         enabled: self.rule?.enabled ?? true,
-                        createdAt: self.rule?.createdAt ?? Date()
-                    )
+                        createdAt: self.rule?.createdAt ?? Date())
                     self.onSave(newRule)
                     self.dismiss()
                 }

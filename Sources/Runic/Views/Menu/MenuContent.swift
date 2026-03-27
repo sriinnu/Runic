@@ -4,16 +4,16 @@ import SwiftUI
 
 enum MenuContentMetrics {
     /// Horizontal padding for menu content
-    static let horizontalPadding: CGFloat = RunicSpacing.sm  // 12
+    static let horizontalPadding: CGFloat = RunicSpacing.sm // 12
 
     /// Vertical padding for menu content
-    static let verticalPadding: CGFloat = RunicSpacing.xs  // 8
+    static let verticalPadding: CGFloat = RunicSpacing.xs // 8
 
     /// Spacing between menu sections
-    static let sectionSpacing: CGFloat = RunicSpacing.xs  // 8
+    static let sectionSpacing: CGFloat = RunicSpacing.xs // 8
 
     /// Spacing between menu entries
-    static let entrySpacing: CGFloat = RunicSpacing.xxs  // 4
+    static let entrySpacing: CGFloat = RunicSpacing.xxs // 4
 
     /// Minimum menu width
     static let minWidth: CGFloat = 290
@@ -90,7 +90,9 @@ struct MenuContent: View {
         }
     }
 
-    private func iconName(for action: MenuDescriptor.MenuAction) -> String? { action.systemImageName }
+    private func iconName(for action: MenuDescriptor.MenuAction) -> String? {
+        action.systemImageName
+    }
 
     private func perform(_ action: MenuDescriptor.MenuAction) {
         switch action {

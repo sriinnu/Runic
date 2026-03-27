@@ -26,8 +26,8 @@ public struct Team: Codable, Sendable, Identifiable {
         totalQuota: Int,
         members: [TeamMembership] = [],
         createdAt: Date = Date(),
-        updatedAt: Date = Date()
-    ) {
+        updatedAt: Date = Date())
+    {
         self.id = id
         self.name = name
         self.ownerUserID = ownerUserID
@@ -41,22 +41,22 @@ public struct Team: Codable, Sendable, Identifiable {
 extension Team {
     /// Total number of team members including owner
     public var memberCount: Int {
-        return members.count
+        self.members.count
     }
 
     /// Get all admin users (owner + admins)
     public var adminUserIDs: [String] {
-        return members.filter { $0.role == .owner || $0.role == .admin }.map(\.userID)
+        self.members.filter { $0.role == .owner || $0.role == .admin }.map(\.userID)
     }
 
     /// Check if a user is a member of this team
     public func hasMember(userID: String) -> Bool {
-        return members.contains { $0.userID == userID }
+        self.members.contains { $0.userID == userID }
     }
 
     /// Get membership for a specific user
     public func membership(for userID: String) -> TeamMembership? {
-        return members.first { $0.userID == userID }
+        self.members.first { $0.userID == userID }
     }
 
     /// Check if user has admin privileges
@@ -67,12 +67,12 @@ extension Team {
 
     /// Calculate total quota allocated to members with individual limits
     public var allocatedQuota: Int {
-        return members.compactMap(\.quotaLimit).reduce(0, +)
+        self.members.compactMap(\.quotaLimit).reduce(0, +)
     }
 
     /// Remaining unallocated quota
     public var unallocatedQuota: Int {
-        return max(0, totalQuota - allocatedQuota)
+        max(0, self.totalQuota - self.allocatedQuota)
     }
 }
 
@@ -93,8 +93,8 @@ public struct TeamMembership: Codable, Sendable, Identifiable {
         teamID: String,
         role: TeamRole,
         quotaLimit: Int? = nil,
-        joinedAt: Date = Date()
-    ) {
+        joinedAt: Date = Date())
+    {
         self.id = id
         self.userID = userID
         self.teamID = teamID
@@ -107,27 +107,27 @@ public struct TeamMembership: Codable, Sendable, Identifiable {
 extension TeamMembership {
     /// Check if this member can manage other members
     public var canManageMembers: Bool {
-        return role == .owner || role == .admin
+        self.role == .owner || self.role == .admin
     }
 
     /// Check if this member can modify team settings
     public var canModifyTeamSettings: Bool {
-        return role == .owner || role == .admin
+        self.role == .owner || self.role == .admin
     }
 
     /// Check if this member can invite others
     public var canInviteMembers: Bool {
-        return role == .owner || role == .admin
+        self.role == .owner || self.role == .admin
     }
 
     /// Check if this member can view usage
     public var canViewUsage: Bool {
-        return true // All members can view usage
+        true // All members can view usage
     }
 
     /// Check if this member can create projects
     public var canCreateProjects: Bool {
-        return role != .viewer
+        self.role != .viewer
     }
 }
 
@@ -135,18 +135,18 @@ extension TeamMembership {
 
 /// Defines permission levels within a team
 public enum TeamRole: String, Codable, Sendable, CaseIterable {
-    case owner = "owner"
-    case admin = "admin"
-    case member = "member"
-    case viewer = "viewer"
+    case owner
+    case admin
+    case member
+    case viewer
 
     /// Display name for the role
     public var displayName: String {
         switch self {
-        case .owner: return "Owner"
-        case .admin: return "Admin"
-        case .member: return "Member"
-        case .viewer: return "Viewer"
+        case .owner: "Owner"
+        case .admin: "Admin"
+        case .member: "Member"
+        case .viewer: "Viewer"
         }
     }
 
@@ -154,29 +154,29 @@ public enum TeamRole: String, Codable, Sendable, CaseIterable {
     public var description: String {
         switch self {
         case .owner:
-            return "Full control over team, billing, and members"
+            "Full control over team, billing, and members"
         case .admin:
-            return "Can manage members and team settings"
+            "Can manage members and team settings"
         case .member:
-            return "Can create and share projects within team"
+            "Can create and share projects within team"
         case .viewer:
-            return "Read-only access to team projects"
+            "Read-only access to team projects"
         }
     }
 
     /// Permission level (higher = more permissions)
     public var level: Int {
         switch self {
-        case .owner: return 4
-        case .admin: return 3
-        case .member: return 2
-        case .viewer: return 1
+        case .owner: 4
+        case .admin: 3
+        case .member: 2
+        case .viewer: 1
         }
     }
 
     /// Check if this role can modify another role
     public func canModify(_ other: TeamRole) -> Bool {
-        return self.level > other.level
+        self.level > other.level
     }
 }
 
@@ -199,8 +199,8 @@ public struct ProjectOwnership: Codable, Sendable, Identifiable {
         ownerUserID: String,
         sharedWith: [String] = [],
         accessLevel: AccessLevel = .privateAccess,
-        createdAt: Date = Date()
-    ) {
+        createdAt: Date = Date())
+    {
         self.id = id
         self.projectID = projectID
         self.teamID = teamID
@@ -215,17 +215,17 @@ extension ProjectOwnership {
     /// Check if a user has access to this project
     public func hasAccess(userID: String) -> Bool {
         // Owner always has access
-        if userID == ownerUserID {
+        if userID == self.ownerUserID {
             return true
         }
 
         // Check access level
-        switch accessLevel {
+        switch self.accessLevel {
         case .privateAccess:
-            return sharedWith.contains(userID)
+            return self.sharedWith.contains(userID)
         case .team:
             // User must be in the team
-            return teamID != nil
+            return self.teamID != nil
         case .public:
             return true
         }
@@ -233,24 +233,24 @@ extension ProjectOwnership {
 
     /// Check if a user can edit this project
     public func canEdit(userID: String) -> Bool {
-        return userID == ownerUserID || sharedWith.contains(userID)
+        userID == self.ownerUserID || self.sharedWith.contains(userID)
     }
 
     /// Add a user to the shared list
     public mutating func share(with userID: String) {
-        if !sharedWith.contains(userID) {
-            sharedWith.append(userID)
+        if !self.sharedWith.contains(userID) {
+            self.sharedWith.append(userID)
         }
     }
 
     /// Remove a user from the shared list
     public mutating func unshare(with userID: String) {
-        sharedWith.removeAll { $0 == userID }
+        self.sharedWith.removeAll { $0 == userID }
     }
 
     /// Check if project is owned by a team
     public var isTeamOwned: Bool {
-        return teamID != nil
+        self.teamID != nil
     }
 }
 
@@ -259,24 +259,24 @@ extension ProjectOwnership {
 /// Defines who can access a project
 public enum AccessLevel: String, Codable, Sendable, CaseIterable {
     case privateAccess = "private" // Only owner and explicitly shared users
-    case team = "team" // All team members
-    case `public` = "public" // Anyone with link
+    case team // All team members
+    case `public` // Anyone with link
 
     /// Display name for the access level
     public var displayName: String {
         switch self {
-        case .privateAccess: return "Private"
-        case .team: return "Team"
-        case .public: return "Public"
+        case .privateAccess: "Private"
+        case .team: "Team"
+        case .public: "Public"
         }
     }
 
     /// Icon representing the access level
     public var icon: String {
         switch self {
-        case .privateAccess: return "lock.fill"
-        case .team: return "person.2.fill"
-        case .public: return "globe"
+        case .privateAccess: "lock.fill"
+        case .team: "person.2.fill"
+        case .public: "globe"
         }
     }
 
@@ -284,11 +284,11 @@ public enum AccessLevel: String, Codable, Sendable, CaseIterable {
     public var description: String {
         switch self {
         case .privateAccess:
-            return "Only you and people you share with"
+            "Only you and people you share with"
         case .team:
-            return "All team members can access"
+            "All team members can access"
         case .public:
-            return "Anyone with the link can view"
+            "Anyone with the link can view"
         }
     }
 }
@@ -310,8 +310,8 @@ public struct TeamUsageSummary: Codable, Sendable {
         totalTokens: Int = 0,
         totalCost: Double = 0.0,
         memberUsage: [String: MemberUsage] = [:],
-        quotaUsedPercent: Double = 0.0
-    ) {
+        quotaUsedPercent: Double = 0.0)
+    {
         self.teamID = teamID
         self.period = period
         self.totalTokens = totalTokens
@@ -324,12 +324,12 @@ public struct TeamUsageSummary: Codable, Sendable {
 extension TeamUsageSummary {
     /// Get usage for a specific member
     public func usage(for userID: String) -> MemberUsage? {
-        return memberUsage[userID]
+        self.memberUsage[userID]
     }
 
     /// Top users by token consumption
     public func topUsers(limit: Int = 5) -> [(userID: String, usage: MemberUsage)] {
-        return memberUsage
+        self.memberUsage
             .sorted { $0.value.tokens > $1.value.tokens }
             .prefix(limit)
             .map { ($0.key, $0.value) }
@@ -337,36 +337,36 @@ extension TeamUsageSummary {
 
     /// Average tokens per member
     public var averageTokensPerMember: Int {
-        guard !memberUsage.isEmpty else { return 0 }
-        return totalTokens / memberUsage.count
+        guard !self.memberUsage.isEmpty else { return 0 }
+        return self.totalTokens / self.memberUsage.count
     }
 
     /// Average cost per member
     public var averageCostPerMember: Double {
-        guard !memberUsage.isEmpty else { return 0.0 }
-        return totalCost / Double(memberUsage.count)
+        guard !self.memberUsage.isEmpty else { return 0.0 }
+        return self.totalCost / Double(self.memberUsage.count)
     }
 
     /// Check if team is approaching quota limit
     public var isApproachingQuota: Bool {
-        return quotaUsedPercent >= 80.0
+        self.quotaUsedPercent >= 80.0
     }
 
     /// Check if team has exceeded quota
     public var hasExceededQuota: Bool {
-        return quotaUsedPercent >= 100.0
+        self.quotaUsedPercent >= 100.0
     }
 
     /// Add or update member usage
     public mutating func updateUsage(for userID: String, usage: MemberUsage) {
-        memberUsage[userID] = usage
-        recalculateTotals()
+        self.memberUsage[userID] = usage
+        self.recalculateTotals()
     }
 
     /// Recalculate total tokens and cost from member usage
     private mutating func recalculateTotals() {
-        totalTokens = memberUsage.values.reduce(0) { $0 + $1.tokens }
-        totalCost = memberUsage.values.reduce(0.0) { $0 + $1.cost }
+        self.totalTokens = self.memberUsage.values.reduce(0) { $0 + $1.tokens }
+        self.totalCost = self.memberUsage.values.reduce(0.0) { $0 + $1.cost }
     }
 }
 
@@ -383,8 +383,8 @@ public struct MemberUsage: Codable, Sendable {
         userID: String,
         tokens: Int = 0,
         cost: Double = 0.0,
-        requests: Int = 0
-    ) {
+        requests: Int = 0)
+    {
         self.userID = userID
         self.tokens = tokens
         self.cost = cost
@@ -395,20 +395,20 @@ public struct MemberUsage: Codable, Sendable {
 extension MemberUsage {
     /// Average cost per request
     public var averageCostPerRequest: Double {
-        guard requests > 0 else { return 0.0 }
-        return cost / Double(requests)
+        guard self.requests > 0 else { return 0.0 }
+        return self.cost / Double(self.requests)
     }
 
     /// Average tokens per request
     public var averageTokensPerRequest: Int {
-        guard requests > 0 else { return 0 }
-        return tokens / requests
+        guard self.requests > 0 else { return 0 }
+        return self.tokens / self.requests
     }
 
     /// Check if member has quota limit and percentage used
     public func quotaUsedPercent(limit: Int?) -> Double? {
-        guard let limit = limit, limit > 0 else { return nil }
-        return (Double(tokens) / Double(limit)) * 100.0
+        guard let limit, limit > 0 else { return nil }
+        return (Double(self.tokens) / Double(limit)) * 100.0
     }
 
     /// Combine with another usage record
@@ -440,8 +440,8 @@ public struct TeamInvitation: Codable, Sendable, Identifiable {
         role: TeamRole = .member,
         expiresAt: Date = Date().addingTimeInterval(7 * 24 * 60 * 60), // 7 days
         status: InvitationStatus = .pending,
-        createdAt: Date = Date()
-    ) {
+        createdAt: Date = Date())
+    {
         self.id = id
         self.teamID = teamID
         self.invitedEmail = invitedEmail
@@ -456,36 +456,36 @@ public struct TeamInvitation: Codable, Sendable, Identifiable {
 extension TeamInvitation {
     /// Check if invitation is still valid
     public var isValid: Bool {
-        return status == .pending && !isExpired
+        self.status == .pending && !self.isExpired
     }
 
     /// Check if invitation has expired
     public var isExpired: Bool {
-        return Date() > expiresAt
+        Date() > self.expiresAt
     }
 
     /// Days until expiration
     public var daysUntilExpiration: Int {
-        let timeInterval = expiresAt.timeIntervalSince(Date())
+        let timeInterval = self.expiresAt.timeIntervalSince(Date())
         return max(0, Int(timeInterval / (24 * 60 * 60)))
     }
 
     /// Accept the invitation
     public mutating func accept() {
-        guard isValid else { return }
-        status = .accepted
+        guard self.isValid else { return }
+        self.status = .accepted
     }
 
     /// Decline the invitation
     public mutating func decline() {
-        guard isValid else { return }
-        status = .declined
+        guard self.isValid else { return }
+        self.status = .declined
     }
 
     /// Mark as expired
     public mutating func expire() {
-        if status == .pending {
-            status = .expired
+        if self.status == .pending {
+            self.status = .expired
         }
     }
 }
@@ -494,38 +494,38 @@ extension TeamInvitation {
 
 /// Status of a team invitation
 public enum InvitationStatus: String, Codable, Sendable, CaseIterable {
-    case pending = "pending"
-    case accepted = "accepted"
-    case declined = "declined"
-    case expired = "expired"
+    case pending
+    case accepted
+    case declined
+    case expired
 
     /// Display name for the status
     public var displayName: String {
         switch self {
-        case .pending: return "Pending"
-        case .accepted: return "Accepted"
-        case .declined: return "Declined"
-        case .expired: return "Expired"
+        case .pending: "Pending"
+        case .accepted: "Accepted"
+        case .declined: "Declined"
+        case .expired: "Expired"
         }
     }
 
     /// Icon representing the status
     public var icon: String {
         switch self {
-        case .pending: return "clock.fill"
-        case .accepted: return "checkmark.circle.fill"
-        case .declined: return "xmark.circle.fill"
-        case .expired: return "hourglass.bottomhalf.filled"
+        case .pending: "clock.fill"
+        case .accepted: "checkmark.circle.fill"
+        case .declined: "xmark.circle.fill"
+        case .expired: "hourglass.bottomhalf.filled"
         }
     }
 
     /// Color associated with status
     public var colorName: String {
         switch self {
-        case .pending: return "orange"
-        case .accepted: return "green"
-        case .declined: return "red"
-        case .expired: return "gray"
+        case .pending: "orange"
+        case .accepted: "green"
+        case .declined: "red"
+        case .expired: "gray"
         }
     }
 }
@@ -545,11 +545,12 @@ public struct TeamQuotaAllocation: Sendable {
     /// Get remaining quota for a specific member
     public func remainingQuota(for userID: String) -> Int? {
         guard let membership = team.membership(for: userID),
-              let limit = membership.quotaLimit else {
+              let limit = membership.quotaLimit
+        else {
             return nil
         }
 
-        let used = usage.usage(for: userID)?.tokens ?? 0
+        let used = self.usage.usage(for: userID)?.tokens ?? 0
         return max(0, limit - used)
     }
 
@@ -557,25 +558,25 @@ public struct TeamQuotaAllocation: Sendable {
     public func canUseTokens(_ tokens: Int, userID: String) -> Bool {
         guard let remaining = remainingQuota(for: userID) else {
             // No individual limit, check team limit
-            return usage.totalTokens + tokens <= team.totalQuota
+            return self.usage.totalTokens + tokens <= self.team.totalQuota
         }
         return remaining >= tokens
     }
 
     /// Get members who have exceeded their quota
     public func membersExceedingQuota() -> [TeamMembership] {
-        return team.members.filter { membership in
+        self.team.members.filter { membership in
             guard let limit = membership.quotaLimit else { return false }
-            let used = usage.usage(for: membership.userID)?.tokens ?? 0
+            let used = self.usage.usage(for: membership.userID)?.tokens ?? 0
             return used > limit
         }
     }
 
     /// Get members approaching their quota (>80%)
     public func membersApproachingQuota() -> [TeamMembership] {
-        return team.members.filter { membership in
+        self.team.members.filter { membership in
             guard let limit = membership.quotaLimit else { return false }
-            let used = usage.usage(for: membership.userID)?.tokens ?? 0
+            let used = self.usage.usage(for: membership.userID)?.tokens ?? 0
             let percent = (Double(used) / Double(limit)) * 100.0
             return percent >= 80.0 && percent < 100.0
         }

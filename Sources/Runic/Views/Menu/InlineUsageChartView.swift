@@ -15,15 +15,17 @@ struct InlineUsageChartView: View {
 
         var cutoffInterval: TimeInterval {
             switch self {
-            case .threeDays: return -259200
-            case .sevenDays: return -604800
-            case .thirtyDays: return -2592000
-            case .quarter: return -7776000
-            case .year: return -31536000
+            case .threeDays: -259_200
+            case .sevenDays: -604_800
+            case .thirtyDays: -2_592_000
+            case .quarter: -7_776_000
+            case .year: -31_536_000
             }
         }
 
-        var usesHourlyData: Bool { false }
+        var usesHourlyData: Bool {
+            false
+        }
     }
 
     private struct ChartPoint: Identifiable {

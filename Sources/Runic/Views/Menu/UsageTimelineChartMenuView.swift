@@ -13,17 +13,21 @@ struct UsageTimelineChartMenuView: View {
 
         var cutoffInterval: TimeInterval {
             switch self {
-            case .threeDays: return -259200
-            case .sevenDays: return -604800
-            case .thirtyDays: return -2592000
-            case .quarter: return -7776000
-            case .year: return -31536000
+            case .threeDays: -259_200
+            case .sevenDays: -604_800
+            case .thirtyDays: -2_592_000
+            case .quarter: -7_776_000
+            case .year: -31_536_000
             }
         }
 
-        var usesHourlyData: Bool { false }
+        var usesHourlyData: Bool {
+            false
+        }
 
-        var label: String { self.rawValue }
+        var label: String {
+            self.rawValue
+        }
     }
 
     private struct Point: Identifiable {
@@ -184,7 +188,8 @@ struct UsageTimelineChartMenuView: View {
         }
         .chartPanelStyle(width: self.width)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Usage timeline chart showing \(model.points.count) data points over \(self.selectedTimeRange.label)")
+        .accessibilityLabel(
+            "Usage timeline chart showing \(model.points.count) data points over \(self.selectedTimeRange.label)")
     }
 
     // MARK: - Stat cell
@@ -254,7 +259,7 @@ struct UsageTimelineChartMenuView: View {
             }
         }
 
-        let desiredAxisCount: Int = switch timeRange {
+        let desiredAxisCount = switch timeRange {
         case .threeDays: 3
         case .sevenDays: 5
         case .thirtyDays: 6

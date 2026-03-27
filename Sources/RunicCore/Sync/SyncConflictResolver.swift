@@ -11,7 +11,6 @@ import Foundation
 /// - Highest version: Keep record with highest version number
 /// - Merge: Attempt to merge both versions (custom logic required)
 public actor SyncConflictResolver: SyncConflictResolverProtocol {
-
     // MARK: - Properties
 
     /// Statistics about resolved conflicts
@@ -38,38 +37,35 @@ public actor SyncConflictResolver: SyncConflictResolverProtocol {
     public func resolve(
         local: SyncableRecord,
         remote: SyncableRecord,
-        strategy: ConflictResolutionStrategy
-    ) async -> SyncableRecord {
+        strategy: ConflictResolutionStrategy) async -> SyncableRecord
+    {
         // Validate that records are the same type
         guard local.recordID == remote.recordID else {
             return local // Fallback to local if IDs don't match
         }
 
-        let resolved: SyncableRecord
-
-        switch strategy {
+        let resolved: SyncableRecord = switch strategy {
         case .lastWriteWins:
-            resolved = resolveLastWriteWins(local: local, remote: remote)
+            self.resolveLastWriteWins(local: local, remote: remote)
 
         case .preferLocal:
-            resolved = local
+            local
 
         case .preferRemote:
-            resolved = remote
+            remote
 
         case .highestVersion:
-            resolved = resolveHighestVersion(local: local, remote: remote)
+            self.resolveHighestVersion(local: local, remote: remote)
 
         case .merge:
-            resolved = resolveMerge(local: local, remote: remote)
+            self.resolveMerge(local: local, remote: remote)
         }
 
         // Update statistics
-        conflictStats.recordConflict(
+        self.conflictStats.recordConflict(
             recordType: local.recordType,
             strategy: strategy,
-            winner: resolved.recordID == local.recordID ? .local : .remote
-        )
+            winner: resolved.recordID == local.recordID ? .local : .remote)
 
         return resolved
     }
@@ -81,14 +77,14 @@ public actor SyncConflictResolver: SyncConflictResolverProtocol {
     ///   - handler: Closure that merges two records of this type
     public func registerMergeHandler(
         for recordType: String,
-        handler: @escaping MergeHandler
-    ) {
-        mergeHandlers[recordType] = handler
+        handler: @escaping MergeHandler)
+    {
+        self.mergeHandlers[recordType] = handler
     }
 
     /// Resets conflict statistics
     public func resetStatistics() {
-        conflictStats = ConflictStatistics()
+        self.conflictStats = ConflictStatistics()
     }
 
     // MARK: - Private Resolution Methods
@@ -96,45 +92,45 @@ public actor SyncConflictResolver: SyncConflictResolverProtocol {
     /// Resolves conflict by keeping the most recently modified record
     private func resolveLastWriteWins(
         local: SyncableRecord,
-        remote: SyncableRecord
-    ) -> SyncableRecord {
+        remote: SyncableRecord) -> SyncableRecord
+    {
         if local.modifiedAt > remote.modifiedAt {
-            return local
+            local
         } else if remote.modifiedAt > local.modifiedAt {
-            return remote
+            remote
         } else {
             // Same timestamp, use version as tiebreaker
-            return local.version >= remote.version ? local : remote
+            local.version >= remote.version ? local : remote
         }
     }
 
     /// Resolves conflict by keeping the record with highest version number
     private func resolveHighestVersion(
         local: SyncableRecord,
-        remote: SyncableRecord
-    ) -> SyncableRecord {
+        remote: SyncableRecord) -> SyncableRecord
+    {
         if local.version > remote.version {
-            return local
+            local
         } else if remote.version > local.version {
-            return remote
+            remote
         } else {
             // Same version, use timestamp as tiebreaker
-            return local.modifiedAt >= remote.modifiedAt ? local : remote
+            local.modifiedAt >= remote.modifiedAt ? local : remote
         }
     }
 
     /// Attempts to merge both versions using custom merge logic
     private func resolveMerge(
         local: SyncableRecord,
-        remote: SyncableRecord
-    ) -> SyncableRecord {
+        remote: SyncableRecord) -> SyncableRecord
+    {
         // Check for registered merge handler
         if let handler = mergeHandlers[local.recordType] {
             return handler(local, remote)
         }
 
         // No custom merge handler, fall back to last-write-wins
-        return resolveLastWriteWins(local: local, remote: remote)
+        return self.resolveLastWriteWins(local: local, remote: remote)
     }
 }
 
@@ -173,32 +169,32 @@ public struct ConflictStatistics: Sendable {
     mutating func recordConflict(
         recordType: String,
         strategy: ConflictResolutionStrategy,
-        winner: ConflictWinner
-    ) {
-        totalConflicts += 1
-        conflictsByType[recordType, default: 0] += 1
-        conflictsByStrategy[strategy.rawValue, default: 0] += 1
+        winner: ConflictWinner)
+    {
+        self.totalConflicts += 1
+        self.conflictsByType[recordType, default: 0] += 1
+        self.conflictsByStrategy[strategy.rawValue, default: 0] += 1
 
         switch winner {
         case .local:
-            localWins += 1
+            self.localWins += 1
         case .remote:
-            remoteWins += 1
+            self.remoteWins += 1
         }
 
-        lastConflictAt = Date()
+        self.lastConflictAt = Date()
     }
 
     /// Percentage of conflicts won by local version
     public var localWinRate: Double {
-        guard totalConflicts > 0 else { return 0 }
-        return Double(localWins) / Double(totalConflicts)
+        guard self.totalConflicts > 0 else { return 0 }
+        return Double(self.localWins) / Double(self.totalConflicts)
     }
 
     /// Percentage of conflicts won by remote version
     public var remoteWinRate: Double {
-        guard totalConflicts > 0 else { return 0 }
-        return Double(remoteWins) / Double(totalConflicts)
+        guard self.totalConflicts > 0 else { return 0 }
+        return Double(self.remoteWins) / Double(self.totalConflicts)
     }
 
     /// Human-readable summary of conflict statistics
@@ -207,19 +203,19 @@ public struct ConflictStatistics: Sendable {
             "Conflict Resolution Statistics:",
             "  Total conflicts: \(totalConflicts)",
             "  Local wins: \(localWins) (\(String(format: "%.1f%%", localWinRate * 100)))",
-            "  Remote wins: \(remoteWins) (\(String(format: "%.1f%%", remoteWinRate * 100)))"
+            "  Remote wins: \(remoteWins) (\(String(format: "%.1f%%", remoteWinRate * 100)))",
         ]
 
-        if !conflictsByType.isEmpty {
+        if !self.conflictsByType.isEmpty {
             lines.append("  By record type:")
-            for (type, count) in conflictsByType.sorted(by: { $0.value > $1.value }) {
+            for (type, count) in self.conflictsByType.sorted(by: { $0.value > $1.value }) {
                 lines.append("    \(type): \(count)")
             }
         }
 
-        if !conflictsByStrategy.isEmpty {
+        if !self.conflictsByStrategy.isEmpty {
             lines.append("  By strategy:")
-            for (strategy, count) in conflictsByStrategy.sorted(by: { $0.value > $1.value }) {
+            for (strategy, count) in self.conflictsByStrategy.sorted(by: { $0.value > $1.value }) {
                 lines.append("    \(strategy): \(count)")
             }
         }
@@ -240,9 +236,10 @@ extension SyncConflictResolver {
     /// Registers default merge handlers for Runic record types
     public func registerDefaultMergeHandlers() {
         // Usage Snapshot merge: prefer record with most recent data
-        registerMergeHandler(for: CloudKitRecordType.usageSnapshot) { local, remote in
+        self.registerMergeHandler(for: CloudKitRecordType.usageSnapshot) { local, remote in
             guard let localUsage = local as? UsageSnapshotSyncRecord,
-                  let remoteUsage = remote as? UsageSnapshotSyncRecord else {
+                  let remoteUsage = remote as? UsageSnapshotSyncRecord
+            else {
                 return local
             }
 
@@ -251,9 +248,10 @@ extension SyncConflictResolver {
         }
 
         // User Preferences merge: combine enabled providers
-        registerMergeHandler(for: CloudKitRecordType.userPreferences) { local, remote in
+        self.registerMergeHandler(for: CloudKitRecordType.userPreferences) { local, remote in
             guard let localPrefs = local as? UserPreferencesSyncRecord,
-                  let remotePrefs = remote as? UserPreferencesSyncRecord else {
+                  let remotePrefs = remote as? UserPreferencesSyncRecord
+            else {
                 return local
             }
 
@@ -273,14 +271,14 @@ extension SyncConflictResolver {
                 notificationsEnabled: source.notificationsEnabled,
                 autoRefreshEnabled: source.autoRefreshEnabled,
                 theme: source.theme,
-                displayFormat: source.displayFormat
-            )
+                displayFormat: source.displayFormat)
         }
 
         // Alert Configuration merge: prefer most restrictive thresholds
-        registerMergeHandler(for: CloudKitRecordType.alertConfiguration) { local, remote in
+        self.registerMergeHandler(for: CloudKitRecordType.alertConfiguration) { local, remote in
             guard let localAlert = local as? AlertConfigurationSyncRecord,
-                  let remoteAlert = remote as? AlertConfigurationSyncRecord else {
+                  let remoteAlert = remote as? AlertConfigurationSyncRecord
+            else {
                 return local
             }
 
@@ -303,8 +301,7 @@ extension SyncConflictResolver {
                 warningThreshold: warningThreshold,
                 criticalThreshold: criticalThreshold,
                 notificationChannels: mergedChannels,
-                enabled: enabled
-            )
+                enabled: enabled)
         }
     }
 }

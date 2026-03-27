@@ -158,9 +158,13 @@ extension StatusItemController {
         }
     }
 
-    @objc func showSettingsGeneral() { self.openSettings(tab: .general) }
+    @objc func showSettingsGeneral() {
+        self.openSettings(tab: .general)
+    }
 
-    @objc func showSettingsAbout() { self.openSettings(tab: .about) }
+    @objc func showSettingsAbout() {
+        self.openSettings(tab: .about)
+    }
 
     func openMenuFromShortcut() {
         if self.shouldMergeIcons {
@@ -602,7 +606,7 @@ extension StatusItemController {
         self.presentLoginAlert(title: info.title, message: info.message)
     }
 
-    struct LoginAlertInfo: Equatable, Sendable {
+    struct LoginAlertInfo: Equatable {
         let title: String
         let message: String
     }

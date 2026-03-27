@@ -1,48 +1,48 @@
 import AppKit
-import RunicCore
+import CoreGraphics
 import Foundation
 import Observation
+import RunicCore
 import Silo
-import CoreGraphics
 
-/// **UsageStore** - Main state management for AI provider usage tracking
-///
-/// **Purpose:**
-/// Central store managing all provider usage data, snapshots, errors, and refresh logic.
-/// This is the single source of truth for the app's state.
-///
-/// **Responsibilities:**
-/// - Fetch usage snapshots from all providers (Claude, Codex, Cursor, Gemini, etc.)
-/// - Manage authentication state and cookies via Silo
-/// - Track token usage across all providers
-/// - Coordinate "ping" operations (manual and automatic)
-/// - Handle errors and stale data detection
-/// - Provide Observable state for SwiftUI views
-///
-/// **Performance Philosophy:**
-/// - **Zero Token Leakage** - Always use cookies/cached data first before API calls
-/// - **Single Ping Strategy** - One ping per provider per session, cache rest
-/// - **Stale Detection** - Mark data stale after 5 minutes (PerformanceConstants.staleDuration)
-///
-/// **Known Issues:**
-/// - **God Class** - 2089 lines, needs refactoring (see PLAN.md)
-///   - Planned split: `UsageStateStore`, `UsageFetchingActor`, `TokenUsageService`
-///
-/// **Dependencies:**
-/// - `RunicCore` - Provider descriptors and status probes
-/// - `Silo` - Browser cookie access
-/// - `Observation` - SwiftUI state updates
-///
-/// **Usage:**
-/// ```swift
-/// @Observable
-/// final class UsageStore {
-///     var snapshots: [UsageProvider: ProviderSnapshot] = [:]
-///     var errors: [UsageProvider: Error] = [:]
-///     
-///     func ping(provider: UsageProvider) async { ... }
-/// }
-/// ```
+// **UsageStore** - Main state management for AI provider usage tracking
+//
+// **Purpose:**
+// Central store managing all provider usage data, snapshots, errors, and refresh logic.
+// This is the single source of truth for the app's state.
+//
+// **Responsibilities:**
+// - Fetch usage snapshots from all providers (Claude, Codex, Cursor, Gemini, etc.)
+// - Manage authentication state and cookies via Silo
+// - Track token usage across all providers
+// - Coordinate "ping" operations (manual and automatic)
+// - Handle errors and stale data detection
+// - Provide Observable state for SwiftUI views
+//
+// **Performance Philosophy:**
+// - **Zero Token Leakage** - Always use cookies/cached data first before API calls
+// - **Single Ping Strategy** - One ping per provider per session, cache rest
+// - **Stale Detection** - Mark data stale after 5 minutes (PerformanceConstants.staleDuration)
+//
+// **Known Issues:**
+// - **God Class** - 2089 lines, needs refactoring (see PLAN.md)
+//   - Planned split: `UsageStateStore`, `UsageFetchingActor`, `TokenUsageService`
+//
+// **Dependencies:**
+// - `RunicCore` - Provider descriptors and status probes
+// - `Silo` - Browser cookie access
+// - `Observation` - SwiftUI state updates
+//
+// **Usage:**
+// ```swift
+// @Observable
+// final class UsageStore {
+//     var snapshots: [UsageProvider: ProviderSnapshot] = [:]
+//     var errors: [UsageProvider: Error] = [:]
+//
+//     func ping(provider: UsageProvider) async { ... }
+// }
+// ```
 
 // MARK: - Observation helpers
 
@@ -305,8 +305,8 @@ struct ConsecutiveFailureGate {
     }
 }
 
-struct UsageLedgerAnomalySummary: Sendable, Hashable {
-    enum Severity: Int, Sendable, Hashable {
+struct UsageLedgerAnomalySummary: Hashable {
+    enum Severity: Int, Hashable {
         case elevated = 1
         case high = 2
         case critical = 3
@@ -320,8 +320,8 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
         }
     }
 
-    struct MetricAnomaly: Sendable, Hashable {
-        enum Metric: String, Sendable, Hashable {
+    struct MetricAnomaly: Hashable {
+        enum Metric: String, Hashable {
             case tokens
             case spend
 
@@ -340,8 +340,8 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
         let percentIncrease: Double
     }
 
-    struct Explanation: Sendable, Hashable {
-        struct Factor: Sendable, Hashable {
+    struct Explanation: Hashable {
+        struct Factor: Hashable {
             let metric: MetricAnomaly.Metric
             let severity: Severity
             let percentIncrease: Double
@@ -353,6 +353,7 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
         let primaryFactor: Factor
         let contributingFactors: [Factor]
     }
+
     let provider: UsageProvider
     let baselineDays: Int
     let tokenAnomaly: MetricAnomaly?
@@ -360,7 +361,7 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
 
     var primaryAnomaly: MetricAnomaly? {
         [self.tokenAnomaly, self.spendAnomaly]
-            .compactMap { $0 }
+            .compactMap(\.self)
             .max { lhs, rhs in
                 if lhs.severity != rhs.severity {
                     return lhs.severity.rawValue < rhs.severity.rawValue
@@ -370,11 +371,11 @@ struct UsageLedgerAnomalySummary: Sendable, Hashable {
     }
 
     func secondaryAnomaly(excluding metric: MetricAnomaly.Metric) -> MetricAnomaly? {
-        let candidates = [self.tokenAnomaly, self.spendAnomaly].compactMap { $0 }
+        let candidates = [self.tokenAnomaly, self.spendAnomaly].compactMap(\.self)
         guard !candidates.isEmpty else { return nil }
         return candidates.first { $0.metric != metric }
     }
-    
+
     var explanation: Explanation? {
         guard let primary = self.primaryAnomaly else { return nil }
         let primaryFactor = self.factor(from: primary)
@@ -522,7 +523,7 @@ enum UsageLedgerAnomalyDetector {
     }
 }
 
-struct ProviderHistoryDaySnapshot: Sendable, Hashable, Identifiable {
+struct ProviderHistoryDaySnapshot: Hashable, Identifiable {
     let dayStart: Date
     let totals: UsageLedgerTotals
     let requestCount: Int
@@ -532,10 +533,12 @@ struct ProviderHistoryDaySnapshot: Sendable, Hashable, Identifiable {
     let modelSummaries: [UsageLedgerModelSummary]
     let projectSummaries: [UsageLedgerProjectSummary]
 
-    var id: Date { self.dayStart }
+    var id: Date {
+        self.dayStart
+    }
 }
 
-struct ProviderHistoryMonthSnapshot: Sendable, Hashable {
+struct ProviderHistoryMonthSnapshot: Hashable {
     let provider: UsageProvider
     let monthStart: Date
     let generatedAt: Date
@@ -544,6 +547,7 @@ struct ProviderHistoryMonthSnapshot: Sendable, Hashable {
     let note: String?
     let error: String?
 }
+
 @MainActor
 @Observable
 final class UsageStore {
@@ -629,16 +633,22 @@ final class UsageStore {
     @ObservationIgnored private var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored private var ledgerRefreshTask: Task<Void, Never>?
-    @ObservationIgnored private var providerHistoryMonthCache: [UsageProvider: [String: ProviderHistoryMonthCacheEntry]] = [:]
+    @ObservationIgnored private var providerHistoryMonthCache: [
+        UsageProvider: [String: ProviderHistoryMonthCacheEntry]
+    ] =
+        [:]
     @ObservationIgnored private var lastKnownSessionRemaining: [UsageProvider: Double] = [:]
     @ObservationIgnored private(set) var lastTokenFetchAt: [UsageProvider: Date] = [:]
     @ObservationIgnored private let tokenFetchTTL: TimeInterval = 60 * 60
     @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
     @ObservationIgnored private let ledgerRefreshTTL: TimeInterval = 90
-    @ObservationIgnored private var ledgerMaxAgeDays: Int { self.settings.ledgerMaxAgeDays }
+    @ObservationIgnored private var ledgerMaxAgeDays: Int {
+        self.settings.ledgerMaxAgeDays
+    }
+
     @ObservationIgnored private let providerHistoryCacheTTL: TimeInterval = 90
     @ObservationIgnored private let providerHistoryMaxScanDays: Int = 180
-    @ObservationIgnored nonisolated(unsafe) private let performanceStorage: PerformanceStorageImpl?
+    @ObservationIgnored private nonisolated(unsafe) let performanceStorage: PerformanceStorageImpl?
 
     init(
         fetcher: UsageFetcher,
@@ -928,7 +938,7 @@ final class UsageStore {
     func ledgerProjectBreakdown(for provider: UsageProvider) -> [UsageLedgerProjectSummary] {
         self.ledgerProjectBreakdowns[provider] ?? []
     }
-    
+
     func ledgerSpendForecast(for provider: UsageProvider) -> UsageLedgerSpendForecast? {
         self.ledgerSpendForecasts[provider]
     }
@@ -944,7 +954,6 @@ final class UsageStore {
     func ledgerAnomalySummary(for provider: UsageProvider) -> UsageLedgerAnomalySummary? {
         self.ledgerAnomalies[provider]
     }
-
 
     func ledgerError(for provider: UsageProvider) -> String? {
         self.ledgerErrors[provider]
@@ -1084,27 +1093,27 @@ final class UsageStore {
         case .codex:
             return CodexUsageLogSource(maxAgeDays: maxAgeDays, now: now)
         case .copilot,
-            .gemini,
-            .antigravity,
-            .cursor,
-            .factory,
-            .zai,
-            .minimax,
-            .openrouter,
-            .groq,
-            .deepseek,
-            .fireworks,
-            .mistral,
-            .perplexity,
-            .kimi,
-            .auggie,
-            .together,
-            .cohere,
-            .xai,
-            .cerebras,
-            .sambanova,
-            .azure,
-            .bedrock:
+             .gemini,
+             .antigravity,
+             .cursor,
+             .factory,
+             .zai,
+             .minimax,
+             .openrouter,
+             .groq,
+             .deepseek,
+             .fireworks,
+             .mistral,
+             .perplexity,
+             .kimi,
+             .auggie,
+             .together,
+             .cohere,
+             .xai,
+             .cerebras,
+             .sambanova,
+             .azure,
+             .bedrock:
             return self.providerOTelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:
             return nil
@@ -1131,7 +1140,7 @@ final class UsageStore {
             minTimestamp: cutoff)
     }
 
-    private struct UsageLedgerProviderFilterSource: UsageLedgerSource, Sendable {
+    private struct UsageLedgerProviderFilterSource: UsageLedgerSource {
         private let source: any UsageLedgerSource
         private let provider: UsageProvider
         private let minTimestamp: Date?
@@ -1165,7 +1174,7 @@ final class UsageStore {
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATH"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATH"]),
-        ].flatMap { $0 }
+        ].flatMap(\.self)
 
         let urls = candidatePaths.compactMap(Self.expandTildePath)
         return Self.discoverOTelLedgerFiles(from: urls)
@@ -1250,7 +1259,7 @@ final class UsageStore {
             error: nil)
     }
 
-    nonisolated private static func providerHistoryDays(
+    private nonisolated static func providerHistoryDays(
         entries: [UsageLedgerEntry],
         timeZone: TimeZone) -> [ProviderHistoryDaySnapshot]
     {
@@ -1377,12 +1386,11 @@ final class UsageStore {
 
             // Track successful latency
             await self.trackLatency(
-                provider: .codex,  // TODO: Add custom provider tracking
+                provider: .codex, // TODO: Add custom provider tracking
                 requestID: requestID,
                 startTime: startTime,
                 endTime: endTime,
-                success: true
-            )
+                success: true)
 
             let snapshot = CustomProviderSnapshot.from(usageData: usageData.toCustomUsageData(), config: config)
             await MainActor.run {
@@ -1394,13 +1402,12 @@ final class UsageStore {
 
             // Track failed latency and error
             await self.trackLatency(
-                provider: .codex,  // TODO: Add custom provider tracking
+                provider: .codex, // TODO: Add custom provider tracking
                 requestID: requestID,
                 startTime: startTime,
                 endTime: endTime,
-                success: false
-            )
-            await self.trackError(provider: .codex, error: error)  // TODO: Add custom provider tracking
+                success: false)
+            await self.trackError(provider: .codex, error: error) // TODO: Add custom provider tracking
 
             await MainActor.run {
                 self.customProviderErrors[id] = error.localizedDescription
@@ -1534,11 +1541,11 @@ final class UsageStore {
     private func systemPauseDetailText(_ reason: AutoRefreshSuspensionReason) -> String {
         switch reason {
         case .systemSleep:
-            return "your Mac went to sleep"
+            "your Mac went to sleep"
         case .screenSleep:
-            return "the display went to sleep"
+            "the display went to sleep"
         case .sessionInactive:
-            return "your session became inactive"
+            "your session became inactive"
         }
     }
 
@@ -1628,11 +1635,11 @@ final class UsageStore {
         func windowChanged(_ lhs: RateWindow?, _ rhs: RateWindow?) -> Bool {
             switch (lhs, rhs) {
             case (nil, nil):
-                return false
+                false
             case let (l?, r?):
-                return abs(l.usedPercent - r.usedPercent) >= 0.1
+                abs(l.usedPercent - r.usedPercent) >= 0.1
             case (nil, _), (_, nil):
-                return true
+                true
             }
         }
 
@@ -1670,7 +1677,8 @@ final class UsageStore {
         if self.ledgerRefreshTask != nil { return }
 
         // Immediately populate from cache so the UI has data before the background scan.
-        let providersToCache = providers.filter { self.ledgerAllDailySummaries[$0] == nil || self.ledgerAllDailySummaries[$0]?.isEmpty == true }
+        let providersToCache = providers
+            .filter { self.ledgerAllDailySummaries[$0] == nil || self.ledgerAllDailySummaries[$0]?.isEmpty == true }
         if !providersToCache.isEmpty {
             Task {
                 let cache = LedgerCache.shared
@@ -1681,7 +1689,9 @@ final class UsageStore {
                     if !summaries.isEmpty {
                         await MainActor.run { [weak self] in
                             guard let self else { return }
-                            if self.ledgerAllDailySummaries[provider] == nil || self.ledgerAllDailySummaries[provider]?.isEmpty == true {
+                            if self.ledgerAllDailySummaries[provider] == nil || self.ledgerAllDailySummaries[provider]?
+                                .isEmpty == true
+                            {
                                 self.ledgerAllDailySummaries[provider] = summaries
                                 // Also populate today's summary from cache.
                                 let todayStart = Calendar.current.startOfDay(for: now)
@@ -1842,7 +1852,7 @@ final class UsageStore {
         self.ledgerRefreshTask?.cancel()
     }
 
-    private struct LedgerRefreshResult: Sendable {
+    private struct LedgerRefreshResult {
         let dailyByProvider: [UsageProvider: UsageLedgerDailySummary]
         let allDailySummariesByProvider: [UsageProvider: [UsageLedgerDailySummary]]
         let hourlySummariesByProvider: [UsageProvider: [UsageLedgerHourlySummary]]
@@ -1870,7 +1880,7 @@ final class UsageStore {
         now: Date,
         inactiveProviders: Set<UsageProvider>) -> [(UsageProvider, any UsageLedgerSource)]
     {
-        return UsageProvider.allCases.compactMap { provider in
+        UsageProvider.allCases.compactMap { provider in
             guard self.isEnabled(provider), !inactiveProviders.contains(provider) else { return nil }
             guard let source = self.providerHistorySource(
                 provider: provider,
@@ -1886,23 +1896,23 @@ final class UsageStore {
         now: Date) async -> LedgerRefreshResult
     {
         guard !sources.isEmpty else {
-        return LedgerRefreshResult(
-            dailyByProvider: [:],
-            allDailySummariesByProvider: [:],
-            hourlySummariesByProvider: [:],
-            activeBlocksByProvider: [:],
-            topModelsByProvider: [:],
-            topProjectsByProvider: [:],
-            modelBreakdownsByProvider: [:],
-            projectBreakdownsByProvider: [:],
-            spendForecastsByProvider: [:],
-            projectSpendForecastsByProvider: [:],
-            topProjectSpendForecastsByProvider: [:],
-            anomaliesByProvider: [:],
-            errorsByProvider: [:],
-            lastActivityByProvider: [:],
-            updatedAt: now,
-            providers: [])
+            return LedgerRefreshResult(
+                dailyByProvider: [:],
+                allDailySummariesByProvider: [:],
+                hourlySummariesByProvider: [:],
+                activeBlocksByProvider: [:],
+                topModelsByProvider: [:],
+                topProjectsByProvider: [:],
+                modelBreakdownsByProvider: [:],
+                projectBreakdownsByProvider: [:],
+                spendForecastsByProvider: [:],
+                projectSpendForecastsByProvider: [:],
+                topProjectSpendForecastsByProvider: [:],
+                anomaliesByProvider: [:],
+                errorsByProvider: [:],
+                lastActivityByProvider: [:],
+                updatedAt: now,
+                providers: [])
         }
 
         let providers = sources.map(\.0)
@@ -2006,10 +2016,10 @@ final class UsageStore {
             projectBreakdownsByProvider[summary.provider, default: []].append(summary)
         }
 
-    let providerForecasts = UsageLedgerAggregator.providerSpendForecasts(
-        entries: entries,
-        now: now,
-        timeZone: timeZone)
+        let providerForecasts = UsageLedgerAggregator.providerSpendForecasts(
+            entries: entries,
+            now: now,
+            timeZone: timeZone)
         var spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
         for forecast in providerForecasts where spendForecastsByProvider[forecast.provider] == nil {
             spendForecastsByProvider[forecast.provider] = forecast
@@ -2032,34 +2042,34 @@ final class UsageStore {
         }
 
         var topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
-    for (provider, summary) in topProjectsByProvider {
-        guard let forecasts = projectSpendForecastsByProvider[provider] else { continue }
-        if let matched = self.matchingProjectForecast(for: summary, forecasts: forecasts) {
-            topProjectSpendForecastsByProvider[provider] = matched
+        for (provider, summary) in topProjectsByProvider {
+            guard let forecasts = projectSpendForecastsByProvider[provider] else { continue }
+            if let matched = self.matchingProjectForecast(for: summary, forecasts: forecasts) {
+                topProjectSpendForecastsByProvider[provider] = matched
+            }
         }
-    }
-    let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
-        dailySummaries: dailySummaries,
-        now: now,
-        calendar: calendar)
+        let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
+            dailySummaries: dailySummaries,
+            now: now,
+            calendar: calendar)
 
         return LedgerRefreshResult(
             dailyByProvider: dailyByProvider,
             allDailySummariesByProvider: allDailySummariesByProvider,
             hourlySummariesByProvider: hourlySummariesByProvider,
-        activeBlocksByProvider: activeByProvider,
-        topModelsByProvider: topModelsByProvider,
-        topProjectsByProvider: topProjectsByProvider,
-        modelBreakdownsByProvider: modelBreakdownsByProvider,
-        projectBreakdownsByProvider: projectBreakdownsByProvider,
-        spendForecastsByProvider: spendForecastsByProvider,
-        projectSpendForecastsByProvider: projectSpendForecastsByProvider,
-        topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
-        anomaliesByProvider: anomaliesByProvider,
-        errorsByProvider: errors,
-        lastActivityByProvider: lastActivityByProvider,
-        updatedAt: now,
-        providers: providers)
+            activeBlocksByProvider: activeByProvider,
+            topModelsByProvider: topModelsByProvider,
+            topProjectsByProvider: topProjectsByProvider,
+            modelBreakdownsByProvider: modelBreakdownsByProvider,
+            projectBreakdownsByProvider: projectBreakdownsByProvider,
+            spendForecastsByProvider: spendForecastsByProvider,
+            projectSpendForecastsByProvider: projectSpendForecastsByProvider,
+            topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
+            anomaliesByProvider: anomaliesByProvider,
+            errorsByProvider: errors,
+            lastActivityByProvider: lastActivityByProvider,
+            updatedAt: now,
+            providers: providers)
     }
 
     private func projectNameOverridesFromBudgets() -> [String: String] {
@@ -2806,9 +2816,11 @@ extension UsageStore {
                         ? nil : self.settings.azureOpenAIAPIToken,
                     endpoint: self.settings.azureOpenAIEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? nil : self.settings.azureOpenAIEndpoint,
-                    deployment: self.settings.azureOpenAIDeployment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    deployment: self.settings.azureOpenAIDeployment.trimmingCharacters(in: .whitespacesAndNewlines)
+                        .isEmpty
                         ? nil : self.settings.azureOpenAIDeployment,
-                    apiVersion: self.settings.azureOpenAIAPIVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    apiVersion: self.settings.azureOpenAIAPIVersion.trimmingCharacters(in: .whitespacesAndNewlines)
+                        .isEmpty
                         ? nil : self.settings.azureOpenAIAPIVersion),
                 bedrock: ProviderSettingsSnapshot.BedrockProviderSettings(
                     region: self.settings.bedrockRegion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -3140,8 +3152,8 @@ extension UsageStore {
         context: ProviderFetchContext,
         settings: ProviderSettingsSnapshot) async -> String
     {
-        var lines: [String] = [
-            "provider=\(provider.rawValue)"
+        var lines = [
+            "provider=\(provider.rawValue)",
         ]
 
         lines.append(contentsOf: self.debugCredentialLines(for: provider, settings: settings))
@@ -3186,38 +3198,54 @@ extension UsageStore {
                     resolution: ProviderTokenResolver.minimaxGroupResolution()),
             ]
         case .openrouter:
-            return [self.debugTokenSummary(provider: "openrouter", resolution: ProviderTokenResolver.openRouterResolution())]
+            return [self.debugTokenSummary(
+                provider: "openrouter",
+                resolution: ProviderTokenResolver.openRouterResolution())]
         case .groq:
             return [self.debugTokenSummary(provider: "groq", resolution: ProviderTokenResolver.groqResolution())]
         case .deepseek:
-            return [self.debugTokenSummary(provider: "deepseek", resolution: ProviderTokenResolver.deepSeekResolution())]
+            return [self.debugTokenSummary(
+                provider: "deepseek",
+                resolution: ProviderTokenResolver.deepSeekResolution())]
         case .fireworks:
-            return [self.debugTokenSummary(provider: "fireworks", resolution: ProviderTokenResolver.fireworksResolution())]
+            return [self.debugTokenSummary(
+                provider: "fireworks",
+                resolution: ProviderTokenResolver.fireworksResolution())]
         case .mistral:
             return [self.debugTokenSummary(provider: "mistral", resolution: ProviderTokenResolver.mistralResolution())]
         case .perplexity:
-            return [self.debugTokenSummary(provider: "perplexity", resolution: ProviderTokenResolver.perplexityResolution())]
+            return [self.debugTokenSummary(
+                provider: "perplexity",
+                resolution: ProviderTokenResolver.perplexityResolution())]
         case .kimi:
             return [self.debugTokenSummary(provider: "kimi", resolution: ProviderTokenResolver.kimiResolution())]
         case .auggie:
             return [self.debugTokenSummary(provider: "auggie", resolution: ProviderTokenResolver.auggieResolution())]
         case .together:
-            return [self.debugTokenSummary(provider: "together", resolution: ProviderTokenResolver.togetherResolution())]
+            return [self.debugTokenSummary(
+                provider: "together",
+                resolution: ProviderTokenResolver.togetherResolution())]
         case .cohere:
             return [self.debugTokenSummary(provider: "cohere", resolution: ProviderTokenResolver.cohereResolution())]
         case .xai:
             return [self.debugTokenSummary(provider: "xai", resolution: ProviderTokenResolver.xaiResolution())]
         case .cerebras:
-            return [self.debugTokenSummary(provider: "cerebras", resolution: ProviderTokenResolver.cerebrasResolution())]
+            return [self.debugTokenSummary(
+                provider: "cerebras",
+                resolution: ProviderTokenResolver.cerebrasResolution())]
         case .sambanova:
-            return [self.debugTokenSummary(provider: "sambanova", resolution: ProviderTokenResolver.sambaNovaResolution())]
+            return [self.debugTokenSummary(
+                provider: "sambanova",
+                resolution: ProviderTokenResolver.sambaNovaResolution())]
         case .azure:
             var lines: [String] = [
                 "azure.endpoint=\(self.debugFieldValue(settings.azure?.endpoint))",
                 "azure.deployment=\(self.debugFieldValue(settings.azure?.deployment))",
-                "azure.apiVersion=\(self.debugFieldValue(settings.azure?.apiVersion))"
+                "azure.apiVersion=\(self.debugFieldValue(settings.azure?.apiVersion))",
             ]
-            lines.append(self.debugTokenSummary(provider: "azure.token", resolution: ProviderTokenResolver.azureOpenAIResolution()))
+            lines.append(self.debugTokenSummary(
+                provider: "azure.token",
+                resolution: ProviderTokenResolver.azureOpenAIResolution()))
             return lines
         case .bedrock:
             return [
@@ -3277,7 +3305,7 @@ extension UsageStore {
             let resetsAt = providerCost.resetsAt?.description ?? "nil"
             lines.append(
                 "provider_cost.used=\(providerCost.used) limit=\(providerCost.limit) " +
-                "currency=\(providerCost.currencyCode) period=\(providerCost.period ?? "nil") resetsAt=\(resetsAt)")
+                    "currency=\(providerCost.currencyCode) period=\(providerCost.period ?? "nil") resetsAt=\(resetsAt)")
         }
         return lines
     }
@@ -3526,8 +3554,8 @@ extension UsageStore {
         requestID: String,
         startTime: Date,
         endTime: Date,
-        success: Bool
-    ) async {
+        success: Bool) async
+    {
         guard let storage = self.performanceStorage else { return }
 
         let metric = LatencyMetric(
@@ -3539,8 +3567,7 @@ extension UsageStore {
             endTime: endTime,
             durationMs: Int(endTime.timeIntervalSince(startTime) * 1000),
             success: success,
-            createdAt: Date()
-        )
+            createdAt: Date())
 
         try? await storage.save(latency: metric)
     }
@@ -3556,8 +3583,7 @@ extension UsageStore {
             errorType: errorType,
             errorMessage: error.localizedDescription,
             retryCount: 0,
-            timestamp: Date()
-        )
+            timestamp: Date())
 
         try? await storage.save(error: errorEvent)
     }

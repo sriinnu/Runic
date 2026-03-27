@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -74,7 +74,7 @@ struct OpenRouterAPIFetchStrategy: ProviderFetchStrategy {
 
 // MARK: - Settings Errors
 
-enum OpenRouterSettingsError: LocalizedError, Sendable {
+enum OpenRouterSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

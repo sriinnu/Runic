@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -191,7 +191,9 @@ struct ClaudeCLIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .cli
     let useWebExtras: Bool
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool { true }
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        true
+    }
 
     func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
         let fetcher = ClaudeUsageFetcher(dataSource: .cli, useWebExtras: self.useWebExtras)

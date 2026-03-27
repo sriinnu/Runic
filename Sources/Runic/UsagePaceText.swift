@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 
 enum UsagePaceText {
     private static let minimumExpectedPercent: Double = 3

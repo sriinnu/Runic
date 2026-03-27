@@ -2,25 +2,23 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct ZaiSettingsReaderTests {
     @Test
-    func apiTokenReadsFromEnvironment() {
+    func `api token reads from environment`() {
         let token = ZaiSettingsReader.apiToken(environment: ["Z_AI_API_KEY": "abc123"])
         #expect(token == "abc123")
     }
 
     @Test
-    func apiTokenStripsQuotes() {
+    func `api token strips quotes`() {
         let token = ZaiSettingsReader.apiToken(environment: ["Z_AI_API_KEY": "\"token-xyz\""])
         #expect(token == "token-xyz")
     }
 }
 
-@Suite
 struct ZaiUsageSnapshotTests {
     @Test
-    func mapsUsageSnapshotWindows() {
+    func `maps usage snapshot windows`() {
         let reset = Date(timeIntervalSince1970: 123)
         let tokenLimit = ZaiLimitEntry(
             type: .tokensLimit,

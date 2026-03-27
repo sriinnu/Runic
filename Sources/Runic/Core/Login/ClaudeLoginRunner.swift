@@ -1,9 +1,9 @@
-import RunicCore
 import Darwin
 import Foundation
+import RunicCore
 
 struct ClaudeLoginRunner {
-    enum Phase: Sendable {
+    enum Phase {
         case requesting
         case waitingBrowser
     }

@@ -2,10 +2,9 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct FactoryStatusSnapshotTests {
     @Test
-    func mapsUsageSnapshotWindowsAndLoginMethod() {
+    func `maps usage snapshot windows and login method`() {
         let periodEnd = Date(timeIntervalSince1970: 1_738_368_000) // Feb 1, 2025
         let snapshot = FactoryStatusSnapshot(
             standardUserTokens: 50,
@@ -33,7 +32,7 @@ struct FactoryStatusSnapshotTests {
     }
 
     @Test
-    func treatsLargeAllowancesAsUnlimited() {
+    func `treats large allowances as unlimited`() {
         let snapshot = FactoryStatusSnapshot(
             standardUserTokens: 50_000_000,
             standardOrgTokens: 0,
@@ -56,10 +55,9 @@ struct FactoryStatusSnapshotTests {
     }
 }
 
-@Suite
 struct FactoryStatusProbeWorkOSTests {
     @Test
-    func detectsMissingRefreshTokenPayload() {
+    func `detects missing refresh token payload`() {
         let payload = Data("""
         {"error":"invalid_request","error_description":"Missing refresh token."}
         """.utf8)

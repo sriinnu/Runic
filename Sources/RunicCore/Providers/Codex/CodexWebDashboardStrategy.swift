@@ -39,7 +39,7 @@ public struct CodexWebDashboardStrategy: ProviderFetchStrategy {
     }
 }
 
-private struct OpenAIWebCodexResult: Sendable {
+private struct OpenAIWebCodexResult {
     let usage: UsageSnapshot
     let credits: CreditsSnapshot?
     let dashboard: OpenAIDashboardSnapshot
@@ -56,7 +56,7 @@ private enum OpenAIWebCodexError: LocalizedError {
     }
 }
 
-private struct OpenAIWebOptions: Sendable {
+private struct OpenAIWebOptions {
     let timeout: TimeInterval
     let debugDumpHTML: Bool
     let verbose: Bool
@@ -168,7 +168,9 @@ public struct CodexWebDashboardStrategy: ProviderFetchStrategy {
 
     public init() {}
 
-    public func isAvailable(_: ProviderFetchContext) async -> Bool { false }
+    public func isAvailable(_: ProviderFetchContext) async -> Bool {
+        false
+    }
 
     public func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
         throw ProviderFetchError.noAvailableStrategy(.codex)

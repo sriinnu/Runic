@@ -49,7 +49,10 @@ public actor LedgerCache {
     /// - Today's entry is ACCUMULATED (adds to existing totals for partial scans)
     /// - New days are appended
     public func mergeDailies(provider: String, newDailies: [CachedDaily], scanDate: Date, todayKey: String? = nil) {
-        var ledger = self.loadCachedDailies(provider: provider) ?? CachedLedger(lastScanDate: scanDate, lastFullScanDate: nil, dailies: [])
+        var ledger = self.loadCachedDailies(provider: provider) ?? CachedLedger(
+            lastScanDate: scanDate,
+            lastFullScanDate: nil,
+            dailies: [])
 
         let resolvedTodayKey = todayKey ?? Self.dayKey(for: Date())
         var existingByKey: [String: CachedDaily] = [:]
@@ -119,7 +122,7 @@ public struct CachedLedger: Codable, Sendable {
 }
 
 public struct CachedDaily: Codable, Sendable {
-    public let dayKey: String          // "2026-03-23"
+    public let dayKey: String // "2026-03-23"
     public let inputTokens: Int
     public let outputTokens: Int
     public let cacheCreationTokens: Int

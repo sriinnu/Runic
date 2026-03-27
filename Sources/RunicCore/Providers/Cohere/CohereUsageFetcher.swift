@@ -9,7 +9,7 @@ struct CohereModelsResponse: Decodable {
         let name: String?
 
         var modelID: String? {
-            let candidate = id ?? name
+            let candidate = self.id ?? self.name
             guard let candidate else { return nil }
             let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? nil : trimmed
@@ -17,7 +17,7 @@ struct CohereModelsResponse: Decodable {
     }
 }
 
-struct CohereUsageFetcher {
+enum CohereUsageFetcher {
     static let apiURL = URL(string: "https://api.cohere.ai/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> CohereModelsResponse {
@@ -67,7 +67,7 @@ extension CohereModelsResponse {
     }
 }
 
-enum CohereAPIError: LocalizedError, Sendable {
+enum CohereAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

@@ -43,15 +43,15 @@ struct HeroTodayStatView: View {
                     .padding(.vertical, RunicSpacing.xxxs)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.light))
-                    )
+                            .fill(Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.light)))
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
         .padding(.vertical, RunicSpacing.xxs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Today usage: \(UsageFormatter.tokenCountString(self.tokenCount)) tokens\(self.costUSD.map { ", \(UsageFormatter.usdString($0))" } ?? "")")
+        .accessibilityLabel(
+            "Today usage: \(UsageFormatter.tokenCountString(self.tokenCount)) tokens\(self.costUSD.map { ", \(UsageFormatter.usdString($0))" } ?? "")")
     }
 }
 
@@ -89,7 +89,8 @@ struct GlassmorphismStatCardsView: View {
         .padding(.vertical, RunicSpacing.xxs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Peak hour \(self.peakHourLabel), \(self.peakHourTokens). This week \(self.weekTotalTokens)")
+        .accessibilityLabel(
+            "Peak hour \(self.peakHourLabel), \(self.peakHourTokens). This week \(self.weekTotalTokens)")
     }
 }
 
@@ -123,12 +124,10 @@ private struct GlassStatCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
+                .fill(.ultraThinMaterial))
         .overlay(
             RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                .stroke(Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.medium), lineWidth: 0.5)
-        )
+                .stroke(Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.medium), lineWidth: 0.5))
         .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
         .glassShimmer()
     }
@@ -147,7 +146,9 @@ private struct MiniSparklineView: View {
                 // Filled gradient area under the line
                 Path { path in
                     path.move(to: CGPoint(x: points[0].x, y: geo.size.height))
-                    for point in points { path.addLine(to: point) }
+                    for point in points {
+                        path.addLine(to: point)
+                    }
                     path.addLine(to: CGPoint(x: points.last!.x, y: geo.size.height))
                     path.closeSubpath()
                 }
@@ -159,7 +160,9 @@ private struct MiniSparklineView: View {
                 // Line stroke
                 Path { path in
                     path.move(to: points[0])
-                    for point in points.dropFirst() { path.addLine(to: point) }
+                    for point in points.dropFirst() {
+                        path.addLine(to: point)
+                    }
                 }
                 .stroke(self.color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
             } else if self.data.count == 1, maxVal > 0 {

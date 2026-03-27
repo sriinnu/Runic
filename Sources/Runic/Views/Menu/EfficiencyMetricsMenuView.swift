@@ -11,10 +11,10 @@ struct EfficiencyMetricsMenuView: View {
 
         var label: String {
             switch self {
-            case .model: return "Model"
-            case .tokensPerRequest: return "Tokens/Req"
-            case .costPerRequest: return "Cost/Req"
-            case .cacheHitRate: return "Cache Hit %"
+            case .model: "Model"
+            case .tokensPerRequest: "Tokens/Req"
+            case .costPerRequest: "Cost/Req"
+            case .cacheHitRate: "Cache Hit %"
             }
         }
     }
@@ -181,7 +181,7 @@ struct EfficiencyMetricsMenuView: View {
         ascending: Bool) -> [ModelMetrics]
     {
         let metrics = summaries.map { ModelMetrics(summary: $0) }
-        let sorted = metrics.sorted { lhs, rhs in
+        return metrics.sorted { lhs, rhs in
             let result: Bool
             switch sortBy {
             case .model:
@@ -197,7 +197,6 @@ struct EfficiencyMetricsMenuView: View {
             }
             return ascending ? result : !result
         }
-        return sorted
     }
 
     private static func totalRequests(_ metrics: [ModelMetrics]) -> Int {
@@ -259,7 +258,7 @@ private struct MetricsRow: View {
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
-                Text(UsageFormatter.modelDisplayName(metrics.modelName))
+                Text(UsageFormatter.modelDisplayName(self.metrics.modelName))
                     .font(RunicFont.caption)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -272,7 +271,7 @@ private struct MetricsRow: View {
                 }
             }
             .frame(width: 140, alignment: .leading)
-            Text(UsageFormatter.tokenCountString(Int(metrics.tokensPerRequest)))
+            Text(UsageFormatter.tokenCountString(Int(self.metrics.tokensPerRequest)))
                 .font(RunicFont.caption)
                 .frame(width: 90, alignment: .leading)
             if let cost = metrics.costPerRequest {
@@ -285,7 +284,7 @@ private struct MetricsRow: View {
                     .foregroundStyle(.secondary)
                     .frame(width: 80, alignment: .leading)
             }
-            Text(String(format: "%.1f%%", metrics.cacheHitRate * 100))
+            Text(String(format: "%.1f%%", self.metrics.cacheHitRate * 100))
                 .font(RunicFont.caption)
                 .foregroundStyle(self.cacheHitColor)
                 .frame(width: 80, alignment: .leading)
@@ -301,12 +300,12 @@ private struct MetricsRow: View {
     }
 
     private var cacheHitColor: Color {
-        if metrics.cacheHitRate > 0.5 {
-            return Color(red: 0.46, green: 0.75, blue: 0.36)
-        } else if metrics.cacheHitRate > 0.2 {
-            return Color(red: 0.94, green: 0.74, blue: 0.26)
+        if self.metrics.cacheHitRate > 0.5 {
+            Color(red: 0.46, green: 0.75, blue: 0.36)
+        } else if self.metrics.cacheHitRate > 0.2 {
+            Color(red: 0.94, green: 0.74, blue: 0.26)
         } else {
-            return .secondary
+            .secondary
         }
     }
 }

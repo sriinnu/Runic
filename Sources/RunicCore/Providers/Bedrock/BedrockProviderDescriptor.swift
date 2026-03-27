@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -74,7 +74,7 @@ struct BedrockCLIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveRegion(context: ProviderFetchContext) -> String? {
-        if let region = Self.cleaned(context.settings?.bedrock?.region) {
+        if let region = cleaned(context.settings?.bedrock?.region) {
             return region
         }
         if let region = Self.cleaned(context.env["AWS_REGION"]) {
@@ -87,7 +87,7 @@ struct BedrockCLIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveProfile(context: ProviderFetchContext) -> String? {
-        if let profile = Self.cleaned(context.settings?.bedrock?.profile) {
+        if let profile = cleaned(context.settings?.bedrock?.profile) {
             return profile
         }
         if let profile = Self.cleaned(context.env["AWS_PROFILE"]) {
@@ -97,7 +97,7 @@ struct BedrockCLIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveModelFilter(context: ProviderFetchContext) -> String? {
-        if let model = Self.cleaned(context.settings?.bedrock?.modelID) {
+        if let model = cleaned(context.settings?.bedrock?.modelID) {
             return model
         }
         if let model = Self.cleaned(context.env["BEDROCK_MODEL_ID"]) {
@@ -113,13 +113,13 @@ struct BedrockCLIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum BedrockSettingsError: LocalizedError, Sendable {
+enum BedrockSettingsError: LocalizedError {
     case missingRegion
 
     var errorDescription: String? {
         switch self {
         case .missingRegion:
-            return "AWS region not found. Set it in Preferences → Providers → Amazon Bedrock or " +
+            "AWS region not found. Set it in Preferences → Providers → Amazon Bedrock or " +
                 "export AWS_REGION."
         }
     }

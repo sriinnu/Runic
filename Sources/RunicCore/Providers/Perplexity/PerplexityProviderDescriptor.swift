@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct PerplexityAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum PerplexitySettingsError: LocalizedError, Sendable {
+enum PerplexitySettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

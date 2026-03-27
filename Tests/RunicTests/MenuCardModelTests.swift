@@ -1,11 +1,11 @@
-import RunicCore
 import Foundation
+import RunicCore
 import SwiftUI
 import Testing
 @testable import Runic
 
-private extension UsageMenuCardView.Model.Input {
-    init(
+extension UsageMenuCardView.Model.Input {
+    fileprivate init(
         provider: UsageProvider,
         metadata: ProviderMetadata,
         snapshot: UsageSnapshot?,
@@ -30,7 +30,7 @@ private extension UsageMenuCardView.Model.Input {
         isRefreshing: Bool,
         lastError: String?,
         usageBarsShowUsed: Bool,
-        menuMode: MenuMode = .`operator`,
+        menuMode: MenuMode = .operator,
         tokenCostUsageEnabled: Bool,
         showOptionalCreditsAndExtraUsage: Bool,
         now: Date)
@@ -68,10 +68,9 @@ private extension UsageMenuCardView.Model.Input {
     }
 }
 
-@Suite
 struct MenuCardModelTests {
     @Test
-    func buildsMetricsUsingRemainingPercent() {
+    func `builds metrics using remaining percent`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -91,12 +90,12 @@ struct MenuCardModelTests {
                 resetDescription: nil),
             updatedAt: now,
             identity: identity)
-        let metadata = ProviderDefaults.metadata[.codex]!
-        let updatedSnap = UsageSnapshot(
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
+        let updatedSnap = try UsageSnapshot(
             primary: snapshot.primary,
             secondary: RateWindow(
-                usedPercent: snapshot.secondary!.usedPercent,
-                windowMinutes: snapshot.secondary!.windowMinutes,
+                usedPercent: #require(snapshot.secondary?.usedPercent),
+                windowMinutes: #require(snapshot.secondary?.windowMinutes),
                 resetsAt: now.addingTimeInterval(3600),
                 resetDescription: nil),
             tertiary: snapshot.tertiary,
@@ -131,7 +130,7 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func buildsMetricsUsingUsedPercentWhenEnabled() {
+    func `builds metrics using used percent when enabled`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -151,7 +150,7 @@ struct MenuCardModelTests {
                 resetDescription: nil),
             updatedAt: now,
             identity: identity)
-        let metadata = ProviderDefaults.metadata[.codex]!
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
 
         let dashboard = OpenAIDashboardSnapshot(
             signedInEmail: "codex@example.com",
@@ -187,7 +186,7 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func showsCodeReviewMetricWhenDashboardPresent() {
+    func `shows code review metric when dashboard present`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -200,7 +199,7 @@ struct MenuCardModelTests {
             tertiary: nil,
             updatedAt: now,
             identity: identity)
-        let metadata = ProviderDefaults.metadata[.codex]!
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
 
         let dashboard = OpenAIDashboardSnapshot(
             signedInEmail: "codex@example.com",
@@ -232,7 +231,7 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func claudeModelHidesWeeklyWhenUnavailable() {
+    func `claude model hides weekly when unavailable`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
             providerID: .claude,
@@ -249,7 +248,7 @@ struct MenuCardModelTests {
             tertiary: nil,
             updatedAt: now,
             identity: identity)
-        let metadata = ProviderDefaults.metadata[.claude]!
+        let metadata = try #require(ProviderDefaults.metadata[.claude])
         let model = UsageMenuCardView.Model.make(.init(
             provider: .claude,
             metadata: metadata,
@@ -274,8 +273,8 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func showsErrorSubtitleWhenPresent() {
-        let metadata = ProviderDefaults.metadata[.codex]!
+    func `shows error subtitle when present`() throws {
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
         let model = UsageMenuCardView.Model.make(.init(
             provider: .codex,
             metadata: metadata,
@@ -300,9 +299,9 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func costSectionIncludesLast30DaysTokens() {
+    func `cost section includes last30 days tokens`() throws {
         let now = Date()
-        let metadata = ProviderDefaults.metadata[.codex]!
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
         let snapshot = UsageSnapshot(
             primary: RateWindow(usedPercent: 0, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
             secondary: nil,
@@ -338,8 +337,8 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func claudeModelDoesNotLeakCodexPlan() {
-        let metadata = ProviderDefaults.metadata[.claude]!
+    func `claude model does not leak codex plan`() throws {
+        let metadata = try #require(ProviderDefaults.metadata[.claude])
         let model = UsageMenuCardView.Model.make(.init(
             provider: .claude,
             metadata: metadata,
@@ -363,7 +362,7 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func hidesCodexCreditsWhenDisabled() {
+    func `hides codex credits when disabled`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -376,7 +375,7 @@ struct MenuCardModelTests {
             tertiary: nil,
             updatedAt: now,
             identity: identity)
-        let metadata = ProviderDefaults.metadata[.codex]!
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
 
         let model = UsageMenuCardView.Model.make(.init(
             provider: .codex,
@@ -400,7 +399,7 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func hidesClaudeExtraUsageWhenDisabled() {
+    func `hides claude extra usage when disabled`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(
             providerID: .claude,
@@ -414,7 +413,7 @@ struct MenuCardModelTests {
             providerCost: ProviderCostSnapshot(used: 12, limit: 200, currencyCode: "USD", updatedAt: now),
             updatedAt: now,
             identity: identity)
-        let metadata = ProviderDefaults.metadata[.claude]!
+        let metadata = try #require(ProviderDefaults.metadata[.claude])
 
         let model = UsageMenuCardView.Model.make(.init(
             provider: .claude,
@@ -438,9 +437,9 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func insightsShowForecastAndBudgetETAForTopProject() {
+    func `insights show forecast and budget ETA for top project`() throws {
         let now = Date()
-        let metadata = ProviderDefaults.metadata[.codex]!
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
         let topProject = UsageLedgerProjectSummary(
             provider: .codex,
             projectKey: "id:proj-runic",
@@ -448,8 +447,8 @@ struct MenuCardModelTests {
             projectName: "Runic",
             entryCount: 5,
             totals: UsageLedgerTotals(
-                inputTokens: 2_000,
-                outputTokens: 1_000,
+                inputTokens: 2000,
+                outputTokens: 1000,
                 cacheCreationTokens: 0,
                 cacheReadTokens: 0,
                 costUSD: 12.5),
@@ -503,16 +502,16 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func insightsSurfaceAnomalySeverityLine() {
-        let metadata = ProviderDefaults.metadata[.codex]!
+    func `insights surface anomaly severity line`() throws {
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
         let anomaly = UsageLedgerAnomalySummary(
             provider: .codex,
             baselineDays: 7,
             tokenAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
                 metric: .tokens,
                 severity: .high,
-                todayValue: 4_200,
-                baselineAverage: 1_500,
+                todayValue: 4200,
+                baselineAverage: 1500,
                 percentIncrease: 1.8),
             spendAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
                 metric: .spend,

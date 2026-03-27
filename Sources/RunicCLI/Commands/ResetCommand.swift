@@ -1,24 +1,23 @@
-/// ResetCommand.swift
-/// Runic CLI - Usage Reset Timing Information
-///
-/// Displays when usage limits reset for different providers,
-/// helping you plan usage and understand billing cycles.
-///
-/// Usage:
-///   runic reset [--when <provider>] [--all] [--json] [--pretty] [--no-color]
-///
-/// Examples:
-///   runic reset                            # Show reset times for all providers
-///   runic reset --when claude              # Show Claude reset timings only
-///   runic reset --all --json               # JSON output for all providers
+// ResetCommand.swift
+// Runic CLI - Usage Reset Timing Information
+//
+// Displays when usage limits reset for different providers,
+// helping you plan usage and understand billing cycles.
+//
+// Usage:
+//   runic reset [--when <provider>] [--all] [--json] [--pretty] [--no-color]
+//
+// Examples:
+//   runic reset                            # Show reset times for all providers
+//   runic reset --when claude              # Show Claude reset timings only
+//   runic reset --all --json               # JSON output for all providers
 
-import RunicCore
-import Helix
 import Foundation
+import Helix
+import RunicCore
 
 /// Main entry point for the reset command
 public enum ResetCommand {
-
     /// Command signature defining available options and flags
     public static var signature: CommandSignature {
         CommandSignature(
@@ -86,22 +85,22 @@ public enum ResetCommand {
 
     /// Execute the reset command
     public static func run(_ invocation: CommandInvocation) async {
-        let config = parseConfiguration(invocation)
+        let config = self.parseConfiguration(invocation)
 
         do {
             let resetInfos = try await loadResetInformation(providers: config.providers)
 
             if resetInfos.isEmpty {
-                exitWithError("No reset information available for the specified providers.")
+                self.exitWithError("No reset information available for the specified providers.")
             }
 
             if config.isJSON {
-                outputJSON(resetInfos, pretty: config.isPretty)
+                self.outputJSON(resetInfos, pretty: config.isPretty)
             } else {
-                outputText(resetInfos, config: config)
+                self.outputText(resetInfos, config: config)
             }
         } catch {
-            exitWithError("Failed to load reset information: \(error.localizedDescription)")
+            self.exitWithError("Failed to load reset information: \(error.localizedDescription)")
         }
     }
 
@@ -125,7 +124,7 @@ public enum ResetCommand {
         let noColor = invocation.parsedValues.flags.contains("noColor")
         let compact = invocation.parsedValues.flags.contains("compact")
 
-        let providers = resolveProviders(whenArg)
+        let providers = self.resolveProviders(whenArg)
 
         return Configuration(
             providers: providers,
@@ -145,7 +144,7 @@ public enum ResetCommand {
         }
 
         guard let provider = UsageProvider(rawValue: arg) else {
-            exitWithError("Unknown provider: \(arg)")
+            self.exitWithError("Unknown provider: \(arg)")
         }
 
         return [provider]
@@ -173,8 +172,8 @@ public enum ResetCommand {
     // MARK: - Data Loading
 
     private static func loadResetInformation(
-        providers: [UsageProvider]
-    ) async throws -> [ProviderResetInfo] {
+        providers: [UsageProvider]) async throws -> [ProviderResetInfo]
+    {
         let fetcher = UsageFetcher()
         var results: [ProviderResetInfo] = []
 
@@ -194,8 +193,8 @@ public enum ResetCommand {
 
             let outcome = await descriptor.fetchOutcome(context: context)
 
-            if case .success(let result) = outcome.result {
-                let info = buildResetInfo(
+            if case let .success(result) = outcome.result {
+                let info = self.buildResetInfo(
                     provider: provider,
                     snapshot: result.usage,
                     metadata: descriptor.metadata)
@@ -209,30 +208,30 @@ public enum ResetCommand {
     private static func buildResetInfo(
         provider: UsageProvider,
         snapshot: UsageSnapshot,
-        metadata: ProviderMetadata
-    ) -> ProviderResetInfo {
+        metadata: ProviderMetadata) -> ProviderResetInfo
+    {
         var windows: [WindowResetInfo] = []
 
         // Primary window
-        windows.append(buildWindowInfo(
+        windows.append(self.buildWindowInfo(
             windowName: metadata.sessionLabel,
             window: snapshot.primary))
 
         // Secondary window
         if let secondary = snapshot.secondary {
-            windows.append(buildWindowInfo(
+            windows.append(self.buildWindowInfo(
                 windowName: metadata.weeklyLabel,
                 window: secondary))
         }
 
         // Tertiary window (Opus)
         if metadata.supportsOpus, let tertiary = snapshot.tertiary {
-            windows.append(buildWindowInfo(
+            windows.append(self.buildWindowInfo(
                 windowName: metadata.opusLabel ?? "Opus",
                 window: tertiary))
         }
 
-        let status = determineStatus(windows: windows)
+        let status = self.determineStatus(windows: windows)
 
         return ProviderResetInfo(
             provider: provider,
@@ -243,9 +242,9 @@ public enum ResetCommand {
 
     private static func buildWindowInfo(
         windowName: String,
-        window: RateWindow
-    ) -> WindowResetInfo {
-        let resetAt = extractResetDate(from: window.resetDescription)
+        window: RateWindow) -> WindowResetInfo
+    {
+        let resetAt = self.extractResetDate(from: window.resetDescription)
         let timeUntilReset = resetAt?.timeIntervalSinceNow
 
         return WindowResetInfo(
@@ -261,14 +260,15 @@ public enum ResetCommand {
     private static func extractResetDate(from description: String?) -> Date? {
         // This is a simplified implementation
         // Real implementation would parse the reset description
-        guard let description = description else { return nil }
+        guard let description else { return nil }
 
         // Look for patterns like "in Xh Ym"
         let pattern = #"in (\d+)h(?: (\d+)m)?"#
         guard let regex = try? NSRegularExpression(pattern: pattern),
               let match = regex.firstMatch(
                   in: description,
-                  range: NSRange(description.startIndex..., in: description)) else {
+                  range: NSRange(description.startIndex..., in: description))
+        else {
             return nil
         }
 
@@ -313,7 +313,8 @@ public enum ResetCommand {
         }
 
         guard let data = try? encoder.encode(infos),
-              let text = String(data: data, encoding: .utf8) else {
+              let text = String(data: data, encoding: .utf8)
+        else {
             print("[]")
             return
         }
@@ -323,18 +324,18 @@ public enum ResetCommand {
 
     private static func outputText(_ infos: [ProviderResetInfo], config: Configuration) {
         if config.compact {
-            outputCompactText(infos, useColor: config.useColor)
+            self.outputCompactText(infos, useColor: config.useColor)
         } else {
-            outputDetailedText(infos, useColor: config.useColor)
+            self.outputDetailedText(infos, useColor: config.useColor)
         }
     }
 
     private static func outputCompactText(_ infos: [ProviderResetInfo], useColor: Bool) {
-        printHeader("Usage Reset Times", useColor: useColor)
+        self.printHeader("Usage Reset Times", useColor: useColor)
         print("")
 
         for info in infos {
-            let status = statusIndicator(info.status, useColor: useColor)
+            let status = self.statusIndicator(info.status, useColor: useColor)
             let provider = info.providerName.padding(toLength: 12, withPad: " ", startingAt: 0)
 
             var resetTimes: [String] = []
@@ -350,7 +351,7 @@ public enum ResetCommand {
     }
 
     private static func outputDetailedText(_ infos: [ProviderResetInfo], useColor: Bool) {
-        printHeader("Usage Reset Information", useColor: useColor)
+        self.printHeader("Usage Reset Information", useColor: useColor)
         print("")
 
         for (index, info) in infos.enumerated() {
@@ -358,11 +359,11 @@ public enum ResetCommand {
                 print("")
             }
 
-            let status = statusIndicator(info.status, useColor: useColor)
+            let status = self.statusIndicator(info.status, useColor: useColor)
             let providerLine = "\(status) \(info.providerName) - \(info.status)"
 
             if useColor {
-                print(ansi("1;37", providerLine))
+                print(self.ansi("1;37", providerLine))
             } else {
                 print(providerLine)
             }
@@ -382,7 +383,7 @@ public enum ResetCommand {
                 if window.isNearLimit {
                     let warning = "⚠ High usage - consider monitoring closely"
                     if useColor {
-                        print("    \(ansi("33", warning))")
+                        print("    \(self.ansi("33", warning))")
                     } else {
                         print("    \(warning)")
                     }
@@ -403,12 +404,12 @@ public enum ResetCommand {
             ("✓", "32")
         }
 
-        return useColor ? ansi(color, icon) : icon
+        return useColor ? self.ansi(color, icon) : icon
     }
 
     private static func printHeader(_ text: String, useColor: Bool) {
         if useColor {
-            print(ansi("1;36", text))
+            print(self.ansi("1;36", text))
         } else {
             print(text)
         }

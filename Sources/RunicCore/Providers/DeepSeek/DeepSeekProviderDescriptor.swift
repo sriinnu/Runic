@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -72,7 +72,7 @@ struct DeepSeekAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum DeepSeekSettingsError: LocalizedError, Sendable {
+enum DeepSeekSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Storage for team management, memberships, project ownership, and invitations
-public struct TeamStore {
+public enum TeamStore {
     // MARK: - Types
 
     public enum TeamRole: String, Codable, Sendable {
@@ -57,8 +57,8 @@ public struct TeamStore {
             quota: Int,
             usedQuota: Int = 0,
             createdAt: Date = Date(),
-            updatedAt: Date = Date()
-        ) {
+            updatedAt: Date = Date())
+        {
             self.id = id
             self.name = name
             self.ownerUserID = ownerUserID
@@ -87,8 +87,8 @@ public struct TeamStore {
             quota: Int? = nil,
             usedQuota: Int = 0,
             joinedAt: Date = Date(),
-            updatedAt: Date = Date()
-        ) {
+            updatedAt: Date = Date())
+        {
             self.id = id
             self.teamID = teamID
             self.userID = userID
@@ -101,7 +101,10 @@ public struct TeamStore {
     }
 
     public struct ProjectOwnership: Codable, Sendable, Identifiable {
-        public var id: String { projectID }
+        public var id: String {
+            self.projectID
+        }
+
         public let projectID: String
         public var ownerUserID: String
         public var teamID: String?
@@ -117,8 +120,8 @@ public struct TeamStore {
             accessLevel: AccessLevel = .private,
             sharedWithUserIDs: [String] = [],
             createdAt: Date = Date(),
-            updatedAt: Date = Date()
-        ) {
+            updatedAt: Date = Date())
+        {
             self.projectID = projectID
             self.ownerUserID = ownerUserID
             self.teamID = teamID
@@ -149,8 +152,8 @@ public struct TeamStore {
             status: InvitationStatus = .pending,
             createdAt: Date = Date(),
             expiresAt: Date = Date().addingTimeInterval(7 * 24 * 60 * 60), // 7 days
-            respondedAt: Date? = nil
-        ) {
+            respondedAt: Date? = nil)
+        {
             self.id = id
             self.teamID = teamID
             self.email = email
@@ -163,7 +166,7 @@ public struct TeamStore {
         }
 
         public var isExpired: Bool {
-            Date() > expiresAt && status == .pending
+            Date() > self.expiresAt && self.status == .pending
         }
     }
 
@@ -181,8 +184,8 @@ public struct TeamStore {
             teams: [String: Team] = [:],
             memberships: [String: TeamMembership] = [:],
             projectOwnership: [String: ProjectOwnership] = [:],
-            invitations: [String: TeamInvitation] = [:]
-        ) {
+            invitations: [String: TeamInvitation] = [:])
+        {
             self.version = version
             self.currentUserID = currentUserID
             self.teams = teams
@@ -212,31 +215,31 @@ public struct TeamStore {
         public var errorDescription: String? {
             switch self {
             case .teamNotFound:
-                return "Team not found"
+                "Team not found"
             case .membershipNotFound:
-                return "Membership not found"
+                "Membership not found"
             case .projectNotFound:
-                return "Project not found"
+                "Project not found"
             case .invitationNotFound:
-                return "Invitation not found"
+                "Invitation not found"
             case .invalidQuota:
-                return "Invalid quota value"
+                "Invalid quota value"
             case .insufficientPermissions:
-                return "Insufficient permissions to perform this action"
+                "Insufficient permissions to perform this action"
             case .duplicateMembership:
-                return "User is already a member of this team"
+                "User is already a member of this team"
             case .duplicateInvitation:
-                return "An invitation has already been sent to this email"
+                "An invitation has already been sent to this email"
             case .invitationExpired:
-                return "This invitation has expired"
+                "This invitation has expired"
             case .ownerCannotLeave:
-                return "Team owner cannot leave the team. Transfer ownership first."
+                "Team owner cannot leave the team. Transfer ownership first."
             case .invalidEmailFormat:
-                return "Invalid email format"
+                "Invalid email format"
             case .teamQuotaExceeded:
-                return "Team quota exceeded"
+                "Team quota exceeded"
             case .memberQuotaExceeded:
-                return "Member quota exceeded"
+                "Member quota exceeded"
             }
         }
     }
@@ -253,7 +256,7 @@ public struct TeamStore {
     // MARK: - Storage Operations
 
     public static func load() -> TeamsData {
-        guard FileManager.default.fileExists(atPath: storageURL.path) else {
+        guard FileManager.default.fileExists(atPath: self.storageURL.path) else {
             return TeamsData()
         }
 
@@ -274,7 +277,7 @@ public struct TeamStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
         let data = try encoder.encode(teamsData)
-        try data.write(to: storageURL, options: .atomic)
+        try data.write(to: self.storageURL, options: .atomic)
     }
 
     // MARK: - Team Management
@@ -284,7 +287,7 @@ public struct TeamStore {
             throw TeamStoreError.invalidQuota
         }
 
-        var data = load()
+        var data = self.load()
         let team = Team(name: name, ownerUserID: ownerUserID, quota: quota)
         data.teams[team.id] = team
 
@@ -292,20 +295,19 @@ public struct TeamStore {
         let ownerMembership = TeamMembership(
             teamID: team.id,
             userID: ownerUserID,
-            role: .owner
-        )
+            role: .owner)
         data.memberships[ownerMembership.id] = ownerMembership
 
-        try save(data)
+        try self.save(data)
         return team
     }
 
     public static func getTeam(id: String) -> Team? {
-        load().teams[id]
+        self.load().teams[id]
     }
 
     public static func updateTeam(_ team: Team) throws {
-        var data = load()
+        var data = self.load()
         guard data.teams[team.id] != nil else {
             throw TeamStoreError.teamNotFound
         }
@@ -313,11 +315,11 @@ public struct TeamStore {
         var updatedTeam = team
         updatedTeam.updatedAt = Date()
         data.teams[team.id] = updatedTeam
-        try save(data)
+        try self.save(data)
     }
 
     public static func deleteTeam(id: String) throws {
-        var data = load()
+        var data = self.load()
         guard data.teams[id] != nil else {
             throw TeamStoreError.teamNotFound
         }
@@ -340,20 +342,25 @@ public struct TeamStore {
             data.projectOwnership[projectID] = updatedOwnership
         }
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func getUserTeams(userID: String) -> [Team] {
-        let data = load()
+        let data = self.load()
         let userMemberships = data.memberships.values.filter { $0.userID == userID }
-        let teamIDs = Set(userMemberships.map { $0.teamID })
+        let teamIDs = Set(userMemberships.map(\.teamID))
         return teamIDs.compactMap { data.teams[$0] }.sorted { $0.createdAt < $1.createdAt }
     }
 
     // MARK: - Membership Management
 
-    public static func addMember(teamID: String, userID: String, role: TeamRole, quota: Int? = nil) throws -> TeamMembership {
-        var data = load()
+    public static func addMember(
+        teamID: String,
+        userID: String,
+        role: TeamRole,
+        quota: Int? = nil) throws -> TeamMembership
+    {
+        var data = self.load()
 
         guard data.teams[teamID] != nil else {
             throw TeamStoreError.teamNotFound
@@ -366,7 +373,7 @@ public struct TeamStore {
         }
 
         // Validate quota if provided
-        if let quota = quota, quota < 0 {
+        if let quota, quota < 0 {
             throw TeamStoreError.invalidQuota
         }
 
@@ -374,22 +381,21 @@ public struct TeamStore {
             teamID: teamID,
             userID: userID,
             role: role,
-            quota: quota
-        )
+            quota: quota)
         data.memberships[membership.id] = membership
 
-        try save(data)
+        try self.save(data)
         return membership
     }
 
     public static func updateMemberRole(membershipID: String, newRole: TeamRole) throws {
-        var data = load()
+        var data = self.load()
         guard var membership = data.memberships[membershipID] else {
             throw TeamStoreError.membershipNotFound
         }
 
         // Prevent changing owner role (should use transfer ownership instead)
-        if membership.role == .owner && newRole != .owner {
+        if membership.role == .owner, newRole != .owner {
             throw TeamStoreError.insufficientPermissions
         }
 
@@ -397,11 +403,11 @@ public struct TeamStore {
         membership.updatedAt = Date()
         data.memberships[membershipID] = membership
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func updateMemberQuota(membershipID: String, newQuota: Int?) throws {
-        var data = load()
+        var data = self.load()
         guard var membership = data.memberships[membershipID] else {
             throw TeamStoreError.membershipNotFound
         }
@@ -414,11 +420,11 @@ public struct TeamStore {
         membership.updatedAt = Date()
         data.memberships[membershipID] = membership
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func removeMember(membershipID: String) throws {
-        var data = load()
+        var data = self.load()
         guard let membership = data.memberships[membershipID] else {
             throw TeamStoreError.membershipNotFound
         }
@@ -429,32 +435,36 @@ public struct TeamStore {
         }
 
         data.memberships.removeValue(forKey: membershipID)
-        try save(data)
+        try self.save(data)
     }
 
     public static func getTeamMembers(teamID: String) -> [TeamMembership] {
-        load().memberships.values
+        self.load().memberships.values
             .filter { $0.teamID == teamID }
             .sorted { $0.joinedAt < $1.joinedAt }
     }
 
     public static func getUserMembership(teamID: String, userID: String) -> TeamMembership? {
-        load().memberships.values.first { $0.teamID == teamID && $0.userID == userID }
+        self.load().memberships.values.first { $0.teamID == teamID && $0.userID == userID }
     }
 
     public static func transferOwnership(teamID: String, newOwnerUserID: String) throws {
-        var data = load()
+        var data = self.load()
         guard var team = data.teams[teamID] else {
             throw TeamStoreError.teamNotFound
         }
 
         // Get current owner membership
-        guard let currentOwnerMembership = data.memberships.values.first(where: { $0.teamID == teamID && $0.userID == team.ownerUserID }) else {
+        guard let currentOwnerMembership = data.memberships.values
+            .first(where: { $0.teamID == teamID && $0.userID == team.ownerUserID })
+        else {
             throw TeamStoreError.membershipNotFound
         }
 
         // Get new owner membership
-        guard let newOwnerMembership = data.memberships.values.first(where: { $0.teamID == teamID && $0.userID == newOwnerUserID }) else {
+        guard let newOwnerMembership = data.memberships.values
+            .first(where: { $0.teamID == teamID && $0.userID == newOwnerUserID })
+        else {
             throw TeamStoreError.membershipNotFound
         }
 
@@ -474,16 +484,21 @@ public struct TeamStore {
         updatedNewOwner.updatedAt = Date()
         data.memberships[newOwnerMembership.id] = updatedNewOwner
 
-        try save(data)
+        try self.save(data)
     }
 
     // MARK: - Project Ownership Management
 
-    public static func setProjectOwnership(projectID: String, ownerUserID: String, teamID: String? = nil, accessLevel: AccessLevel) throws {
-        var data = load()
+    public static func setProjectOwnership(
+        projectID: String,
+        ownerUserID: String,
+        teamID: String? = nil,
+        accessLevel: AccessLevel) throws
+    {
+        var data = self.load()
 
         // Validate team exists if provided
-        if let teamID = teamID {
+        if let teamID {
             guard data.teams[teamID] != nil else {
                 throw TeamStoreError.teamNotFound
             }
@@ -501,16 +516,15 @@ public struct TeamStore {
                 projectID: projectID,
                 ownerUserID: ownerUserID,
                 teamID: teamID,
-                accessLevel: accessLevel
-            )
+                accessLevel: accessLevel)
             data.projectOwnership[projectID] = ownership
         }
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func shareProject(projectID: String, withUserIDs: [String]) throws {
-        var data = load()
+        var data = self.load()
         guard var ownership = data.projectOwnership[projectID] else {
             throw TeamStoreError.projectNotFound
         }
@@ -520,11 +534,11 @@ public struct TeamStore {
         ownership.updatedAt = Date()
         data.projectOwnership[projectID] = ownership
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func unshareProject(projectID: String, withUserIDs: [String]) throws {
-        var data = load()
+        var data = self.load()
         guard var ownership = data.projectOwnership[projectID] else {
             throw TeamStoreError.projectNotFound
         }
@@ -533,52 +547,57 @@ public struct TeamStore {
         ownership.updatedAt = Date()
 
         // If no users are shared with, revert to private
-        if ownership.sharedWithUserIDs.isEmpty && ownership.accessLevel == .shared {
+        if ownership.sharedWithUserIDs.isEmpty, ownership.accessLevel == .shared {
             ownership.accessLevel = .private
         }
 
         data.projectOwnership[projectID] = ownership
-        try save(data)
+        try self.save(data)
     }
 
     public static func getProjectOwnership(projectID: String) -> ProjectOwnership? {
-        load().projectOwnership[projectID]
+        self.load().projectOwnership[projectID]
     }
 
     public static func getUserProjects(userID: String) -> [ProjectOwnership] {
-        let data = load()
+        let data = self.load()
         return data.projectOwnership.values
             .filter { $0.ownerUserID == userID || $0.sharedWithUserIDs.contains(userID) }
             .sorted { $0.createdAt < $1.createdAt }
     }
 
     public static func getTeamProjects(teamID: String) -> [ProjectOwnership] {
-        load().projectOwnership.values
+        self.load().projectOwnership.values
             .filter { $0.teamID == teamID }
             .sorted { $0.createdAt < $1.createdAt }
     }
 
     public static func deleteProjectOwnership(projectID: String) throws {
-        var data = load()
+        var data = self.load()
         guard data.projectOwnership[projectID] != nil else {
             throw TeamStoreError.projectNotFound
         }
 
         data.projectOwnership.removeValue(forKey: projectID)
-        try save(data)
+        try self.save(data)
     }
 
     // MARK: - Invitation Management
 
-    public static func createInvitation(teamID: String, email: String, role: TeamRole, invitedBy: String) throws -> TeamInvitation {
-        var data = load()
+    public static func createInvitation(
+        teamID: String,
+        email: String,
+        role: TeamRole,
+        invitedBy: String) throws -> TeamInvitation
+    {
+        var data = self.load()
 
         guard data.teams[teamID] != nil else {
             throw TeamStoreError.teamNotFound
         }
 
         // Validate email format (basic validation)
-        guard email.contains("@") && email.contains(".") else {
+        guard email.contains("@"), email.contains(".") else {
             throw TeamStoreError.invalidEmailFormat
         }
 
@@ -594,16 +613,15 @@ public struct TeamStore {
             teamID: teamID,
             email: email,
             role: role,
-            invitedBy: invitedBy
-        )
+            invitedBy: invitedBy)
         data.invitations[invitation.id] = invitation
 
-        try save(data)
+        try self.save(data)
         return invitation
     }
 
     public static func acceptInvitation(id: String, userID: String) throws {
-        var data = load()
+        var data = self.load()
         guard var invitation = data.invitations[id] else {
             throw TeamStoreError.invitationNotFound
         }
@@ -616,7 +634,7 @@ public struct TeamStore {
             invitation.status = .expired
             invitation.respondedAt = Date()
             data.invitations[id] = invitation
-            try save(data)
+            try self.save(data)
             throw TeamStoreError.invitationExpired
         }
 
@@ -624,8 +642,7 @@ public struct TeamStore {
         let membership = TeamMembership(
             teamID: invitation.teamID,
             userID: userID,
-            role: invitation.role
-        )
+            role: invitation.role)
         data.memberships[membership.id] = membership
 
         // Update invitation status
@@ -633,11 +650,11 @@ public struct TeamStore {
         invitation.respondedAt = Date()
         data.invitations[id] = invitation
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func declineInvitation(id: String) throws {
-        var data = load()
+        var data = self.load()
         guard var invitation = data.invitations[id] else {
             throw TeamStoreError.invitationNotFound
         }
@@ -646,53 +663,53 @@ public struct TeamStore {
         invitation.respondedAt = Date()
         data.invitations[id] = invitation
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func cancelInvitation(id: String) throws {
-        var data = load()
+        var data = self.load()
         guard data.invitations[id] != nil else {
             throw TeamStoreError.invitationNotFound
         }
 
         data.invitations.removeValue(forKey: id)
-        try save(data)
+        try self.save(data)
     }
 
     public static func getPendingInvitations(email: String) -> [TeamInvitation] {
-        load().invitations.values
+        self.load().invitations.values
             .filter { $0.email.lowercased() == email.lowercased() && $0.status == .pending && !$0.isExpired }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
     public static func getTeamInvitations(teamID: String) -> [TeamInvitation] {
-        load().invitations.values
+        self.load().invitations.values
             .filter { $0.teamID == teamID }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
     public static func cleanupExpiredInvitations() throws {
-        var data = load()
-        let expiredIDs = data.invitations.filter { $0.value.isExpired }.map { $0.key }
+        var data = self.load()
+        let expiredIDs = data.invitations.filter(\.value.isExpired).map(\.key)
 
         for id in expiredIDs {
             data.invitations[id]?.status = .expired
             data.invitations[id]?.respondedAt = Date()
         }
 
-        try save(data)
+        try self.save(data)
     }
 
     // MARK: - Current User Management
 
     public static func setCurrentUser(userID: String) throws {
-        var data = load()
+        var data = self.load()
         data.currentUserID = userID
-        try save(data)
+        try self.save(data)
     }
 
     public static func getCurrentUser() -> String? {
-        load().currentUserID
+        self.load().currentUserID
     }
 
     // MARK: - Usage Tracking
@@ -702,7 +719,7 @@ public struct TeamStore {
             throw TeamStoreError.invalidQuota
         }
 
-        var data = load()
+        var data = self.load()
         guard var team = data.teams[teamID] else {
             throw TeamStoreError.teamNotFound
         }
@@ -712,12 +729,12 @@ public struct TeamStore {
 
         if team.usedQuota > team.quota {
             data.teams[teamID] = team
-            try save(data)
+            try self.save(data)
             throw TeamStoreError.teamQuotaExceeded
         }
 
         data.teams[teamID] = team
-        try save(data)
+        try self.save(data)
     }
 
     public static func incrementMemberUsage(membershipID: String, amount: Int) throws {
@@ -725,7 +742,7 @@ public struct TeamStore {
             throw TeamStoreError.invalidQuota
         }
 
-        var data = load()
+        var data = self.load()
         guard var membership = data.memberships[membershipID] else {
             throw TeamStoreError.membershipNotFound
         }
@@ -736,16 +753,16 @@ public struct TeamStore {
         // Check individual quota if set
         if let quota = membership.quota, membership.usedQuota > quota {
             data.memberships[membershipID] = membership
-            try save(data)
+            try self.save(data)
             throw TeamStoreError.memberQuotaExceeded
         }
 
         data.memberships[membershipID] = membership
-        try save(data)
+        try self.save(data)
     }
 
     public static func resetTeamUsage(teamID: String) throws {
-        var data = load()
+        var data = self.load()
         guard var team = data.teams[teamID] else {
             throw TeamStoreError.teamNotFound
         }
@@ -754,11 +771,11 @@ public struct TeamStore {
         team.updatedAt = Date()
         data.teams[teamID] = team
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func resetMemberUsage(membershipID: String) throws {
-        var data = load()
+        var data = self.load()
         guard var membership = data.memberships[membershipID] else {
             throw TeamStoreError.membershipNotFound
         }
@@ -767,11 +784,11 @@ public struct TeamStore {
         membership.updatedAt = Date()
         data.memberships[membershipID] = membership
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func resetAllTeamUsages() throws {
-        var data = load()
+        var data = self.load()
 
         // Reset all teams
         for (id, var team) in data.teams {
@@ -787,6 +804,6 @@ public struct TeamStore {
             data.memberships[id] = membership
         }
 
-        try save(data)
+        try self.save(data)
     }
 }

@@ -1,12 +1,11 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 @testable import Runic
 
-@Suite
 struct PathBuilderTests {
     @Test
-    func mergesLoginShellPathWhenAvailable() {
+    func `merges login shell path when available`() {
         let seeded = PathBuilder.effectivePATH(
             purposes: [.rpc],
             env: ["PATH": "/custom/bin:/usr/bin"],
@@ -15,7 +14,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func fallsBackToExistingPathWhenNoLoginPath() {
+    func `falls back to existing path when no login path`() {
         let seeded = PathBuilder.effectivePATH(
             purposes: [.tty],
             env: ["PATH": "/custom/bin:/usr/bin"],
@@ -24,7 +23,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func usesFallbackWhenNoPathAvailable() {
+    func `uses fallback when no path available`() {
         let seeded = PathBuilder.effectivePATH(
             purposes: [.tty],
             env: [:],
@@ -33,7 +32,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesCodexFromEnvOverride() {
+    func `resolves codex from env override`() {
         let overridePath = "/custom/bin/codex"
         let fm = MockFileManager(executables: [overridePath])
 
@@ -46,7 +45,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesCodexFromLoginPath() {
+    func `resolves codex from login path`() {
         let fm = MockFileManager(executables: ["/login/bin/codex"])
         let resolved = BinaryLocator.resolveCodexBinary(
             env: ["PATH": "/env/bin"],
@@ -57,7 +56,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesCodexFromEnvPath() {
+    func `resolves codex from env path`() {
         let fm = MockFileManager(executables: ["/env/bin/codex"])
         let resolved = BinaryLocator.resolveCodexBinary(
             env: ["PATH": "/env/bin:/usr/bin"],
@@ -68,7 +67,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesCodexFromInteractiveShell() {
+    func `resolves codex from interactive shell`() {
         let fm = MockFileManager(executables: ["/shell/bin/codex"])
         let commandV: (String, String?, TimeInterval, FileManager) -> String? = { tool, shell, timeout, fileManager in
             #expect(tool == "codex")
@@ -88,7 +87,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesClaudeFromInteractiveShell() {
+    func `resolves claude from interactive shell`() {
         let fm = MockFileManager(executables: ["/shell/bin/claude"])
         let commandV: (String, String?, TimeInterval, FileManager) -> String? = { tool, shell, timeout, fileManager in
             #expect(tool == "claude")
@@ -108,7 +107,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesGeminiFromInteractiveShell() {
+    func `resolves gemini from interactive shell`() {
         let fm = MockFileManager(executables: ["/shell/bin/gemini"])
         let commandV: (String, String?, TimeInterval, FileManager) -> String? = { tool, shell, timeout, fileManager in
             #expect(tool == "gemini")
@@ -128,7 +127,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesClaudeFromLoginPath() {
+    func `resolves claude from login path`() {
         let fm = MockFileManager(executables: ["/login/bin/claude"])
         let resolved = BinaryLocator.resolveClaudeBinary(
             env: ["PATH": "/env/bin"],
@@ -139,7 +138,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesClaudeFromAliasWhenOtherLookupsFail() {
+    func `resolves claude from alias when other lookups fail`() {
         let aliasPath = "/home/test/.claude/local/bin/claude"
         let fm = MockFileManager(executables: [aliasPath])
         var aliasCalled = false
@@ -169,7 +168,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func resolvesCodexFromAliasWhenOtherLookupsFail() {
+    func `resolves codex from alias when other lookups fail`() {
         let aliasPath = "/home/test/.codex/bin/codex"
         let fm = MockFileManager(executables: [aliasPath])
         var aliasCalled = false
@@ -199,7 +198,7 @@ struct PathBuilderTests {
     }
 
     @Test
-    func skipsAliasWhenCommandVResolves() {
+    func `skips alias when command V resolves`() {
         let path = "/shell/bin/claude"
         let fm = MockFileManager(executables: [path])
         var aliasCalled = false

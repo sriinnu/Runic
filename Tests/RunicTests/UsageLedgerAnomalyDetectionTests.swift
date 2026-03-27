@@ -1,13 +1,11 @@
 import Foundation
 import RunicCore
 import Testing
-
 @testable import Runic
 
-@Suite
 struct UsageLedgerAnomalyDetectionTests {
     @Test
-    func detectsTokenSpikeAgainstSevenDayBaseline() {
+    func `detects token spike against seven day baseline`() {
         let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone.current
@@ -17,7 +15,7 @@ struct UsageLedgerAnomalyDetectionTests {
             summaries.append(self.dailySummary(
                 provider: .codex,
                 dayOffset: offset,
-                tokens: 1_000,
+                tokens: 1000,
                 cost: nil,
                 now: now,
                 calendar: calendar))
@@ -25,7 +23,7 @@ struct UsageLedgerAnomalyDetectionTests {
         summaries.append(self.dailySummary(
             provider: .codex,
             dayOffset: 0,
-            tokens: 2_500,
+            tokens: 2500,
             cost: nil,
             now: now,
             calendar: calendar))
@@ -43,7 +41,7 @@ struct UsageLedgerAnomalyDetectionTests {
     }
 
     @Test
-    func detectsSpendSpikeWhenCostDataExists() {
+    func `detects spend spike when cost data exists`() {
         let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone.current
@@ -53,7 +51,7 @@ struct UsageLedgerAnomalyDetectionTests {
             summaries.append(self.dailySummary(
                 provider: .claude,
                 dayOffset: offset,
-                tokens: 1_000,
+                tokens: 1000,
                 cost: 2.0,
                 now: now,
                 calendar: calendar))
@@ -61,7 +59,7 @@ struct UsageLedgerAnomalyDetectionTests {
         summaries.append(self.dailySummary(
             provider: .claude,
             dayOffset: 0,
-            tokens: 1_100,
+            tokens: 1100,
             cost: 7.0,
             now: now,
             calendar: calendar))
@@ -79,7 +77,7 @@ struct UsageLedgerAnomalyDetectionTests {
     }
 
     @Test
-    func doesNotEmitAnomalyWhenHistoryHasFewerThanSevenDays() {
+    func `does not emit anomaly when history has fewer than seven days`() {
         let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone.current
@@ -97,7 +95,7 @@ struct UsageLedgerAnomalyDetectionTests {
         summaries.append(self.dailySummary(
             provider: .codex,
             dayOffset: 0,
-            tokens: 4_000,
+            tokens: 4000,
             cost: 8.0,
             now: now,
             calendar: calendar))
@@ -112,15 +110,15 @@ struct UsageLedgerAnomalyDetectionTests {
     }
 
     @Test
-    func explanationIncludesHeadlineAndContributingFactors() {
+    func `explanation includes headline and contributing factors`() {
         let summary = UsageLedgerAnomalySummary(
             provider: .codex,
             baselineDays: 7,
             tokenAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
                 metric: .tokens,
                 severity: .high,
-                todayValue: 4_200,
-                baselineAverage: 1_500,
+                todayValue: 4200,
+                baselineAverage: 1500,
                 percentIncrease: 1.8),
             spendAnomaly: UsageLedgerAnomalySummary.MetricAnomaly(
                 metric: .spend,
@@ -137,7 +135,7 @@ struct UsageLedgerAnomalyDetectionTests {
     }
 
     @Test
-    func explanationIsNilWhenNoAnomaliesExist() {
+    func `explanation is nil when no anomalies exist`() {
         let summary = UsageLedgerAnomalySummary(
             provider: .codex,
             baselineDays: 7,

@@ -1,17 +1,23 @@
-import RunicCore
 import Foundation
+import RunicCore
 import SwiftUI
 import Testing
 @testable import Runic
 
 @MainActor
-@Suite
 struct ProviderSettingsDescriptorTests {
     @Test
-    func toggleIDsAreUniqueAcrossProviders() {
-        let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-unique")!
+    func `toggle I ds are unique across providers`() throws {
+        let defaults = try #require(UserDefaults(suiteName: "ProviderSettingsDescriptorTests-unique"))
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-unique")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
 
         var statusByID: [String: String] = [:]
@@ -52,7 +58,7 @@ struct ProviderSettingsDescriptorTests {
                 },
                 requestConfirmation: { _ in })
 
-            let impl = ProviderCatalog.implementation(for: provider)!
+            let impl = try #require(ProviderCatalog.implementation(for: provider))
             let toggles = impl.settingsToggles(context: context)
             for toggle in toggles {
                 #expect(!seenToggleIDs.contains(toggle.id))
@@ -67,10 +73,17 @@ struct ProviderSettingsDescriptorTests {
     }
 
     @Test
-    func codexDoesNotExposeOpenAIWebToggle() {
-        let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-codex")!
+    func `codex does not expose open AI web toggle`() throws {
+        let defaults = try #require(UserDefaults(suiteName: "ProviderSettingsDescriptorTests-codex"))
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-codex")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
 
         let context = ProviderSettingsContext(
@@ -98,10 +111,17 @@ struct ProviderSettingsDescriptorTests {
     }
 
     @Test
-    func claudeDoesNotExposeSettingsToggles() {
-        let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-claude")!
+    func `claude does not expose settings toggles`() throws {
+        let defaults = try #require(UserDefaults(suiteName: "ProviderSettingsDescriptorTests-claude"))
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-claude")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
 
         let context = ProviderSettingsContext(
@@ -128,10 +148,17 @@ struct ProviderSettingsDescriptorTests {
     }
 
     @Test
-    func claudeWebExtrasAutoDisablesWhenLeavingCLI() {
-        let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-claude-invariant")!
+    func `claude web extras auto disables when leaving CLI`() throws {
+        let defaults = try #require(UserDefaults(suiteName: "ProviderSettingsDescriptorTests-claude-invariant"))
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-claude-invariant")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         settings.debugMenuEnabled = true
         settings.claudeUsageDataSource = .cli
         settings.claudeWebExtrasEnabled = true
@@ -141,10 +168,17 @@ struct ProviderSettingsDescriptorTests {
     }
 
     @Test
-    func extraProvidersExposeExpectedSettingsFields() {
-        let defaults = UserDefaults(suiteName: "ProviderSettingsDescriptorTests-extra-fields")!
+    func `extra providers expose expected settings fields`() throws {
+        let defaults = try #require(UserDefaults(suiteName: "ProviderSettingsDescriptorTests-extra-fields"))
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-extra-fields")
-        let settings = SettingsStore(userDefaults: defaults, zaiTokenStore: NoopZaiTokenStore(), minimaxTokenStore: NoopMiniMaxTokenStore(), minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(), minimaxGroupIDStore: NoopMiniMaxGroupIDStore(), openRouterTokenStore: NoopOpenRouterTokenStore(), groqTokenStore: NoopGroqTokenStore())
+        let settings = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
         let store = UsageStore(fetcher: UsageFetcher(environment: [:]), settings: settings)
 
         let expectedFields: [UsageProvider: Set<String>] = [
@@ -168,7 +202,7 @@ struct ProviderSettingsDescriptorTests {
     }
 
     @Test
-    func allProvidersHaveAppSideImplementation() {
+    func `all providers have app side implementation`() {
         for provider in UsageProvider.allCases {
             #expect(ProviderCatalog.implementation(for: provider) != nil)
         }

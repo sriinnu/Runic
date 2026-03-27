@@ -1,11 +1,11 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 
-@Suite("Gemini API", .serialized)
+@Suite(.serialized)
 struct GeminiStatusProbeAPITests {
     @Test
-    func missingCredentialsThrowsNotLoggedIn() async throws {
+    func `missing credentials throws not logged in`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
 
@@ -16,7 +16,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func rejectsApiKeyAuthType() async throws {
+    func `rejects api key auth type`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeSettings(authType: "api-key")
@@ -28,7 +28,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func rejectsVertexAuthType() async throws {
+    func `rejects vertex auth type`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeSettings(authType: "vertex-ai")
@@ -40,7 +40,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func refreshesExpiredTokenAndUpdatesStoredCredentials() async throws {
+    func `refreshes expired token and updates stored credentials`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -112,7 +112,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func failsRefreshWhenOAuthConfigMissing() async throws {
+    func `fails refresh when O auth config missing`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -139,7 +139,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func reportsApiErrors() async throws {
+    func `reports api errors`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -175,7 +175,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func reportsNotLoggedInWhenAccessTokenMissing() async throws {
+    func `reports not logged in when access token missing`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -191,7 +191,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func reportsNotLoggedInOn401() async throws {
+    func `reports not logged in on401`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(
@@ -227,7 +227,7 @@ struct GeminiStatusProbeAPITests {
     }
 
     @Test
-    func reportsParseErrorsForInvalidPayload() async throws {
+    func `reports parse errors for invalid payload`() async throws {
         let env = try GeminiTestEnvironment()
         defer { env.cleanup() }
         try env.writeCredentials(

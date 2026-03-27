@@ -1,13 +1,13 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 import XCTest
 @testable import Runic
 
-@Suite("Live RPC account checks", .serialized)
+@Suite(.serialized)
 struct LiveAccountTests {
     @Test(.disabled("Set LIVE_TEST=1 to run live Codex account checks."))
-    func codexAccountEmailIsPresent() async throws {
+    func `codex account email is present`() async throws {
         guard ProcessInfo.processInfo.environment["LIVE_TEST"] == "1" else { return }
 
         let fetcher = UsageFetcher()
