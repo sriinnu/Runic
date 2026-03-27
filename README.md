@@ -77,7 +77,9 @@ Context windows are configurable via `Resources/provider-context-windows.json`.
 - Dark / Light / System theme
 - Liquid UI with glass materials and animated progress bars
 - Staggered entrance animations and glass shimmer effects
-- SF Rounded typography with design tokens
+- Custom font system — 7 bundled families (Fira Code, JetBrains Mono, IBM Plex Mono, Space Mono, Inconsolata, Caveat, SF Pro/Mono) with live switching
+- Drop-in font extensibility — add TTF/OTF to `Resources/Fonts`, rebuild, auto-discovered
+- Design tokens for typography, colors, spacing, corner radius, animation
 - VoiceOver accessible
 - Sparkle auto-updates
 
@@ -106,6 +108,11 @@ All tokens stored in macOS Keychain with no password prompts.
 ## Privacy
 
 Zero telemetry. No analytics. No crash reporting. All data stays on your Mac.
+
+## Roadmap
+
+- Windows desktop app
+- Web app
 
 ## License
 
