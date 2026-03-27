@@ -6,7 +6,7 @@ import SwiftUI
 // MARK: - NSMenu construction
 
 extension StatusItemController {
-    static let menuCardBaseWidth: CGFloat = 310
+    static let menuCardBaseWidth: CGFloat = 340
     private static let menuOpenPingDelay: Duration = PerformanceConstants.menuOpenPingDelay
 
     func menuCardWidth(for providers: [UsageProvider], menu: NSMenu? = nil) -> CGFloat {
@@ -148,8 +148,9 @@ extension StatusItemController {
                 width: menuWidth,
                 menu: menu)
             if let tabBarView {
-                let hosting = MenuHostingView(rootView: tabBarView)
-                let controller = NSHostingController(rootView: tabBarView)
+                let monoTabBar = tabBarView.runicTypography()
+                let hosting = MenuHostingView(rootView: monoTabBar)
+                let controller = NSHostingController(rootView: monoTabBar)
                 let size = controller.sizeThatFits(in: CGSize(width: menuWidth, height: .greatestFiniteMagnitude))
                 hosting.frame = NSRect(origin: .zero, size: NSSize(width: menuWidth, height: size.height))
                 let tabItem = NSMenuItem()
@@ -172,8 +173,9 @@ extension StatusItemController {
             let overviewView = self.makeOverviewView(
                 providers: enabledProviders,
                 width: menuWidth)
-            let hosting = MenuHostingView(rootView: overviewView)
-            let controller = NSHostingController(rootView: overviewView)
+            let monoOverview = overviewView.runicTypography()
+            let hosting = MenuHostingView(rootView: monoOverview)
+            let controller = NSHostingController(rootView: monoOverview)
             let size = controller.sizeThatFits(in: CGSize(width: menuWidth, height: .greatestFiniteMagnitude))
             hosting.frame = NSRect(origin: .zero, size: NSSize(width: menuWidth, height: size.height))
             let overviewItem = NSMenuItem()
@@ -266,10 +268,10 @@ extension StatusItemController {
                     let item = NSMenuItem(title: text, action: nil, keyEquivalent: "")
                     item.isEnabled = false
                     if style == .headline {
-                        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+                        let font = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
                         item.attributedTitle = NSAttributedString(string: text, attributes: [.font: font])
                     } else if style == .secondary {
-                        let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+                        let font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
                         item.attributedTitle = NSAttributedString(
                             string: text,
                             attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
@@ -306,6 +308,8 @@ extension StatusItemController {
                 menu.addItem(.separator())
             }
         }
+
+        self.applyRunicFont(to: menu)
     }
 
     func makeMenu(for provider: UsageProvider?) -> NSMenu {
@@ -838,7 +842,7 @@ private final class ProviderSwitcherView: NSView {
             button.bezelStyle = .regularSquare
             button.isBordered = false
             button.controlSize = .small
-            button.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+            button.font = RunicFont.nsFont(size: 12, weight: .medium)
             button.setButtonType(.toggle)
             button.contentTintColor = self.unselectedTextColor
             button.alignment = .center
@@ -1224,7 +1228,7 @@ private final class ProviderSwitcherView: NSView {
             if self.stackedIcons,
                self.segments.indices.contains(index)
             {
-                let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+                let font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
                 let titleWidth = ceil((self.segments[index].title as NSString).size(withAttributes: [.font: font])
                     .width)
                 let contentPadding: CGFloat = 6 + 6

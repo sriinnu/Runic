@@ -336,6 +336,7 @@ extension StatusItemController {
         let submenu = NSMenu()
         submenu.delegate = self
         let chartView = UsageBreakdownChartMenuView(breakdown: breakdown, width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -357,6 +358,7 @@ extension StatusItemController {
         let submenu = NSMenu()
         submenu.delegate = self
         let chartView = CreditsHistoryChartMenuView(breakdown: breakdown, width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -383,6 +385,7 @@ extension StatusItemController {
             daily: tokenSnapshot.daily,
             totalCostUSD: tokenSnapshot.last30DaysCostUSD,
             width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -411,6 +414,7 @@ extension StatusItemController {
             dailySummaries: dailySummaries,
             hourlySummaries: hourlySummaries,
             width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -438,6 +442,7 @@ extension StatusItemController {
         let submenu = NSMenu()
         submenu.delegate = self
         let chartView = HourlyActivityChartMenuView(hourlySummaries: hourlySummaries, width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -465,6 +470,7 @@ extension StatusItemController {
         let submenu = NSMenu()
         submenu.delegate = self
         let chartView = WeeklyActivityChartMenuView(dailySummaries: dailySummaries, width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -502,6 +508,7 @@ extension StatusItemController {
             currentUsedPercent: currentUsedPercent,
             todayTokens: todayTokens,
             width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -544,6 +551,7 @@ extension StatusItemController {
             primaryPercent: primaryPercent,
             secondaryPercent: secondaryPercent,
             width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -572,6 +580,7 @@ extension StatusItemController {
         let submenu = NSMenu()
         submenu.delegate = self
         let chartView = ProjectBreakdownMenuView(breakdown: breakdown, width: width)
+            .runicTypography()
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -598,6 +607,7 @@ extension StatusItemController {
         if !breakdown.isEmpty {
             let width = Self.menuCardBaseWidth
             let chartView = ModelBreakdownMenuView(breakdown: breakdown, width: width)
+                .runicTypography()
             let hosting = MenuHostingView(rootView: chartView)
             let controller = NSHostingController(rootView: chartView)
             let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -692,7 +702,7 @@ extension StatusItemController {
 
         // MARK: Model usage (24h) — tokens, prompts, estimated cost per model
         if let modelUsage = zai.modelUsage, !modelUsage.entries.isEmpty {
-            let headerFont = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+            let headerFont = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
             let header = NSMenuItem(title: "Models (24h)", action: nil, keyEquivalent: "")
             header.attributedTitle = NSAttributedString(string: "Models (24h)", attributes: [.font: headerFont])
             header.isEnabled = false
@@ -706,7 +716,7 @@ extension StatusItemController {
                 title: "\(totalTokensStr) tokens · \(totalPromptsStr)\(totalCostStr)",
                 action: nil, keyEquivalent: "")
             summaryItem.isEnabled = false
-            let summaryFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+            let summaryFont = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
             summaryItem.attributedTitle = NSAttributedString(
                 string: summaryItem.title,
                 attributes: [.font: summaryFont, .foregroundColor: NSColor.secondaryLabelColor])
@@ -733,7 +743,7 @@ extension StatusItemController {
 
         // MARK: Tool usage (24h) — MCP tool call counts
         if let toolUsage = zai.toolUsage, !toolUsage.entries.isEmpty {
-            let headerFont = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+            let headerFont = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
             let header = NSMenuItem(title: "MCP Tools (24h)", action: nil, keyEquivalent: "")
             header.attributedTitle = NSAttributedString(string: "MCP Tools (24h)", attributes: [.font: headerFont])
             header.isEnabled = false
@@ -743,7 +753,7 @@ extension StatusItemController {
                 title: "\(toolUsage.totalCalls) total calls",
                 action: nil, keyEquivalent: "")
             totalItem.isEnabled = false
-            let totalFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+            let totalFont = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
             totalItem.attributedTitle = NSAttributedString(
                 string: totalItem.title,
                 attributes: [.font: totalFont, .foregroundColor: NSColor.secondaryLabelColor])
@@ -765,7 +775,7 @@ extension StatusItemController {
 
         // MARK: Quota MCP details (existing — from timeLimit.usageDetails)
         if let timeLimit = zai.timeLimit, !timeLimit.usageDetails.isEmpty {
-            let headerFont = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+            let headerFont = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
             let header = NSMenuItem(title: "Quota Window", action: nil, keyEquivalent: "")
             header.attributedTitle = NSAttributedString(string: "Quota Window", attributes: [.font: headerFont])
             header.isEnabled = false

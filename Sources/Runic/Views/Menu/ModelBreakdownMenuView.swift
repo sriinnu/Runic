@@ -20,12 +20,12 @@ struct ModelBreakdownMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.items.isEmpty {
                 Text("No model data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 // MARK: - Title
                 Text("Models")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
@@ -54,7 +54,7 @@ struct ModelBreakdownMenuView: View {
                 // MARK: - Overflow note
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
-                        .font(.caption2)
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                 }
 
@@ -63,11 +63,11 @@ struct ModelBreakdownMenuView: View {
                     Divider()
                     HStack(spacing: RunicSpacing.xxs) {
                         Text("Cache hit rate")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                         Spacer(minLength: RunicSpacing.xxs)
                         Text(cacheRate)
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(.primary)
                     }
@@ -91,27 +91,27 @@ struct ModelBreakdownMenuView: View {
                 .fill(item.color)
                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
             Text(item.displayName)
-                .font(.caption)
+                .font(RunicFont.caption)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(item.totalTokens)) tokens")
-                    .font(.system(.caption2, design: .rounded))
+                    .font(RunicFont.caption2)
                     .foregroundStyle(.secondary)
                 if let context = UsageFormatter.modelContextLabel(for: item.model) {
                     Text(context)
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                 }
                 HStack(spacing: RunicSpacing.xxxs) {
                     Text("\(item.requestCount) req\(item.requestCount == 1 ? "" : "s")")
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                     if let cost = item.costText {
                         Text(cost)
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -122,21 +122,21 @@ struct ModelBreakdownMenuView: View {
     private static func totalRow(model: ModelModel) -> some View {
         HStack {
             Text("Total")
-                .font(.caption)
+                .font(RunicFont.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(model.grandTotalTokens)) tokens")
-                    .font(.system(.caption2, design: .rounded))
+                    .font(RunicFont.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: RunicSpacing.xxxs) {
                     Text("\(model.grandTotalRequests) requests")
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                     if let cost = model.grandTotalCostText {
                         Text(cost)
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.tertiary)
                     }
                 }

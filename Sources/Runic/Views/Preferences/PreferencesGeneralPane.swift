@@ -23,18 +23,18 @@ struct GeneralPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.costUsageEnabled) {
                             Text("Show cost summary")
-                                .font(.body)
+                                .font(RunicFont.body)
                         }
                         .toggleStyle(.checkbox)
 
                         Text("Reads local usage logs. Shows today + last 30 days cost in the menu.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                             .fixedSize(horizontal: false, vertical: true)
 
                         if self.settings.costUsageEnabled {
                             Text("Auto-refresh: hourly · Timeout: 10m")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.tertiary)
 
                             self.costStatusLine(provider: .claude)
@@ -45,12 +45,12 @@ struct GeneralPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.openAIWebAccessEnabled) {
                             Text("Access OpenAI via web")
-                                .font(.body)
+                                .font(RunicFont.body)
                         }
                         .toggleStyle(.checkbox)
 
                         Text("Imports browser cookies for dashboard extras (credits history, code review).")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -84,7 +84,7 @@ struct GeneralPane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Menu refresh rate")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$settings.refreshFrequency) {
                             ForEach(RefreshFrequency.allCases) { option in
@@ -94,13 +94,13 @@ struct GeneralPane: View {
                         .pickerStyle(.segmented)
 
                         Text("How often to automatically refresh usage data.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Chart style")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$settings.chartStyle) {
                             Text("Line").tag(ChartStyle.line)
@@ -111,13 +111,13 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("Visual style for usage charts and graphs.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Number format")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$settings.numberFormat) {
                             Text("Abbreviated (45.2K)").tag(NumberFormat.abbreviated)
@@ -127,13 +127,13 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("How to display large numbers in the UI.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Date format")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$settings.dateFormat) {
                             Text("Relative (2h ago)").tag(DateFormat.relative)
@@ -143,13 +143,13 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("How to display timestamps throughout the app.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Theme")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$settings.theme) {
                             Text("System").tag(Theme.system)
@@ -160,7 +160,26 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("App appearance (requires restart).")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Font")
+                            .font(RunicFont.body)
+
+                        Picker("", selection: self.$settings.selectedFontFamily) {
+                            ForEach(RunicFontChoice.availableChoices()) { choice in
+                                Text(choice.displayName)
+                                    .font(choice.previewFont)
+                                    .tag(choice.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 360)
+
+                        Text("Drop .ttf/.otf files in Resources/Fonts to add more.")
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -186,7 +205,7 @@ struct GeneralPane: View {
 
         guard provider == .claude || provider == .codex else {
             return Text("\(name): unsupported")
-                .font(.footnote)
+                .font(RunicFont.footnote)
                 .foregroundStyle(.tertiary)
         }
 
@@ -200,20 +219,20 @@ struct GeneralPane: View {
                 return formatter.string(from: seconds).map { " (\($0))" } ?? ""
             }()
             return Text("\(name): fetching…\(elapsed)")
-                .font(.footnote)
+                .font(RunicFont.footnote)
                 .foregroundStyle(.tertiary)
         }
         if let snapshot = self.store.tokenSnapshot(for: provider) {
             let updated = UsageFormatter.updatedString(from: snapshot.updatedAt)
             let cost = snapshot.last30DaysCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
             return Text("\(name): \(updated) · 30d \(cost)")
-                .font(.footnote)
+                .font(RunicFont.footnote)
                 .foregroundStyle(.tertiary)
         }
         if let error = self.store.tokenError(for: provider), !error.isEmpty {
             let truncated = UsageFormatter.truncatedSingleLine(error, max: 120)
             return Text("\(name): \(truncated)")
-                .font(.footnote)
+                .font(RunicFont.footnote)
                 .foregroundStyle(.tertiary)
         }
         if let lastAttempt = self.store.tokenLastAttemptAt(for: provider) {
@@ -221,11 +240,11 @@ struct GeneralPane: View {
             rel.unitsStyle = .abbreviated
             let when = rel.localizedString(for: lastAttempt, relativeTo: Date())
             return Text("\(name): last attempt \(when)")
-                .font(.footnote)
+                .font(RunicFont.footnote)
                 .foregroundStyle(.tertiary)
         }
         return Text("\(name): no data yet")
-            .font(.footnote)
+            .font(RunicFont.footnote)
             .foregroundStyle(.tertiary)
     }
 }

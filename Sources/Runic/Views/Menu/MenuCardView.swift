@@ -229,28 +229,28 @@ struct UsageMenuCardView: View {
                     if hasTokenCost, let tokenUsage = self.model.tokenUsage {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                             Text("Cost")
-                                .font(.body)
+                                .font(RunicFont.body)
                                 .fontWeight(.medium)
                             Text(tokenUsage.sessionLine)
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                             if let sessionDetail = tokenUsage.sessionDetailLine {
                                 Text(sessionDetail)
-                                    .font(.footnote)
+                                    .font(RunicFont.footnote)
                                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             }
                             Text(tokenUsage.monthLine)
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                             if let monthDetail = tokenUsage.monthDetailLine {
                                 Text(monthDetail)
-                                    .font(.footnote)
+                                    .font(RunicFont.footnote)
                                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             }
                             Text(tokenUsage.updatedLine)
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             if let hint = tokenUsage.hintLine, !hint.isEmpty {
                                 Text(hint)
-                                    .font(.footnote)
+                                    .font(RunicFont.footnote)
                                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                                     .lineLimit(4)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -258,10 +258,10 @@ struct UsageMenuCardView: View {
                             if let error = tokenUsage.errorLine, !error.isEmpty {
                                 HStack(alignment: .top, spacing: RunicSpacing.xs) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.footnote)
+                                        .font(RunicFont.footnote)
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
-                                        .font(.footnote)
+                                        .font(RunicFont.footnote)
                                         .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -313,7 +313,7 @@ private struct UsageMenuCardHeaderView: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                     Text(self.model.providerName)
-                        .font(.headline)
+                        .font(RunicFont.headline)
                         .fontWeight(.semibold)
                     if !self.model.email.isEmpty {
                         ProfilePill(
@@ -344,7 +344,7 @@ private struct UsageMenuCardHeaderView: View {
             let subtitleAlignment: VerticalAlignment = self.model.subtitleStyle == .error ? .top : .firstTextBaseline
             HStack(alignment: subtitleAlignment) {
                 Text(self.model.subtitleText)
-                    .font(.footnote.weight(.medium))
+                    .font(RunicFont.footnote.weight(.medium))
                     .foregroundStyle(self.subtitleColor)
                     .lineLimit(self.model.subtitleStyle == .error ? 4 : 1)
                     .multilineTextAlignment(.leading)
@@ -359,7 +359,7 @@ private struct UsageMenuCardHeaderView: View {
 
             if let topModelLine = self.model.topModelLine {
                 Text(topModelLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)
             }
@@ -455,7 +455,7 @@ private struct ProviderAvatarView: View {
                     .shadow(color: Color.black.opacity(0.18), radius: 1, x: 0, y: 1)
             } else {
                 Text(self.fallbackInitials)
-                    .font(.caption.weight(.semibold))
+                    .font(RunicFont.caption.weight(.semibold))
                     .foregroundStyle(Color.white.opacity(0.95))
             }
         }
@@ -491,9 +491,9 @@ private struct ProfilePill: View {
     var body: some View {
         HStack(spacing: RunicSpacing.xxxs) {
             Image(systemName: self.systemImage)
-                .font(.caption2.weight(.semibold))
+                .font(RunicFont.caption2.weight(.semibold))
             Text(self.text)
-                .font(.caption.weight(.medium))
+                .font(RunicFont.caption.weight(.medium))
         }
         .padding(.horizontal, RunicSpacing.compact)
         .padding(.vertical, RunicSpacing.xxxs)
@@ -548,10 +548,10 @@ private struct MenuHeaderBadgeView: View {
                     .frame(width: 10, height: 10)
             } else {
                 Image(systemName: self.badgeIcon)
-                    .font(.caption2.weight(.semibold))
+                    .font(RunicFont.caption2.weight(.semibold))
             }
             Text(self.badge.text)
-                .font(.caption2.weight(.semibold))
+                .font(RunicFont.caption2.weight(.semibold))
         }
         .padding(.horizontal, RunicSpacing.compact)
         .padding(.vertical, RunicSpacing.xxxs)
@@ -615,15 +615,15 @@ private struct MenuEmptyStateView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack(spacing: RunicSpacing.xxs) {
                 Image(systemName: "sparkles")
-                    .font(.caption.weight(.semibold))
+                    .font(RunicFont.caption.weight(.semibold))
                 Text("Connect \(self.providerName)")
-                    .font(.subheadline.weight(.semibold))
+                    .font(RunicFont.subheadline.weight(.semibold))
             }
             Text(self.placeholder)
-                .font(.footnote)
+                .font(RunicFont.footnote)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             Text("Open Settings → Providers, add credentials, then refresh.")
-                .font(.footnote)
+                .font(RunicFont.footnote)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -667,7 +667,7 @@ private struct CopyIconButton: View {
             }
         } label: {
             Image(systemName: self.didCopy ? "checkmark" : "doc.on.doc")
-                .font(.caption2.weight(.semibold))
+                .font(RunicFont.caption2.weight(.semibold))
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 .frame(width: 18, height: 18)
         }
@@ -690,7 +690,7 @@ private struct ProviderCostContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text(self.section.title)
-                .font(.body)
+                .font(RunicFont.body)
                 .fontWeight(.medium)
             UsageProgressBar(
                 percent: self.section.percentUsed,
@@ -698,10 +698,10 @@ private struct ProviderCostContent: View {
                 accessibilityLabel: "Extra usage spent")
             HStack(alignment: .firstTextBaseline) {
                 Text(self.section.spendLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                 Spacer()
                 Text(String(format: "%.0f%% used", min(100, max(0, self.section.percentUsed))))
-                    .font(.system(.footnote, design: .rounded))
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
         }
@@ -715,88 +715,88 @@ private struct InsightsContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text(self.section.title)
-                .font(.body)
+                .font(RunicFont.body)
                 .fontWeight(.medium)
             if let today = self.section.todayLine {
                 Text(today)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
             }
             if let detail = self.section.todayDetail {
                 Text(detail)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let forecastLine = self.section.forecastLine {
                 Text(forecastLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let block = self.section.blockLine {
                 Text(block)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
             }
             if let blockDetail = self.section.blockDetail {
                 Text(blockDetail)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let modelLine = self.section.modelLine {
                 Text(modelLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let projectLine = self.section.projectLine {
                 Text(projectLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let projectDetail = self.section.projectDetail {
                 Text(projectDetail)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let anomalyLine = self.section.anomalyLine {
                 Text(anomalyLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let anomalyDetail = self.section.anomalyDetail {
                 Text(anomalyDetail)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let reliabilityLine = self.section.reliabilityLine {
                 Text(reliabilityLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let reliabilityDetail = self.section.reliabilityDetail {
                 Text(reliabilityDetail)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let routingLine = self.section.routingLine {
                 Text(routingLine)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let routingDetail = self.section.routingDetail {
                 Text(routingDetail)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let updated = self.section.updatedLine {
                 Text(updated)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             if let error = self.section.errorLine {
                 HStack(alignment: .top, spacing: RunicSpacing.xs) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(RunicColors.error)
                     Text(error)
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
                         .lineLimit(4)
                         .fixedSize(horizontal: false, vertical: true)
@@ -841,12 +841,12 @@ private struct UsageMenuMetricCard: View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                 Text(self.metric.title)
-                    .font(.caption.weight(.semibold))
+                    .font(RunicFont.caption.weight(.semibold))
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 Spacer(minLength: RunicSpacing.xs)
                 if let reset = self.metric.resetText {
                     Text(reset)
-                        .font(.caption2)
+                        .font(RunicFont.caption2)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 }
             }
@@ -861,7 +861,7 @@ private struct UsageMenuMetricCard: View {
             if self.displayMode.showsPercent {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                     Text(self.metric.percentLabel)
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .fontWeight(.medium)
                     Spacer()
                 }
@@ -869,7 +869,7 @@ private struct UsageMenuMetricCard: View {
 
             if let detail = self.metric.detailText {
                 Text(detail)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)
                     .textCase(.none)
@@ -996,7 +996,7 @@ private struct CreditsBarContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text("Credits")
-                .font(.body)
+                .font(RunicFont.body)
                 .fontWeight(.medium)
             if let percentLeft {
                 UsageProgressBar(
@@ -1005,19 +1005,19 @@ private struct CreditsBarContent: View {
                     accessibilityLabel: "Credits remaining")
                 HStack(alignment: .firstTextBaseline) {
                     Text(self.creditsText)
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                     Spacer()
                     Text(self.scaleText)
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 }
             } else {
                 Text(self.creditsText)
-                    .font(.system(.caption, design: .rounded))
+                    .font(RunicFont.caption)
             }
             if let hintText, !hintText.isEmpty {
                 Text(hintText)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1061,28 +1061,28 @@ struct UsageMenuCardCostSectionView: View {
                     if let tokenUsage = self.model.tokenUsage {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                             Text("Cost")
-                                .font(.body)
+                                .font(RunicFont.body)
                                 .fontWeight(.medium)
                             Text(tokenUsage.sessionLine)
-                                .font(.system(.caption, design: .rounded))
+                                .font(RunicFont.caption)
                             if let sessionDetail = tokenUsage.sessionDetailLine {
                                 Text(sessionDetail)
-                                    .font(.footnote)
+                                    .font(RunicFont.footnote)
                                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             }
                             Text(tokenUsage.monthLine)
-                                .font(.system(.caption, design: .rounded))
+                                .font(RunicFont.caption)
                             if let monthDetail = tokenUsage.monthDetailLine {
                                 Text(monthDetail)
-                                    .font(.footnote)
+                                    .font(RunicFont.footnote)
                                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             }
                             Text(tokenUsage.updatedLine)
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                             if let hint = tokenUsage.hintLine, !hint.isEmpty {
                                 Text(hint)
-                                    .font(.footnote)
+                                    .font(RunicFont.footnote)
                                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                                     .lineLimit(4)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -1090,10 +1090,10 @@ struct UsageMenuCardCostSectionView: View {
                             if let error = tokenUsage.errorLine, !error.isEmpty {
                                 HStack(alignment: .top, spacing: RunicSpacing.xs) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.footnote)
+                                        .font(RunicFont.footnote)
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
-                                        .font(.footnote)
+                                        .font(RunicFont.footnote)
                                         .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)

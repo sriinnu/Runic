@@ -33,20 +33,20 @@ struct WeeklyActivityChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Last 7 Days")
-                    .font(.system(.subheadline, design: .rounded))
+                    .font(RunicFont.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
                 if model.bars.count > 1 {
                     let avg = model.totalTokens / max(1, model.bars.filter { $0.totalTokens > 0 }.count)
                     Text("\(UsageFormatter.tokenCountString(avg)) avg")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
                 Text("No usage in the last 7 days.")
-                    .font(.system(.footnote, design: .rounded))
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
                     .frame(height: 80)
             } else {
@@ -62,7 +62,7 @@ struct WeeklyActivityChartMenuView: View {
                 .chartXAxis {
                     AxisMarks { value in
                         AxisValueLabel()
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -73,7 +73,7 @@ struct WeeklyActivityChartMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }

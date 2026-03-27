@@ -30,7 +30,7 @@ struct TeamManagementView: View {
         PreferencesPane {
             SettingsSection(title: "Teams", contentSpacing: RunicSpacing.md) {
                 Text("Manage team workspaces, members, and quota allocation.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -41,7 +41,7 @@ struct TeamManagementView: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     HStack {
                         Text("Your Teams")
-                            .font(.subheadline.weight(.semibold))
+                            .font(RunicFont.subheadline.weight(.semibold))
                         Spacer()
                         Button {
                             self.showingCreateTeam = true
@@ -58,10 +58,10 @@ struct TeamManagementView: View {
                                 .font(.system(size: 48))
                                 .foregroundStyle(.tertiary)
                             Text("No teams yet")
-                                .font(.body.weight(.semibold))
+                                .font(RunicFont.body.weight(.semibold))
                                 .foregroundStyle(.secondary)
                             Text("Create a team to collaborate with others")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.tertiary)
                         }
                         .frame(maxWidth: .infinity)
@@ -103,7 +103,7 @@ struct TeamManagementView: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
                             Text("Members")
-                                .font(.footnote.weight(.semibold))
+                                .font(RunicFont.footnote.weight(.semibold))
                                 .foregroundStyle(.secondary)
                             Spacer()
                             Button {
@@ -127,24 +127,24 @@ struct TeamManagementView: View {
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Team Usage")
-                            .font(.footnote.weight(.semibold))
+                            .font(RunicFont.footnote.weight(.semibold))
                             .foregroundStyle(.secondary)
 
                         HStack {
                             Text("Total quota")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                             Spacer()
                             Text("\(team.totalQuota, format: .number) credits")
-                                .font(.footnote.weight(.semibold))
+                                .font(RunicFont.footnote.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
 
                         HStack {
                             Text("Used")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                             Spacer()
                             Text("\(team.usedQuota, format: .number) credits")
-                                .font(.footnote.weight(.semibold))
+                                .font(RunicFont.footnote.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
 
@@ -170,6 +170,7 @@ struct TeamManagementView: View {
                 }
             }
         }
+        .runicTypography()
         .sheet(isPresented: self.$showingCreateTeam) {
             CreateTeamSheet(
                 teamName: self.$newTeamName,
@@ -431,14 +432,14 @@ private struct TeamRowView: View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 HStack(spacing: RunicSpacing.xs) {
                     Image(systemName: self.team.role.icon)
-                        .font(.body)
+                        .font(RunicFont.body)
                         .foregroundStyle(self.team.role.color)
                     Text(self.team.name)
-                        .font(.body.weight(.semibold))
+                        .font(RunicFont.body.weight(.semibold))
                 }
 
                 Text("\(self.team.members.count) member\(self.team.members.count == 1 ? "" : "s") · \(self.team.usedQuota, format: .number) / \(self.team.totalQuota, format: .number) credits")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.tertiary)
             }
 
@@ -499,11 +500,11 @@ private struct CreateTeamSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             Text("Create Team")
-                .font(.title2.weight(.semibold))
+                .font(RunicFont.title2.weight(.semibold))
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Team Name")
-                    .font(.subheadline.weight(.medium))
+                    .font(RunicFont.subheadline.weight(.medium))
                 TextField("Enter team name", text: self.$teamName)
                     .textFieldStyle(.roundedBorder)
                     .focused(self.$isNameFieldFocused)
@@ -543,11 +544,11 @@ private struct EditTeamSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             Text("Edit Team")
-                .font(.title2.weight(.semibold))
+                .font(RunicFont.title2.weight(.semibold))
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Team Name")
-                    .font(.subheadline.weight(.medium))
+                    .font(RunicFont.subheadline.weight(.medium))
                 TextField("Enter team name", text: self.$teamName)
                     .textFieldStyle(.roundedBorder)
                     .focused(self.$isNameFieldFocused)
@@ -588,21 +589,21 @@ private struct MemberQuotaSheet: View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Edit Quota")
-                    .font(.title2.weight(.semibold))
+                    .font(RunicFont.title2.weight(.semibold))
                 Text("Set a monthly quota for \(self.memberName)")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
             }
 
             PreferencesDivider()
 
             Toggle("Enable quota limit", isOn: self.$hasLimit)
-                .font(.subheadline.weight(.medium))
+                .font(RunicFont.subheadline.weight(.medium))
 
             if self.hasLimit {
                 HStack(spacing: RunicSpacing.sm) {
                     Text("Credits")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.secondary)
                     Stepper(value: self.$quotaLimit, in: 1_000...1_000_000, step: 1_000) {
                         TextField("", value: self.$quotaLimit, format: .number)
@@ -611,11 +612,11 @@ private struct MemberQuotaSheet: View {
                     }
                 }
                 Text("Monthly credit allocation for this member")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.tertiary)
             } else {
                 Text("No limit — uses shared team quota")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.tertiary)
             }
 
@@ -646,9 +647,9 @@ private struct MemberRoleSheet: View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Change Role")
-                    .font(.title2.weight(.semibold))
+                    .font(RunicFont.title2.weight(.semibold))
                 Text("Update permissions for \(self.memberName)")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
             }
 

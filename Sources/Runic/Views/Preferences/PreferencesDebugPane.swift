@@ -128,7 +128,7 @@ struct DebugPane: View {
                 ZStack(alignment: .topLeading) {
                     ScrollView {
                         Text(self.displayedLog)
-                            .font(.system(.footnote, design: .monospaced))
+                            .font(RunicFont.footnote)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(RunicSpacing.xs)
@@ -160,7 +160,7 @@ struct DebugPane: View {
 
                 ScrollView {
                     Text(self.fetchAttemptsText(for: self.currentFetchProvider))
-                        .font(.system(.footnote, design: .monospaced))
+                        .font(RunicFont.footnote)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(RunicSpacing.xs)
@@ -185,7 +185,7 @@ struct DebugPane: View {
                     Text(self.store.openAIDashboardCookieImportDebugLog?.isEmpty == false
                         ? (self.store.openAIDashboardCookieImportDebugLog ?? "")
                         : "No log yet. Enable \"Access OpenAI via web\" in General to run an import.")
-                        .font(.system(.footnote, design: .monospaced))
+                        .font(RunicFont.footnote)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(RunicSpacing.xs)
@@ -212,7 +212,7 @@ struct DebugPane: View {
 
                     if let status = self.costCacheStatus {
                         Text(status)
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -313,12 +313,12 @@ struct DebugPane: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Effective PATH")
-                        .font(.callout.weight(.semibold))
+                        .font(RunicFont.callout.weight(.semibold))
                     ScrollView {
                         Text(self.store.pathDebugInfo.effectivePATH.isEmpty
                             ? "Unavailable"
                             : self.store.pathDebugInfo.effectivePATH)
-                            .font(.system(.footnote, design: .monospaced))
+                            .font(RunicFont.footnote)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(RunicSpacing.xs)
@@ -331,10 +331,10 @@ struct DebugPane: View {
                 if let loginPATH = self.store.pathDebugInfo.loginShellPATH {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Login shell PATH (startup capture)")
-                            .font(.callout.weight(.semibold))
+                            .font(RunicFont.callout.weight(.semibold))
                         ScrollView {
                             Text(loginPATH)
-                                .font(.system(.footnote, design: .monospaced))
+                                .font(RunicFont.footnote)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(RunicSpacing.xs)
@@ -405,9 +405,9 @@ struct DebugPane: View {
     private func binaryRow(title: String, value: String?) -> some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text(title)
-                .font(.callout.weight(.semibold))
+                .font(RunicFont.callout.weight(.semibold))
             Text(value ?? "Not found")
-                .font(.system(.footnote, design: .monospaced))
+                .font(RunicFont.footnote)
                 .foregroundStyle(value == nil ? .secondary : .primary)
         }
     }

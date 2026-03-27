@@ -135,11 +135,11 @@ struct ProviderHeaderView: View {
 
                 VStack(spacing: 4) {
                     Text("\(Int(snapshot.primary.usedPercent))%")
-                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .font(RunicFont.largeTitle.weight(.bold))
                         .foregroundStyle(statusColor)
 
                     Text("Used")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -148,15 +148,15 @@ struct ProviderHeaderView: View {
             // Status message
             if snapshot.primary.usedPercent >= 90 {
                 Text("⚠️ Approaching Limit")
-                    .font(.headline)
+                    .font(RunicFont.headline)
                     .foregroundStyle(.red)
             } else if snapshot.primary.usedPercent >= 75 {
                 Text("⚡ High Usage")
-                    .font(.headline)
+                    .font(RunicFont.headline)
                     .foregroundStyle(.orange)
             } else {
                 Text("✓ Healthy")
-                    .font(.headline)
+                    .font(RunicFont.headline)
                     .foregroundStyle(.green)
             }
         }
@@ -212,10 +212,10 @@ struct MetricRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
-                    .font(.subheadline)
+                    .font(RunicFont.subheadline)
                 Spacer()
                 Text("\(Int(value))%")
-                    .font(.system(.headline, design: .rounded))
+                    .font(RunicFont.headline)
                     .foregroundStyle(color)
             }
 
@@ -232,7 +232,7 @@ struct MetricRow: View {
             .frame(height: 8)
 
             Text(label)
-                .font(.caption)
+                .font(RunicFont.caption)
                 .foregroundStyle(.secondary)
         }
     }
@@ -283,7 +283,7 @@ struct AccountTypeBadge: View {
 
     var body: some View {
         Text(type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
-            .font(.caption)
+            .font(RunicFont.caption)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(color.opacity(0.2))

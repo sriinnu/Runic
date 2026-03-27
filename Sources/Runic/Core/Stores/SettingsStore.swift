@@ -296,6 +296,13 @@ final class SettingsStore {
         }
     }
 
+    var selectedFontFamily: String {
+        didSet {
+            self.userDefaults.set(self.selectedFontFamily, forKey: "selectedFontFamily")
+            RunicFont.family = self.selectedFontFamily
+        }
+    }
+
     /// Optional: use provider branding icons with a percentage in the menu bar.
     var menuBarShowsBrandIconWithPercent: Bool {
         didSet {
@@ -893,6 +900,7 @@ final class SettingsStore {
         self.dateFormat = DateFormat(rawValue: dateFormatRaw ?? "") ?? .relative
         let themeRaw = userDefaults.string(forKey: "theme")
         self.theme = Theme(rawValue: themeRaw ?? "") ?? .system
+        self.selectedFontFamily = userDefaults.string(forKey: "selectedFontFamily") ?? "Fira Code"
         self.menuBarShowsBrandIconWithPercent = userDefaults.object(
             forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
         self.menuBarVibrantIconEnabled = userDefaults.object(
@@ -965,6 +973,7 @@ final class SettingsStore {
         if self.claudeUsageDataSource != .cli {
             self.claudeWebExtrasEnabled = false
         }
+        RunicFont.family = self.selectedFontFamily
     }
 
     func orderedProviders() -> [UsageProvider] {

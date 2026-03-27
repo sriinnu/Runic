@@ -30,7 +30,7 @@ struct CreditsHistoryChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No credits history data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 Chart {
@@ -55,7 +55,7 @@ struct CreditsHistoryChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -83,13 +83,13 @@ struct CreditsHistoryChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -99,7 +99,7 @@ struct CreditsHistoryChartMenuView: View {
 
                 if let total = model.totalCreditsUsed {
                     Text("Total (30d): \(total.formatted(.number.precision(.fractionLength(0...2)))) credits")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                 }
             }

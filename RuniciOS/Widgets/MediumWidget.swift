@@ -80,18 +80,18 @@ struct MediumWidgetView: View {
         HStack(spacing: 8) {
             // Status icon
             Image(systemName: entry.systemStatus.iconName)
-                .font(.system(size: 16, weight: .semibold))
+                .font(RunicFont.system(size: 16, weight: .semibold))
                 .foregroundColor(statusColor)
 
             Text("Runic")
-                .font(.system(size: 16, weight: .bold))
+                .font(RunicFont.system(size: 16, weight: .bold))
                 .foregroundColor(.white)
 
             Spacer()
 
             // Provider count
             Text("\(providers.count) active")
-                .font(.system(size: 12, weight: .medium))
+                .font(RunicFont.system(size: 12, weight: .medium))
                 .foregroundColor(.white.opacity(0.7))
         }
     }
@@ -110,18 +110,18 @@ struct MediumWidgetView: View {
                     .frame(width: 10, height: 10)
 
                 Text(provider.displayName)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(RunicFont.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
 
                 Spacer()
 
                 // Remaining percentage
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(RunicFont.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
 
                 Text("left")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(RunicFont.system(size: 11, weight: .medium))
                     .foregroundColor(.white.opacity(0.6))
             }
 
@@ -144,7 +144,7 @@ struct MediumWidgetView: View {
             if let countdown = provider.resetCountdown {
                 HStack {
                     Text("Resets \(countdown)")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(RunicFont.system(size: 10, weight: .medium))
                         .foregroundColor(.white.opacity(0.5))
 
                     Spacer()
@@ -228,16 +228,16 @@ struct MediumWidgetView: View {
     private var emptyStateView: some View {
         HStack(spacing: 12) {
             Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 28))
+                .font(RunicFont.system(size: 28))
                 .foregroundColor(.white.opacity(0.4))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("No Providers Active")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(RunicFont.system(size: 14, weight: .semibold))
                     .foregroundColor(.white.opacity(0.7))
 
                 Text("Open Runic to enable providers")
-                    .font(.system(size: 11))
+                    .font(RunicFont.system(size: 11))
                     .foregroundColor(.white.opacity(0.5))
             }
 

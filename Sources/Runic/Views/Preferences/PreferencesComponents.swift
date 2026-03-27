@@ -71,7 +71,7 @@ struct PreferenceToggleRow: View {
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
                 Toggle(isOn: self.$binding) {
                     Text(self.title)
-                        .font(.body)
+                        .font(RunicFont.body)
                 }
                 .toggleStyle(.checkbox)
                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
@@ -79,7 +79,7 @@ struct PreferenceToggleRow: View {
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -100,7 +100,7 @@ struct PreferenceStepperRow: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(spacing: RunicSpacing.sm) {
                 Text(self.title)
-                    .font(.body)
+                    .font(RunicFont.body)
                 Spacer()
                 PreferenceStepperControl(
                     valueLabel: self.valueLabel(self.value),
@@ -112,7 +112,7 @@ struct PreferenceStepperRow: View {
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -146,7 +146,7 @@ private struct PreferenceStepperControl: View {
             .disabled(!self.canDecrement)
 
             Text(self.valueLabel)
-                .font(.footnote.weight(.semibold))
+                .font(RunicFont.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, RunicSpacing.sm)
                 .padding(.vertical, RunicSpacing.xxs)
@@ -187,11 +187,11 @@ struct SettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionHeaderSpacing) {
             if let title, !title.isEmpty {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(RunicFont.subheadline.weight(.semibold))
             }
             if let caption {
                 Text(caption)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }

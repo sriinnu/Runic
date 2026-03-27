@@ -26,6 +26,7 @@ struct TeamDashboardView: View {
             }
             .padding(RunicSpacing.lg)
         }
+        .runicTypography()
         .frame(width: 700, height: 600)
     }
 
@@ -34,9 +35,9 @@ struct TeamDashboardView: View {
             HStack {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     Text(self.team.name)
-                        .font(.title.weight(.bold))
+                        .font(RunicFont.title.weight(.bold))
                     Text("\(self.team.members.count) member\(self.team.members.count == 1 ? "" : "s")")
-                        .font(.subheadline)
+                        .font(RunicFont.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
@@ -56,7 +57,7 @@ struct TeamDashboardView: View {
     private var usageOverviewSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             Text("Usage Overview")
-                .font(.headline)
+                .font(RunicFont.headline)
 
             HStack(spacing: RunicSpacing.lg) {
                 self.statCard(
@@ -99,13 +100,13 @@ struct TeamDashboardView: View {
     private var memberBreakdownSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             Text("Member Usage Breakdown")
-                .font(.headline)
+                .font(RunicFont.headline)
 
             let data = self.memberUsageData
 
             if data.isEmpty {
                 Text("No usage data available")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, RunicSpacing.xl)
@@ -121,7 +122,7 @@ struct TeamDashboardView: View {
                         .annotation(position: .top) {
                             if item.usage > 0 {
                                 Text("\(item.usage, specifier: "%d")")
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -131,7 +132,7 @@ struct TeamDashboardView: View {
                         AxisValueLabel {
                             if let name = value.as(String.self) {
                                 Text(name)
-                                    .font(.caption)
+                                    .font(RunicFont.caption)
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                             }
@@ -144,7 +145,7 @@ struct TeamDashboardView: View {
                         AxisValueLabel {
                             if let intValue = value.as(Int.self) {
                                 Text("\(intValue / 1000)K")
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -173,14 +174,14 @@ struct TeamDashboardView: View {
                                 .fill(item.color)
                                 .frame(width: 8, height: 8)
                             Text(item.memberName)
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(
                                     self.selectedMemberID == item.memberID
                                         ? .primary
                                         : .secondary)
                             Spacer()
                             Text("\(item.usage, specifier: "%d")")
-                                .font(.caption.monospacedDigit())
+                                .font(RunicFont.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, RunicSpacing.xs)
@@ -208,21 +209,21 @@ struct TeamDashboardView: View {
     private var recentActivitySection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             Text("Recent Activity")
-                .font(.headline)
+                .font(RunicFont.headline)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 ForEach(self.recentActivities) { activity in
                     HStack(spacing: RunicSpacing.sm) {
                         Image(systemName: activity.icon)
-                            .font(.body)
+                            .font(RunicFont.body)
                             .foregroundStyle(activity.color)
                             .frame(width: 24)
 
                         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                             Text(activity.title)
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                             Text(activity.timestamp)
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.tertiary)
                         }
 
@@ -248,21 +249,21 @@ struct TeamDashboardView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack {
                 Image(systemName: icon)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(color)
                 Spacer()
             }
 
             Text(value)
-                .font(.title2.weight(.bold))
+                .font(RunicFont.title2.weight(.bold))
                 .foregroundStyle(color)
 
             Text(title)
-                .font(.caption2.weight(.medium))
+                .font(RunicFont.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
 
             Text(subtitle)
-                .font(.caption2)
+                .font(RunicFont.caption2)
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

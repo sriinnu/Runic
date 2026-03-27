@@ -142,11 +142,11 @@ struct UsageProgressRing: View {
             // Center content
             VStack(spacing: size * 0.05) {
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: size * 0.25, weight: .bold, design: .rounded))
+                    .font(RunicFont.system(size: size * 0.25, weight: .bold))
                     .foregroundColor(.white)
 
                 Text("left")
-                    .font(.system(size: size * 0.12, weight: .medium))
+                    .font(RunicFont.system(size: size * 0.12, weight: .medium))
                     .foregroundColor(.white.opacity(0.7))
             }
         }
@@ -184,7 +184,7 @@ struct ProviderHeader: View {
                 .frame(width: iconSize, height: iconSize)
 
             Text(provider.displayName)
-                .font(.system(size: iconSize * 0.8, weight: .semibold))
+                .font(RunicFont.system(size: iconSize * 0.8, weight: .semibold))
                 .foregroundColor(.white)
 
             Spacer()
@@ -201,13 +201,13 @@ struct CompactUsageBar: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(provider.displayName)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(RunicFont.system(size: 12, weight: .medium))
                     .foregroundColor(.white)
 
                 Spacer()
 
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(RunicFont.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
             }
 

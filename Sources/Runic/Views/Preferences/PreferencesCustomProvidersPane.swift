@@ -17,7 +17,7 @@ struct CustomProvidersPane: View {
                 // Header with add button
                 HStack {
                     Text("Custom API Providers")
-                        .font(.headline)
+                        .font(RunicFont.headline)
 
                     Spacer()
 
@@ -37,11 +37,11 @@ struct CustomProvidersPane: View {
                             .foregroundStyle(.secondary)
 
                         Text("No custom providers configured")
-                            .font(.headline)
+                            .font(RunicFont.headline)
                             .foregroundStyle(.secondary)
 
                         Text("Add a custom API provider to track usage from APIs not natively supported by Runic.")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: 300)
@@ -172,33 +172,33 @@ private struct CustomProviderRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(provider.name)
-                    .font(.body)
+                    .font(RunicFont.body)
                     .fontWeight(.medium)
 
                 if let snapshot = self.snapshot {
                     if let error = snapshot.error {
                         Text(error)
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.red)
                     } else {
                         HStack(spacing: 4) {
                             if let quota = snapshot.usageData.quota, let used = snapshot.usageData.used {
                                 let percent = quota > 0 ? (used / quota) * 100 : 0
                                 Text("\(Int(percent))% used")
-                                    .font(.caption)
+                                    .font(RunicFont.caption)
                                     .foregroundStyle(.secondary)
                             }
                             Text("•")
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(.tertiary)
                             Text("Updated \(snapshot.updatedAt.relativeDescription())")
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
                 } else {
                     Text("No data")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -284,7 +284,7 @@ private struct CustomProviderEditorView: View {
     var body: some View {
         VStack {
             Text(provider == nil ? "Add Custom Provider" : "Edit Provider")
-                .font(.headline)
+                .font(RunicFont.headline)
                 .padding()
             Form {
                 TextField("Provider Name", text: $name)

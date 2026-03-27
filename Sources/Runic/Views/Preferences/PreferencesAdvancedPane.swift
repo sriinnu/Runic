@@ -14,7 +14,7 @@ struct AdvancedPane: View {
         PreferencesPane {
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Refresh cadence")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                 Picker("", selection: self.$settings.refreshFrequency) {
@@ -26,12 +26,12 @@ struct AdvancedPane: View {
 
                 if self.settings.refreshFrequency == .manual {
                     Text("Auto-refresh is off; use the menu's Refresh command.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.secondary)
                 }
                 if let badgeText = self.store.autoRefreshDisableBadgeText() {
                     Text(badgeText)
-                        .font(.caption2.weight(.medium))
+                        .font(RunicFont.caption2.weight(.medium))
                         .padding(.horizontal, RunicSpacing.xs)
                         .padding(.vertical, RunicSpacing.xxs)
                         .background(Color(nsColor: .controlBackgroundColor))
@@ -39,7 +39,7 @@ struct AdvancedPane: View {
                         .foregroundStyle(.secondary)
                 }
                 Text("Auto-refresh can switch to Manual when your Mac is idle or sleeps/locks. Adjust below.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             }
 
@@ -47,19 +47,19 @@ struct AdvancedPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Auto-refresh safety")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoDisableRefreshWhenIdleEnabled) {
                         Text("Switch to Manual when idle")
-                            .font(.body)
+                            .font(RunicFont.body)
                     }
                     .toggleStyle(.checkbox)
 
                     Text("If your Mac is idle for the threshold below, Runic switches auto-refresh to Manual.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -77,12 +77,12 @@ struct AdvancedPane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoDisableRefreshOnSleepEnabled) {
                         Text("Switch to Manual on sleep/lock")
-                            .font(.body)
+                            .font(RunicFont.body)
                     }
                     .toggleStyle(.checkbox)
 
                     Text("When your Mac sleeps or locks, auto-refresh moves to Manual to avoid background checks.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -90,12 +90,12 @@ struct AdvancedPane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoRefreshWarningEnabled) {
                         Text("Warn after repeated auto-refreshes")
-                            .font(.body)
+                            .font(RunicFont.body)
                     }
                     .toggleStyle(.checkbox)
 
                     Text("Sends a notification after the configured number of auto-refresh cycles.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -113,12 +113,12 @@ struct AdvancedPane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle(isOn: self.$settings.autoSuspendInactiveProvidersEnabled) {
                         Text("Skip inactive providers")
-                            .font(.body)
+                            .font(RunicFont.body)
                     }
                     .toggleStyle(.checkbox)
 
                     Text("Pauses auto-refresh for providers with no usage changes for the threshold below.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -134,11 +134,11 @@ struct AdvancedPane: View {
                 }
 
                 Text("Auto-refresh can read local logs or browser cookies depending on provider settings.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("Auto-refresh also switches to Manual when your Mac sleeps or is locked.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -147,17 +147,17 @@ struct AdvancedPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Keyboard shortcut")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                 HStack(alignment: .center, spacing: RunicSpacing.sm) {
                     Text("Open menu")
-                        .font(.body)
+                        .font(RunicFont.body)
                     Spacer()
                     KeyboardShortcuts.Recorder(for: .openMenu)
                 }
                 Text("Trigger the menu bar menu from anywhere.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
             }
 
@@ -178,13 +178,13 @@ struct AdvancedPane: View {
 
                     if let status = self.cliStatus {
                         Text(status)
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                             .lineLimit(2)
                     }
                 }
                 Text("Symlink RunicCLI to /usr/local/bin and /opt/homebrew/bin as runic.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
             }
 

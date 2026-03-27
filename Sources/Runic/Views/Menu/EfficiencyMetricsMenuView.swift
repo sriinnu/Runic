@@ -65,12 +65,12 @@ struct EfficiencyMetricsMenuView: View {
 
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             Text("Efficiency Metrics")
-                .font(.headline)
+                .font(RunicFont.headline)
                 .fontWeight(.semibold)
 
             if model.isEmpty {
                 Text("No efficiency metrics available.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -134,27 +134,27 @@ struct EfficiencyMetricsMenuView: View {
                 HStack(spacing: RunicSpacing.lg) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Total Requests")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                         Text("\(Self.totalRequests(model))")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .fontWeight(.medium)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Avg Tokens/Req")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                         Text(UsageFormatter.tokenCountString(Self.averageTokensPerRequest(model)))
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .fontWeight(.medium)
                     }
                     if Self.hasAnyCost(model) {
                         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                             Text("Avg Cost/Req")
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.secondary)
                             Text(UsageFormatter.usdString(Self.averageCostPerRequest(model)))
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .fontWeight(.medium)
                         }
                     }
@@ -237,12 +237,12 @@ private struct SortableColumnHeader: View {
         } label: {
             HStack(spacing: RunicSpacing.xxs) {
                 Text(self.title)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .fontWeight(.medium)
                 if self.currentSort == self.column {
                     Image(systemName: self.ascending ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -260,12 +260,12 @@ private struct MetricsRow: View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                 Text(UsageFormatter.modelDisplayName(metrics.modelName))
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 if let context = UsageFormatter.modelContextLabel(for: metrics.modelName) {
                     Text(context)
-                        .font(.caption2)
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -273,20 +273,20 @@ private struct MetricsRow: View {
             }
             .frame(width: 140, alignment: .leading)
             Text(UsageFormatter.tokenCountString(Int(metrics.tokensPerRequest)))
-                .font(.caption)
+                .font(RunicFont.caption)
                 .frame(width: 90, alignment: .leading)
             if let cost = metrics.costPerRequest {
                 Text(UsageFormatter.usdString(cost))
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .frame(width: 80, alignment: .leading)
             } else {
                 Text("—")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .frame(width: 80, alignment: .leading)
             }
             Text(String(format: "%.1f%%", metrics.cacheHitRate * 100))
-                .font(.caption)
+                .font(RunicFont.caption)
                 .foregroundStyle(self.cacheHitColor)
                 .frame(width: 80, alignment: .leading)
         }

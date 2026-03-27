@@ -98,6 +98,7 @@ extension StatusItemController {
 
         var body: some View {
             self.content
+                .runicTypography()
                 .environment(\.menuItemHighlighted, self.highlightState.isHighlighted)
                 .foregroundStyle(MenuHighlightStyle.primary(self.highlightState.isHighlighted))
                 .background(alignment: .topLeading) {
@@ -111,7 +112,7 @@ extension StatusItemController {
                 .overlay(alignment: .topTrailing) {
                     if self.showsSubmenuIndicator {
                         Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.semibold))
+                            .font(RunicFont.caption2.weight(.semibold))
                             .foregroundStyle(MenuHighlightStyle.secondary(self.highlightState.isHighlighted))
                             .padding(.top, RunicSpacing.xs)
                             .padding(.trailing, RunicSpacing.xs)
@@ -142,7 +143,7 @@ extension StatusItemController {
             self.iconView.imageScaling = .scaleNone
             self.iconView.translatesAutoresizingMaskIntoConstraints = false
 
-            self.titleField.font = NSFont.menuFont(ofSize: NSFont.systemFontSize)
+            self.titleField.font = RunicFont.nsFont(size: NSFont.systemFontSize)
             self.titleField.lineBreakMode = .byTruncatingTail
             self.titleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
@@ -363,14 +364,14 @@ extension StatusItemController {
         container.alphaValue = isEnabled ? 1.0 : 0.7
 
         let titleField = NSTextField(labelWithString: title)
-        titleField.font = NSFont.menuFont(ofSize: NSFont.systemFontSize)
+        titleField.font = RunicFont.nsFont(size: NSFont.systemFontSize)
         titleField.textColor = NSColor.labelColor
         titleField.lineBreakMode = .byTruncatingTail
         titleField.maximumNumberOfLines = 1
         titleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         let subtitleField = NSTextField(labelWithString: subtitle)
-        subtitleField.font = NSFont.menuFont(ofSize: NSFont.smallSystemFontSize)
+        subtitleField.font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
         subtitleField.textColor = NSColor.secondaryLabelColor
         subtitleField.lineBreakMode = .byTruncatingTail
         subtitleField.maximumNumberOfLines = 1
@@ -391,5 +392,22 @@ extension StatusItemController {
         ])
 
         return container
+    }
+
+    // MARK: - Fira Code menu font post-processor
+
+    /// Recursively apply Fira Code to every NSMenuItem that uses a plain title (no custom view).
+    func applyRunicFont(to menu: NSMenu) {
+        for item in menu.items {
+            guard !item.isSeparatorItem, item.view == nil, !item.title.isEmpty else { continue }
+            if item.attributedTitle == nil {
+                item.attributedTitle = NSAttributedString(
+                    string: item.title,
+                    attributes: [.font: RunicFont.nsFont(size: NSFont.systemFontSize)])
+            }
+            if let submenu = item.submenu {
+                self.applyRunicFont(to: submenu)
+            }
+        }
     }
 }

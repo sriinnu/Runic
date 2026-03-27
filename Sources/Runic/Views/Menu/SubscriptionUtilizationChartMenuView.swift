@@ -50,7 +50,7 @@ struct SubscriptionUtilizationChartMenuView: View {
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Utilization")
-                .font(.system(.subheadline, design: .rounded))
+                .font(RunicFont.subheadline)
                 .fontWeight(.semibold)
 
             Picker("", selection: self.$selectedPeriod) {
@@ -62,7 +62,7 @@ struct SubscriptionUtilizationChartMenuView: View {
 
             if model.bars.isEmpty {
                 Text("No utilization data available.")
-                    .font(.system(.footnote, design: .rounded))
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
                     .frame(height: 80)
             } else {
@@ -83,7 +83,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                         AxisValueLabel {
                             if let pct = value.as(Int.self) {
                                 Text("\(pct)%")
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
@@ -92,7 +92,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisValueLabel()
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -104,7 +104,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                     let used = Int(latest.usedPercent.rounded())
                     let unused = max(0, 100 - used)
                     Text("\(latest.label): \(used)% used, \(unused)% unused")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                 }
             }

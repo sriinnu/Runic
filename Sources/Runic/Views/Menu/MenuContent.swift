@@ -16,7 +16,7 @@ enum MenuContentMetrics {
     static let entrySpacing: CGFloat = RunicSpacing.xxs  // 4
 
     /// Minimum menu width
-    static let minWidth: CGFloat = 260
+    static let minWidth: CGFloat = 290
 }
 
 @MainActor
@@ -52,6 +52,7 @@ struct MenuContent: View {
         .padding(.horizontal, MenuContentMetrics.horizontalPadding)
         .padding(.vertical, MenuContentMetrics.verticalPadding)
         .frame(minWidth: MenuContentMetrics.minWidth, alignment: .leading)
+        .runicTypography()
     }
 
     @ViewBuilder
@@ -60,11 +61,11 @@ struct MenuContent: View {
         case let .text(text, style):
             switch style {
             case .headline:
-                Text(text).font(.headline)
+                Text(text).font(RunicFont.headline)
             case .primary:
                 Text(text)
             case .secondary:
-                Text(text).foregroundStyle(.secondary).font(.footnote)
+                Text(text).foregroundStyle(.secondary).font(RunicFont.footnote)
             }
         case let .action(title, action):
             Button {

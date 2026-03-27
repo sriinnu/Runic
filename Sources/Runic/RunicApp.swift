@@ -15,6 +15,8 @@ struct RunicApp: App {
     private let account: AccountInfo
 
     init() {
+        RunicTypography.registerFonts()
+
         let env = ProcessInfo.processInfo.environment
         let level = RunicLog.parseLevel(env["RUNIC_LOG_LEVEL"]) ?? .info
         RunicLog.bootstrapIfNeeded(.init(

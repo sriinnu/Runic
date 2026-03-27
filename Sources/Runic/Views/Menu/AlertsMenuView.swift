@@ -49,7 +49,7 @@ struct AlertsMenuView: View {
     private var headerSection: some View {
         HStack(alignment: .firstTextBaseline) {
             Text("Alerts")
-                .font(.headline)
+                .font(RunicFont.headline)
                 .fontWeight(.semibold)
 
             if self.unacknowledgedCount > 0 {
@@ -67,7 +67,7 @@ struct AlertsMenuView: View {
                     Task { await self.loadAlerts() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 }
                 .buttonStyle(.plain)
@@ -78,7 +78,7 @@ struct AlertsMenuView: View {
 
     private var unacknowledgedBadge: some View {
         Text("\(self.unacknowledgedCount)")
-            .font(.caption2)
+            .font(RunicFont.caption2)
             .fontWeight(.semibold)
             .foregroundStyle(.white)
             .padding(.horizontal, RunicSpacing.compact)
@@ -108,11 +108,11 @@ struct AlertsMenuView: View {
     private var emptyStateView: some View {
         VStack(spacing: RunicSpacing.xs) {
             Image(systemName: "checkmark.shield")
-                .font(.title2)
+                .font(RunicFont.title2)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
 
             Text("No active alerts")
-                .font(.subheadline)
+                .font(RunicFont.subheadline)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
         }
         .frame(maxWidth: .infinity)
@@ -158,13 +158,13 @@ private struct AlertRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(self.alert.message)
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(self.timeAgo(from: self.alert.triggeredAt))
-                    .font(.caption2)
+                    .font(RunicFont.caption2)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
 
@@ -184,7 +184,7 @@ private struct AlertRow: View {
         let color = self.severityColor
 
         return Image(systemName: icon)
-            .font(.caption)
+            .font(RunicFont.caption)
             .foregroundStyle(color)
             .frame(width: 16, alignment: .center)
     }
@@ -227,7 +227,7 @@ private struct AlertRow: View {
                     .frame(width: 12, height: 12)
             } else {
                 Image(systemName: "checkmark.circle")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
         }

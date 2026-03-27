@@ -20,12 +20,12 @@ struct ProjectBreakdownMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.items.isEmpty {
                 Text("No project data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 // MARK: - Title
                 Text("Projects")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
@@ -43,7 +43,7 @@ struct ProjectBreakdownMenuView: View {
                 .chartYAxis {
                     AxisMarks { _ in
                         AxisValueLabel()
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .secondaryLabelColor))
                     }
                 }
@@ -62,7 +62,7 @@ struct ProjectBreakdownMenuView: View {
                 // MARK: - Overflow note
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
-                        .font(.caption2)
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                 }
 
@@ -84,24 +84,24 @@ struct ProjectBreakdownMenuView: View {
                 .fill(item.color)
                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
             Text(item.name)
-                .font(.caption)
+                .font(RunicFont.caption)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(item.totalTokens)) tokens")
-                    .font(.system(.caption2, design: .rounded))
+                    .font(RunicFont.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: RunicSpacing.xxxs) {
                     if let cost = item.costText {
                         Text(cost)
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.tertiary)
                     }
                     if item.modelCount > 0 {
                         Text("\(item.modelCount) model\(item.modelCount == 1 ? "" : "s")")
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -112,17 +112,17 @@ struct ProjectBreakdownMenuView: View {
     private static func totalRow(model: ProjectModel) -> some View {
         HStack {
             Text("Total")
-                .font(.caption)
+                .font(RunicFont.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(model.grandTotalTokens)) tokens")
-                    .font(.system(.caption2, design: .rounded))
+                    .font(RunicFont.caption2)
                     .foregroundStyle(.secondary)
                 if let cost = model.grandTotalCostText {
                     Text(cost)
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                 }
             }

@@ -165,15 +165,15 @@ struct AboutPane: View {
 
             VStack(spacing: RunicSpacing.xxs) {
                 Text("Runic")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(RunicFont.system(size: 26, weight: .bold))
 
                 Text("Version \(self.versionString)")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(RunicFont.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
 
                 if let buildTimestamp {
                     Text("Built \(buildTimestamp)")
-                        .font(.system(size: 11, design: .rounded))
+                        .font(RunicFont.system(size: 11))
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -184,12 +184,12 @@ struct AboutPane: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 Text("From fullness comes fullness.\nWhen fullness is taken from fullness,\nfullness alone remains.")
-                    .font(.system(size: 11.5, weight: .regular, design: .rounded))
+                    .font(RunicFont.system(size: 11.5, weight: .regular))
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
                 Text("— Isha Upanishad")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .font(RunicFont.system(size: 10, weight: .medium))
                     .foregroundStyle(.quaternary)
             }
         }
@@ -243,7 +243,7 @@ struct AboutPane: View {
                 }
             } else {
                 Text(self.updater.unavailableReason ?? "Updates unavailable in this build.")
-                    .font(.system(size: 12, design: .rounded))
+                    .font(RunicFont.system(size: 12))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
             }
@@ -257,7 +257,7 @@ struct AboutPane: View {
 
     private var footerSection: some View {
         Text("© 2025–2026 Srinivas Pendela. MIT License.")
-            .font(.system(size: 11, design: .rounded))
+            .font(RunicFont.system(size: 11))
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity)
             .opacity(self.appeared ? 1 : 0)

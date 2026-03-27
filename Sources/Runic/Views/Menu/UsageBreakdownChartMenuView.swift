@@ -32,7 +32,7 @@ struct UsageBreakdownChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No usage breakdown data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 Chart {
@@ -58,7 +58,7 @@ struct UsageBreakdownChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -88,13 +88,13 @@ struct UsageBreakdownChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -113,7 +113,7 @@ struct UsageBreakdownChartMenuView: View {
                                 .fill(model.color(for: service))
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(service)
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }

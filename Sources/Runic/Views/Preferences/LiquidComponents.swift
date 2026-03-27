@@ -224,7 +224,7 @@ struct LiquidSection<Content: View>: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if let title {
                 Text(title)
-                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .font(RunicFont.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
                     .padding(.leading, RunicSpacing.xxs)

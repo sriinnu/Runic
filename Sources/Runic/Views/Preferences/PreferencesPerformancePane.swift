@@ -48,7 +48,7 @@ struct PerformancePane: View {
 
                 if !self.performanceTrackingEnabled {
                     Text("Performance tracking is disabled. Historical data is preserved but new metrics won't be collected.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.orange)
                         .padding(.vertical, RunicSpacing.xs)
                 }
@@ -59,7 +59,7 @@ struct PerformancePane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Raw metrics retention")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$rawMetricsRetentionDays) {
                             Text("30 days").tag(30)
@@ -70,13 +70,13 @@ struct PerformancePane: View {
                         .frame(maxWidth: 300)
 
                         Text("How long to keep detailed latency and error records.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Aggregated stats retention")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$aggregatedStatsRetentionYears) {
                             Text("1 year").tag(1)
@@ -87,7 +87,7 @@ struct PerformancePane: View {
                         .frame(maxWidth: 300)
 
                         Text("How long to keep daily performance summaries.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -104,7 +104,7 @@ struct PerformancePane: View {
                     if self.qualityRatingPromptsEnabled {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Prompt frequency")
-                                .font(.body)
+                                .font(RunicFont.body)
 
                             Picker("", selection: self.$qualityRatingFrequency) {
                                 ForEach(QualityRatingFrequency.allCases) { freq in
@@ -115,7 +115,7 @@ struct PerformancePane: View {
                             .frame(maxWidth: 400)
 
                             Text("When to show rating prompts based on response size.")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.tertiary)
                         }
 
@@ -135,9 +135,9 @@ struct PerformancePane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     HStack {
                         Text("Current database size:")
-                            .font(.body)
+                            .font(RunicFont.body)
                         Text(self.databaseSize)
-                            .font(.body.weight(.semibold))
+                            .font(RunicFont.body.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
 
@@ -157,13 +157,13 @@ struct PerformancePane: View {
 
                         if let status = self.vacuumStatus {
                             Text(status)
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(status.contains("Success") ? .green : .red)
                         }
                     }
 
                     Text("Optimizes database file by reclaiming unused space.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
 
                     Divider()
@@ -185,13 +185,13 @@ struct PerformancePane: View {
 
                         if let status = self.clearDataStatus {
                             Text(status)
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(status.contains("Success") ? .green : .red)
                         }
                     }
 
                     Text("Removes metrics older than configured retention periods.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -205,7 +205,7 @@ struct PerformancePane: View {
 
                 if self.anonymousUsageStatsEnabled {
                     Text("Only aggregate statistics are shared. Request IDs, prompts, and responses are never included.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, RunicSpacing.xs)
                 }

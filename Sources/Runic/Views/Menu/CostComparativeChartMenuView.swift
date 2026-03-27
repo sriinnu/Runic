@@ -36,7 +36,7 @@ struct CostComparativeChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.isEmpty {
                 Text("No cost comparison data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 Chart {
@@ -55,7 +55,7 @@ struct CostComparativeChartMenuView: View {
                         AxisValueLabel {
                             if let cost = value.as(Double.self) {
                                 Text(UsageFormatter.usdString(cost))
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
@@ -66,7 +66,7 @@ struct CostComparativeChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel()
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .labelColor))
                     }
                 }
@@ -94,14 +94,14 @@ struct CostComparativeChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .truncationMode(.tail)
                         .frame(height: 32, alignment: .leading)
                     if let secondary = detail.secondary {
                         Text(secondary)
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .truncationMode(.tail)
@@ -116,7 +116,7 @@ struct CostComparativeChartMenuView: View {
                             .fill(Self.cheapColor)
                             .frame(width: 8, height: 8)
                         Text("Low cost")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                     }
                     HStack(spacing: RunicSpacing.xxs) {
@@ -124,7 +124,7 @@ struct CostComparativeChartMenuView: View {
                             .fill(Self.mediumColor)
                             .frame(width: 8, height: 8)
                         Text("Medium cost")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                     }
                     HStack(spacing: RunicSpacing.xxs) {
@@ -132,7 +132,7 @@ struct CostComparativeChartMenuView: View {
                             .fill(Self.expensiveColor)
                             .frame(width: 8, height: 8)
                         Text("High cost")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                     }
                 }

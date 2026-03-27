@@ -18,9 +18,9 @@ struct TeamInviteSheet: View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Invite to \(self.team.name)")
-                    .font(.title2.weight(.semibold))
+                    .font(RunicFont.title2.weight(.semibold))
                 Text("Send an invitation to join your team")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
             }
 
@@ -29,7 +29,7 @@ struct TeamInviteSheet: View {
             VStack(alignment: .leading, spacing: RunicSpacing.md) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Email Address")
-                        .font(.subheadline.weight(.medium))
+                        .font(RunicFont.subheadline.weight(.medium))
 
                     TextField("colleague@example.com", text: self.$email)
                         .textFieldStyle(.roundedBorder)
@@ -40,18 +40,18 @@ struct TeamInviteSheet: View {
 
                     if let error = self.emailError {
                         Text(error)
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.red)
                     } else {
                         Text("They will receive an email invitation")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.tertiary)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Role")
-                        .font(.subheadline.weight(.medium))
+                        .font(RunicFont.subheadline.weight(.medium))
 
                     Picker("Role", selection: self.$selectedRole) {
                         ForEach(TeamRole.allCases.filter { $0 != .owner }, id: \.self) { role in
@@ -69,12 +69,12 @@ struct TeamInviteSheet: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle("Set quota limit", isOn: self.$hasQuotaLimit)
-                        .font(.subheadline.weight(.medium))
+                        .font(RunicFont.subheadline.weight(.medium))
 
                     if self.hasQuotaLimit {
                         HStack(spacing: RunicSpacing.sm) {
                             Text("Credits")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.secondary)
 
                             Stepper(
@@ -92,11 +92,11 @@ struct TeamInviteSheet: View {
                         }
 
                         Text("Monthly credit allocation for this member")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.tertiary)
                     } else {
                         Text("No quota limit - uses shared team quota")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.tertiary)
                     }
                 }
@@ -140,7 +140,7 @@ struct TeamInviteSheet: View {
                 Text("")
             }
         }
-        .font(.caption)
+        .font(RunicFont.caption)
         .foregroundStyle(.tertiary)
         .fixedSize(horizontal: false, vertical: true)
     }

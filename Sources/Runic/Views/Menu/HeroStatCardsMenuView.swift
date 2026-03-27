@@ -26,17 +26,17 @@ struct HeroTodayStatView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xxs) {
                     Text(UsageFormatter.tokenCountString(self.tokenCount))
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(RunicFont.system(size: 26, weight: .bold))
                         .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                     Text("today")
-                        .font(.system(.subheadline, design: .rounded))
+                        .font(RunicFont.subheadline)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                 }
             }
             Spacer()
             if let cost = self.costUSD, cost > 0 {
                 Text(UsageFormatter.usdString(cost))
-                    .font(.system(.subheadline, design: .rounded))
+                    .font(RunicFont.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .padding(.horizontal, RunicSpacing.xs)
@@ -104,18 +104,18 @@ private struct GlassStatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             Text(self.title)
-                .font(.system(.caption2, design: .rounded))
+                .font(RunicFont.caption2)
                 .fontWeight(.medium)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             MiniSparklineView(data: self.sparkline, color: self.sparkColor)
                 .frame(height: 24)
             Text(self.value)
-                .font(.system(.title3, design: .rounded))
+                .font(RunicFont.title3)
                 .fontWeight(.bold)
                 .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
             if let detail {
                 Text(detail)
-                    .font(.system(.caption2, design: .rounded))
+                    .font(RunicFont.caption2)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
         }
@@ -199,7 +199,7 @@ struct UpdatedTimestampView: View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
             let text = Self.relativeString(from: self.updatedAt, to: context.date)
             Text(text)
-                .font(.system(.caption2, design: .rounded))
+                .font(RunicFont.caption2)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted).opacity(0.7))
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)

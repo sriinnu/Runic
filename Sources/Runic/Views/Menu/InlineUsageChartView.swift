@@ -58,7 +58,7 @@ struct InlineUsageChartView: View {
                 HStack {
                     Spacer()
                     Text("No data")
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                     Spacer()
                 }
@@ -94,7 +94,7 @@ struct InlineUsageChartView: View {
                             AxisValueLabel {
                                 if let tokens = value.as(Int.self) {
                                     Text(UsageFormatter.tokenCountString(tokens))
-                                        .font(.system(size: 8, design: .rounded))
+                                        .font(RunicFont.system(size: 8))
                                         .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                                 }
                             }
@@ -103,7 +103,7 @@ struct InlineUsageChartView: View {
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                             AxisValueLabel(format: self.xAxisFormat)
-                                .font(.system(size: 8, design: .rounded))
+                                .font(RunicFont.system(size: 8))
                                 .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                         }
                     }
@@ -113,7 +113,7 @@ struct InlineUsageChartView: View {
                     // Peak badge
                     if let peak = points.max(by: { $0.tokens < $1.tokens }), peak.tokens > 0 {
                         Text("Peak \(UsageFormatter.tokenCountString(peak.tokens))")
-                            .font(.system(size: 8, weight: .medium, design: .rounded))
+                            .font(RunicFont.system(size: 8, weight: .medium))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)

@@ -61,14 +61,14 @@ struct SmallWidgetView: View {
                     .frame(width: 8, height: 8)
 
                 Text(provider.displayName)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(RunicFont.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
 
                 Spacer()
 
                 // Status indicator
                 Image(systemName: statusIcon(for: provider))
-                    .font(.system(size: 12))
+                    .font(RunicFont.system(size: 12))
                     .foregroundColor(statusColor(for: provider))
             }
             .padding(.horizontal, 16)
@@ -85,19 +85,19 @@ struct SmallWidgetView: View {
             VStack(spacing: 2) {
                 if let countdown = provider.resetCountdown {
                     Text("Resets")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(RunicFont.system(size: 10, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
 
                     Text(countdown)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(RunicFont.system(size: 12, weight: .semibold))
                         .foregroundColor(.white.opacity(0.9))
                 } else {
                     Text("Updated")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(RunicFont.system(size: 10, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
 
                     Text(relativeTime(from: provider.updatedAt))
-                        .font(.system(size: 11, weight: .medium))
+                        .font(RunicFont.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.8))
                 }
             }
@@ -160,15 +160,15 @@ struct SmallWidgetView: View {
     private var emptyStateView: some View {
         VStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 24))
+                .font(RunicFont.system(size: 24))
                 .foregroundColor(.white.opacity(0.5))
 
             Text("No Data")
-                .font(.system(size: 14, weight: .semibold))
+                .font(RunicFont.system(size: 14, weight: .semibold))
                 .foregroundColor(.white.opacity(0.7))
 
             Text("Open app to refresh")
-                .font(.system(size: 11))
+                .font(RunicFont.system(size: 11))
                 .foregroundColor(.white.opacity(0.5))
                 .multilineTextAlignment(.center)
         }

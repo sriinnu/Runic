@@ -7,22 +7,22 @@ struct HelpPane: View {
         PreferencesPane {
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Menu refresh")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
                 Text("Use Ping now in the menu to update usage without closing the panel.")
-                    .font(.body)
+                    .font(RunicFont.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Auto-refresh cadence and safety rules live in Performance > Refresh & Safety.")
-                    .font(.body)
+                    .font(RunicFont.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Manual mode avoids background refreshes that may touch tokens.")
-                    .font(.body)
+                    .font(RunicFont.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -31,17 +31,17 @@ struct HelpPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Data sources")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
                 Text("Runic reads local logs or browser cookies depending on provider settings.")
-                    .font(.body)
+                    .font(RunicFont.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Open Providers to review each source and add credentials.")
-                    .font(.body)
+                    .font(RunicFont.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

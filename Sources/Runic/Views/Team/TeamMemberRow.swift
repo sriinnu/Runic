@@ -17,19 +17,19 @@ struct TeamMemberRow: View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 HStack(spacing: RunicSpacing.xs) {
                     Text(self.member.name)
-                        .font(.body.weight(.medium))
+                        .font(RunicFont.body.weight(.medium))
 
                     self.roleBadge
                 }
 
                 Text(self.member.email)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.tertiary)
 
                 if let quota = self.member.quotaLimit {
                     HStack(spacing: RunicSpacing.xxs) {
                         Text("\(self.member.usedQuota, format: .number) / \(quota, format: .number)")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
 
                         UsageProgressBar(
@@ -95,7 +95,7 @@ struct TeamMemberRow: View {
                 .frame(width: 36, height: 36)
 
             Text(self.member.initials)
-                .font(.footnote.weight(.semibold))
+                .font(RunicFont.footnote.weight(.semibold))
                 .foregroundStyle(.white)
         }
     }
@@ -103,9 +103,9 @@ struct TeamMemberRow: View {
     private var roleBadge: some View {
         HStack(spacing: RunicSpacing.xxxs) {
             Image(systemName: self.member.role.icon)
-                .font(.caption2)
+                .font(RunicFont.caption2)
             Text(self.member.role.displayName)
-                .font(.caption2.weight(.medium))
+                .font(RunicFont.caption2.weight(.medium))
         }
         .padding(.horizontal, RunicSpacing.xxs + RunicSpacing.xxxs)
         .padding(.vertical, RunicSpacing.xxxs)

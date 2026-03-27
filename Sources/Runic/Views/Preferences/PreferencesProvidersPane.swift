@@ -835,10 +835,10 @@ struct ProvidersPane: View {
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 Text("Built-in providers")
-                    .font(.subheadline.weight(.semibold))
+                    .font(RunicFont.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Text("Switch to sidebar layout for per-day history cards and model or project drill-down details.")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -903,7 +903,7 @@ struct ProvidersPane: View {
                     onCopyError: { text in self.copyToPasteboard(text) })
             } else {
                 Text("Select a provider")
-                    .font(.title3)
+                    .font(RunicFont.title3)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -1237,7 +1237,7 @@ private struct ProviderListBrandIcon: View {
                     RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
                         .fill(brandColor.opacity(0.18))
                     Text(initial)
-                        .font(.system(size: ProviderListMetrics.iconSize * 0.5, weight: .bold, design: .rounded))
+                        .font(RunicFont.system(size: ProviderListMetrics.iconSize * 0.5, weight: .bold))
                         .foregroundStyle(brandColor)
                 }
                 .frame(width: ProviderListMetrics.iconSize, height: ProviderListMetrics.iconSize)
@@ -1289,11 +1289,11 @@ private struct ProviderInsightChip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
             Text(line.label.uppercased())
-                .font(.caption2.weight(.semibold))
+                .font(RunicFont.caption2.weight(.semibold))
                 .tracking(0.2)
                 .foregroundStyle(.tertiary)
             Text(line.value)
-                .font(.caption)
+                .font(RunicFont.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1350,10 +1350,10 @@ private struct ProviderListProviderRowView: View {
                         ProviderListBrandIcon(provider: self.provider)
                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                             Text(metadata.displayName)
-                                .font(.headline.weight(.semibold))
+                                .font(RunicFont.headline.weight(.semibold))
                                 .foregroundStyle(.primary)
                             Text(self.subtitle)
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -1363,7 +1363,7 @@ private struct ProviderListProviderRowView: View {
                     HStack(alignment: .center, spacing: RunicSpacing.xs) {
                         self.sourceBadge
                         Text(self.statusLabel)
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.tertiary)
                             .lineLimit(1)
 
@@ -1372,7 +1372,7 @@ private struct ProviderListProviderRowView: View {
                                 .controlSize(.small)
                                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                             Text("Refreshing…")
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.secondary)
                         } else {
                             self.usageStatusBadge
@@ -1420,7 +1420,7 @@ private struct ProviderListProviderRowView: View {
         let (color, backgroundColor) = self.usageStatusColors
 
         return Text(self.usageStatus.text)
-            .font(.caption2.weight(.medium))
+            .font(RunicFont.caption2.weight(.medium))
             .padding(.horizontal, ProviderListMetrics.statusBadgePaddingH)
             .padding(.vertical, ProviderListMetrics.statusBadgePaddingV)
             .background(Capsule(style: .continuous).fill(backgroundColor))
@@ -1429,7 +1429,7 @@ private struct ProviderListProviderRowView: View {
 
     private var sourceBadge: some View {
         Text(self.sourceLabel)
-            .font(.caption2.weight(.medium))
+            .font(RunicFont.caption2.weight(.medium))
             .foregroundStyle(.secondary)
             .padding(.horizontal, RunicSpacing.xs)
             .padding(.vertical, RunicSpacing.xxxs)
@@ -1541,9 +1541,9 @@ private struct ProviderListToggleRowView: View {
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     Text(self.toggle.title)
-                        .font(.callout.weight(.semibold))
+                        .font(RunicFont.callout.weight(.semibold))
                     Text(self.toggle.subtitle)
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1551,7 +1551,7 @@ private struct ProviderListToggleRowView: View {
                 if self.toggle.binding.wrappedValue {
                     if let status = self.toggle.statusText?(), !status.isEmpty {
                         Text(status)
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(4)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1629,9 +1629,9 @@ private struct ProviderListFieldRowView: View {
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     Text(self.field.title)
-                        .font(.callout.weight(.semibold))
+                        .font(RunicFont.callout.weight(.semibold))
                     Text(self.field.subtitle)
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1640,12 +1640,12 @@ private struct ProviderListFieldRowView: View {
                 case .plain:
                     TextField(self.field.placeholder ?? "", text: self.field.binding)
                         .textFieldStyle(.roundedBorder)
-                        .font(.callout)
+                        .font(RunicFont.callout)
                         .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
                 case .secure:
                     SecureField(self.field.placeholder ?? "", text: self.field.binding)
                         .textFieldStyle(.roundedBorder)
-                        .font(.callout)
+                        .font(RunicFont.callout)
                         .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
                 }
 
@@ -1756,11 +1756,11 @@ private struct ProviderErrorView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.orange)
                     .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                 Text(self.title)
-                    .font(.callout.weight(.semibold))
+                    .font(RunicFont.callout.weight(.semibold))
                     .foregroundStyle(.orange)
                 Spacer()
                 Button {
@@ -1768,9 +1768,9 @@ private struct ProviderErrorView: View {
                 } label: {
                     HStack(alignment: .center, spacing: RunicSpacing.xxs) {
                         Image(systemName: "doc.on.doc")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                         Text("Copy")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                     }
                 }
                 .buttonStyle(.bordered)
@@ -1780,7 +1780,7 @@ private struct ProviderErrorView: View {
             }
 
             Text(self.display.preview)
-                .font(.callout)
+                .font(RunicFont.callout)
                 .foregroundStyle(.secondary)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1794,13 +1794,13 @@ private struct ProviderErrorView: View {
             if self.display.preview != self.display.full {
                 Button(self.isExpanded ? "Hide details" : "Show details") { self.isExpanded.toggle() }
                     .buttonStyle(.link)
-                    .font(.callout)
+                    .font(RunicFont.callout)
             }
 
             if self.isExpanded {
                 ScrollView(.horizontal, showsIndicators: true) {
                     Text(self.display.full)
-                        .font(.system(.caption, design: .monospaced))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.primary)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1865,7 +1865,7 @@ private struct ProviderSidebarRow: View {
                     .frame(width: 20, height: 20)
             }
             Text(self.store.metadata(for: self.provider).displayName)
-                .font(.body)
+                .font(RunicFont.body)
                 .foregroundStyle(self.isEnabled ? .primary : .secondary)
                 .lineLimit(1)
                 .layoutPriority(1)
@@ -1921,7 +1921,7 @@ private struct ProviderHistoryNavigationButton: View {
     var body: some View {
         Button(action: self.action) {
             Image(systemName: self.systemName)
-                .font(.caption.weight(.semibold))
+                .font(RunicFont.caption.weight(.semibold))
                 .foregroundStyle(self.enabled ? .secondary : .tertiary)
                 .frame(width: 26, height: 26)
         }
@@ -1947,7 +1947,7 @@ private struct ProviderSidebarSectionHeader: View {
 
     var body: some View {
         Text(self.title)
-            .font(.subheadline.weight(.semibold))
+            .font(RunicFont.subheadline.weight(.semibold))
             .foregroundStyle(.secondary)
     }
 }
@@ -1961,12 +1961,12 @@ private struct ProviderSidebarKeyValueRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
             Text("\(self.label):")
-                .font(.caption)
+                .font(RunicFont.caption)
                 .foregroundStyle(.tertiary)
                 .frame(width: ProviderListMetrics.sidebarStatusLabelWidth, alignment: .leading)
             if let helpText = self.helpText {
                 Text(self.value)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1974,7 +1974,7 @@ private struct ProviderSidebarKeyValueRow: View {
                     .help(helpText)
             } else {
                 Text(self.value)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1993,11 +1993,11 @@ private struct ProviderSidebarMetricChip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
             Text(self.title)
-                .font(.caption2.weight(.semibold))
+                .font(RunicFont.caption2.weight(.semibold))
                 .foregroundStyle(.tertiary)
                 .textCase(.uppercase)
             Text(self.value)
-                .font(.caption.weight(.medium))
+                .font(RunicFont.caption.weight(.medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2059,7 +2059,7 @@ private struct ProviderHistoryCalendarDayCell: View {
         Button(action: self.action) {
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                 Text("\(self.dayNumber)")
-                    .font(.caption.weight(self.isSelected ? .semibold : .regular))
+                    .font(RunicFont.caption.weight(self.isSelected ? .semibold : .regular))
                     .foregroundStyle(self.isInMonth ? .primary : .tertiary)
                 Spacer(minLength: 0)
                 if self.hasActivity {
@@ -2142,9 +2142,9 @@ private struct ProviderSidebarDetailView: View {
                             ProviderListBrandIcon(provider: self.provider)
                             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                 Text(self.store.metadata(for: self.provider).displayName)
-                                    .font(.title2.weight(.semibold))
+                                    .font(RunicFont.title2.weight(.semibold))
                                 Text(self.subtitle)
-                                    .font(.caption)
+                                    .font(RunicFont.caption)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -2207,7 +2207,7 @@ private struct ProviderSidebarDetailView: View {
 
                                 if let diagnosticsCopyStatus {
                                     Text(diagnosticsCopyStatus)
-                                        .font(.caption2)
+                                        .font(RunicFont.caption2)
                                         .foregroundStyle(.tertiary)
                                 }
                             }
@@ -2231,11 +2231,11 @@ private struct ProviderSidebarDetailView: View {
                                     if !topModelLines.isEmpty {
                                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                             Text(self.modelSectionTitle)
-                                                .font(.caption2.weight(.semibold))
+                                                .font(RunicFont.caption2.weight(.semibold))
                                                 .foregroundStyle(.secondary)
                                             ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
                                                 Text("\(index + 1). \(line)")
-                                                    .font(.caption)
+                                                    .font(RunicFont.caption)
                                                     .foregroundStyle(.secondary)
                                                     .textSelection(.enabled)
                                             }
@@ -2246,11 +2246,11 @@ private struct ProviderSidebarDetailView: View {
                                     if !topProjectLines.isEmpty {
                                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                             Text("Projects")
-                                                .font(.caption2.weight(.semibold))
+                                                .font(RunicFont.caption2.weight(.semibold))
                                                 .foregroundStyle(.secondary)
                                             ForEach(Array(topProjectLines.enumerated()), id: \.offset) { index, line in
                                                 Text("\(index + 1). \(line)")
-                                                    .font(.caption)
+                                                    .font(RunicFont.caption)
                                                     .foregroundStyle(.secondary)
                                                     .textSelection(.enabled)
                                             }
@@ -2280,19 +2280,19 @@ private struct ProviderSidebarDetailView: View {
                             ForEach(self.settingsFields) { field in
                                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                     Text(field.title)
-                                        .font(.body.weight(.medium))
+                                        .font(RunicFont.body.weight(.medium))
                                     Text(field.subtitle)
-                                        .font(.caption)
+                                        .font(RunicFont.caption)
                                         .foregroundStyle(.secondary)
                                     switch field.kind {
                                     case .plain:
                                         TextField(field.placeholder ?? "", text: field.binding)
                                             .textFieldStyle(.roundedBorder)
-                                            .font(.callout)
+                                            .font(RunicFont.callout)
                                     case .secure:
                                         SecureField(field.placeholder ?? "", text: field.binding)
                                             .textFieldStyle(.roundedBorder)
-                                            .font(.callout)
+                                            .font(RunicFont.callout)
                                     }
                                     self.fieldActions(field.actions)
                                 }
@@ -2310,9 +2310,9 @@ private struct ProviderSidebarDetailView: View {
                                     Toggle(isOn: toggle.binding) {
                                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                             Text(toggle.title)
-                                                .font(.body.weight(.medium))
+                                                .font(RunicFont.body.weight(.medium))
                                             Text(toggle.subtitle)
-                                                .font(.caption)
+                                                .font(RunicFont.caption)
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
@@ -2321,7 +2321,7 @@ private struct ProviderSidebarDetailView: View {
                                     if toggle.binding.wrappedValue {
                                         if let status = toggle.statusText?(), !status.isEmpty {
                                             Text(status)
-                                                .font(.caption)
+                                                .font(RunicFont.caption)
                                                 .foregroundStyle(.secondary)
                                                 .padding(RunicSpacing.xs)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2364,7 +2364,7 @@ private struct ProviderSidebarDetailView: View {
     private var statusBadge: some View {
         let (color, bg) = self.statusColors
         return Text(self.usageStatus.text)
-            .font(.caption2.weight(.medium))
+            .font(RunicFont.caption2.weight(.medium))
             .padding(.horizontal, RunicSpacing.xs)
             .padding(.vertical, RunicSpacing.xxs)
             .background(bg)
@@ -2397,7 +2397,7 @@ private struct ProviderSidebarDetailView: View {
                     }
 
                     Text(self.historyMonthTitle)
-                        .font(.caption.weight(.semibold))
+                        .font(RunicFont.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .frame(minWidth: 130, alignment: .leading)
 
@@ -2424,14 +2424,14 @@ private struct ProviderSidebarDetailView: View {
                         ProgressView()
                             .controlSize(.small)
                         Text("Loading history…")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, RunicSpacing.xs)
                 } else if let snapshot = self.historySnapshot {
                     if !snapshot.isSupported {
                         Text(snapshot.note ?? "History is not available for this provider yet.")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .padding(.vertical, RunicSpacing.xs)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -2444,11 +2444,11 @@ private struct ProviderSidebarDetailView: View {
                     } else {
                         if let note = snapshot.note, !note.isEmpty {
                             Text(note)
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.tertiary)
                         }
                         Text(snapshot.days.count == 1 ? "1 active day in \(self.historyMonthTitle)." : "\(snapshot.days.count) active days in \(self.historyMonthTitle).")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                             .padding(.bottom, RunicSpacing.xxs)
 
@@ -2457,7 +2457,7 @@ private struct ProviderSidebarDetailView: View {
                     }
                 } else {
                     Text("History is empty for this period.")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .padding(.vertical, RunicSpacing.xs)
                 }
@@ -2465,10 +2465,10 @@ private struct ProviderSidebarDetailView: View {
                 if let historyError = self.historyError {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("History load failed")
-                            .font(.caption.weight(.semibold))
+                            .font(RunicFont.caption.weight(.semibold))
                             .foregroundStyle(.red)
                         Text(historyError)
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
                         Button("Retry") {
@@ -2494,7 +2494,7 @@ private struct ProviderSidebarDetailView: View {
                 }
 
                 Text("Local aggregated history only. Prompts, cookies, API keys, and raw payloads are never shown here.")
-                    .font(.caption2)
+                    .font(RunicFont.caption2)
                     .foregroundStyle(.tertiary)
             }
         }
@@ -2506,7 +2506,7 @@ private struct ProviderSidebarDetailView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: RunicSpacing.xxs), count: 7), spacing: RunicSpacing.xxs) {
                 ForEach(weekdays, id: \.self) { symbol in
                     Text(symbol)
-                        .font(.caption2.weight(.semibold))
+                        .font(RunicFont.caption2.weight(.semibold))
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
                 }
@@ -2537,7 +2537,7 @@ private struct ProviderSidebarDetailView: View {
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                     Text("Day details")
-                        .font(.caption.weight(.semibold))
+                        .font(RunicFont.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                         .textCase(.uppercase)
                         .tracking(0.25)
@@ -2556,7 +2556,7 @@ private struct ProviderSidebarDetailView: View {
 
                 if let selected = self.selectedHistoryDaySummary {
                     Text(selected.dayStart.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()))
-                        .font(.caption.weight(.semibold))
+                        .font(RunicFont.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
                     if self.historyDayDetailMode == .summary {
@@ -2587,7 +2587,7 @@ private struct ProviderSidebarDetailView: View {
 
                         if self.hasModelBreakdown, let topModel = selected.topModel {
                             Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
                         }
@@ -2595,7 +2595,7 @@ private struct ProviderSidebarDetailView: View {
                         if self.hasProjectAttribution, let topProject = selected.topProject {
                             let project = self.projectDisplay(topProject)
                             Text("Top project: \(project.title)")
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
                                 .help(project.helpText ?? "")
@@ -2605,23 +2605,23 @@ private struct ProviderSidebarDetailView: View {
                     if self.historyDayDetailMode == .models {
                         if self.hasModelBreakdown, !selected.modelSummaries.isEmpty {
                             Text("Models used")
-                                .font(.caption2.weight(.medium))
+                                .font(RunicFont.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
                             ForEach(Array(selected.modelSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
                                 Text("• \(self.historyModelLine(summary))")
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(.tertiary)
                                     .textSelection(.enabled)
                                     .help(self.historyModelLine(summary))
                             }
                         } else if self.hasModelBreakdown, !selected.modelsUsed.isEmpty {
                             Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.tertiary)
                                 .textSelection(.enabled)
                         } else {
                             Text(self.hasModelBreakdown ? "No models recorded for this day." : "Model attribution is not available for this provider.")
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
@@ -2629,28 +2629,28 @@ private struct ProviderSidebarDetailView: View {
                     if self.historyDayDetailMode == .projects {
                         if self.hasProjectAttribution, !selected.projectSummaries.isEmpty {
                             Text("Top projects")
-                                .font(.caption2.weight(.medium))
+                                .font(RunicFont.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
                             ForEach(Array(selected.projectSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
                                 let project = self.projectDisplay(summary)
                                 Text("• \(self.historyProjectLine(summary))")
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(.tertiary)
                                     .textSelection(.enabled)
                                     .help(project.helpText ?? "")
                             }
                         } else {
                             Text(self.hasProjectAttribution ? "No projects recorded for this day." : "Project attribution is not available for this provider.")
-                                .font(.caption)
+                                .font(RunicFont.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
                 } else {
                     Text(self.historySelectedDay?.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
-                        .font(.caption.weight(.semibold))
+                        .font(RunicFont.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text("No recorded activity for this day.")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(.tertiary)
                 }
             }
