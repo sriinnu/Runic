@@ -3,6 +3,29 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.0.0</title>
+            <pubDate>Fri, 27 Mar 2026 18:53:39 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>51</sparkle:version>
+            <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.0.0</h2>
+<ul>
+<li>Typography: custom font system with 7 bundled families (Fira Code, JetBrains Mono, IBM Plex Mono, Space Mono, Inconsolata, Caveat, SF Pro/Mono)</li>
+<li>Typography: live font switching from Settings > General — no restart needed</li>
+<li>Typography: RunicTypography design tokens with dynamic RunicFont scale across 600+ font call sites</li>
+<li>Typography: drop-in font extensibility — add TTF/OTF to Resources/Fonts, rebuild, auto-discovered</li>
+<li>Typography: font preview in picker — each choice rendered in its own typeface</li>
+<li>Typography: NSMenuItem post-processor applies selected font to all plain menu items</li>
+<li>Typography: xLarge dynamic type for slightly larger text across the app</li>
+<li>Menu: wider card base width (310→340pt) for monospaced font comfort</li>
+<li>iOS: RunicFont enum for consistent monospaced typography across widgets and views</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.0.0/Runic-2.0.0.zip" length="35394004" type="application/octet-stream" sparkle:edSignature="VIBJ2AnXWmsFN2J6sm/FooxOkhx4L9W8Ew9dF3yR1QnNVl2Bhvo2GKprn8102F6M1/EZMzvLHNd8xfrsiJuyBQ=="/>
+        </item>
+        <item>
             <title>1.2.0</title>
             <pubDate>Tue, 25 Mar 2026 21:00:00 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -36,87 +59,6 @@
 </ul>
 ]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v1.1.0/Runic-1.1.0.zip" length="30807384" type="application/octet-stream" sparkle:edSignature="hXMeE/CLrSDV+kbFythUA6w84WQ7u0YpvXK6uI58QHfBAn2FpH98xWERNfyL55gxBULdMASXzpv1UxmjtRFjCg=="/>
-        </item>
-        <item>
-            <title>1.0.0</title>
-            <pubDate>Sat, 22 Mar 2026 18:00:00 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>48</sparkle:version>
-            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 1.0.0</h2>
-<ul>
-<li>26 AI providers including Vertex AI and Qwen/DashScope</li>
-<li>Inline line charts (1h/6h/1d/7d/30d), hourly/weekly bar charts</li>
-<li>Provider tab bar with brand icons and Overview tab</li>
-<li>Hero stat, glassmorphism cards with sparklines</li>
-<li>Subscription utilization and usage window comparison charts</li>
-<li>Export usage as CSV or JSON</li>
-<li>Budget breach notifications</li>
-<li>Dark/Light/System theme</li>
-<li>Liquid UI animations</li>
-</ul>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v1.0.0/Runic-1.0.0.zip" length="30772430" type="application/octet-stream" sparkle:edSignature="a065lJa+Gwv2mH8DcniAxFW4tHB2JD4ZnT39+tXWs0k4p+Zq61WKi699aowEf8HakfgnSU7OQ3YdL5X0XYn7CQ=="/>
-        </item>
-        <item>
-            <title>0.16.0</title>
-            <pubDate>Mon, 29 Dec 2025 19:03:57 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>46</sparkle:version>
-            <sparkle:shortVersionString>0.16.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 0.16.0</h2>
-<ul>
-<li>Menu bar: optional “percent mode” (provider brand icons + percentage labels) via Advanced toggle.</li>
-<li>CLI: add <code>runic cost</code> to print local cost usage (text/JSON) for Codex + Claude.</li>
-<li>Cost: align local cost scanner with ccusage; stabilize parsing/decoding and handle large JSONL lines.</li>
-<li>Claude: skip pricing for unknown models (tokens still tracked) to avoid hard-coded legacy prices.</li>
-<li>Performance: reduce menu bar CPU usage by caching morph icons, skipping redundant status-item updates, and caching provider enablement/order during animations.</li>
-<li>Menu: improve provider switcher hover contrast in light mode.</li>
-<li>Icons: refresh Droid + Claude brand assets to better match menu sizing.</li>
-<li>CI: avoid interactive login-shell probes to reduce noisy “CLI missing” errors.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v0.16.0/Runic-0.16.0.zip" length="7607740" type="application/octet-stream" sparkle:edSignature="D/d9z4+8/gqpeoXBKkmEkzpPrzs9pp1DQeCETkndA2kyi1wKTAjPyw6Hj6V1Pe3T5ge66E0N5De88ilUp6WmBw=="/>
-        </item>
-        <item>
-            <title>0.15.3</title>
-            <pubDate>Sun, 28 Dec 2025 20:18:41 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>45</sparkle:version>
-            <sparkle:shortVersionString>0.15.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 0.15.3</h2>
-<ul>
-<li>Codex: default to OAuth usage API (ChatGPT backend) with CLI-only override in Debug.</li>
-<li>Codex: map OAuth credits balance directly, avoiding web fallback for credits.</li>
-<li>Preferences: add optional “Access OpenAI via web” toggle and show blended source labels when web extras are active.</li>
-<li>Copilot: replace blocking auth wait dialog with a non-modal sheet to avoid stuck login.</li>
-</ul>
-<ul>
-<li>CI: stabilize Claude CLI version detection test.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v0.15.3/Runic-0.15.3.zip" length="7549248" type="application/octet-stream" sparkle:edSignature="3xoy09WoQnTuskCqIPRHriFPmmTJCVZ4BIgufRNLqfNhszmE1MSf2pWQVYzgt0SBVDrY+12/0dCie9TG0RqTBg=="/>
-        </item>
-        <item>
-            <title>0.15.2</title>
-            <pubDate>Sun, 28 Dec 2025 18:51:01 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>44</sparkle:version>
-            <sparkle:shortVersionString>0.15.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 0.15.2</h2>
-<ul>
-<li>Copilot: fix device-flow waiting modal to close reliably after auth (and avoid stuck waits).</li>
-<li>Packaging: include the KeyboardShortcuts resource bundle to prevent Settings → Keyboard shortcut crashes in packaged builds.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v0.15.2/Runic-0.15.2.zip" length="7413967" type="application/octet-stream" sparkle:edSignature="vv7kPaGk0vzAj1AJ5EEbRE0kXtE4iIscrkhxsjU8X+BDT5HQkwJTully+OivJFCksjuUyaZIV74tfi1kWlSWDQ=="/>
         </item>
         <item>
             <title>0.14.0</title>
