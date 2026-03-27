@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct CerebrasAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum CerebrasSettingsError: LocalizedError, Sendable {
+enum CerebrasSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

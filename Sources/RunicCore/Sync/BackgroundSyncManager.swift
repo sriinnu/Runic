@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 
 #if canImport(UIKit)
 import UIKit
@@ -21,7 +21,6 @@ import AppKit
 /// - Lifecycle-aware sync (app launch, foreground, background)
 /// - Network reachability monitoring
 public actor BackgroundSyncManager {
-
     // MARK: - Properties
 
     /// The underlying sync engine
@@ -49,7 +48,7 @@ public actor BackgroundSyncManager {
     /// Observers registered for sync events
     private var observers: [WeakSyncObserver] = []
 
-    /// Background task identifier (iOS only)
+    // Background task identifier (iOS only)
     #if canImport(UIKit)
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     #endif
@@ -63,14 +62,14 @@ public actor BackgroundSyncManager {
     ///   - config: Configuration for sync intervals and behavior
     public init(
         syncEngine: any SyncEngine,
-        config: SyncConfiguration = .default
-    ) {
+        config: SyncConfiguration = .default)
+    {
         self.syncEngine = syncEngine
         self.config = config
 
         // Register for app lifecycle notifications
         Task {
-            await registerLifecycleObservers()
+            await self.registerLifecycleObservers()
         }
     }
 
@@ -78,19 +77,19 @@ public actor BackgroundSyncManager {
 
     /// Starts background synchronization
     public func start() {
-        guard !isEnabled else { return }
+        guard !self.isEnabled else { return }
 
-        isEnabled = true
-        scheduleNextSync()
-        notifyObservers { $0.syncDidStart() }
+        self.isEnabled = true
+        self.scheduleNextSync()
+        self.notifyObservers { $0.syncDidStart() }
     }
 
     /// Stops background synchronization
     public func stop() {
-        isEnabled = false
+        self.isEnabled = false
         Task { @MainActor in
-            syncTimer?.invalidate()
-            syncTimer = nil
+            self.syncTimer?.invalidate()
+            self.syncTimer = nil
         }
     }
 
@@ -100,21 +99,21 @@ public actor BackgroundSyncManager {
     /// - Returns: Result of the sync operation
     @discardableResult
     public func syncNow(options: SyncOptions? = nil) async -> Result<SyncResult, SyncError> {
-        let syncOptions = options ?? config.defaultSyncOptions
+        let syncOptions = options ?? self.config.defaultSyncOptions
 
-        notifyObservers { $0.syncDidStart() }
+        self.notifyObservers { $0.syncDidStart() }
 
         let result = await syncEngine.sync(options: syncOptions)
 
         switch result {
-        case .success(let syncResult):
-            lastSyncDate = Date()
-            recordSyncHistory(success: true, result: syncResult)
-            notifyObservers { $0.syncDidComplete(result: syncResult) }
+        case let .success(syncResult):
+            self.lastSyncDate = Date()
+            self.recordSyncHistory(success: true, result: syncResult)
+            self.notifyObservers { $0.syncDidComplete(result: syncResult) }
 
-        case .failure(let error):
-            recordSyncHistory(success: false, error: error)
-            notifyObservers { $0.syncDidFail(error: error) }
+        case let .failure(error):
+            self.recordSyncHistory(success: false, error: error)
+            self.notifyObservers { $0.syncDidFail(error: error) }
         }
 
         return result
@@ -125,26 +124,25 @@ public actor BackgroundSyncManager {
     /// - Parameter observer: The observer to add
     public func addObserver(_ observer: SyncObserver) {
         let weakObserver = WeakSyncObserver(observer)
-        observers.append(weakObserver)
+        self.observers.append(weakObserver)
     }
 
     /// Removes an observer
     ///
     /// - Parameter observer: The observer to remove
     public func removeObserver(_ observer: SyncObserver) {
-        observers.removeAll { $0.observer === observer }
+        self.observers.removeAll { $0.observer === observer }
     }
 
     /// Returns sync statistics
     public var statistics: SyncStatistics {
         SyncStatistics(
-            lastSyncDate: lastSyncDate,
-            totalSyncs: syncHistory.count,
-            successfulSyncs: syncHistory.filter { $0.success }.count,
-            failedSyncs: syncHistory.filter { !$0.success }.count,
-            averageDuration: calculateAverageDuration(),
-            syncHistory: Array(syncHistory.suffix(10))
-        )
+            lastSyncDate: self.lastSyncDate,
+            totalSyncs: self.syncHistory.count,
+            successfulSyncs: self.syncHistory.count(where: { $0.success }),
+            failedSyncs: self.syncHistory.count(where: { !$0.success }),
+            averageDuration: self.calculateAverageDuration(),
+            syncHistory: Array(self.syncHistory.suffix(10)))
     }
 
     /// Updates sync configuration
@@ -153,8 +151,8 @@ public actor BackgroundSyncManager {
     public func updateConfiguration(_ config: SyncConfiguration) async {
         // Note: Configuration updates require recreating the manager
         // This is a placeholder - in practice, you'd want to make config mutable
-        if isEnabled {
-            stop()
+        if self.isEnabled {
+            self.stop()
             // Caller should create a new BackgroundSyncManager with new config
         }
     }
@@ -163,17 +161,17 @@ public actor BackgroundSyncManager {
 
     /// Schedules the next automatic sync
     private func scheduleNextSync() {
-        guard isEnabled else { return }
+        guard self.isEnabled else { return }
 
-        let interval = determineNextInterval()
+        let interval = self.determineNextInterval()
 
         Task { @MainActor [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             self.syncTimer?.invalidate()
             self.syncTimer = Timer.scheduledTimer(
                 withTimeInterval: interval,
-                repeats: false
-            ) { [weak self] _ in
+                repeats: false)
+            { [weak self] _ in
                 Task {
                     await self?.performScheduledSync()
                 }
@@ -185,9 +183,9 @@ public actor BackgroundSyncManager {
     private func determineNextInterval() -> TimeInterval {
         #if canImport(UIKit)
         let isActive = UIApplication.shared.applicationState == .active
-        return isActive ? config.activeSyncInterval : config.backgroundSyncInterval
+        return isActive ? self.config.activeSyncInterval : self.config.backgroundSyncInterval
         #else
-        return config.activeSyncInterval
+        return self.config.activeSyncInterval
         #endif
     }
 
@@ -195,27 +193,27 @@ public actor BackgroundSyncManager {
     private func performScheduledSync() async {
         #if canImport(UIKit)
         // Begin background task
-        backgroundTaskID = UIApplication.shared.beginBackgroundTask { [weak self] in
+        self.backgroundTaskID = UIApplication.shared.beginBackgroundTask { [weak self] in
             self?.endBackgroundTask()
         }
         #endif
 
-        await syncNow()
+        await self.syncNow()
 
         #if canImport(UIKit)
-        endBackgroundTask()
+        self.endBackgroundTask()
         #endif
 
         // Schedule next sync
-        scheduleNextSync()
+        self.scheduleNextSync()
     }
 
     #if canImport(UIKit)
     /// Ends the background task
     private func endBackgroundTask() {
-        guard backgroundTaskID != .invalid else { return }
-        UIApplication.shared.endBackgroundTask(backgroundTaskID)
-        backgroundTaskID = .invalid
+        guard self.backgroundTaskID != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(self.backgroundTaskID)
+        self.backgroundTaskID = .invalid
     }
     #endif
 
@@ -225,16 +223,16 @@ public actor BackgroundSyncManager {
         NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
             object: nil,
-            queue: .main
-        ) { [weak self] _ in
+            queue: .main)
+        { [weak self] _ in
             Task { await self?.handleAppBecameActive() }
         }
 
         NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
-            queue: .main
-        ) { [weak self] _ in
+            queue: .main)
+        { [weak self] _ in
             Task { await self?.handleAppEnteredBackground() }
         }
         #endif
@@ -243,16 +241,16 @@ public actor BackgroundSyncManager {
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
             object: nil,
-            queue: .main
-        ) { [weak self] _ in
+            queue: .main)
+        { [weak self] _ in
             Task { await self?.handleAppBecameActive() }
         }
 
         NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification,
             object: nil,
-            queue: .main
-        ) { [weak self] _ in
+            queue: .main)
+        { [weak self] _ in
             Task { await self?.handleAppEnteredBackground() }
         }
         #endif
@@ -260,18 +258,18 @@ public actor BackgroundSyncManager {
 
     /// Handles app becoming active
     private func handleAppBecameActive() async {
-        guard config.syncOnForeground else { return }
+        guard self.config.syncOnForeground else { return }
 
         // Sync if last sync was more than interval ago
-        if shouldSyncOnForeground() {
-            await syncNow()
+        if self.shouldSyncOnForeground() {
+            await self.syncNow()
         }
     }
 
     /// Handles app entering background
     private func handleAppEnteredBackground() async {
-        guard config.syncOnBackground else { return }
-        await syncNow()
+        guard self.config.syncOnBackground else { return }
+        await self.syncNow()
     }
 
     /// Determines if sync should occur on foreground
@@ -279,35 +277,34 @@ public actor BackgroundSyncManager {
         guard let lastSync = lastSyncDate else { return true }
 
         let elapsed = Date().timeIntervalSince(lastSync)
-        return elapsed >= config.activeSyncInterval
+        return elapsed >= self.config.activeSyncInterval
     }
 
     /// Records sync operation in history
     private func recordSyncHistory(
         success: Bool,
         result: SyncResult? = nil,
-        error: SyncError? = nil
-    ) {
+        error: SyncError? = nil)
+    {
         let entry = SyncHistoryEntry(
             timestamp: Date(),
             success: success,
             duration: result?.duration ?? 0,
             pushedCount: result?.pushedCount ?? 0,
             fetchedCount: result?.fetchedCount ?? 0,
-            error: error?.localizedDescription
-        )
+            error: error?.localizedDescription)
 
-        syncHistory.append(entry)
+        self.syncHistory.append(entry)
 
         // Trim history if needed
-        if syncHistory.count > maxHistoryEntries {
-            syncHistory.removeFirst(syncHistory.count - maxHistoryEntries)
+        if self.syncHistory.count > self.maxHistoryEntries {
+            self.syncHistory.removeFirst(self.syncHistory.count - self.maxHistoryEntries)
         }
     }
 
     /// Calculates average sync duration
     private func calculateAverageDuration() -> TimeInterval {
-        let successfulSyncs = syncHistory.filter { $0.success && $0.duration > 0 }
+        let successfulSyncs = self.syncHistory.filter { $0.success && $0.duration > 0 }
         guard !successfulSyncs.isEmpty else { return 0 }
 
         let totalDuration = successfulSyncs.reduce(0.0) { $0 + $1.duration }
@@ -317,10 +314,10 @@ public actor BackgroundSyncManager {
     /// Notifies all observers
     private func notifyObservers(_ action: (SyncObserver) -> Void) {
         // Clean up deallocated observers
-        observers.removeAll { $0.observer == nil }
+        self.observers.removeAll { $0.observer == nil }
 
         // Notify active observers
-        for weakObserver in observers {
+        for weakObserver in self.observers {
             if let observer = weakObserver.observer {
                 action(observer)
             }
@@ -343,8 +340,8 @@ public struct SyncConfiguration: Sendable {
         backgroundSyncInterval: TimeInterval = 3600,
         syncOnForeground: Bool = true,
         syncOnBackground: Bool = true,
-        defaultSyncOptions: SyncOptions = SyncOptions()
-    ) {
+        defaultSyncOptions: SyncOptions = SyncOptions())
+    {
         self.activeSyncInterval = activeSyncInterval
         self.backgroundSyncInterval = backgroundSyncInterval
         self.syncOnForeground = syncOnForeground
@@ -365,8 +362,8 @@ public struct SyncStatistics: Sendable {
     public let syncHistory: [SyncHistoryEntry]
 
     public var successRate: Double {
-        guard totalSyncs > 0 else { return 0 }
-        return Double(successfulSyncs) / Double(totalSyncs) * 100
+        guard self.totalSyncs > 0 else { return 0 }
+        return Double(self.successfulSyncs) / Double(self.totalSyncs) * 100
     }
 }
 
@@ -381,5 +378,7 @@ public struct SyncHistoryEntry: Sendable, Codable {
 
 private struct WeakSyncObserver {
     weak var observer: SyncObserver?
-    init(_ observer: SyncObserver) { self.observer = observer }
+    init(_ observer: SyncObserver) {
+        self.observer = observer
+    }
 }

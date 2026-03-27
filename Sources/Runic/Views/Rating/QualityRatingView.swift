@@ -3,7 +3,6 @@ import SwiftUI
 
 /// Inline quality rating UI for AI model interactions (1-5 stars)
 struct QualityRatingView: View {
-
     // MARK: - Types
 
     struct Model {

@@ -1,12 +1,11 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 @testable import Runic
 
-@Suite
 struct UsagePaceTextTests {
     @Test
-    func weeklyPaceText_includesEtaWhenRunningOutBeforeReset() {
+    func `weekly pace text includes eta when running out before reset`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 50,
@@ -20,7 +19,7 @@ struct UsagePaceTextTests {
     }
 
     @Test
-    func weeklyPaceText_showsResetSafeWhenPaceIsSlow() {
+    func `weekly pace text shows reset safe when pace is slow`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 10,
@@ -34,7 +33,7 @@ struct UsagePaceTextTests {
     }
 
     @Test
-    func weeklyPaceText_hidesWhenResetIsMissing() {
+    func `weekly pace text hides when reset is missing`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 10,
@@ -48,7 +47,7 @@ struct UsagePaceTextTests {
     }
 
     @Test
-    func weeklyPaceText_hidesWhenResetIsInPastOrTooFar() {
+    func `weekly pace text hides when reset is in past or too far`() {
         let now = Date(timeIntervalSince1970: 0)
         let pastWindow = RateWindow(
             usedPercent: 10,
@@ -66,7 +65,7 @@ struct UsagePaceTextTests {
     }
 
     @Test
-    func weeklyPaceText_hidesWhenNoElapsedButUsageExists() {
+    func `weekly pace text hides when no elapsed but usage exists`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 5,
@@ -80,7 +79,7 @@ struct UsagePaceTextTests {
     }
 
     @Test
-    func weeklyPaceText_hidesWhenTooEarlyInWindow() {
+    func `weekly pace text hides when too early in window`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 40,
@@ -94,7 +93,7 @@ struct UsagePaceTextTests {
     }
 
     @Test
-    func weeklyPaceText_hidesWhenUsageIsDepleted() {
+    func `weekly pace text hides when usage is depleted`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(
             usedPercent: 100,

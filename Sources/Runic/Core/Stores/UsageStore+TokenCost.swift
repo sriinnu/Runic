@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 
 extension UsageStore {
     func tokenSnapshot(for provider: UsageProvider) -> CostUsageTokenSnapshot? {

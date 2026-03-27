@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -33,7 +33,9 @@ public enum QwenProviderDescriptor {
                 color: ProviderColor(red: 1.0, green: 0.416, blue: 0.0)),
             tokenCost: ProviderTokenCostConfig(
                 supportsTokenCost: false,
-                noDataMessage: { "Qwen cost estimates are shown per-model in the details submenu (based on public DashScope pricing)." }),
+                noDataMessage: {
+                    "Qwen cost estimates are shown per-model in the details submenu (based on public DashScope pricing)."
+                }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],
                 pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [QwenAPIFetchStrategy()] })),
@@ -71,7 +73,7 @@ struct QwenAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum QwenSettingsError: LocalizedError, Sendable {
+enum QwenSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

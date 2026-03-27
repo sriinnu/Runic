@@ -46,10 +46,10 @@ public enum QwenModelPricing {
         "qwen-turbo-latest": Tier(inputPerMillion: 0.30, outputPerMillion: 0.60, contextWindow: 131_072),
         "qwen-plus": Tier(inputPerMillion: 0.80, outputPerMillion: 2.00, contextWindow: 131_072),
         "qwen-plus-latest": Tier(inputPerMillion: 0.80, outputPerMillion: 2.00, contextWindow: 131_072),
-        "qwen-max": Tier(inputPerMillion: 2.40, outputPerMillion: 9.60, contextWindow: 32_768),
-        "qwen-max-latest": Tier(inputPerMillion: 2.40, outputPerMillion: 9.60, contextWindow: 32_768),
-        "qwen-vl-max": Tier(inputPerMillion: 3.00, outputPerMillion: 9.60, contextWindow: 32_768),
-        "qwen-vl-max-latest": Tier(inputPerMillion: 3.00, outputPerMillion: 9.60, contextWindow: 32_768),
+        "qwen-max": Tier(inputPerMillion: 2.40, outputPerMillion: 9.60, contextWindow: 32768),
+        "qwen-max-latest": Tier(inputPerMillion: 2.40, outputPerMillion: 9.60, contextWindow: 32768),
+        "qwen-vl-max": Tier(inputPerMillion: 3.00, outputPerMillion: 9.60, contextWindow: 32768),
+        "qwen-vl-max-latest": Tier(inputPerMillion: 3.00, outputPerMillion: 9.60, contextWindow: 32768),
         "qwen-vl-plus": Tier(inputPerMillion: 0.80, outputPerMillion: 2.00, contextWindow: 131_072),
         "qwen-long": Tier(inputPerMillion: 0.50, outputPerMillion: 2.00, contextWindow: 10_000_000),
         "qwen2.5-72b-instruct": Tier(inputPerMillion: 0.56, outputPerMillion: 1.12, contextWindow: 131_072),
@@ -185,11 +185,25 @@ private struct QwenModelUsageRaw: Decodable {
     let requests: Int?
     let calls: Int?
 
-    var resolvedModelID: String? { self.model_id ?? self.model }
-    var resolvedInputTokens: Int { self.input_tokens ?? 0 }
-    var resolvedOutputTokens: Int { self.output_tokens ?? 0 }
-    var resolvedTotalTokens: Int { self.total_tokens ?? self.tokens ?? (self.resolvedInputTokens + self.resolvedOutputTokens) }
-    var resolvedRequestCount: Int { self.request_count ?? self.requests ?? self.calls ?? 0 }
+    var resolvedModelID: String? {
+        self.model_id ?? self.model
+    }
+
+    var resolvedInputTokens: Int {
+        self.input_tokens ?? 0
+    }
+
+    var resolvedOutputTokens: Int {
+        self.output_tokens ?? 0
+    }
+
+    var resolvedTotalTokens: Int {
+        self.total_tokens ?? self.tokens ?? (self.resolvedInputTokens + self.resolvedOutputTokens)
+    }
+
+    var resolvedRequestCount: Int {
+        self.request_count ?? self.requests ?? self.calls ?? 0
+    }
 }
 
 // MARK: - Fetcher
@@ -241,11 +255,10 @@ public struct QwenUsageFetcher: Sendable {
             let output = model.resolvedOutputTokens
             let tokens = model.resolvedTotalTokens
             let requests = model.resolvedRequestCount
-            let cost: Double?
-            if input > 0 || output > 0 {
-                cost = QwenModelPricing.estimateCost(inputTokens: input, outputTokens: output, modelID: modelID)
+            let cost: Double? = if input > 0 || output > 0 {
+                QwenModelPricing.estimateCost(inputTokens: input, outputTokens: output, modelID: modelID)
             } else {
-                cost = QwenModelPricing.estimateCost(tokens: tokens, modelID: modelID)
+                QwenModelPricing.estimateCost(tokens: tokens, modelID: modelID)
             }
             entries.append(QwenModelUsageEntry(
                 modelID: modelID,

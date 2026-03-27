@@ -1,12 +1,11 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 @testable import Runic
 
-@Suite
 struct ClaudeUsageTests {
     @Test
-    func parsesUsageJSONWithSonnetLimit() {
+    func `parses usage JSON with sonnet limit`() {
         let json = """
         {
           "ok": true,
@@ -24,7 +23,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesUsageJSONWhenWeeklyMissing() {
+    func `parses usage JSON when weekly missing`() {
         let json = """
         {
           "ok": true,
@@ -39,7 +38,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesLegacyOpusAndAccount() {
+    func `parses legacy opus and account`() {
         let json = """
         {
           "ok": true,
@@ -59,7 +58,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesUsageJSONWhenOnlySonnetLimitIsPresent() {
+    func `parses usage JSON when only sonnet limit is present`() {
         let json = """
         {
           "ok": true,
@@ -76,7 +75,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func trimsAccountFields() throws {
+    func `trims account fields`() throws {
         let cases: [[String: String?]] = [
             ["email": " sriinnu@icloud.com ", "org": "  Org  "],
             ["email": "", "org": " Claude Max Account "],
@@ -93,11 +92,11 @@ struct ClaudeUsageTests {
             if let org = entry["org"] { payload["account_org"] = org }
             let data = try JSONSerialization.data(withJSONObject: payload)
             let snap = ClaudeUsageFetcher.parse(json: data)
-            let emailRaw: String? = entry["email"] ?? Optional<String>.none
+            let emailRaw: String? = entry["email"] ?? String?.none
             let expectedEmail = emailRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
             let normalizedEmail = (expectedEmail?.isEmpty ?? true) ? nil : expectedEmail
             #expect(snap?.accountEmail == normalizedEmail)
-            let orgRaw: String? = entry["org"] ?? Optional<String>.none
+            let orgRaw: String? = entry["org"] ?? String?.none
             let expectedOrg = orgRaw?.trimmingCharacters(in: .whitespacesAndNewlines)
             let normalizedOrg = (expectedOrg?.isEmpty ?? true) ? nil : expectedOrg
             #expect(snap?.accountOrganization == normalizedOrg)
@@ -105,7 +104,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func liveClaudeFetchPTY() async throws {
+    func `live claude fetch PTY`() async throws {
         guard ProcessInfo.processInfo.environment["LIVE_CLAUDE_FETCH"] == "1" else {
             return
         }
@@ -162,7 +161,7 @@ struct ClaudeUsageTests {
     // MARK: - Web API tests
 
     @Test
-    func liveClaudeFetchWebAPI() async throws {
+    func `live claude fetch web API`() async throws {
         // Set LIVE_CLAUDE_WEB_FETCH=1 to run this test with real browser cookies
         guard ProcessInfo.processInfo.environment["LIVE_CLAUDE_WEB_FETCH"] == "1" else {
             return
@@ -183,7 +182,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func claudeWebAPIHasSessionKeyCheck() {
+    func `claude web API has session key check`() {
         // Quick check that hasSessionKey returns a boolean (doesn't crash)
         let hasKey = ClaudeWebAPIFetcher.hasSessionKey()
         // We can't assert the value since it depends on the test environment
@@ -191,7 +190,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIUsageResponse() throws {
+    func `parses claude web API usage response`() throws {
         let json = """
         {
           "five_hour": { "utilization": 9, "resets_at": "2025-12-23T16:00:00.000Z" },
@@ -209,7 +208,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIUsageResponseWhenWeeklyMissing() throws {
+    func `parses claude web API usage response when weekly missing`() throws {
         let json = """
         {
           "five_hour": { "utilization": 9, "resets_at": "2025-12-23T16:00:00.000Z" }
@@ -222,7 +221,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIOverageSpendLimit() {
+    func `parses claude web API overage spend limit`() {
         let json = """
         {
           "monthly_credit_limit": 2000,
@@ -241,7 +240,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIOverageSpendLimitCents() {
+    func `parses claude web API overage spend limit cents`() {
         let json = """
         {
           "monthly_credit_limit": 12345,
@@ -258,7 +257,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIOrganizationsResponse() throws {
+    func `parses claude web API organizations response`() throws {
         let json = """
         [
           { "uuid": "org-123", "name": "Example Org", "capabilities": [] }
@@ -271,7 +270,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIAccountInfo() {
+    func `parses claude web API account info`() {
         let json = """
         {
           "email_address": "sriinnu@icloud.com",
@@ -294,7 +293,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIAccountInfoSelectsMatchingOrg() {
+    func `parses claude web API account info selects matching org`() {
         let json = """
         {
           "email_address": "sriinnu@icloud.com",
@@ -324,7 +323,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func parsesClaudeWebAPIAccountInfoFallsBackToFirstMembership() {
+    func `parses claude web API account info falls back to first membership`() {
         let json = """
         {
           "email_address": "sriinnu@icloud.com",
@@ -354,7 +353,7 @@ struct ClaudeUsageTests {
     }
 
     @Test
-    func claudeUsageFetcherInitWithDataSources() {
+    func `claude usage fetcher init with data sources`() {
         // Verify we can create fetchers with both configurations
         let defaultFetcher = ClaudeUsageFetcher()
         let webFetcher = ClaudeUsageFetcher(dataSource: .web)

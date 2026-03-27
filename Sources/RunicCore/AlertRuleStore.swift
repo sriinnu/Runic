@@ -2,7 +2,7 @@ import Foundation
 import RunicCore
 
 /// Storage for alert rules, alert history, and webhook configurations
-public struct AlertRuleStore {
+public enum AlertRuleStore {
     // MARK: - Types
 
     public enum AlertType: String, Codable, Sendable {
@@ -40,8 +40,8 @@ public struct AlertRuleStore {
             notifyWebhook: Bool = false,
             webhookURL: String? = nil,
             enabled: Bool = true,
-            createdAt: Date = Date()
-        ) {
+            createdAt: Date = Date())
+        {
             self.id = id
             self.type = type
             self.projectID = projectID
@@ -71,8 +71,8 @@ public struct AlertRuleStore {
             message: String,
             severity: AlertSeverity,
             acknowledged: Bool = false,
-            acknowledgedAt: Date? = nil
-        ) {
+            acknowledgedAt: Date? = nil)
+        {
             self.id = id
             self.alertID = alertID
             self.triggeredAt = triggeredAt
@@ -107,7 +107,7 @@ public struct AlertRuleStore {
     // MARK: - Public Methods
 
     public static func load() -> AlertsData {
-        guard FileManager.default.fileExists(atPath: storageURL.path) else {
+        guard FileManager.default.fileExists(atPath: self.storageURL.path) else {
             return AlertsData()
         }
 
@@ -128,35 +128,35 @@ public struct AlertRuleStore {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
         let data = try encoder.encode(alertsData)
-        try data.write(to: storageURL, options: .atomic)
+        try data.write(to: self.storageURL, options: .atomic)
     }
 
     public static func addRule(_ rule: AlertRule) throws {
-        var data = load()
+        var data = self.load()
         data.rules.append(rule)
-        try save(data)
+        try self.save(data)
     }
 
     public static func removeRule(id: String) throws {
-        var data = load()
+        var data = self.load()
         data.rules.removeAll { $0.id == id }
-        try save(data)
+        try self.save(data)
     }
 
     public static func updateRule(_ rule: AlertRule) throws {
-        var data = load()
+        var data = self.load()
         if let index = data.rules.firstIndex(where: { $0.id == rule.id }) {
             data.rules[index] = rule
-            try save(data)
+            try self.save(data)
         }
     }
 
     public static func getEnabledRules() -> [AlertRule] {
-        load().rules.filter { $0.enabled }
+        self.load().rules.filter(\.enabled)
     }
 
     public static func addHistoryEntry(_ entry: AlertHistoryEntry) throws {
-        var data = load()
+        var data = self.load()
         data.history.append(entry)
 
         // Keep last 100 history entries
@@ -164,24 +164,24 @@ public struct AlertRuleStore {
             data.history = Array(data.history.suffix(100))
         }
 
-        try save(data)
+        try self.save(data)
     }
 
     public static func acknowledgeAlert(id: String) throws {
-        var data = load()
+        var data = self.load()
         if let index = data.history.firstIndex(where: { $0.id == id }) {
             data.history[index].acknowledged = true
             data.history[index].acknowledgedAt = Date()
-            try save(data)
+            try self.save(data)
         }
     }
 
     public static func getRecentHistory(limit: Int = 20) -> [AlertHistoryEntry] {
-        let history = load().history.sorted { $0.triggeredAt > $1.triggeredAt }
+        let history = self.load().history.sorted { $0.triggeredAt > $1.triggeredAt }
         return Array(history.prefix(limit))
     }
 
     public static func getUnacknowledgedAlerts() -> [AlertHistoryEntry] {
-        load().history.filter { !$0.acknowledged }
+        self.load().history.filter { !$0.acknowledged }
     }
 }

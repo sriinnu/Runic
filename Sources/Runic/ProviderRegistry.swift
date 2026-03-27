@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 
 struct ProviderSpec {
     let style: IconStyle

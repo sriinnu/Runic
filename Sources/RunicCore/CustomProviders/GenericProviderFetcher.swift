@@ -33,7 +33,7 @@ public actor GenericProviderFetcher {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         // Add auth headers
-        try await addAuthHeaders(to: &request)
+        try await self.addAuthHeaders(to: &request)
 
         // 3. Make request
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -52,7 +52,7 @@ public actor GenericProviderFetcher {
         }
 
         // 5. Extract fields using mapping
-        return try extractUsageData(from: json, mapping: endpoint.mapping)
+        return try self.extractUsageData(from: json, mapping: endpoint.mapping)
     }
 
     /// Fetch balance data from the custom provider
@@ -70,7 +70,7 @@ public actor GenericProviderFetcher {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         // Add auth headers
-        try await addAuthHeaders(to: &request)
+        try await self.addAuthHeaders(to: &request)
 
         // 3. Make request
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -89,34 +89,31 @@ public actor GenericProviderFetcher {
         }
 
         // 5. Extract fields using mapping
-        return try extractBalanceData(from: json, mapping: endpoint.mapping)
+        return try self.extractBalanceData(from: json, mapping: endpoint.mapping)
     }
 
     /// Convert usage data to Runic's UsageSnapshot format
     public func toUsageSnapshot(_ data: UsageData) -> UsageSnapshot {
-        let usedPercent: Double
-        if let quota = data.quota, let used = data.used, quota > 0 {
-            usedPercent = (used / quota) * 100.0
+        let usedPercent: Double = if let quota = data.quota, let used = data.used, quota > 0 {
+            (used / quota) * 100.0
         } else if let remaining = data.remaining, let quota = data.quota, quota > 0 {
-            usedPercent = ((quota - remaining) / quota) * 100.0
+            ((quota - remaining) / quota) * 100.0
         } else {
-            usedPercent = 0
+            0
         }
 
         let primary = RateWindow(
             usedPercent: max(0, min(100, usedPercent)),
             windowMinutes: nil,
             resetsAt: data.resetDate,
-            resetDescription: data.resetDate.map { resetDescription(from: $0) }
-        )
+            resetDescription: data.resetDate.map { self.resetDescription(from: $0) })
 
         return UsageSnapshot(
             primary: primary,
             secondary: nil,
             tertiary: nil,
             updatedAt: Date(),
-            identity: nil
-        )
+            identity: nil)
     }
 
     // MARK: - URL Building
@@ -126,7 +123,7 @@ public actor GenericProviderFetcher {
         var urlString = template
 
         // Replace date variables
-        urlString = try substituteDateVariables(in: urlString)
+        urlString = try self.substituteDateVariables(in: urlString)
 
         // Build URL components
         guard var components = URLComponents(string: urlString) else {
@@ -134,7 +131,7 @@ public actor GenericProviderFetcher {
         }
 
         // Add query parameters
-        if let params = params, !params.isEmpty {
+        if let params, !params.isEmpty {
             var queryItems = components.queryItems ?? []
             queryItems.append(contentsOf: params.map { URLQueryItem(name: $0.key, value: $0.value) })
             components.queryItems = queryItems
@@ -205,10 +202,10 @@ public actor GenericProviderFetcher {
         let token = try await loadToken()
 
         // Add auth header based on type
-        switch config.auth.type {
+        switch self.config.auth.type {
         case .apiKey:
             let value = (config.auth.headerPrefix ?? "") + token
-            request.setValue(value, forHTTPHeaderField: config.auth.headerName)
+            request.setValue(value, forHTTPHeaderField: self.config.auth.headerName)
 
         case .bearer:
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -224,11 +221,11 @@ public actor GenericProviderFetcher {
         case .custom:
             // Custom auth uses the exact header name and prefix from config
             let value = (config.auth.headerPrefix ?? "") + token
-            request.setValue(value, forHTTPHeaderField: config.auth.headerName)
+            request.setValue(value, forHTTPHeaderField: self.config.auth.headerName)
         }
 
         // Add additional headers
-        config.auth.additionalHeaders?.forEach { key, value in
+        self.config.auth.additionalHeaders?.forEach { key, value in
             request.setValue(value, forHTTPHeaderField: key)
         }
     }
@@ -241,12 +238,12 @@ public actor GenericProviderFetcher {
         }
 
         // Try environment variable
-        let envKey = config.auth.tokenKeychain.uppercased().replacingOccurrences(of: "-", with: "_")
+        let envKey = self.config.auth.tokenKeychain.uppercased().replacingOccurrences(of: "-", with: "_")
         if let token = ProcessInfo.processInfo.environment[envKey] {
             return token.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        throw FetchError.missingToken(config.auth.tokenKeychain)
+        throw FetchError.missingToken(self.config.auth.tokenKeychain)
     }
 
     /// Read token from keychain
@@ -255,18 +252,18 @@ public actor GenericProviderFetcher {
         var result: CFTypeRef?
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
+            kSecAttrService as String: self.keychainService,
             kSecAttrAccount as String: account,
             kSecUseDataProtectionKeychain as String: true,
             kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
-#if canImport(LocalAuthentication)
+        #if canImport(LocalAuthentication)
         let authContext = LAContext()
         authContext.interactionNotAllowed = true
         query[kSecUseAuthenticationContext as String] = authContext
-#endif
+        #endif
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound {
@@ -276,7 +273,7 @@ public actor GenericProviderFetcher {
             return nil
         }
         guard status == errSecSuccess else {
-            log.error("Keychain read failed for \(account): \(status)")
+            self.log.error("Keychain read failed for \(account): \(status)")
             return nil
         }
 
@@ -303,32 +300,32 @@ public actor GenericProviderFetcher {
 
         // Extract quota
         if let quotaPath = mapping.quota {
-            data.quota = extractDouble(from: json, path: quotaPath, nested: mapping.nestedPaths)
+            data.quota = self.extractDouble(from: json, path: quotaPath, nested: mapping.nestedPaths)
         }
 
         // Extract used amount
         if let usedPath = mapping.used {
-            data.used = extractDouble(from: json, path: usedPath, nested: mapping.nestedPaths)
+            data.used = self.extractDouble(from: json, path: usedPath, nested: mapping.nestedPaths)
         }
 
         // Extract remaining amount
         if let remainingPath = mapping.remaining {
-            data.remaining = extractDouble(from: json, path: remainingPath, nested: mapping.nestedPaths)
+            data.remaining = self.extractDouble(from: json, path: remainingPath, nested: mapping.nestedPaths)
         }
 
         // Extract cost
         if let costPath = mapping.cost {
-            data.cost = extractDouble(from: json, path: costPath, nested: mapping.nestedPaths)
+            data.cost = self.extractDouble(from: json, path: costPath, nested: mapping.nestedPaths)
         }
 
         // Extract reset date
         if let resetPath = mapping.resetDate {
-            data.resetDate = extractDate(from: json, path: resetPath, nested: mapping.nestedPaths)
+            data.resetDate = self.extractDate(from: json, path: resetPath, nested: mapping.nestedPaths)
         }
 
         // Extract tokens
         if let tokensPath = mapping.tokens {
-            data.tokens = extractInt(from: json, path: tokensPath, nested: mapping.nestedPaths)
+            data.tokens = self.extractInt(from: json, path: tokensPath, nested: mapping.nestedPaths)
         }
 
         return data
@@ -340,11 +337,11 @@ public actor GenericProviderFetcher {
 
         // Extract balance (use 'remaining' or 'used' mapping)
         if let balancePath = mapping.remaining ?? mapping.used {
-            data.balance = extractDouble(from: json, path: balancePath, nested: mapping.nestedPaths)
+            data.balance = self.extractDouble(from: json, path: balancePath, nested: mapping.nestedPaths)
         }
 
         // Try to detect currency from response
-        data.currency = extractString(from: json, path: "currency", nested: true) ?? "USD"
+        data.currency = self.extractString(from: json, path: "currency", nested: true) ?? "USD"
 
         return data
     }
@@ -363,14 +360,16 @@ public actor GenericProviderFetcher {
         for component in components {
             // Handle array indexing: field[0]
             if let bracketIndex = component.firstIndex(of: "["),
-               let closeBracket = component.firstIndex(of: "]") {
+               let closeBracket = component.firstIndex(of: "]")
+            {
                 let fieldName = String(component[..<bracketIndex])
                 let indexStr = String(component[component.index(after: bracketIndex)..<closeBracket])
 
                 guard let dict = current as? [String: Any],
                       let array = dict[fieldName] as? [Any],
                       let index = Int(indexStr),
-                      index < array.count else {
+                      index < array.count
+                else {
                     return nil
                 }
                 current = array[index]
@@ -520,8 +519,8 @@ public struct UsageData: Sendable {
         remaining: Double? = nil,
         cost: Double? = nil,
         resetDate: Date? = nil,
-        tokens: Int? = nil
-    ) {
+        tokens: Int? = nil)
+    {
         self.quota = quota
         self.used = used
         self.remaining = remaining
@@ -531,14 +530,13 @@ public struct UsageData: Sendable {
     }
 
     public func toCustomUsageData() -> CustomUsageData {
-        return CustomUsageData(
+        CustomUsageData(
             quota: self.quota,
             used: self.used,
             remaining: self.remaining,
             cost: self.cost,
             resetDate: self.resetDate,
-            tokens: self.tokens
-        )
+            tokens: self.tokens)
     }
 }
 
@@ -571,63 +569,63 @@ public enum FetchError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .noUsageEndpoint:
-            return "No usage endpoint configured for this provider"
+            "No usage endpoint configured for this provider"
         case .noBalanceEndpoint:
-            return "No balance endpoint configured for this provider"
-        case .invalidURL(let url):
-            return "Invalid URL: \(url)"
+            "No balance endpoint configured for this provider"
+        case let .invalidURL(url):
+            "Invalid URL: \(url)"
         case .invalidResponse:
-            return "Invalid response from provider API"
-        case .httpError(let code):
-            return "HTTP error \(code) from provider API"
+            "Invalid response from provider API"
+        case let .httpError(code):
+            "HTTP error \(code) from provider API"
         case .invalidJSON:
-            return "Failed to parse JSON response from provider"
-        case .missingToken(let account):
-            return "No API token found for '\(account)'. Store it in Keychain or set as environment variable."
+            "Failed to parse JSON response from provider"
+        case let .missingToken(account):
+            "No API token found for '\(account)'. Store it in Keychain or set as environment variable."
         case .invalidDateRange:
-            return "Failed to calculate date range for URL template"
-        case .extractionFailed(let field):
-            return "Failed to extract field '\(field)' from response"
-        case .insecureURL(let url):
-            return "Only HTTPS URLs are allowed. Got: \(url)"
+            "Failed to calculate date range for URL template"
+        case let .extractionFailed(field):
+            "Failed to extract field '\(field)' from response"
+        case let .insecureURL(url):
+            "Only HTTPS URLs are allowed. Got: \(url)"
         }
     }
 
     public var failureReason: String? {
         switch self {
-        case .missingToken(let account):
-            return "The token for account '\(account)' is not configured in Keychain or environment variables"
-        case .httpError(let code):
-            return "The server returned HTTP status code \(code)"
+        case let .missingToken(account):
+            "The token for account '\(account)' is not configured in Keychain or environment variables"
+        case let .httpError(code):
+            "The server returned HTTP status code \(code)"
         case .invalidJSON:
-            return "The response is not valid JSON or has unexpected structure"
-        case .extractionFailed(let field):
-            return "The field '\(field)' was not found in the response or has wrong type"
+            "The response is not valid JSON or has unexpected structure"
+        case let .extractionFailed(field):
+            "The field '\(field)' was not found in the response or has wrong type"
         case .insecureURL:
-            return "The URL scheme is not HTTPS"
+            "The URL scheme is not HTTPS"
         default:
-            return nil
+            nil
         }
     }
 
     public var recoverySuggestion: String? {
         switch self {
-        case .missingToken(let account):
-            return "Store your API token in Keychain with account name '\(account)' or set it as environment variable"
+        case let .missingToken(account):
+            "Store your API token in Keychain with account name '\(account)' or set it as environment variable"
         case .noUsageEndpoint:
-            return "Configure a usage endpoint in the provider settings"
+            "Configure a usage endpoint in the provider settings"
         case .noBalanceEndpoint:
-            return "Configure a balance endpoint in the provider settings"
-        case .httpError(let code) where code == 401:
-            return "Check that your API token is valid and has not expired"
-        case .httpError(let code) where code == 429:
-            return "You have been rate limited. Try again later."
+            "Configure a balance endpoint in the provider settings"
+        case let .httpError(code) where code == 401:
+            "Check that your API token is valid and has not expired"
+        case let .httpError(code) where code == 429:
+            "You have been rate limited. Try again later."
         case .invalidJSON:
-            return "Check the API endpoint URL and response mapping configuration"
+            "Check the API endpoint URL and response mapping configuration"
         case .insecureURL:
-            return "Change the provider URL to use HTTPS (e.g., https://api.example.com)"
+            "Change the provider URL to use HTTPS (e.g., https://api.example.com)"
         default:
-            return nil
+            nil
         }
     }
 }

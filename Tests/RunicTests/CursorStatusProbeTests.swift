@@ -2,12 +2,11 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct CursorStatusProbeTests {
     // MARK: - Usage Summary Parsing
 
     @Test
-    func parsesBasicUsageSummary() throws {
+    func `parses basic usage summary`() throws {
         let json = """
         {
             "billingCycleStart": "2025-01-01T00:00:00.000Z",
@@ -38,7 +37,7 @@ struct CursorStatusProbeTests {
             }
         }
         """
-        let data = json.data(using: .utf8)!
+        let data = try #require(json.data(using: .utf8))
         let summary = try JSONDecoder().decode(CursorUsageSummary.self, from: data)
 
         #expect(summary.membershipType == "pro")
@@ -51,7 +50,7 @@ struct CursorStatusProbeTests {
     }
 
     @Test
-    func parsesMinimalUsageSummary() throws {
+    func `parses minimal usage summary`() throws {
         let json = """
         {
             "membershipType": "hobby",
@@ -63,7 +62,7 @@ struct CursorStatusProbeTests {
             }
         }
         """
-        let data = json.data(using: .utf8)!
+        let data = try #require(json.data(using: .utf8))
         let summary = try JSONDecoder().decode(CursorUsageSummary.self, from: data)
 
         #expect(summary.membershipType == "hobby")
@@ -73,7 +72,7 @@ struct CursorStatusProbeTests {
     }
 
     @Test
-    func parsesEnterpriseUsageSummary() throws {
+    func `parses enterprise usage summary`() throws {
         let json = """
         {
             "membershipType": "enterprise",
@@ -88,7 +87,7 @@ struct CursorStatusProbeTests {
             }
         }
         """
-        let data = json.data(using: .utf8)!
+        let data = try #require(json.data(using: .utf8))
         let summary = try JSONDecoder().decode(CursorUsageSummary.self, from: data)
 
         #expect(summary.membershipType == "enterprise")
@@ -99,7 +98,7 @@ struct CursorStatusProbeTests {
     // MARK: - User Info Parsing
 
     @Test
-    func parsesUserInfo() throws {
+    func `parses user info`() throws {
         let json = """
         {
             "email": "user@example.com",
@@ -108,7 +107,7 @@ struct CursorStatusProbeTests {
             "sub": "auth0|12345"
         }
         """
-        let data = json.data(using: .utf8)!
+        let data = try #require(json.data(using: .utf8))
         let userInfo = try JSONDecoder().decode(CursorUserInfo.self, from: data)
 
         #expect(userInfo.email == "user@example.com")
@@ -120,7 +119,7 @@ struct CursorStatusProbeTests {
     // MARK: - Snapshot Conversion
 
     @Test
-    func prefersPlanRatioOverPercentField() {
+    func `prefers plan ratio over percent field`() {
         let snapshot = CursorStatusProbe()
             .parseUsageSummary(
                 CursorUsageSummary(
@@ -149,7 +148,7 @@ struct CursorStatusProbeTests {
     }
 
     @Test
-    func usesPercentFieldWhenLimitMissing() {
+    func `uses percent field when limit missing`() {
         let snapshot = CursorStatusProbe()
             .parseUsageSummary(
                 CursorUsageSummary(
@@ -178,7 +177,7 @@ struct CursorStatusProbeTests {
     }
 
     @Test
-    func convertsSnapshotToUsageSnapshot() {
+    func `converts snapshot to usage snapshot`() {
         let snapshot = CursorStatusSnapshot(
             planPercentUsed: 45.0,
             planUsedUSD: 22.50,
@@ -206,7 +205,7 @@ struct CursorStatusProbeTests {
     }
 
     @Test
-    func usesIndividualOnDemandWhenNoTeamUsage() {
+    func `uses individual on demand when no team usage`() {
         let snapshot = CursorStatusSnapshot(
             planPercentUsed: 10.0,
             planUsedUSD: 5.0,
@@ -229,7 +228,7 @@ struct CursorStatusProbeTests {
     }
 
     @Test
-    func formatsMembershipTypes() {
+    func `formats membership types`() {
         let testCases: [(input: String, expected: String)] = [
             ("pro", "Cursor Pro"),
             ("hobby", "Cursor Hobby"),
@@ -259,7 +258,7 @@ struct CursorStatusProbeTests {
     }
 
     @Test
-    func handlesNilOnDemandLimit() {
+    func `handles nil on demand limit`() {
         let snapshot = CursorStatusSnapshot(
             planPercentUsed: 50.0,
             planUsedUSD: 25.0,
@@ -287,7 +286,7 @@ struct CursorStatusProbeTests {
     // MARK: - Session Store Serialization
 
     @Test
-    func sessionStoreSavesAndLoadsCookies() async throws {
+    func `session store saves and loads cookies`() async {
         let store = CursorSessionStore.shared
 
         // Clear any existing cookies

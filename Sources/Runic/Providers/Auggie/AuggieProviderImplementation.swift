@@ -1,7 +1,7 @@
 import AppKit
+import Foundation
 import RunicCore
 import RunicMacroSupport
-import Foundation
 
 @ProviderImplementationRegistration
 struct AuggieProviderImplementation: ProviderImplementation {

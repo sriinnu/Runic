@@ -1,12 +1,10 @@
 import Foundation
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct UsageLedgerInsightsAdvisorTests {
     @Test
-    func reliabilityScoreDropsWhenErrorsExist() {
+    func `reliability score drops when errors exist`() {
         let now = Date()
         let daily = UsageLedgerDailySummary(
             provider: .codex,
@@ -14,7 +12,7 @@ struct UsageLedgerInsightsAdvisorTests {
             dayStart: now,
             dayKey: "2026-02-21",
             totals: UsageLedgerTotals(
-                inputTokens: 1_000,
+                inputTokens: 1000,
                 outputTokens: 500,
                 cacheCreationTokens: 100,
                 cacheReadTokens: 200,
@@ -44,7 +42,7 @@ struct UsageLedgerInsightsAdvisorTests {
     }
 
     @Test
-    func routingRecommendationFindsSavingsBetweenModels() {
+    func `routing recommendation finds savings between models`() {
         let expensive = UsageLedgerModelSummary(
             provider: .codex,
             projectID: "proj-a",
@@ -52,8 +50,8 @@ struct UsageLedgerInsightsAdvisorTests {
             model: "gpt-5",
             entryCount: 20,
             totals: UsageLedgerTotals(
-                inputTokens: 30_000,
-                outputTokens: 20_000,
+                inputTokens: 30000,
+                outputTokens: 20000,
                 cacheCreationTokens: 0,
                 cacheReadTokens: 0,
                 costUSD: 12.0))
@@ -65,8 +63,8 @@ struct UsageLedgerInsightsAdvisorTests {
             model: "gpt-5-mini",
             entryCount: 30,
             totals: UsageLedgerTotals(
-                inputTokens: 40_000,
-                outputTokens: 20_000,
+                inputTokens: 40000,
+                outputTokens: 20000,
                 cacheCreationTokens: 0,
                 cacheReadTokens: 0,
                 costUSD: 3.0))

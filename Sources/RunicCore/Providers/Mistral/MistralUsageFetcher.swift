@@ -8,7 +8,7 @@ struct MistralModelsResponse: Decodable {
     }
 }
 
-struct MistralUsageFetcher {
+enum MistralUsageFetcher {
     static let apiURL = URL(string: "https://api.mistral.ai/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> MistralModelsResponse {
@@ -57,7 +57,7 @@ extension MistralModelsResponse {
     }
 }
 
-enum MistralAPIError: LocalizedError, Sendable {
+enum MistralAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

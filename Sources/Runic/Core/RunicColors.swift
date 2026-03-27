@@ -14,12 +14,12 @@ enum RunicColors {
     /// Ordered palette for chart series. Colors chosen for distinguishability in
     /// both light and dark mode and for common color-vision deficiencies.
     static let chartPalette: [Color] = [
-        Color(red: 0.26, green: 0.55, blue: 0.96),  // blue
-        Color(red: 0.94, green: 0.53, blue: 0.18),  // orange
-        Color(red: 0.46, green: 0.75, blue: 0.36),  // green
-        Color(red: 0.80, green: 0.45, blue: 0.92),  // purple
-        Color(red: 0.26, green: 0.78, blue: 0.86),  // teal
-        Color(red: 0.94, green: 0.74, blue: 0.26),  // yellow
+        Color(red: 0.26, green: 0.55, blue: 0.96), // blue
+        Color(red: 0.94, green: 0.53, blue: 0.18), // orange
+        Color(red: 0.46, green: 0.75, blue: 0.36), // green
+        Color(red: 0.80, green: 0.45, blue: 0.92), // purple
+        Color(red: 0.26, green: 0.78, blue: 0.86), // teal
+        Color(red: 0.94, green: 0.74, blue: 0.26), // yellow
     ]
 
     /// Returns a chart color for the given index, wrapping around if needed.

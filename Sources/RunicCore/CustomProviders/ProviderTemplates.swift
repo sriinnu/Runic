@@ -7,7 +7,6 @@ import Foundation
 /// Each template includes accurate endpoint URLs, authentication methods,
 /// and response field mappings based on official API documentation.
 public enum ProviderTemplates {
-
     // MARK: - Template Collection
 
     /// All available provider templates
@@ -21,12 +20,12 @@ public enum ProviderTemplates {
         cohere,
         huggingface,
         replicate,
-        runway
+        runway,
     ]
 
     /// Get a template by provider ID
     public static func template(for id: String) -> CustomProviderConfig? {
-        return all.first { $0.id == id }
+        self.all.first { $0.id == id }
     }
 
     // MARK: - ElevenLabs
@@ -45,8 +44,7 @@ public enum ProviderTemplates {
             headerName: "xi-api-key",
             headerPrefix: nil,
             tokenKeychain: "elevenlabs-api-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.elevenlabs.io/v1/user/subscription",
@@ -58,16 +56,12 @@ public enum ProviderTemplates {
                     cost: nil,
                     resetDate: "next_character_count_reset_unix",
                     tokens: "character_count",
-                    nestedPaths: false
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: false),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#7C3AED",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - OpenAI
 
@@ -85,8 +79,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Bearer ",
             tokenKeychain: "openai-api-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.openai.com/v1/organization/usage/completions",
@@ -98,16 +91,12 @@ public enum ProviderTemplates {
                     cost: nil,
                     resetDate: nil,
                     tokens: "data.0.n_requests",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: true),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#10A37F",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Anthropic Claude
 
@@ -126,8 +115,7 @@ public enum ProviderTemplates {
             headerName: "x-api-key",
             headerPrefix: nil,
             tokenKeychain: "anthropic-admin-api-token",
-            additionalHeaders: ["anthropic-version": "2023-06-01"]
-        ),
+            additionalHeaders: ["anthropic-version": "2023-06-01"]),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.anthropic.com/v1/organizations/usage_report/messages",
@@ -139,10 +127,8 @@ public enum ProviderTemplates {
                     cost: nil,
                     resetDate: nil,
                     tokens: "data.0.output_tokens",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
+                    nestedPaths: true),
+                queryParams: nil),
             balance: BalanceEndpoint(
                 url: "https://api.anthropic.com/v1/organizations/cost_report",
                 method: .GET,
@@ -153,14 +139,10 @@ public enum ProviderTemplates {
                     cost: "data.0.cost_usd",
                     resetDate: nil,
                     tokens: nil,
-                    nestedPaths: true
-                )
-            )
-        ),
+                    nestedPaths: true))),
         colorHex: "#D4A574",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Stability AI
 
@@ -178,8 +160,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Bearer ",
             tokenKeychain: "stability-ai-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: nil,
             balance: BalanceEndpoint(
@@ -192,14 +173,10 @@ public enum ProviderTemplates {
                     cost: nil,
                     resetDate: nil,
                     tokens: nil,
-                    nestedPaths: false
-                )
-            )
-        ),
+                    nestedPaths: false))),
         colorHex: "#FF6F61",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Together AI
 
@@ -217,8 +194,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Bearer ",
             tokenKeychain: "together-ai-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.together.xyz/v1/usage",
@@ -230,16 +206,12 @@ public enum ProviderTemplates {
                     cost: "total_cost",
                     resetDate: nil,
                     tokens: "total_tokens",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: true),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#00D4FF",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Perplexity
 
@@ -257,8 +229,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Bearer ",
             tokenKeychain: "perplexity-api-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.perplexity.ai/usage",
@@ -270,16 +241,12 @@ public enum ProviderTemplates {
                     cost: "total_cost",
                     resetDate: nil,
                     tokens: "total_tokens",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: true),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#2EAADC",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Cohere
 
@@ -298,8 +265,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Bearer ",
             tokenKeychain: "cohere-api-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.cohere.ai/v1/usage",
@@ -311,16 +277,12 @@ public enum ProviderTemplates {
                     cost: "total_cost",
                     resetDate: nil,
                     tokens: "tokens_used",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: true),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#39594D",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Hugging Face
 
@@ -339,8 +301,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Bearer ",
             tokenKeychain: "huggingface-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api-inference.huggingface.co/status",
@@ -352,16 +313,12 @@ public enum ProviderTemplates {
                     cost: nil,
                     resetDate: nil,
                     tokens: "compute_time",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: true),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#FFD21E",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Replicate
 
@@ -380,8 +337,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Token ",
             tokenKeychain: "replicate-token",
-            additionalHeaders: nil
-        ),
+            additionalHeaders: nil),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.replicate.com/v1/account/usage",
@@ -393,16 +349,12 @@ public enum ProviderTemplates {
                     cost: "total_spend",
                     resetDate: nil,
                     tokens: "prediction_count",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: true),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#000000",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 
     // MARK: - Runway ML
 
@@ -420,8 +372,7 @@ public enum ProviderTemplates {
             headerName: "Authorization",
             headerPrefix: "Bearer ",
             tokenKeychain: "runway-token",
-            additionalHeaders: ["X-Runway-Version": "2024-11-06"]
-        ),
+            additionalHeaders: ["X-Runway-Version": "2024-11-06"]),
         endpoints: EndpointConfig(
             usage: UsageEndpoint(
                 url: "https://api.dev.runwayml.com/v1/usage",
@@ -433,22 +384,17 @@ public enum ProviderTemplates {
                     cost: "total_cost",
                     resetDate: nil,
                     tokens: "generation_count",
-                    nestedPaths: true
-                ),
-                queryParams: nil
-            ),
-            balance: nil
-        ),
+                    nestedPaths: true),
+                queryParams: nil),
+            balance: nil),
         colorHex: "#00FFA3",
         createdAt: Date(),
-        updatedAt: Date()
-    )
+        updatedAt: Date())
 }
 
 // MARK: - Template Categories
 
 extension ProviderTemplates {
-
     /// Text generation and LLM providers
     public static var textProviders: [CustomProviderConfig] {
         [openai, anthropic, cohere, perplexity, togetherAI, huggingface]
@@ -473,13 +419,12 @@ extension ProviderTemplates {
 // MARK: - Template Helpers
 
 extension ProviderTemplates {
-
     /// Create a new provider from a template with custom settings
     public static func createFromTemplate(
         _ template: CustomProviderConfig,
         name: String? = nil,
-        enabled: Bool = true
-    ) -> CustomProviderConfig {
+        enabled: Bool = true) -> CustomProviderConfig
+    {
         var config = template
 
         // Generate new ID to avoid conflicts
@@ -492,8 +437,7 @@ extension ProviderTemplates {
             endpoints: template.endpoints,
             colorHex: template.colorHex,
             createdAt: Date(),
-            updatedAt: Date()
-        )
+            updatedAt: Date())
 
         return config
     }

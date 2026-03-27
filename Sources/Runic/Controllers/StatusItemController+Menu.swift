@@ -1,6 +1,6 @@
 import AppKit
-import RunicCore
 import Observation
+import RunicCore
 import SwiftUI
 
 // MARK: - NSMenu construction
@@ -506,7 +506,7 @@ extension StatusItemController {
 
     private static func defaultContextLabel(for provider: UsageProvider) -> String? {
         guard let k = self.defaultContextWindows[provider.rawValue] else { return nil }
-        return k >= 1_000 ? "ctx \(k / 1_000)M" : "ctx \(k)K"
+        return k >= 1000 ? "ctx \(k / 1000)M" : "ctx \(k)K"
     }
 
     private func resolvedMenuProvider() -> UsageProvider? {
@@ -682,7 +682,7 @@ extension StatusItemController {
     }
 
     private func isHostedSubviewMenu(_ menu: NSMenu) -> Bool {
-        let ids: Set<String> = [
+        let ids: Set = [
             "usageBreakdownChart",
             "creditsHistoryChart",
             "costHistoryChart",
@@ -1362,7 +1362,8 @@ private final class ProviderSwitcherView: NSView {
 
         let track = NSView()
         track.wantsLayer = true
-        track.layer?.backgroundColor = NSColor.tertiaryLabelColor.withAlphaComponent(CGFloat(RunicColors.Opacity.medium)).cgColor
+        track.layer?.backgroundColor = NSColor.tertiaryLabelColor
+            .withAlphaComponent(CGFloat(RunicColors.Opacity.medium)).cgColor
         track.layer?.cornerRadius = 3
         track.layer?.masksToBounds = true
         track.translatesAutoresizingMaskIntoConstraints = false

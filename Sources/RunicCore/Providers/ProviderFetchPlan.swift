@@ -170,8 +170,8 @@ public struct ProviderFetchPipeline: Sendable {
 
     public init(
         resolveStrategies: @escaping @Sendable (ProviderFetchContext) async -> [any ProviderFetchStrategy],
-        strategyTimeout: TimeInterval = 45
-    ) {
+        strategyTimeout: TimeInterval = 45)
+    {
         self.resolveStrategies = resolveStrategies
         self.strategyTimeout = strategyTimeout
     }

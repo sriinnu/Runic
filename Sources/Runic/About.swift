@@ -24,9 +24,9 @@ func showAbout() {
     let description = NSAttributedString(
         string: "Runic tracks AI usage, tokens, and spend across providers from your menu bar.\n\n",
         attributes: [
-        .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
-        .foregroundColor: NSColor.secondaryLabelColor,
-    ])
+            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+            .foregroundColor: NSColor.secondaryLabelColor,
+        ])
     let credits = NSMutableAttributedString(attributedString: description)
     credits.append(NSAttributedString(string: "MIT License\n", attributes: [
         .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),

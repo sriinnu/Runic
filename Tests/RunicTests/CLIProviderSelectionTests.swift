@@ -1,10 +1,9 @@
 import RunicCore
 import Testing
 
-@Suite
 struct CLIProviderSelectionTests {
     @Test
-    func providerRegistryIncludesCoreProviders() {
+    func `provider registry includes core providers`() {
         let providers = Set(ProviderDescriptorRegistry.all.map(\.id))
 
         #expect(providers.contains(.codex))
@@ -15,7 +14,7 @@ struct CLIProviderSelectionTests {
     }
 
     @Test
-    func providerEnumResolvesInsightsSupportedValues() {
+    func `provider enum resolves insights supported values`() {
         #expect(UsageProvider(rawValue: "codex") == .codex)
         #expect(UsageProvider(rawValue: "claude") == .claude)
     }

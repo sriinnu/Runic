@@ -151,12 +151,13 @@ struct CostComparativeChartMenuView: View {
     private static func makeModel(from summaries: [UsageLedgerModelSummary]) -> [ModelCostData] {
         let withCost = summaries.compactMap { summary -> ModelCostData? in
             guard let cost = summary.totals.costUSD, cost > 0,
-                  summary.totals.totalTokens > 0 else {
+                  summary.totals.totalTokens > 0
+            else {
                 return nil
             }
             // Calculate average cost per token across all models
-            let totalCost = summaries.compactMap { $0.totals.costUSD }.reduce(0, +)
-            let totalTokens = summaries.map { $0.totals.totalTokens }.reduce(0, +)
+            let totalCost = summaries.compactMap(\.totals.costUSD).reduce(0, +)
+            let totalTokens = summaries.map(\.totals.totalTokens).reduce(0, +)
             let averageCostPerToken = totalTokens > 0 ? totalCost / Double(totalTokens) : 0
 
             return ModelCostData(
@@ -171,11 +172,11 @@ struct CostComparativeChartMenuView: View {
 
     private static func colorForExpensiveness(_ relative: Double) -> Color {
         if relative < 0.7 {
-            return cheapColor
+            self.cheapColor
         } else if relative < 1.5 {
-            return mediumColor
+            self.mediumColor
         } else {
-            return expensiveColor
+            self.expensiveColor
         }
     }
 
@@ -255,13 +256,12 @@ struct CostComparativeChartMenuView: View {
         let costPer1M = data.costPerToken * 1_000_000
         let primary = "\(displayName): \(UsageFormatter.usdString(costPer1M)) per 1M tokens"
 
-        let relativeText: String
-        if data.relativeExpensiveness > 1.1 {
-            relativeText = String(format: "%.1fx more expensive than average", data.relativeExpensiveness)
+        let relativeText = if data.relativeExpensiveness > 1.1 {
+            String(format: "%.1fx more expensive than average", data.relativeExpensiveness)
         } else if data.relativeExpensiveness < 0.9 {
-            relativeText = String(format: "%.1fx cheaper than average", 1.0 / data.relativeExpensiveness)
+            String(format: "%.1fx cheaper than average", 1.0 / data.relativeExpensiveness)
         } else {
-            relativeText = "Close to average cost"
+            "Close to average cost"
         }
 
         let tokens = UsageFormatter.tokenCountString(data.totalTokens)

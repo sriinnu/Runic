@@ -16,8 +16,8 @@ struct OverviewMenuView: View {
         let todayTokens: Int
         let brandColor: Color
         let resetDescription: String?
-        let windowLabel: String?       // e.g. "5h" or "Weekly"
-        let topModelContext: String?    // e.g. "200K ctx"
+        let windowLabel: String? // e.g. "5h" or "Weekly"
+        let topModelContext: String? // e.g. "200K ctx"
     }
 
     struct DailyPoint: Identifiable {
@@ -37,6 +37,7 @@ struct OverviewMenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             // MARK: - Hero header
+
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
                 // Ring indicator showing overall usage
                 ZStack {
@@ -77,6 +78,7 @@ struct OverviewMenuView: View {
             Divider().opacity(0.5)
 
             // MARK: - Provider cards
+
             if self.summaries.isEmpty {
                 Text("No active providers.")
                     .font(RunicFont.footnote)
@@ -92,6 +94,7 @@ struct OverviewMenuView: View {
             }
 
             // MARK: - Combined 7-day chart
+
             if !self.chartPoints.isEmpty {
                 Divider().opacity(0.5)
 

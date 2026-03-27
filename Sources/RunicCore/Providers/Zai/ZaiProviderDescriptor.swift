@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -33,7 +33,9 @@ public enum ZaiProviderDescriptor {
                 color: ProviderColor(red: 232 / 255, green: 90 / 255, blue: 106 / 255)),
             tokenCost: ProviderTokenCostConfig(
                 supportsTokenCost: false,
-                noDataMessage: { "z.ai cost estimates are shown per-model in the details submenu (based on public API pricing)." }),
+                noDataMessage: {
+                    "z.ai cost estimates are shown per-model in the details submenu (based on public API pricing)."
+                }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],
                 pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [ZaiAPIFetchStrategy()] })),

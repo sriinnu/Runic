@@ -23,8 +23,8 @@ public struct CustomProviderConfig: Codable, Sendable, Identifiable {
         endpoints: EndpointConfig,
         colorHex: String? = nil,
         createdAt: Date = Date(),
-        updatedAt: Date = Date()
-    ) {
+        updatedAt: Date = Date())
+    {
         self.id = id
         self.name = name
         self.icon = icon
@@ -43,10 +43,10 @@ public struct CustomProviderConfig: Codable, Sendable, Identifiable {
 public struct AuthConfig: Codable, Sendable {
     public enum AuthType: String, Codable, Sendable {
         case apiKey = "api_key"
-        case bearer = "bearer"
-        case basic = "basic"
-        case oauth = "oauth"
-        case custom = "custom"
+        case bearer
+        case basic
+        case oauth
+        case custom
     }
 
     public let type: AuthType
@@ -60,8 +60,8 @@ public struct AuthConfig: Codable, Sendable {
         headerName: String,
         headerPrefix: String? = nil,
         tokenKeychain: String,
-        additionalHeaders: [String: String]? = nil
-    ) {
+        additionalHeaders: [String: String]? = nil)
+    {
         self.type = type
         self.headerName = headerName
         self.headerPrefix = headerPrefix
@@ -79,8 +79,8 @@ public struct EndpointConfig: Codable, Sendable {
 
     public init(
         usage: UsageEndpoint? = nil,
-        balance: BalanceEndpoint? = nil
-    ) {
+        balance: BalanceEndpoint? = nil)
+    {
         self.usage = usage
         self.balance = balance
     }
@@ -99,8 +99,8 @@ public struct UsageEndpoint: Codable, Sendable {
         url: String,
         method: HTTPMethod = .GET,
         mapping: ResponseMapping,
-        queryParams: [String: String]? = nil
-    ) {
+        queryParams: [String: String]? = nil)
+    {
         self.url = url
         self.method = method
         self.mapping = mapping
@@ -119,8 +119,8 @@ public struct BalanceEndpoint: Codable, Sendable {
     public init(
         url: String,
         method: HTTPMethod = .GET,
-        mapping: ResponseMapping
-    ) {
+        mapping: ResponseMapping)
+    {
         self.url = url
         self.method = method
         self.mapping = mapping
@@ -146,7 +146,7 @@ public struct ResponseMapping: Codable, Sendable {
     public var resetDate: String? // JSONPath to reset date
     public var tokens: String? // JSONPath to token count
 
-    // Nested object support (e.g., "data.usage.tokens")
+    /// Nested object support (e.g., "data.usage.tokens")
     public var nestedPaths: Bool // Support dot notation
 
     public init(
@@ -156,8 +156,8 @@ public struct ResponseMapping: Codable, Sendable {
         cost: String? = nil,
         resetDate: String? = nil,
         tokens: String? = nil,
-        nestedPaths: Bool = true
-    ) {
+        nestedPaths: Bool = true)
+    {
         self.quota = quota
         self.used = used
         self.remaining = remaining
@@ -185,8 +185,8 @@ public struct CustomUsageData: Codable, Sendable {
         remaining: Double? = nil,
         cost: Double? = nil,
         resetDate: Date? = nil,
-        tokens: Int? = nil
-    ) {
+        tokens: Int? = nil)
+    {
         self.quota = quota
         self.used = used
         self.remaining = remaining
@@ -211,8 +211,8 @@ public struct CustomProviderSnapshot: Codable, Sendable {
         providerName: String,
         usageData: CustomUsageData,
         updatedAt: Date = Date(),
-        error: String? = nil
-    ) {
+        error: String? = nil)
+    {
         self.providerID = providerID
         self.providerName = providerName
         self.usageData = usageData
@@ -223,35 +223,34 @@ public struct CustomProviderSnapshot: Codable, Sendable {
     /// Convert to RateWindow for UI compatibility
     public func toRateWindow() -> RateWindow? {
         guard let quota = usageData.quota,
-              let used = usageData.used else {
+              let used = usageData.used
+        else {
             return nil
         }
 
         let usedPercent = quota > 0 ? (used / quota) * 100.0 : 0.0
         let windowMinutes: Int? = nil // Custom providers might not have window concept
-        let resetsAt = usageData.resetDate
+        let resetsAt = self.usageData.resetDate
         let resetDescription = resetsAt.map { UsageFormatter.resetDescription(from: $0) }
 
         return RateWindow(
             usedPercent: usedPercent,
             windowMinutes: windowMinutes,
             resetsAt: resetsAt,
-            resetDescription: resetDescription
-        )
+            resetDescription: resetDescription)
     }
 
     /// Create snapshot from usage data and config
     public static func from(
         usageData: CustomUsageData,
-        config: CustomProviderConfig
-    ) -> CustomProviderSnapshot {
-        return CustomProviderSnapshot(
+        config: CustomProviderConfig) -> CustomProviderSnapshot
+    {
+        CustomProviderSnapshot(
             providerID: config.id,
             providerName: config.name,
             usageData: usageData,
             updatedAt: Date(),
-            error: nil
-        )
+            error: nil)
     }
 }
 

@@ -67,7 +67,7 @@ public enum CopilotGitHubCLITokenReader {
 
     private static func isLikelyGitHubToken(_ token: String) -> Bool {
         guard !token.isEmpty else { return false }
-        return tokenPrefixes.contains { token.hasPrefix($0) }
+        return self.tokenPrefixes.contains { token.hasPrefix($0) }
     }
 
     private static func candidateHostConfigPaths(environment: [String: String]) -> [URL] {
@@ -97,9 +97,12 @@ public enum CopilotGitHubCLITokenReader {
 
         for home in homes {
             let homeURL = URL(fileURLWithPath: home)
-            addCandidate(homeURL.appendingPathComponent(".config").appendingPathComponent("gh").appendingPathComponent("hosts.yml"))
-            addCandidate(homeURL.appendingPathComponent("Library").appendingPathComponent("Application Support").appendingPathComponent("gh").appendingPathComponent("hosts.yml"))
-            addCandidate(homeURL.appendingPathComponent(".local").appendingPathComponent("share").appendingPathComponent("gh").appendingPathComponent("hosts.yml"))
+            addCandidate(homeURL.appendingPathComponent(".config").appendingPathComponent("gh")
+                .appendingPathComponent("hosts.yml"))
+            addCandidate(homeURL.appendingPathComponent("Library").appendingPathComponent("Application Support")
+                .appendingPathComponent("gh").appendingPathComponent("hosts.yml"))
+            addCandidate(homeURL.appendingPathComponent(".local").appendingPathComponent("share")
+                .appendingPathComponent("gh").appendingPathComponent("hosts.yml"))
         }
 
         return candidates

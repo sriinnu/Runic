@@ -12,20 +12,20 @@ enum CustomProviderStoreError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .providerNotFound(id):
-            return "Provider with ID '\(id)' not found."
+            "Provider with ID '\(id)' not found."
         case let .duplicateProvider(id):
-            return "Provider with ID '\(id)' already exists."
+            "Provider with ID '\(id)' already exists."
         case .invalidData:
-            return "Invalid provider data."
+            "Invalid provider data."
         case let .fileSystemError(message):
-            return "File system error: \(message)"
+            "File system error: \(message)"
         }
     }
 }
 
 // MARK: - Store
 
-public struct CustomProviderStore {
+public enum CustomProviderStore {
     private static let log = RunicLog.logger("custom-provider-store")
 
     // MARK: - Storage Location
@@ -41,8 +41,8 @@ public struct CustomProviderStore {
 
     /// Load all custom providers from disk.
     public static func load() -> CustomProvidersData {
-        guard FileManager.default.fileExists(atPath: storageURL.path) else {
-            Self.log.info("No custom providers file found, returning empty data.")
+        guard FileManager.default.fileExists(atPath: self.storageURL.path) else {
+            self.log.info("No custom providers file found, returning empty data.")
             return CustomProvidersData()
         }
 
@@ -54,7 +54,7 @@ public struct CustomProviderStore {
             Self.log.info("Loaded \(providersData.providers.count) custom provider(s).")
             return providersData
         } catch {
-            Self.log.error("Failed to load custom providers: \(error)")
+            self.log.error("Failed to load custom providers: \(error)")
             return CustomProvidersData()
         }
     }
@@ -67,7 +67,7 @@ public struct CustomProviderStore {
 
         do {
             let data = try encoder.encode(providersData)
-            try data.write(to: storageURL, options: .atomic)
+            try data.write(to: self.storageURL, options: .atomic)
             Self.log.info("Saved \(providersData.providers.count) custom provider(s).")
         } catch {
             Self.log.error("Failed to save custom providers: \(error)")
@@ -153,6 +153,6 @@ public struct CustomProviderStore {
     /// - Returns: Array of enabled custom provider configurations.
     public static func getEnabledProviders() -> [CustomProviderConfig] {
         let data = Self.load()
-        return data.providers.filter { $0.enabled }
+        return data.providers.filter(\.enabled)
     }
 }

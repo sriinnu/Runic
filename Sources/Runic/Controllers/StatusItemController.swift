@@ -1,51 +1,51 @@
 import AppKit
-import RunicCore
 import Observation
 import QuartzCore
+import RunicCore
 import SwiftUI
 
-/// **StatusItemController** - Manages macOS menubar status item and dropdown menu
-///
-/// **Purpose:**
-/// Coordinates the menubar icon, animations, menu construction, and user interactions.
-/// Acts as the bridge between AppKit (NSStatusItem) and SwiftUI (menu cards).
-///
-/// **Responsibilities:**
-/// - Create and manage NSStatusItem in menubar
-/// - Coordinate icon rendering via IconRenderer
-/// - Build rich NSMenu with embedded SwiftUI views
-/// - Handle animation lifecycle (60 FPS during pings)
-/// - Schedule background "ping" operations when menu opens
-/// - Manage keyboard shortcuts and user actions
-///
-/// **Architecture Pattern:**
-/// This file is split across 4 files via extensions:
-/// - `StatusItemController.swift` - Core setup (318 lines)
-/// - `StatusItemController+Menu.swift` - Menu construction (1878 lines)
-/// - `StatusItemController+Actions.swift` - User actions (200 lines)
-/// - `StatusItemController+Animation.swift` - Animation system (469 lines)
-///
-/// **Performance:**
-/// - **60 FPS cap** during active pings (PerformanceConstants.menubarFPS)
-/// - **Auto-stop animations** when data loaded or error encountered
-/// - **1.2s delay** before background ping when menu opens (reduce perceived lag)
-///
-/// **Dependencies:**
-/// - `UsageStore` - Data source
-/// - `SettingsStore` - User preferences
-/// - `IconRenderer` - Icon generation
-/// - `MenuCardView` - SwiftUI menu content
-///
-/// **Usage:**
-/// ```swift
-/// let controller = StatusItemController(
-///     store: usageStore,
-///     settings: settingsStore,
-///     account: accountInfo,
-///     updater: updater,
-///     preferencesSelection: selection
-/// )
-/// ```
+// **StatusItemController** - Manages macOS menubar status item and dropdown menu
+//
+// **Purpose:**
+// Coordinates the menubar icon, animations, menu construction, and user interactions.
+// Acts as the bridge between AppKit (NSStatusItem) and SwiftUI (menu cards).
+//
+// **Responsibilities:**
+// - Create and manage NSStatusItem in menubar
+// - Coordinate icon rendering via IconRenderer
+// - Build rich NSMenu with embedded SwiftUI views
+// - Handle animation lifecycle (60 FPS during pings)
+// - Schedule background "ping" operations when menu opens
+// - Manage keyboard shortcuts and user actions
+//
+// **Architecture Pattern:**
+// This file is split across 4 files via extensions:
+// - `StatusItemController.swift` - Core setup (318 lines)
+// - `StatusItemController+Menu.swift` - Menu construction (1878 lines)
+// - `StatusItemController+Actions.swift` - User actions (200 lines)
+// - `StatusItemController+Animation.swift` - Animation system (469 lines)
+//
+// **Performance:**
+// - **60 FPS cap** during active pings (PerformanceConstants.menubarFPS)
+// - **Auto-stop animations** when data loaded or error encountered
+// - **1.2s delay** before background ping when menu opens (reduce perceived lag)
+//
+// **Dependencies:**
+// - `UsageStore` - Data source
+// - `SettingsStore` - User preferences
+// - `IconRenderer` - Icon generation
+// - `MenuCardView` - SwiftUI menu content
+//
+// **Usage:**
+// ```swift
+// let controller = StatusItemController(
+//     store: usageStore,
+//     settings: settingsStore,
+//     account: accountInfo,
+//     updater: updater,
+//     preferencesSelection: selection
+// )
+// ```
 
 // MARK: - Status item controller (AppKit-hosted icons, SwiftUI popovers)
 

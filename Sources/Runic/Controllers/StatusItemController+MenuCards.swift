@@ -64,8 +64,8 @@ extension StatusItemController {
     {
         let menuMode = self.settings.menuMode
         let includeSummarySections = menuMode != .glance
-        let includeInsights = menuMode == .`operator`
-        let includeActions = menuMode == .`operator`
+        let includeInsights = menuMode == .operator
+        let includeActions = menuMode == .operator
         let hasUsageBlock = !model.metrics.isEmpty || model.placeholder != nil
         let hasCredits = includeSummarySections && model.creditsText != nil
         let hasExtraUsage = includeSummarySections && model.providerCost != nil
@@ -282,7 +282,9 @@ extension StatusItemController {
                 formatter.dateFormat = "yyyy-MM-dd"
                 formatter.timeZone = TimeZone.current
                 var tokensByDay: [String: Int] = [:]
-                for d in allDaily { tokensByDay[d.dayKey, default: 0] += d.totals.totalTokens }
+                for d in allDaily {
+                    tokensByDay[d.dayKey, default: 0] += d.totals.totalTokens
+                }
                 return (0..<7).map { offset in
                     guard let date = calendar.date(byAdding: .day, value: offset - 6, to: todayStart) else { return 0 }
                     return tokensByDay[formatter.string(from: date)] ?? 0
@@ -306,7 +308,7 @@ extension StatusItemController {
         let updatedAt: Date? = [
             self.store.snapshot(for: provider)?.updatedAt,
             self.store.ledgerUpdatedAt[provider],
-        ].compactMap { $0 }.max()
+        ].compactMap(\.self).max()
 
         if let updatedAt {
             let timestampView = self.menuCardContent(width: width, sidebar: sidebar, showIcons: true) {

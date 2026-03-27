@@ -241,7 +241,7 @@ public struct OpenAIDashboardFetcher {
         throw FetchError.noDashboardData(body: lastBody ?? "")
     }
 
-    struct CreditsHistoryWaitContext: Sendable {
+    struct CreditsHistoryWaitContext {
         let now: Date
         let anyDashboardSignalAt: Date?
         let creditsHeaderVisibleAt: Date?

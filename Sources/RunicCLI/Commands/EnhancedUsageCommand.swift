@@ -1,27 +1,26 @@
-/// EnhancedUsageCommand.swift
-/// Runic CLI - Enhanced Usage Display
-///
-/// Enhanced version of the usage command with additional features:
-/// - Multiple display modes (summary, detailed, breakdown)
-/// - Historical trending
-/// - Cost projections
-/// - Comparative analysis across providers
-///
-/// Usage:
-///   runic usage-enhanced [options]
-///
-/// Examples:
-///   runic usage-enhanced --mode summary      # Quick overview
-///   runic usage-enhanced --mode detailed     # Detailed breakdown
-///   runic usage-enhanced --mode trending     # Usage trends
+// EnhancedUsageCommand.swift
+// Runic CLI - Enhanced Usage Display
+//
+// Enhanced version of the usage command with additional features:
+// - Multiple display modes (summary, detailed, breakdown)
+// - Historical trending
+// - Cost projections
+// - Comparative analysis across providers
+//
+// Usage:
+//   runic usage-enhanced [options]
+//
+// Examples:
+//   runic usage-enhanced --mode summary      # Quick overview
+//   runic usage-enhanced --mode detailed     # Detailed breakdown
+//   runic usage-enhanced --mode trending     # Usage trends
 
-import RunicCore
-import Helix
 import Foundation
+import Helix
+import RunicCore
 
 /// Enhanced usage command with additional analytics
 public enum EnhancedUsageCommand {
-
     /// Command signature defining available options and flags
     public static var signature: CommandSignature {
         CommandSignature(
@@ -106,7 +105,7 @@ public enum EnhancedUsageCommand {
 
     /// Execute the enhanced usage command
     public static func run(_ invocation: CommandInvocation) async {
-        let config = parseConfiguration(invocation)
+        let config = self.parseConfiguration(invocation)
 
         do {
             let data = try await loadUsageData(
@@ -115,12 +114,12 @@ public enum EnhancedUsageCommand {
                 includeCost: config.showCost)
 
             if config.isJSON {
-                outputJSON(data, config: config)
+                self.outputJSON(data, config: config)
             } else {
-                outputText(data, config: config)
+                self.outputText(data, config: config)
             }
         } catch {
-            exitWithError("Failed to load usage data: \(error.localizedDescription)")
+            self.exitWithError("Failed to load usage data: \(error.localizedDescription)")
         }
     }
 
@@ -161,7 +160,7 @@ public enum EnhancedUsageCommand {
 
         let mode = Configuration.DisplayMode(rawValue: modeArg.lowercased()) ?? .summary
         let days = daysArg.flatMap(Int.init) ?? 7
-        let providers = resolveProviders(providerArg)
+        let providers = self.resolveProviders(providerArg)
 
         return Configuration(
             providers: providers,
@@ -185,7 +184,7 @@ public enum EnhancedUsageCommand {
         }
 
         guard let provider = UsageProvider(rawValue: arg) else {
-            exitWithError("Unknown provider: \(arg)")
+            self.exitWithError("Unknown provider: \(arg)")
         }
 
         return [provider]
@@ -269,8 +268,8 @@ public enum EnhancedUsageCommand {
     private static func loadUsageData(
         providers: [UsageProvider],
         days: Int,
-        includeCost: Bool
-    ) async throws -> EnhancedUsageData {
+        includeCost: Bool) async throws -> EnhancedUsageData
+    {
         let fetcher = UsageFetcher()
         let _ = includeCost ? CostUsageFetcher() : nil
         var providerData: [ProviderUsageData] = []
@@ -291,12 +290,12 @@ public enum EnhancedUsageCommand {
 
             let outcome = await descriptor.fetchOutcome(context: context)
 
-            if case .success(let result) = outcome.result {
+            if case let .success(result) = outcome.result {
                 let trending = try? await loadTrendingData(
                     provider: provider,
                     days: days)
 
-                let data = buildProviderData(
+                let data = self.buildProviderData(
                     provider: provider,
                     snapshot: result.usage,
                     credits: result.credits,
@@ -307,8 +306,8 @@ public enum EnhancedUsageCommand {
             }
         }
 
-        let summary = buildSummary(providerData: providerData)
-        let comparison = buildComparison(providerData: providerData)
+        let summary = self.buildSummary(providerData: providerData)
+        let comparison = self.buildComparison(providerData: providerData)
 
         return EnhancedUsageData(
             providers: providerData,
@@ -321,8 +320,8 @@ public enum EnhancedUsageCommand {
         snapshot: UsageSnapshot,
         credits: CreditsSnapshot?,
         metadata: ProviderMetadata,
-        trending: [DailyTrend]?
-    ) -> ProviderUsageData {
+        trending: [DailyTrend]?) -> ProviderUsageData
+    {
         var windows: [WindowData] = []
 
         windows.append(WindowData(
@@ -356,8 +355,8 @@ public enum EnhancedUsageCommand {
 
     private static func loadTrendingData(
         provider: UsageProvider,
-        days: Int
-    ) async throws -> [DailyTrend]? {
+        days: Int) async throws -> [DailyTrend]?
+    {
         let source = UsageLedgerSourceFactory.source(for: provider, now: Date(), maxAgeDays: days)
 
         guard let source else { return nil }
@@ -377,8 +376,8 @@ public enum EnhancedUsageCommand {
     }
 
     private static func buildSummary(
-        providerData: [ProviderUsageData]
-    ) -> UsageSummary? {
+        providerData: [ProviderUsageData]) -> UsageSummary?
+    {
         guard !providerData.isEmpty else { return nil }
 
         let totalTokens = providerData.reduce(0) { sum, data in
@@ -405,8 +404,8 @@ public enum EnhancedUsageCommand {
     }
 
     private static func buildComparison(
-        providerData: [ProviderUsageData]
-    ) -> ProviderComparison? {
+        providerData: [ProviderUsageData]) -> ProviderComparison?
+    {
         guard providerData.count > 1 else { return nil }
 
         let comparisons = providerData.map { data in
@@ -439,7 +438,8 @@ public enum EnhancedUsageCommand {
         }
 
         guard let jsonData = try? encoder.encode(data),
-              let text = String(data: jsonData, encoding: .utf8) else {
+              let text = String(data: jsonData, encoding: .utf8)
+        else {
             print("{}")
             return
         }
@@ -450,23 +450,23 @@ public enum EnhancedUsageCommand {
     private static func outputText(_ data: EnhancedUsageData, config: Configuration) {
         switch config.mode {
         case .summary:
-            outputSummaryMode(data, config: config)
+            self.outputSummaryMode(data, config: config)
         case .detailed:
-            outputDetailedMode(data, config: config)
+            self.outputDetailedMode(data, config: config)
         case .breakdown:
-            outputBreakdownMode(data, config: config)
+            self.outputBreakdownMode(data, config: config)
         case .trending:
-            outputTrendingMode(data, config: config)
+            self.outputTrendingMode(data, config: config)
         }
     }
 
     private static func outputSummaryMode(_ data: EnhancedUsageData, config: Configuration) {
-        printHeader("Usage Summary", useColor: config.useColor)
+        self.printHeader("Usage Summary", useColor: config.useColor)
         print("")
 
         if let summary = data.summary {
             print("Providers: \(summary.totalProviders)")
-            print("Total Tokens: \(formatNumber(summary.totalTokens))")
+            print("Total Tokens: \(self.formatNumber(summary.totalTokens))")
             print("Average Usage: \(String(format: "%.1f", summary.averageUsagePercent))%")
             print("Highest Usage: \(summary.highestUsageProvider)")
             print("")
@@ -475,7 +475,7 @@ public enum EnhancedUsageCommand {
         for providerData in data.providers {
             print(providerData.providerName)
             for window in providerData.windows {
-                let bar = progressBar(
+                let bar = self.progressBar(
                     used: window.usedPercent,
                     width: 20,
                     useColor: config.useColor)
@@ -487,14 +487,14 @@ public enum EnhancedUsageCommand {
     }
 
     private static func outputDetailedMode(_ data: EnhancedUsageData, config: Configuration) {
-        printHeader("Detailed Usage Information", useColor: config.useColor)
+        self.printHeader("Detailed Usage Information", useColor: config.useColor)
         print("")
 
         for (index, providerData) in data.providers.enumerated() {
             if index > 0 { print("") }
 
             if config.useColor {
-                print(ansi("1;36", providerData.providerName))
+                print(self.ansi("1;36", providerData.providerName))
             } else {
                 print(providerData.providerName)
             }
@@ -503,7 +503,7 @@ public enum EnhancedUsageCommand {
                 print("")
                 print("  \(window.name):")
                 if let used = window.used, let limit = window.limit {
-                    print("    Used: \(formatNumber(used)) / \(formatNumber(limit))")
+                    print("    Used: \(self.formatNumber(used)) / \(self.formatNumber(limit))")
                 }
                 print("    Percent: \(String(format: "%.1f", window.usedPercent))%")
                 if let reset = window.resetDescription {
@@ -514,14 +514,14 @@ public enum EnhancedUsageCommand {
     }
 
     private static func outputBreakdownMode(_ data: EnhancedUsageData, config: Configuration) {
-        printHeader("Token Breakdown", useColor: config.useColor)
+        self.printHeader("Token Breakdown", useColor: config.useColor)
         print("")
         print("Note: Detailed token breakdown requires historical log data.")
         print("Use 'runic insights --view models' for model-level breakdown.")
     }
 
     private static func outputTrendingMode(_ data: EnhancedUsageData, config: Configuration) {
-        printHeader("Usage Trends", useColor: config.useColor)
+        self.printHeader("Usage Trends", useColor: config.useColor)
         print("")
 
         for providerData in data.providers {
@@ -529,7 +529,7 @@ public enum EnhancedUsageCommand {
 
             if let trends = providerData.trending, !trends.isEmpty {
                 for trend in trends.suffix(10) {
-                    let tokens = formatNumber(trend.totalTokens)
+                    let tokens = self.formatNumber(trend.totalTokens)
                     let cost = trend.cost.map { String(format: "$%.4f", $0) } ?? "n/a"
                     print("  \(trend.date): \(tokens) tokens (\(cost))")
                 }
@@ -548,26 +548,26 @@ public enum EnhancedUsageCommand {
         guard useColor else { return "[\(bar)]" }
 
         let color = switch used {
-        case 90...: "31"  // red
-        case 75...: "33"  // yellow
-        default: "32"     // green
+        case 90...: "31" // red
+        case 75...: "33" // yellow
+        default: "32" // green
         }
 
-        return "[\(ansi(color, bar))]"
+        return "[\(self.ansi(color, bar))]"
     }
 
     private static func formatNumber(_ n: Int) -> String {
         if n >= 1_000_000 {
             return String(format: "%.1fM", Double(n) / 1_000_000)
-        } else if n >= 1_000 {
-            return String(format: "%.1fK", Double(n) / 1_000)
+        } else if n >= 1000 {
+            return String(format: "%.1fK", Double(n) / 1000)
         }
         return "\(n)"
     }
 
     private static func printHeader(_ text: String, useColor: Bool) {
         if useColor {
-            print(ansi("1;36", text))
+            print(self.ansi("1;36", text))
         } else {
             print(text)
         }

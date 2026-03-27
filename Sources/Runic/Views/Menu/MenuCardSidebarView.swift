@@ -61,29 +61,7 @@ struct ProviderSidebarMenuCardView<Content: View>: View {
     let iconProvider: (UsageProvider, CGFloat) -> NSImage
     let weeklyRemainingProvider: (UsageProvider) -> Double?
     let onSelect: (UsageProvider) -> Void
-    let content: (CGFloat) -> Content
-
-    init(
-        providers: [UsageProvider],
-        selected: UsageProvider?,
-        totalWidth: CGFloat,
-        showIcons: Bool,
-        iconSize: ProviderSwitcherIconSize,
-        iconProvider: @escaping (UsageProvider, CGFloat) -> NSImage,
-        weeklyRemainingProvider: @escaping (UsageProvider) -> Double?,
-        onSelect: @escaping (UsageProvider) -> Void,
-        @ViewBuilder content: @escaping (CGFloat) -> Content)
-    {
-        self.providers = providers
-        self.selected = selected
-        self.totalWidth = totalWidth
-        self.showIcons = showIcons
-        self.iconSize = iconSize
-        self.iconProvider = iconProvider
-        self.weeklyRemainingProvider = weeklyRemainingProvider
-        self.onSelect = onSelect
-        self.content = content
-    }
+    @ViewBuilder let content: (CGFloat) -> Content
 
     var body: some View {
         let style = MenuCardSidebarMetrics.style(for: self.providers.count, iconSize: self.iconSize)
@@ -124,7 +102,8 @@ private struct ProviderSidebarRailView: View {
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
     private var railBackground: LinearGradient {
-        let base = Color(nsColor: .controlTextColor).opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors.Opacity.nano)
+        let base = Color(nsColor: .controlTextColor)
+            .opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors.Opacity.nano)
         return LinearGradient(
             colors: [base, base.opacity(0.6)],
             startPoint: .top,
@@ -164,7 +143,8 @@ private struct ProviderSidebarRailView: View {
             }
 
             Rectangle()
-                .fill(Color(nsColor: .separatorColor).opacity(self.isHighlighted ? RunicColors.Opacity.emphasis : RunicColors.Opacity.strong))
+                .fill(Color(nsColor: .separatorColor)
+                    .opacity(self.isHighlighted ? RunicColors.Opacity.emphasis : RunicColors.Opacity.strong))
                 .frame(width: 1)
                 .padding(.top, MenuCardMetrics.headerTopPadding + 4)
                 .padding(.bottom, MenuCardMetrics.tailPadding)

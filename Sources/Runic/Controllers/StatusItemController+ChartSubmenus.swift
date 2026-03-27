@@ -59,7 +59,9 @@ extension StatusItemController {
         let reliability = self.store.ledgerReliabilityScore(for: provider)
         let routing = self.store.ledgerRoutingRecommendation(for: provider)
         let hasActiveBlock = activeBlock?.isActive == true
-        guard daily != nil || hasActiveBlock || !modelBreakdown.isEmpty || !projectBreakdown.isEmpty || reliability != nil || routing != nil else {
+        guard daily != nil || hasActiveBlock || !modelBreakdown.isEmpty || !projectBreakdown
+            .isEmpty || reliability != nil || routing != nil
+        else {
             return nil
         }
 
@@ -230,22 +232,21 @@ extension StatusItemController {
         includeAttribution: Bool = false) -> String
     {
         let trimmedProjectName = projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayName: String
-        if let trimmedProjectName, !trimmedProjectName.isEmpty {
-            displayName = trimmedProjectName
+        let displayName: String = if let trimmedProjectName, !trimmedProjectName.isEmpty {
+            trimmedProjectName
         } else if let projectID, !projectID.isEmpty {
             if let budgetName = ProjectBudgetStore.getBudget(projectID: projectID)?.projectName?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                 !budgetName.isEmpty
             {
-                displayName = budgetName
+                budgetName
             } else if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: projectID) {
-                displayName = fallback
+                fallback
             } else {
-                displayName = "Unknown project"
+                "Unknown project"
             }
         } else {
-            displayName = "Unknown project"
+            "Unknown project"
         }
         guard includeAttribution else { return displayName }
         guard let annotation = self.projectNameAnnotation(
@@ -318,10 +319,10 @@ extension StatusItemController {
             return nil
         }
 
-        var hash: UInt64 = 0xcbf29ce484222325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for byte in projectID.lowercased().utf8 {
             hash ^= UInt64(byte)
-            hash = hash &* 0x100000001b3
+            hash = hash &* 0x100_0000_01B3
         }
         return String(format: "%08llx", hash)
     }
@@ -673,7 +674,7 @@ extension StatusItemController {
 
     private func modelQuotaWindows(for provider: UsageProvider) -> [RateWindow] {
         guard let snapshot = self.store.snapshot(for: provider) else { return [] }
-        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap { $0 }
+        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
         var seen: Set<String> = []
         var result: [RateWindow] = []
 
@@ -701,6 +702,7 @@ extension StatusItemController {
         submenu.delegate = self
 
         // MARK: Model usage (24h) — tokens, prompts, estimated cost per model
+
         if let modelUsage = zai.modelUsage, !modelUsage.entries.isEmpty {
             let headerFont = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
             let header = NSMenuItem(title: "Models (24h)", action: nil, keyEquivalent: "")
@@ -742,6 +744,7 @@ extension StatusItemController {
         }
 
         // MARK: Tool usage (24h) — MCP tool call counts
+
         if let toolUsage = zai.toolUsage, !toolUsage.entries.isEmpty {
             let headerFont = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
             let header = NSMenuItem(title: "MCP Tools (24h)", action: nil, keyEquivalent: "")
@@ -774,6 +777,7 @@ extension StatusItemController {
         }
 
         // MARK: Quota MCP details (existing — from timeLimit.usageDetails)
+
         if let timeLimit = zai.timeLimit, !timeLimit.usageDetails.isEmpty {
             let headerFont = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
             let header = NSMenuItem(title: "Quota Window", action: nil, keyEquivalent: "")

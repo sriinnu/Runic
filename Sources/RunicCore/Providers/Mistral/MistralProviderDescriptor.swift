@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -71,7 +71,7 @@ struct MistralAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum MistralSettingsError: LocalizedError, Sendable {
+enum MistralSettingsError: LocalizedError {
     case missingToken
 
     var errorDescription: String? {

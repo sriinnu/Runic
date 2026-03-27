@@ -1,5 +1,5 @@
-import Foundation
 import CloudKit
+import Foundation
 
 // MARK: - Sync Protocol Definitions
 
@@ -90,8 +90,7 @@ public protocol SyncConflictResolverProtocol: Sendable {
     func resolve(
         local: SyncableRecord,
         remote: SyncableRecord,
-        strategy: ConflictResolutionStrategy
-    ) async -> SyncableRecord
+        strategy: ConflictResolutionStrategy) async -> SyncableRecord
 }
 
 // MARK: - Sync Observer Protocol
@@ -150,8 +149,8 @@ public struct SyncOptions: Sendable {
         conflictStrategy: ConflictResolutionStrategy = .lastWriteWins,
         backgroundMode: Bool = false,
         timeout: TimeInterval = 60.0,
-        encryptSensitiveData: Bool = true
-    ) {
+        encryptSensitiveData: Bool = true)
+    {
         self.forceFullSync = forceFullSync
         self.batchSize = batchSize
         self.conflictStrategy = conflictStrategy
@@ -191,8 +190,8 @@ public struct SyncResult: Sendable {
         deletedCount: Int = 0,
         completedAt: Date = Date(),
         duration: TimeInterval = 0,
-        warnings: [String] = []
-    ) {
+        warnings: [String] = [])
+    {
         self.pushedCount = pushedCount
         self.fetchedCount = fetchedCount
         self.conflictsResolved = conflictsResolved
@@ -256,25 +255,25 @@ public enum SyncError: Error, Sendable {
     public var localizedDescription: String {
         switch self {
         case .iCloudAccountUnavailable:
-            return "iCloud account is not available. Please sign in to iCloud in Settings."
+            "iCloud account is not available. Please sign in to iCloud in Settings."
         case .networkUnavailable:
-            return "Network connection is not available. Sync will retry when online."
+            "Network connection is not available. Sync will retry when online."
         case .quotaExceeded:
-            return "iCloud storage quota exceeded. Please free up space or upgrade your plan."
-        case .invalidRecordFormat(let details):
-            return "Invalid record format: \(details)"
+            "iCloud storage quota exceeded. Please free up space or upgrade your plan."
+        case let .invalidRecordFormat(details):
+            "Invalid record format: \(details)"
         case .timeout:
-            return "Sync operation timed out. Please try again."
+            "Sync operation timed out. Please try again."
         case .authenticationFailed:
-            return "Authentication failed. Please sign in again."
-        case .conflictResolutionFailed(let details):
-            return "Failed to resolve conflict: \(details)"
-        case .cloudKitError(let error):
-            return "CloudKit error: \(error.localizedDescription)"
-        case .encryptionFailed(let details):
-            return "Encryption failed: \(details)"
-        case .unknown(let error):
-            return "Unknown error: \(error.localizedDescription)"
+            "Authentication failed. Please sign in again."
+        case let .conflictResolutionFailed(details):
+            "Failed to resolve conflict: \(details)"
+        case let .cloudKitError(error):
+            "CloudKit error: \(error.localizedDescription)"
+        case let .encryptionFailed(details):
+            "Encryption failed: \(details)"
+        case let .unknown(error):
+            "Unknown error: \(error.localizedDescription)"
         }
     }
 }

@@ -56,9 +56,8 @@ struct CustomProvidersPane: View {
                             snapshot: self.store.customProviderSnapshots[provider.id],
                             onToggle: { enabled in self.toggleProvider(provider, enabled: enabled) },
                             onEdit: { self.editingProvider = provider },
-                            onDelete: { self.confirmDelete = provider }
-                        )
-                        .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                            onDelete: { self.confirmDelete = provider })
+                            .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
 
                         if provider.id != self.providers.last?.id {
                             Divider()
@@ -79,8 +78,7 @@ struct CustomProvidersPane: View {
                     self.addProvider(provider)
                     self.showingAddProvider = false
                 },
-                onCancel: { self.showingAddProvider = false }
-            )
+                onCancel: { self.showingAddProvider = false })
         }
         .sheet(item: self.$editingProvider) { provider in
             CustomProviderEditorView(
@@ -89,13 +87,12 @@ struct CustomProvidersPane: View {
                     self.updateProvider(updated)
                     self.editingProvider = nil
                 },
-                onCancel: { self.editingProvider = nil }
-            )
+                onCancel: { self.editingProvider = nil })
         }
         .alert("Delete Provider", isPresented: Binding(
             get: { self.confirmDelete != nil },
-            set: { if !$0 { self.confirmDelete = nil } }
-        )) {
+            set: { if !$0 { self.confirmDelete = nil } }))
+        {
             Button("Cancel", role: .cancel) { self.confirmDelete = nil }
             Button("Delete", role: .destructive) {
                 if let provider = self.confirmDelete {
@@ -165,13 +162,13 @@ private struct CustomProviderRow: View {
 
     var body: some View {
         HStack(spacing: RunicSpacing.sm) {
-            Image(systemName: provider.icon)
+            Image(systemName: self.provider.icon)
                 .font(.system(size: 24))
                 .foregroundStyle(self.iconColor)
                 .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(provider.name)
+                Text(self.provider.name)
                     .font(RunicFont.body)
                     .fontWeight(.medium)
 
@@ -222,17 +219,16 @@ private struct CustomProviderRow: View {
 
                 Toggle("", isOn: Binding(
                     get: { self.provider.enabled },
-                    set: { self.onToggle($0) }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
+                    set: { self.onToggle($0) }))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
             }
         }
         .padding(.vertical, RunicSpacing.sm)
     }
 
     private var iconColor: Color {
-        if !provider.enabled { return .secondary }
+        if !self.provider.enabled { return .secondary }
         if let colorHex = provider.colorHex, let nsColor = NSColor(hexString: colorHex) {
             return Color(nsColor: nsColor)
         }
@@ -242,8 +238,8 @@ private struct CustomProviderRow: View {
 
 // MARK: - Helper Extensions
 
-private extension Date {
-    func relativeDescription() -> String {
+extension Date {
+    fileprivate func relativeDescription() -> String {
         let now = Date()
         let interval = now.timeIntervalSince(self)
         if interval < 60 { return "just now" }
@@ -253,8 +249,8 @@ private extension Date {
     }
 }
 
-private extension NSColor {
-    convenience init?(hexString: String) {
+extension NSColor {
+    fileprivate convenience init?(hexString: String) {
         var hex = hexString.trimmingCharacters(in: .whitespacesAndNewlines)
         if hex.hasPrefix("#") { hex.removeFirst() }
         guard hex.count == 6 else { return nil }
@@ -266,7 +262,6 @@ private extension NSColor {
         self.init(red: r, green: g, blue: b, alpha: 1.0)
     }
 }
-
 
 // MARK: - Custom Provider Editor View (Simplified)
 
@@ -283,39 +278,43 @@ private struct CustomProviderEditorView: View {
 
     var body: some View {
         VStack {
-            Text(provider == nil ? "Add Custom Provider" : "Edit Provider")
+            Text(self.provider == nil ? "Add Custom Provider" : "Edit Provider")
                 .font(RunicFont.headline)
                 .padding()
             Form {
-                TextField("Provider Name", text: $name)
-                TextField("Icon (SF Symbol)", text: $icon)
-                SecureField("API Token", text: $apiToken)
-                TextField("Usage Endpoint URL", text: $usageEndpointURL)
+                TextField("Provider Name", text: self.$name)
+                TextField("Icon (SF Symbol)", text: self.$icon)
+                SecureField("API Token", text: self.$apiToken)
+                TextField("Usage Endpoint URL", text: self.$usageEndpointURL)
             }
             .padding()
             HStack {
-                Button("Cancel") { onCancel() }
-                Button(provider == nil ? "Add" : "Save") {
+                Button("Cancel") { self.onCancel() }
+                Button(self.provider == nil ? "Add" : "Save") {
                     // Simplified save logic
-                    onSave(CustomProviderConfig(
-                        id: provider?.id ?? UUID().uuidString,
-                        name: name,
-                        icon: icon,
-                        enabled: provider?.enabled ?? true,
-                        auth: AuthConfig(type: .bearer, headerName: "Authorization", tokenKeychain: "custom-\(name)"),
-                        endpoints: EndpointConfig(usage: UsageEndpoint(url: usageEndpointURL, mapping: ResponseMapping()))
-                    ))
+                    self.onSave(CustomProviderConfig(
+                        id: self.provider?.id ?? UUID().uuidString,
+                        name: self.name,
+                        icon: self.icon,
+                        enabled: self.provider?.enabled ?? true,
+                        auth: AuthConfig(
+                            type: .bearer,
+                            headerName: "Authorization",
+                            tokenKeychain: "custom-\(self.name)"),
+                        endpoints: EndpointConfig(usage: UsageEndpoint(
+                            url: self.usageEndpointURL,
+                            mapping: ResponseMapping()))))
                 }
-                .disabled(name.isEmpty || apiToken.isEmpty || usageEndpointURL.isEmpty)
+                .disabled(self.name.isEmpty || self.apiToken.isEmpty || self.usageEndpointURL.isEmpty)
             }
             .padding()
         }
         .frame(width: 500, height: 400)
         .onAppear {
             if let p = provider {
-                name = p.name
-                icon = p.icon
-                usageEndpointURL = p.endpoints.usage?.url ?? ""
+                self.name = p.name
+                self.icon = p.icon
+                self.usageEndpointURL = p.endpoints.usage?.url ?? ""
             }
         }
     }

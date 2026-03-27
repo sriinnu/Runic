@@ -14,11 +14,11 @@ struct ProjectBudgetMenuView: View {
 
         var statusColor: Color {
             if self.isOverBudget {
-                return Color(red: 0.94, green: 0.36, blue: 0.36) // Red
+                Color(red: 0.94, green: 0.36, blue: 0.36) // Red
             } else if self.isNearLimit {
-                return Color(red: 0.94, green: 0.74, blue: 0.26) // Yellow
+                Color(red: 0.94, green: 0.74, blue: 0.26) // Yellow
             } else {
-                return Color(red: 0.46, green: 0.75, blue: 0.36) // Green
+                Color(red: 0.46, green: 0.75, blue: 0.36) // Green
             }
         }
     }
@@ -88,8 +88,8 @@ struct ProjectBudgetMenuView: View {
                 }
 
                 // Summary
-                let overBudget = model.filter { $0.isOverBudget }.count
-                let nearLimit = model.filter { $0.isNearLimit && !$0.isOverBudget }.count
+                let overBudget = model.count(where: { $0.isOverBudget })
+                let nearLimit = model.count(where: { $0.isNearLimit && !$0.isOverBudget })
                 if overBudget > 0 || nearLimit > 0 {
                     Divider()
                         .padding(.vertical, RunicSpacing.xxs)
@@ -167,7 +167,7 @@ private struct ProjectBudgetRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack(alignment: .firstTextBaseline) {
-                Text(project.projectName)
+                Text(self.project.projectName)
                     .font(RunicFont.body)
                     .fontWeight(.medium)
                     .lineLimit(1)
@@ -178,21 +178,21 @@ private struct ProjectBudgetRow: View {
             }
 
             UsageProgressBar(
-                percent: project.percentUsed,
-                tint: project.statusColor,
+                percent: self.project.percentUsed,
+                tint: self.project.statusColor,
                 accessibilityLabel: "Budget usage")
 
             HStack(alignment: .firstTextBaseline) {
-                Text(String(format: "%.0f%%", project.percentUsed))
+                Text(String(format: "%.0f%%", self.project.percentUsed))
                     .font(RunicFont.caption)
                     .foregroundStyle(self.statusTextColor)
                 Spacer()
-                if project.isOverBudget {
+                if self.project.isOverBudget {
                     Text("Over budget")
                         .font(RunicFont.caption)
                         .foregroundStyle(Color(red: 0.94, green: 0.36, blue: 0.36))
                         .fontWeight(.medium)
-                } else if project.isNearLimit {
+                } else if self.project.isNearLimit {
                     Text("Near limit")
                         .font(RunicFont.caption)
                         .foregroundStyle(Color(red: 0.94, green: 0.74, blue: 0.26))
@@ -208,13 +208,13 @@ private struct ProjectBudgetRow: View {
     }
 
     private var budgetText: String {
-        "\(UsageFormatter.usdString(project.spent)) / \(UsageFormatter.usdString(project.budget.monthlyLimit))"
+        "\(UsageFormatter.usdString(self.project.spent)) / \(UsageFormatter.usdString(self.project.budget.monthlyLimit))"
     }
 
     private var statusTextColor: Color {
         if self.isHighlighted {
             return MenuHighlightStyle.selectionText
         }
-        return project.statusColor
+        return self.project.statusColor
     }
 }

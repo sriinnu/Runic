@@ -1,8 +1,9 @@
 import AppKit
-import RunicCore
 import QuartzCore
+import RunicCore
 
 // MARK: - Animation & Performance Optimization
+
 //
 // **Zero Token Leakage Policy**:
 // - Use cookies/local storage from providers FIRST
@@ -433,14 +434,14 @@ extension StatusItemController {
         let isMerged = mergeIcons ?? self.shouldMergeIcons
         let isVisible = isMerged ? self.isEnabled(provider) : self.isVisible(provider)
         guard isVisible else { return false }
-        
+
         // Critical: Only animate while actively fetching
         guard self.store.refreshingProviders.contains(provider) else { return false }
-        
+
         // Stop animation if we have data OR reached error state (stale = error/cached)
         let isStale = self.store.isStale(provider: provider)
         let hasData = self.store.snapshot(for: provider) != nil
-        
+
         // Animation only runs when: no data yet AND not in error/stale state
         return !hasData && !isStale
     }

@@ -552,7 +552,7 @@ public struct OpenAIDashboardBrowserCookieImporter {
 
     // MARK: - Candidates
 
-    private struct Candidate: Sendable {
+    private struct Candidate {
         let label: String
         let cookies: [HTTPCookie]
     }

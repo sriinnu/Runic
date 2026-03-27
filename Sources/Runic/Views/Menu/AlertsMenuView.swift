@@ -5,7 +5,6 @@ import SwiftUI
 /// Menu view displaying active alerts with severity indicators and acknowledgement
 @MainActor
 struct AlertsMenuView: View {
-
     // MARK: - Types
 
     typealias AlertEntry = AlertRuleStore.AlertHistoryEntry
@@ -84,11 +83,12 @@ struct AlertsMenuView: View {
             .padding(.horizontal, RunicSpacing.compact)
             .padding(.vertical, RunicSpacing.xxxs)
             .background(Capsule().fill(Color.red))
-            .accessibilityLabel("\(self.unacknowledgedCount) unacknowledged alert\(self.unacknowledgedCount == 1 ? "" : "s")")
+            .accessibilityLabel(
+                "\(self.unacknowledgedCount) unacknowledged alert\(self.unacknowledgedCount == 1 ? "" : "s")")
     }
 
     private var unacknowledgedCount: Int {
-        self.alerts.filter { !$0.acknowledged }.count
+        self.alerts.count(where: { !$0.acknowledged })
     }
 
     // MARK: - Alerts List
@@ -191,26 +191,24 @@ private struct AlertRow: View {
 
     private var severityIconName: String {
         switch self.alert.severity {
-        case .info: return "info.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .critical: return "exclamationmark.octagon.fill"
+        case .info: "info.circle.fill"
+        case .warning: "exclamationmark.triangle.fill"
+        case .critical: "exclamationmark.octagon.fill"
         }
     }
 
     private var severityColor: Color {
         switch self.alert.severity {
-        case .info: return .green
-        case .warning: return .yellow
-        case .critical: return .red
+        case .info: .green
+        case .warning: .yellow
+        case .critical: .red
         }
     }
 
     private var backgroundStyle: some View {
-        let baseColor = self.alert.acknowledged
+        self.alert.acknowledged
             ? Color(nsColor: .controlBackgroundColor).opacity(0.5)
             : Color(nsColor: .controlBackgroundColor)
-
-        return baseColor
     }
 
     private var acknowledgeButton: some View {

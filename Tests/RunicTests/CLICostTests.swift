@@ -2,26 +2,25 @@ import Foundation
 import RunicCore
 import Testing
 
-@Suite
 struct CLICostTests {
     @Test
-    func costSnapshotStoresSessionAndMonthFields() {
+    func `cost snapshot stores session and month fields`() {
         let snapshot = CostUsageTokenSnapshot(
-            sessionTokens: 1_200,
+            sessionTokens: 1200,
             sessionCostUSD: 1.25,
-            last30DaysTokens: 9_000,
+            last30DaysTokens: 9000,
             last30DaysCostUSD: 9.99,
             daily: [],
             updatedAt: Date(timeIntervalSince1970: 1_700_000_000))
 
-        #expect(snapshot.sessionTokens == 1_200)
+        #expect(snapshot.sessionTokens == 1200)
         #expect(snapshot.sessionCostUSD == 1.25)
-        #expect(snapshot.last30DaysTokens == 9_000)
+        #expect(snapshot.last30DaysTokens == 9000)
         #expect(snapshot.last30DaysCostUSD == 9.99)
     }
 
     @Test
-    func dailyReportDecodesLegacyCacheTokenKeys() throws {
+    func `daily report decodes legacy cache token keys`() throws {
         let json = """
         {
           "daily": [

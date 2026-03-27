@@ -145,7 +145,7 @@ public enum UsagePolicyEngine {
         context: UsagePolicyContext) -> String?
     {
         switch condition {
-        case .projectedBudgetOverrun(let minimumPercent):
+        case let .projectedBudgetOverrun(minimumPercent):
             guard let budget = context.budgetLimitUSD, budget > 0 else { return nil }
             guard let projected = context.projectedSpendUSD, projected.isFinite else { return nil }
             let overrunUSD = projected - budget
@@ -161,7 +161,7 @@ public enum UsagePolicyEngine {
             guard observed >= budget else { return nil }
             return "Observed spend \(UsageFormatter.usdString(observed)) reached budget \(UsageFormatter.usdString(budget))."
 
-        case .anomalySeverityAtLeast(let required):
+        case let .anomalySeverityAtLeast(required):
             guard let observed = context.anomalySeverity else { return nil }
             guard observed.rawValue >= required.rawValue else { return nil }
             return "Anomaly severity \(self.severityLabel(observed)) meets threshold \(self.severityLabel(required))."

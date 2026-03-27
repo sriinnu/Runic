@@ -27,7 +27,7 @@ public struct VertexAISettingsReader: Sendable {
     public static func credentials(
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
-        self.cleaned(environment[credentialsKey])
+        self.cleaned(environment[self.credentialsKey])
     }
 
     static func cleaned(_ raw: String?) -> String? {

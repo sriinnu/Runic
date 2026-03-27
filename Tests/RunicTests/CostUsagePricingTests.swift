@@ -1,18 +1,16 @@
 import Testing
-
 @testable import RunicCore
 
-@Suite
 struct CostUsagePricingTests {
     @Test
-    func normalizesCodexModelVariants() {
+    func `normalizes codex model variants`() {
         #expect(CostUsagePricing.normalizeCodexModel("openai/gpt-5-codex") == "gpt-5")
         #expect(CostUsagePricing.normalizeCodexModel("gpt-5.2-codex") == "gpt-5.2")
         #expect(CostUsagePricing.normalizeCodexModel("gpt-5.1-codex-max") == "gpt-5.1")
     }
 
     @Test
-    func codexCostSupportsGpt51CodexMax() {
+    func `codex cost supports gpt51 codex max`() {
         let cost = CostUsagePricing.codexCostUSD(
             model: "gpt-5.1-codex-max",
             inputTokens: 100,
@@ -22,12 +20,12 @@ struct CostUsagePricingTests {
     }
 
     @Test
-    func normalizesClaudeOpus41DatedVariants() {
+    func `normalizes claude opus41 dated variants`() {
         #expect(CostUsagePricing.normalizeClaudeModel("claude-opus-4-1-20250805") == "claude-opus-4-1")
     }
 
     @Test
-    func claudeCostSupportsOpus41DatedVariant() {
+    func `claude cost supports opus41 dated variant`() {
         let cost = CostUsagePricing.claudeCostUSD(
             model: "claude-opus-4-1-20250805",
             inputTokens: 10,
@@ -38,7 +36,7 @@ struct CostUsagePricingTests {
     }
 
     @Test
-    func claudeCostReturnsNilForUnknownModels() {
+    func `claude cost returns nil for unknown models`() {
         let cost = CostUsagePricing.claudeCostUSD(
             model: "glm-4.6",
             inputTokens: 100,

@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 
 @MainActor
 struct MenuDescriptor {
@@ -351,7 +351,9 @@ private enum AccountFormatter {
         return cleaned.isEmpty ? text : cleaned
     }
 
-    static func email(_ text: String) -> String { text }
+    static func email(_ text: String) -> String {
+        text
+    }
 }
 
 extension MenuDescriptor.MenuAction {

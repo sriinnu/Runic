@@ -1,8 +1,8 @@
-import RunicCore
 import Foundation
+import RunicCore
 @preconcurrency import UserNotifications
 
-enum SessionQuotaTransition: Equatable, Sendable {
+enum SessionQuotaTransition: Equatable {
     case none
     case depleted
     case restored

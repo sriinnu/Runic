@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Security
 
 protocol ZaiTokenStoring: Sendable {
@@ -114,5 +114,4 @@ struct KeychainZaiTokenStore: ZaiTokenStoring {
         }
         return q
     }
-
 }

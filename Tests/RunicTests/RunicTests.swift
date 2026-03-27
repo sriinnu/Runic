@@ -1,13 +1,12 @@
 import AppKit
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 @testable import Runic
 
-@Suite
 struct RunicTests {
     @Test
-    func iconRendererProducesTemplateImage() {
+    func `icon renderer produces template image`() {
         let image = IconRenderer.makeIcon(
             primaryRemaining: 50,
             weeklyRemaining: 75,
@@ -19,7 +18,7 @@ struct RunicTests {
     }
 
     @Test
-    func iconRendererRendersAtPixelAlignedSize() {
+    func `icon renderer renders at pixel aligned size`() {
         let image = IconRenderer.makeIcon(
             primaryRemaining: 50,
             weeklyRemaining: 75,
@@ -32,7 +31,7 @@ struct RunicTests {
     }
 
     @Test
-    func iconRendererCachesStaticIcons() {
+    func `icon renderer caches static icons`() {
         let first = IconRenderer.makeIcon(
             primaryRemaining: 42,
             weeklyRemaining: 17,
@@ -49,7 +48,7 @@ struct RunicTests {
     }
 
     @Test
-    func iconRendererCodexEyesPunchThroughWhenUnknown() {
+    func `icon renderer codex eyes punch through when unknown`() {
         // Regression guard: icon should preserve transparent + opaque pixels.
         let image = IconRenderer.makeIcon(
             primaryRemaining: nil,
@@ -83,7 +82,7 @@ struct RunicTests {
     }
 
     @Test
-    func accountInfoParsesAuthToken() throws {
+    func `account info parses auth token`() throws {
         let tmp = try FileManager.default.url(
             for: .itemReplacementDirectory,
             in: .userDomainMask,

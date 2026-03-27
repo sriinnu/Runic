@@ -225,7 +225,9 @@ private enum ProviderInsightsComposer {
                 help: self.budgetHelpText(topProjectSpendForecast)))
         }
 
-        if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
+        if let today = self
+            .tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD)
+        {
             rows.append(ProviderInsightLine(id: "today", label: "Today", value: today))
         }
 
@@ -247,14 +249,14 @@ private enum ProviderInsightsComposer {
     }
 
     static func coverageSummaryLabel(for provider: UsageProvider, store: UsageStore) -> String? {
-        Self.effectiveCoverage(for: provider, store: store).summaryLabel
+        self.effectiveCoverage(for: provider, store: store).summaryLabel
     }
 
     static func effectiveCoverage(
         for provider: UsageProvider,
         store: UsageStore) -> ProviderUsageCoverage
     {
-        Self.effectiveCoverage(
+        self.effectiveCoverage(
             provider: provider,
             metadataCoverage: store.metadata(for: provider).usageCoverage,
             topModel: store.ledgerTopModel(for: provider),
@@ -277,13 +279,13 @@ private enum ProviderInsightsComposer {
     {
         let hasModelBreakdown =
             metadataCoverage.supportsModelBreakdown
-            || (topModel?.provider == provider)
-            || !modelBreakdown.isEmpty
+                || (topModel?.provider == provider)
+                || !modelBreakdown.isEmpty
 
         let hasProjectAttribution =
             metadataCoverage.supportsProjectAttribution
-            || (topProject?.provider == provider)
-            || !projectBreakdown.isEmpty
+                || (topProject?.provider == provider)
+                || !projectBreakdown.isEmpty
 
         let hasTokenMetrics = metadataCoverage.supportsTokenMetrics
             || snapshot?.providerCost != nil
@@ -457,21 +459,21 @@ private enum ProviderInsightsComposer {
 
     private static func projectSourceLabel(_ source: UsageLedgerProjectNameSource) -> String {
         switch source {
-        case .projectName: return "project name"
-        case .projectID: return "project id"
-        case .inferredFromPath: return "path-derived"
-        case .inferredFromName: return "name-derived"
-        case .budgetOverride: return "budget override"
-        case .unknown: return "unknown"
+        case .projectName: "project name"
+        case .projectID: "project id"
+        case .inferredFromPath: "path-derived"
+        case .inferredFromName: "name-derived"
+        case .budgetOverride: "budget override"
+        case .unknown: "unknown"
         }
     }
 
     private static func projectConfidenceLabel(_ confidence: UsageLedgerProjectNameConfidence) -> String {
         switch confidence {
-        case .high: return "high"
-        case .medium: return "medium"
-        case .low: return "low"
-        case .none: return "none"
+        case .high: "high"
+        case .medium: "medium"
+        case .low: "low"
+        case .none: "none"
         }
     }
 
@@ -480,10 +482,10 @@ private enum ProviderInsightsComposer {
             return nil
         }
 
-        var hash: UInt64 = 0xcbf29ce484222325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for byte in projectID.lowercased().utf8 {
             hash ^= UInt64(byte)
-            hash = hash &* 0x100000001b3
+            hash = hash &* 0x100_0000_01B3
         }
         return String(format: "%08llx", hash)
     }
@@ -542,7 +544,8 @@ private enum ProviderInsightsComposer {
 
     private static func projectBudgetValue(_ forecast: UsageLedgerSpendForecast?) -> String? {
         guard let forecast, let limit = forecast.budgetLimitUSD, limit > 0 else { return nil }
-        let name = self.shortProjectName(forecast.projectName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Top project")
+        let name = self
+            .shortProjectName(forecast.projectName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Top project")
         if let eta = forecast.budgetETAInDays {
             return "\(name) · \(self.budgetBreachETAText(days: eta))"
         }
@@ -574,7 +577,7 @@ private enum ProviderInsightsComposer {
         guard let forecast, let limit = forecast.budgetLimitUSD, limit > 0 else { return nil }
         var lines = [
             "Budget limit: \(UsageFormatter.usdString(limit))",
-            "Projected 30d: \(UsageFormatter.usdString(forecast.projected30DayCostUSD))"
+            "Projected 30d: \(UsageFormatter.usdString(forecast.projected30DayCostUSD))",
         ]
         if let eta = forecast.budgetETAInDays {
             lines.append(self.budgetBreachETAText(days: eta))
@@ -649,7 +652,7 @@ private enum ProviderInsightsComposer {
             "Spend today: \(UsageFormatter.usdString(spend.todayValue))",
             "Baseline (\(anomaly.baselineDays)d avg): \(UsageFormatter.usdString(spend.baselineAverage))",
             "Increase: +\(percent)%",
-            "Severity: \(spend.severity.label)"
+            "Severity: \(spend.severity.label)",
         ]
         if let explanation = anomaly.explanation {
             lines.append(contentsOf: explanation.details.prefix(2))
@@ -660,13 +663,12 @@ private enum ProviderInsightsComposer {
     private static func fetchHealthValue(_ attempts: [ProviderFetchAttempt]) -> String? {
         guard !attempts.isEmpty else { return nil }
         let rendered = attempts.prefix(3).map { attempt in
-            let status: String
-            if !attempt.wasAvailable {
-                status = "unavailable"
+            let status = if !attempt.wasAvailable {
+                "unavailable"
             } else if self.trimmed(attempt.errorDescription) != nil {
-                status = "failed"
+                "failed"
             } else {
-                status = "ok"
+                "ok"
             }
             return "\(self.fetchStrategyLabel(attempt)) \(status)"
         }
@@ -712,13 +714,13 @@ private enum ProviderInsightsComposer {
 
     private static func fetchKindLabel(_ kind: ProviderFetchKind) -> String {
         switch kind {
-        case .cli: return "cli"
-        case .web: return "web"
-        case .oauth: return "oauth"
-        case .apiToken: return "api"
-        case .api: return "api"
-        case .localProbe: return "local"
-        case .webDashboard: return "web"
+        case .cli: "cli"
+        case .web: "web"
+        case .oauth: "oauth"
+        case .apiToken: "api"
+        case .api: "api"
+        case .localProbe: "local"
+        case .webDashboard: "web"
         }
     }
 
@@ -730,7 +732,7 @@ private enum ProviderInsightsComposer {
 
     private static func windowModelsValue(_ snapshot: UsageSnapshot?) -> String? {
         guard let snapshot else { return nil }
-        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap { $0 }
+        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
         guard !windows.isEmpty else { return nil }
 
         var seen: Set<String> = []
@@ -764,7 +766,9 @@ struct ProvidersPane: View {
     @State private var activeConfirmation: ProviderSettingsConfirmationState?
     @State private var sidebarSelection: UsageProvider?
 
-    private var providers: [UsageProvider] { self.settings.orderedProviders() }
+    private var providers: [UsageProvider] {
+        self.settings.orderedProviders()
+    }
 
     var body: some View {
         Group {
@@ -848,14 +852,12 @@ struct ProvidersPane: View {
         .padding(ProviderListMetrics.listHeaderPadding)
         .background(
             RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.listHeaderBackgroundOpacity))
-        )
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.listHeaderBackgroundOpacity)))
         .overlay(
             RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
                 .strokeBorder(
                     Color(nsColor: .separatorColor).opacity(ProviderListMetrics.listHeaderBorderOpacity),
-                    lineWidth: 1)
-        )
+                    lineWidth: 1))
         .padding(.horizontal, ProviderListMetrics.contentInset)
     }
 
@@ -1257,7 +1259,7 @@ private struct ProviderInsightsView: View {
             columns: [
                 GridItem(
                     .adaptive(minimum: ProviderListMetrics.providerInsightsGridItemMinWidth),
-                    spacing: ProviderListMetrics.providerInsightsChipSpacing)
+                    spacing: ProviderListMetrics.providerInsightsChipSpacing),
             ],
             alignment: .leading,
             spacing: ProviderListMetrics.providerInsightsChipSpacing)
@@ -1272,8 +1274,7 @@ private struct ProviderInsightsView: View {
             RoundedRectangle(
                 cornerRadius: ProviderListMetrics.providerInsightsCardCornerRadius,
                 style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.42))
-        )
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.42)))
         .overlay {
             RoundedRectangle(
                 cornerRadius: ProviderListMetrics.providerInsightsCardCornerRadius,
@@ -1288,31 +1289,29 @@ private struct ProviderInsightChip: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
-            Text(line.label.uppercased())
+            Text(self.line.label.uppercased())
                 .font(RunicFont.caption2.weight(.semibold))
                 .tracking(0.2)
                 .foregroundStyle(.tertiary)
-            Text(line.value)
+            Text(self.line.value)
                 .font(RunicFont.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
-                .help(line.help ?? "")
+                .help(self.line.help ?? "")
         }
         .padding(ProviderListMetrics.providerInsightsChipPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: ProviderListMetrics.providerInsightsChipCornerRadius, style: .continuous)
-                .fill(Color(nsColor: .textBackgroundColor).opacity(0.45))
-        )
+                .fill(Color(nsColor: .textBackgroundColor).opacity(0.45)))
         .overlay(
             RoundedRectangle(cornerRadius: ProviderListMetrics.providerInsightsChipCornerRadius, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
-        )
-        .help(line.help ?? "")
-        .accessibilityLabel("\(line.label): \(line.value)")
-        .accessibilityHint(line.help ?? "")
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1))
+        .help(self.line.help ?? "")
+        .accessibilityLabel("\(self.line.label): \(self.line.value)")
+        .accessibilityHint(self.line.help ?? "")
     }
 }
 
@@ -1435,18 +1434,17 @@ private struct ProviderListProviderRowView: View {
             .padding(.vertical, RunicSpacing.xxxs)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7))
-            )
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7)))
     }
 
     private var usageStatusColors: (Color, Color) {
         switch self.usageStatus.style {
         case .success:
-            return (.green, Color.green.opacity(0.15))
+            (.green, Color.green.opacity(0.15))
         case .error:
-            return (.red, Color.red.opacity(0.15))
+            (.red, Color.red.opacity(0.15))
         case .neutral:
-            return (.secondary, Color(nsColor: .controlBackgroundColor))
+            (.secondary, Color(nsColor: .controlBackgroundColor))
         }
     }
 
@@ -1516,7 +1514,6 @@ private struct ProviderListSectionDividerView: View {
 }
 
 extension View {
-    @ViewBuilder
     fileprivate func providerSectionDivider(isVisible: Bool) -> some View {
         overlay(alignment: .bottom) {
             if isVisible {
@@ -1559,8 +1556,7 @@ private struct ProviderListToggleRowView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55))
-                            )
+                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55)))
                             .overlay {
                                 RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
                                     .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
@@ -1607,7 +1603,8 @@ private struct ProviderListToggleRowView: View {
 
     private var supplementalCardBackground: some View {
         RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
+            .fill(Color(nsColor: .controlBackgroundColor)
+                .opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
     }
 
     private var supplementalCardBorderColor: Color {
@@ -1677,7 +1674,8 @@ private struct ProviderListFieldRowView: View {
 
     private var supplementalCardBackground: some View {
         RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
+            .fill(Color(nsColor: .controlBackgroundColor)
+                .opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
     }
 
     private var supplementalCardBorderColor: Color {
@@ -1697,7 +1695,7 @@ extension View {
     }
 }
 
-private struct ProviderErrorDisplay: Sendable {
+private struct ProviderErrorDisplay {
     let preview: String
     let full: String
 }
@@ -1705,7 +1703,9 @@ private struct ProviderErrorDisplay: Sendable {
 @MainActor
 private struct ProviderListScrollInsetFixer: NSViewRepresentable {
     private final class HitTestIgnoringView: NSView {
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            nil
+        }
     }
 
     func makeNSView(context: Context) -> NSView {
@@ -1721,12 +1721,14 @@ private struct ProviderListScrollInsetFixer: NSViewRepresentable {
             let zeroInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
             let currentContentInsets = scrollView.contentInsets
             if currentContentInsets.top != 0 || currentContentInsets.left != 0 ||
-               currentContentInsets.bottom != 0 || currentContentInsets.right != 0 {
+                currentContentInsets.bottom != 0 || currentContentInsets.right != 0
+            {
                 scrollView.contentInsets = zeroInsets
             }
             let currentScrollerInsets = scrollView.scrollerInsets
             if currentScrollerInsets.top != 0 || currentScrollerInsets.left != 0 ||
-               currentScrollerInsets.bottom != 0 || currentScrollerInsets.right != 0 {
+                currentScrollerInsets.bottom != 0 || currentScrollerInsets.right != 0
+            {
                 scrollView.scrollerInsets = zeroInsets
             }
         }
@@ -1788,8 +1790,7 @@ private struct ProviderErrorView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: ProviderListMetrics.errorCardCornerRadius, style: .continuous)
-                        .fill(Color.orange.opacity(0.08))
-                )
+                        .fill(Color.orange.opacity(0.08)))
 
             if self.display.preview != self.display.full {
                 Button(self.isExpanded ? "Hide details" : "Show details") { self.isExpanded.toggle() }
@@ -1809,19 +1810,16 @@ private struct ProviderErrorView: View {
                 .frame(maxHeight: 200)
                 .background(
                     RoundedRectangle(cornerRadius: ProviderListMetrics.errorCardCornerRadius, style: .continuous)
-                        .fill(Color(nsColor: .textBackgroundColor))
-                )
+                        .fill(Color(nsColor: .textBackgroundColor)))
                 .overlay(
                     RoundedRectangle(cornerRadius: ProviderListMetrics.errorCardCornerRadius, style: .continuous)
-                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                )
+                        .stroke(Color.orange.opacity(0.3), lineWidth: 1))
             }
         }
         .padding(ProviderListMetrics.errorCardPadding)
         .background(
             RoundedRectangle(cornerRadius: ProviderListMetrics.errorCardCornerRadius, style: .continuous)
-                .fill(Color.orange.opacity(0.03))
-        )
+                .fill(Color.orange.opacity(0.03)))
     }
 }
 
@@ -1901,14 +1899,15 @@ private struct ProviderSidebarSectionCard<Content: View>: View {
                 RoundedRectangle(
                     cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
                     style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.sidebarCardBackgroundOpacity))
-            )
+                    .fill(Color(nsColor: .controlBackgroundColor)
+                        .opacity(ProviderListMetrics.sidebarCardBackgroundOpacity)))
             .overlay(
                 RoundedRectangle(
                     cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
                     style: .continuous)
-                    .strokeBorder(Color(nsColor: .separatorColor).opacity(ProviderListMetrics.sidebarCardBorderOpacity), lineWidth: 1)
-            )
+                    .strokeBorder(
+                        Color(nsColor: .separatorColor).opacity(ProviderListMetrics.sidebarCardBorderOpacity),
+                        lineWidth: 1))
     }
 }
 
@@ -1935,10 +1934,9 @@ private struct ProviderHistoryNavigationButton: View {
                         .strokeBorder(
                             Color(
                                 nsColor: .separatorColor).opacity(self.enabled ? 0.28 : 0.1),
-                            lineWidth: 1))
-        )
+                            lineWidth: 1)))
         .help(self.help)
-        .accessibilityLabel(help)
+        .accessibilityLabel(self.help)
     }
 }
 
@@ -2010,15 +2008,14 @@ private struct ProviderSidebarMetricChip: View {
             RoundedRectangle(
                 cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
                 style: .continuous)
-                .fill(Color(nsColor: .textBackgroundColor).opacity(ProviderListMetrics.sidebarMicroCardBackgroundOpacity))
-        )
+                .fill(Color(nsColor: .textBackgroundColor)
+                    .opacity(ProviderListMetrics.sidebarMicroCardBackgroundOpacity)))
         .overlay(
             RoundedRectangle(
                 cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
                 style: .continuous)
                 .strokeBorder(Color(
-                    nsColor: .separatorColor).opacity(ProviderListMetrics.sidebarMicroCardBorderOpacity), lineWidth: 1)
-        )
+                    nsColor: .separatorColor).opacity(ProviderListMetrics.sidebarMicroCardBorderOpacity), lineWidth: 1))
         .help(self.helpText ?? "")
     }
 }
@@ -2027,7 +2024,9 @@ private enum ProviderDetailSubview: String, CaseIterable, Identifiable {
     case overview = "Overview"
     case history = "History"
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 }
 
 private enum ProviderHistoryMetricMode: String, CaseIterable, Identifiable {
@@ -2035,7 +2034,9 @@ private enum ProviderHistoryMetricMode: String, CaseIterable, Identifiable {
     case cost = "Cost"
     case requests = "Requests"
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 }
 
 private enum ProviderHistoryDayDetailMode: String, CaseIterable, Identifiable {
@@ -2043,7 +2044,9 @@ private enum ProviderHistoryDayDetailMode: String, CaseIterable, Identifiable {
     case models = "Models"
     case projects = "Projects"
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 }
 
 @MainActor
@@ -2076,12 +2079,10 @@ private struct ProviderHistoryCalendarDayCell: View {
             .frame(maxWidth: .infinity, minHeight: 46, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                    .fill(self.backgroundColor)
-            )
+                    .fill(self.backgroundColor))
             .overlay(
                 RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                    .strokeBorder(self.borderColor, lineWidth: self.isSelected ? 1.5 : 1)
-            )
+                    .strokeBorder(self.borderColor, lineWidth: self.isSelected ? 1.5 : 1))
             .opacity(self.isInMonth ? 1 : 0.52)
         }
         .buttonStyle(.plain)
@@ -2331,7 +2332,7 @@ private struct ProviderSidebarDetailView: View {
                                                         style: .continuous)
                                                         .fill(Color(
                                                             nsColor: .controlBackgroundColor).opacity(
-                                                                ProviderListMetrics.sidebarMicroCardBackgroundOpacity)))
+                                                            ProviderListMetrics.sidebarMicroCardBackgroundOpacity)))
                                         }
                                         self.toggleActions(toggle.actions)
                                     }
@@ -2374,9 +2375,9 @@ private struct ProviderSidebarDetailView: View {
 
     private var statusColors: (Color, Color) {
         switch self.usageStatus.style {
-        case .success: return (.green, Color.green.opacity(0.15))
-        case .error: return (.red, Color.red.opacity(0.15))
-        case .neutral: return (.secondary, Color(nsColor: .controlBackgroundColor))
+        case .success: (.green, Color.green.opacity(0.15))
+        case .error: (.red, Color.red.opacity(0.15))
+        case .neutral: (.secondary, Color(nsColor: .controlBackgroundColor))
         }
     }
 
@@ -2392,7 +2393,8 @@ private struct ProviderSidebarDetailView: View {
                     ProviderHistoryNavigationButton(
                         systemName: "chevron.left",
                         enabled: true,
-                        help: "Previous month") {
+                        help: "Previous month")
+                    {
                         self.shiftHistoryMonth(by: -1)
                     }
 
@@ -2404,7 +2406,8 @@ private struct ProviderSidebarDetailView: View {
                     ProviderHistoryNavigationButton(
                         systemName: "chevron.right",
                         enabled: self.canShiftHistoryForward,
-                        help: "Next month") {
+                        help: "Next month")
+                    {
                         self.shiftHistoryMonth(by: 1)
                     }
 
@@ -2439,15 +2442,17 @@ private struct ProviderSidebarDetailView: View {
                                 RoundedRectangle(
                                     cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
                                     style: .continuous)
-                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.sidebarCardBackgroundOpacity))
-                            )
+                                    .fill(Color(nsColor: .controlBackgroundColor)
+                                        .opacity(ProviderListMetrics.sidebarCardBackgroundOpacity)))
                     } else {
                         if let note = snapshot.note, !note.isEmpty {
                             Text(note)
                                 .font(RunicFont.caption2)
                                 .foregroundStyle(.tertiary)
                         }
-                        Text(snapshot.days.count == 1 ? "1 active day in \(self.historyMonthTitle)." : "\(snapshot.days.count) active days in \(self.historyMonthTitle).")
+                        Text(snapshot.days
+                            .count == 1 ? "1 active day in \(self.historyMonthTitle)." :
+                            "\(snapshot.days.count) active days in \(self.historyMonthTitle).")
                             .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                             .padding(.bottom, RunicSpacing.xxs)
@@ -2483,17 +2488,16 @@ private struct ProviderSidebarDetailView: View {
                         RoundedRectangle(
                             cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
                             style: .continuous)
-                            .fill(Color.red.opacity(0.06))
-                    )
+                            .fill(Color.red.opacity(0.06)))
                     .overlay(
                         RoundedRectangle(
                             cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
                             style: .continuous)
-                            .strokeBorder(Color.red.opacity(0.28), lineWidth: 1)
-                    )
+                            .strokeBorder(Color.red.opacity(0.28), lineWidth: 1))
                 }
 
-                Text("Local aggregated history only. Prompts, cookies, API keys, and raw payloads are never shown here.")
+                Text(
+                    "Local aggregated history only. Prompts, cookies, API keys, and raw payloads are never shown here.")
                     .font(RunicFont.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -2503,7 +2507,10 @@ private struct ProviderSidebarDetailView: View {
     private var historyCalendarGrid: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             let weekdays = self.weekdaySymbols
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: RunicSpacing.xxs), count: 7), spacing: RunicSpacing.xxs) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: RunicSpacing.xxs), count: 7),
+                spacing: RunicSpacing.xxs)
+            {
                 ForEach(weekdays, id: \.self) { symbol in
                     Text(symbol)
                         .font(RunicFont.caption2.weight(.semibold))
@@ -2512,13 +2519,20 @@ private struct ProviderSidebarDetailView: View {
                 }
             }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: RunicSpacing.xxs), count: 7), spacing: RunicSpacing.xxs) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: RunicSpacing.xxs), count: 7),
+                spacing: RunicSpacing.xxs)
+            {
                 ForEach(self.calendarDaysForMonth, id: \.self) { day in
-                    let inMonth = self.historyCalendar.isDate(day, equalTo: self.historyMonthStart, toGranularity: .month)
+                    let inMonth = self.historyCalendar.isDate(
+                        day,
+                        equalTo: self.historyMonthStart,
+                        toGranularity: .month)
                     let normalizedDay = self.historyCalendar.startOfDay(for: day)
                     let summary = self.historySummaryByDay[normalizedDay]
                     let dayNumber = self.historyCalendar.component(.day, from: day)
-                    let isSelected = self.historySelectedDay.map { self.historyCalendar.isDate($0, inSameDayAs: day) } ?? false
+                    let isSelected = self.historySelectedDay
+                        .map { self.historyCalendar.isDate($0, inSameDayAs: day) } ?? false
                     ProviderHistoryCalendarDayCell(
                         dayNumber: dayNumber,
                         isInMonth: inMonth,
@@ -2526,7 +2540,7 @@ private struct ProviderSidebarDetailView: View {
                         hasActivity: summary != nil,
                         intensity: self.historyIntensity(for: summary),
                         action: { self.historySelectedDay = normalizedDay })
-                    .help(self.historyDayHelp(for: day, summary: summary))
+                        .help(self.historyDayHelp(for: day, summary: summary))
                 }
             }
         }
@@ -2586,7 +2600,8 @@ private struct ProviderSidebarDetailView: View {
                         }
 
                         if self.hasModelBreakdown, let topModel = selected.topModel {
-                            Text("Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
+                            Text(
+                                "Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
                                 .font(RunicFont.caption)
                                 .foregroundStyle(.secondary)
                                 .textSelection(.enabled)
@@ -2607,7 +2622,10 @@ private struct ProviderSidebarDetailView: View {
                             Text("Models used")
                                 .font(RunicFont.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
-                            ForEach(Array(selected.modelSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                            ForEach(
+                                Array(selected.modelSummaries.prefix(12).enumerated()),
+                                id: \.offset)
+                            { _, summary in
                                 Text("• \(self.historyModelLine(summary))")
                                     .font(RunicFont.caption2)
                                     .foregroundStyle(.tertiary)
@@ -2620,7 +2638,9 @@ private struct ProviderSidebarDetailView: View {
                                 .foregroundStyle(.tertiary)
                                 .textSelection(.enabled)
                         } else {
-                            Text(self.hasModelBreakdown ? "No models recorded for this day." : "Model attribution is not available for this provider.")
+                            Text(self
+                                .hasModelBreakdown ? "No models recorded for this day." :
+                                "Model attribution is not available for this provider.")
                                 .font(RunicFont.caption)
                                 .foregroundStyle(.tertiary)
                         }
@@ -2631,7 +2651,10 @@ private struct ProviderSidebarDetailView: View {
                             Text("Top projects")
                                 .font(RunicFont.caption2.weight(.medium))
                                 .foregroundStyle(.secondary)
-                            ForEach(Array(selected.projectSummaries.prefix(12).enumerated()), id: \.offset) { _, summary in
+                            ForEach(
+                                Array(selected.projectSummaries.prefix(12).enumerated()),
+                                id: \.offset)
+                            { _, summary in
                                 let project = self.projectDisplay(summary)
                                 Text("• \(self.historyProjectLine(summary))")
                                     .font(RunicFont.caption2)
@@ -2640,13 +2663,16 @@ private struct ProviderSidebarDetailView: View {
                                     .help(project.helpText ?? "")
                             }
                         } else {
-                            Text(self.hasProjectAttribution ? "No projects recorded for this day." : "Project attribution is not available for this provider.")
+                            Text(self
+                                .hasProjectAttribution ? "No projects recorded for this day." :
+                                "Project attribution is not available for this provider.")
                                 .font(RunicFont.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
                 } else {
-                    Text(self.historySelectedDay?.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
+                    Text(self.historySelectedDay?
+                        .formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
                         .font(RunicFont.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text("No recorded activity for this day.")
@@ -2720,11 +2746,11 @@ private struct ProviderSidebarDetailView: View {
     private func historyMetricValue(for day: ProviderHistoryDaySnapshot) -> Double {
         switch self.historyMetricMode {
         case .tokens:
-            return Double(day.totals.totalTokens)
+            Double(day.totals.totalTokens)
         case .cost:
-            return max(0, day.totals.costUSD ?? 0)
+            max(0, day.totals.costUSD ?? 0)
         case .requests:
-            return Double(day.requestCount)
+            Double(day.requestCount)
         }
     }
 
@@ -2887,21 +2913,21 @@ private struct ProviderSidebarDetailView: View {
 
     private func projectSourceLabel(_ source: UsageLedgerProjectNameSource) -> String {
         switch source {
-        case .projectName: return "project name"
-        case .projectID: return "project id"
-        case .inferredFromPath: return "path-derived"
-        case .inferredFromName: return "name-derived"
-        case .budgetOverride: return "budget override"
-        case .unknown: return "unknown"
+        case .projectName: "project name"
+        case .projectID: "project id"
+        case .inferredFromPath: "path-derived"
+        case .inferredFromName: "name-derived"
+        case .budgetOverride: "budget override"
+        case .unknown: "unknown"
         }
     }
 
     private func projectConfidenceLabel(_ confidence: UsageLedgerProjectNameConfidence) -> String {
         switch confidence {
-        case .high: return "high"
-        case .medium: return "medium"
-        case .low: return "low"
-        case .none: return "none"
+        case .high: "high"
+        case .medium: "medium"
+        case .low: "low"
+        case .none: "none"
         }
     }
 
@@ -2909,10 +2935,10 @@ private struct ProviderSidebarDetailView: View {
         guard let projectID = projectID?.trimmingCharacters(in: .whitespacesAndNewlines), !projectID.isEmpty else {
             return nil
         }
-        var hash: UInt64 = 0xcbf29ce484222325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for byte in projectID.lowercased().utf8 {
             hash ^= UInt64(byte)
-            hash = hash &* 0x100000001b3
+            hash = hash &* 0x100_0000_01B3
         }
         return String(format: "%08llx", hash)
     }
@@ -2963,17 +2989,31 @@ private struct ProviderSidebarDetailView: View {
         let hasModelBreakdown = self.hasModelBreakdown
         let hasProjectAttribution = self.hasProjectAttribution
 
-        if let today = self.tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD) {
-            items.append(QuickMetricItem(id: "today", title: "Today", value: today, helpText: "Session cost and tokens."))
+        if let today = self
+            .tokenWindowValue(tokens: tokenSnapshot?.sessionTokens, cost: tokenSnapshot?.sessionCostUSD)
+        {
+            items.append(QuickMetricItem(
+                id: "today",
+                title: "Today",
+                value: today,
+                helpText: "Session cost and tokens."))
         }
         if let last30 = self.tokenWindowValue(
             tokens: tokenSnapshot?.last30DaysTokens,
             cost: tokenSnapshot?.last30DaysCostUSD)
         {
-            items.append(QuickMetricItem(id: "30d", title: "30d", value: last30, helpText: "Last 30 days cost and tokens."))
+            items.append(QuickMetricItem(
+                id: "30d",
+                title: "30d",
+                value: last30,
+                helpText: "Last 30 days cost and tokens."))
         }
         if let spend = self.providerSpendValue(snapshot?.providerCost) {
-            items.append(QuickMetricItem(id: "spend", title: "Spend", value: spend, helpText: "Provider billing usage."))
+            items.append(QuickMetricItem(
+                id: "spend",
+                title: "Spend",
+                value: spend,
+                helpText: "Provider billing usage."))
         }
         if hasModelBreakdown, let topModel = self.store.ledgerTopModel(for: self.provider) {
             let modelName = UsageFormatter.modelDisplayName(topModel.model)
@@ -3176,7 +3216,7 @@ private struct ProviderSidebarDetailView: View {
 
     private func labeledQuotaWindows(from snapshot: UsageSnapshot?) -> [(label: String, window: RateWindow)] {
         guard let snapshot else { return [] }
-        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap { $0 }
+        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
         var seen: Set<String> = []
         var labeled: [(label: String, window: RateWindow)] = []
 
@@ -3246,7 +3286,9 @@ private struct ProviderSidebarDetailView: View {
 
     private func retryCount(from attempts: [ProviderFetchAttempt]) -> Int {
         guard !attempts.isEmpty else { return 0 }
-        if let successIndex = attempts.firstIndex(where: { $0.wasAvailable && self.trimmed($0.errorDescription) == nil }) {
+        if let successIndex = attempts
+            .firstIndex(where: { $0.wasAvailable && self.trimmed($0.errorDescription) == nil })
+        {
             return max(0, successIndex)
         }
         return max(0, attempts.count - 1)
@@ -3267,13 +3309,13 @@ private struct ProviderSidebarDetailView: View {
 
     private static func fetchKindLabel(_ kind: ProviderFetchKind) -> String {
         switch kind {
-        case .cli: return "cli"
-        case .web: return "web"
-        case .oauth: return "oauth"
-        case .apiToken: return "api"
-        case .api: return "api"
-        case .localProbe: return "local"
-        case .webDashboard: return "web"
+        case .cli: "cli"
+        case .web: "web"
+        case .oauth: "oauth"
+        case .apiToken: "api"
+        case .api: "api"
+        case .localProbe: "local"
+        case .webDashboard: "web"
         }
     }
 
@@ -3321,9 +3363,13 @@ private struct ProviderSidebarDetailView: View {
                 lines.append("- primary_resets_at: \(iso.string(from: reset))")
             }
             if let cost = snapshot.providerCost {
-                lines.append("- provider_spend_used: \(UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode))")
+                lines
+                    .append(
+                        "- provider_spend_used: \(UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode))")
                 if cost.limit > 0 {
-                    lines.append("- provider_spend_limit: \(UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode))")
+                    lines
+                        .append(
+                            "- provider_spend_limit: \(UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode))")
                 }
                 if let period = self.trimmed(cost.period) {
                     lines.append("- provider_spend_period: \(period)")
@@ -3337,13 +3383,12 @@ private struct ProviderSidebarDetailView: View {
             lines.append("- none")
         } else {
             for attempt in attempts {
-                let state: String
-                if !attempt.wasAvailable {
-                    state = "unavailable"
+                let state = if !attempt.wasAvailable {
+                    "unavailable"
                 } else if let error = self.trimmed(attempt.errorDescription) {
-                    state = "failed: \(error)"
+                    "failed: \(error)"
                 } else {
-                    state = "ok"
+                    "ok"
                 }
                 lines.append("- \(attempt.strategyID) [\(Self.fetchKindLabel(attempt.kind))] \(state)")
             }

@@ -33,16 +33,16 @@ enum RunicSpacing {
     // MARK: - Semantic Spacing
 
     /// Horizontal padding for menu content
-    static let menuHorizontalPadding: CGFloat = sm  // 12pt
+    static let menuHorizontalPadding: CGFloat = sm // 12pt
 
     /// Vertical padding for menu content
-    static let menuVerticalPadding: CGFloat = xs  // 8pt
+    static let menuVerticalPadding: CGFloat = xs // 8pt
 
     /// Spacing between cards in menu
-    static let cardSpacing: CGFloat = xs  // 8pt
+    static let cardSpacing: CGFloat = xs // 8pt
 
     /// Spacing between major sections
-    static let sectionSpacing: CGFloat = lg  // 24pt
+    static let sectionSpacing: CGFloat = lg // 24pt
 
     // MARK: - Preferences Spacing
 
@@ -50,13 +50,13 @@ enum RunicSpacing {
     static let compact: CGFloat = 6
 
     /// Standardized spacing for toggle rows
-    static let toggleRowSpacing: CGFloat = xs  // 8pt
+    static let toggleRowSpacing: CGFloat = xs // 8pt
 
     /// Spacing after section headers
-    static let sectionHeaderSpacing: CGFloat = md  // 16pt
+    static let sectionHeaderSpacing: CGFloat = md // 16pt
 
     /// Spacing within stepper controls
-    static let stepperControlSpacing: CGFloat = xs  // 8pt
+    static let stepperControlSpacing: CGFloat = xs // 8pt
 
     // MARK: - Chart Metrics
 

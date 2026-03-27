@@ -2,10 +2,9 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct MiniMaxParsingTests {
     @Test
-    func parseManualInputCookieHeader() {
+    func `parse manual input cookie header`() {
         let input = "Cookie: foo=bar; baz=qux"
         let parsed = MiniMaxWebParsing.parseManualInput(input)
         #expect(parsed?.cookieHeader == "foo=bar; baz=qux")
@@ -13,7 +12,7 @@ struct MiniMaxParsingTests {
     }
 
     @Test
-    func parseManualInputCurlExtractsBearerAndGroupID() {
+    func `parse manual input curl extracts bearer and group ID`() {
         let curl = """
         curl 'https://platform.minimax.io/v1/api/openplatform/coding_plan/remains?GroupId=group_123' \
           -H 'Cookie: session=abc; foo=bar' \
@@ -26,7 +25,7 @@ struct MiniMaxParsingTests {
     }
 
     @Test
-    func parseHTMLUsageWithPercentAndReset() {
+    func `parse HTML usage with percent and reset`() {
         let html = """
         <html>
         <head><title>MiniMax Pro</title></head>
@@ -45,7 +44,7 @@ struct MiniMaxParsingTests {
     }
 
     @Test
-    func parseRemainsResponseUsesModelRemains() throws {
+    func `parse remains response uses model remains`() throws {
         let json = """
         {
           "base_resp": { "retcode": 0, "msg": "ok", "success": true },

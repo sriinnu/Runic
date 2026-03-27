@@ -277,7 +277,7 @@ private enum RPCWireError: Error, CustomStringConvertible {
     }
 }
 
-// RPC helper used on background tasks; safe because we confine it to the owning task.
+/// RPC helper used on background tasks; safe because we confine it to the owning task.
 private final class CodexRPCClient: @unchecked Sendable {
     private let process = Process()
     private let stdinPipe = Pipe()
@@ -687,7 +687,7 @@ public struct UsageFetcher: Sendable {
     }
 }
 
-// Minimal auth.json struct preserved from previous implementation
+/// Minimal auth.json struct preserved from previous implementation
 private struct AuthFile: Decodable {
     struct Tokens: Decodable { let idToken: String? }
     let tokens: Tokens?

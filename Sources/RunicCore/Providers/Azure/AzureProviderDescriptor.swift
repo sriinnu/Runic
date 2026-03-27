@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -78,14 +78,14 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveToken(context: ProviderFetchContext) -> ProviderTokenResolution? {
-        if let token = Self.cleaned(context.settings?.azure?.apiToken) {
+        if let token = cleaned(context.settings?.azure?.apiToken) {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
         return ProviderTokenResolver.azureOpenAIResolution(environment: context.env)
     }
 
     private static func resolveEndpoint(context: ProviderFetchContext) -> String? {
-        if let endpoint = Self.cleaned(context.settings?.azure?.endpoint) {
+        if let endpoint = cleaned(context.settings?.azure?.endpoint) {
             return endpoint
         }
         if let endpoint = Self.cleaned(context.env["AZURE_OPENAI_ENDPOINT"]) {
@@ -98,7 +98,7 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveAPIVersion(context: ProviderFetchContext) -> String {
-        if let version = Self.cleaned(context.settings?.azure?.apiVersion) {
+        if let version = cleaned(context.settings?.azure?.apiVersion) {
             return version
         }
         if let version = Self.cleaned(context.env["AZURE_OPENAI_API_VERSION"]) {
@@ -108,7 +108,7 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveDeployment(context: ProviderFetchContext) -> String? {
-        if let deployment = Self.cleaned(context.settings?.azure?.deployment) {
+        if let deployment = cleaned(context.settings?.azure?.deployment) {
             return deployment
         }
         if let deployment = Self.cleaned(context.env["AZURE_OPENAI_DEPLOYMENT"]) {
@@ -124,17 +124,17 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
     }
 }
 
-enum AzureSettingsError: LocalizedError, Sendable {
+enum AzureSettingsError: LocalizedError {
     case missingEndpoint
     case missingToken
 
     var errorDescription: String? {
         switch self {
         case .missingEndpoint:
-            return "Azure OpenAI endpoint not found. Set it in Preferences → Providers → Azure OpenAI or " +
+            "Azure OpenAI endpoint not found. Set it in Preferences → Providers → Azure OpenAI or " +
                 "export AZURE_OPENAI_ENDPOINT."
         case .missingToken:
-            return "Azure OpenAI API key not found. Set it in Preferences → Providers → Azure OpenAI or " +
+            "Azure OpenAI API key not found. Set it in Preferences → Providers → Azure OpenAI or " +
                 "export AZURE_OPENAI_API_KEY."
         }
     }

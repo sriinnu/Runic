@@ -2,10 +2,9 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct CopilotTokenResolverTests {
     @Test
-    func copilotTokenPrefersCopilotApiEnvironmentVariable() {
+    func `copilot token prefers copilot api environment variable`() {
         let env = [
             "COPILOT_API_TOKEN": "copilot-env-token",
             "GITHUB_TOKEN": "github-token",
@@ -18,7 +17,7 @@ struct CopilotTokenResolverTests {
     }
 
     @Test
-    func copilotTokenFallsBackToGithubToken() {
+    func `copilot token falls back to github token`() {
         let env = [
             "GITHUB_TOKEN": "github-token",
             "GH_TOKEN": "gh-fallback-token",
@@ -29,7 +28,7 @@ struct CopilotTokenResolverTests {
     }
 
     @Test
-    func copilotTokenFallsBackToGhToken() {
+    func `copilot token falls back to gh token`() {
         let env = [
             "GH_TOKEN": "gh-fallback-token",
             "GITHUB_TOKEN": "",
@@ -40,7 +39,7 @@ struct CopilotTokenResolverTests {
     }
 
     @Test
-    func copilotTokenFallsBackToGithubCLIToken() throws {
+    func `copilot token falls back to github CLI token`() throws {
         let token = "gho_abcdefghijklmnopqrstuvwxyz1234"
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("runic-copilot-gh-cli-\(UUID().uuidString)", isDirectory: true)
@@ -65,7 +64,7 @@ struct CopilotTokenResolverTests {
     }
 
     @Test
-    func copilotTokenStripsQuotedValues() {
+    func `copilot token strips quoted values`() {
         let env = [
             "COPILOT_API_TOKEN": "\"quoted-token\"",
         ]

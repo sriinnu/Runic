@@ -1,6 +1,6 @@
-import Foundation
 import CloudKit
 import CryptoKit
+import Foundation
 import LocalAuthentication
 
 // MARK: - CloudKit Record Type Constants
@@ -54,8 +54,8 @@ public struct UsageSnapshotSyncRecord: SyncableRecord {
         accountEmail: String? = nil,
         updatedAt: Date = Date(),
         deviceName: String,
-        platform: String
-    ) {
+        platform: String)
+    {
         self.recordID = recordID
         self.version = version
         self.modifiedAt = modifiedAt
@@ -73,20 +73,20 @@ public struct UsageSnapshotSyncRecord: SyncableRecord {
     }
 
     public func toCKRecord() throws -> CKRecord {
-        let record = CKRecord(recordType: recordType, recordID: CKRecord.ID(recordName: recordID))
+        let record = CKRecord(recordType: recordType, recordID: CKRecord.ID(recordName: self.recordID))
 
-        record["version"] = version as CKRecordValue
-        record["modifiedAt"] = modifiedAt as CKRecordValue
-        record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
-        record["providerID"] = providerID as CKRecordValue
-        record["primaryUsed"] = primaryUsed as CKRecordValue
-        record["primaryLimit"] = primaryLimit as? CKRecordValue
-        record["secondaryUsed"] = secondaryUsed as? CKRecordValue
-        record["secondaryLimit"] = secondaryLimit as? CKRecordValue
-        record["costUSD"] = costUSD as? CKRecordValue
-        record["updatedAt"] = updatedAt as CKRecordValue
-        record["deviceName"] = deviceName as CKRecordValue
-        record["platform"] = platform as CKRecordValue
+        record["version"] = self.version as CKRecordValue
+        record["modifiedAt"] = self.modifiedAt as CKRecordValue
+        record["lastModifiedDeviceID"] = self.lastModifiedDeviceID as? CKRecordValue
+        record["providerID"] = self.providerID as CKRecordValue
+        record["primaryUsed"] = self.primaryUsed as CKRecordValue
+        record["primaryLimit"] = self.primaryLimit as? CKRecordValue
+        record["secondaryUsed"] = self.secondaryUsed as? CKRecordValue
+        record["secondaryLimit"] = self.secondaryLimit as? CKRecordValue
+        record["costUSD"] = self.costUSD as? CKRecordValue
+        record["updatedAt"] = self.updatedAt as CKRecordValue
+        record["deviceName"] = self.deviceName as CKRecordValue
+        record["platform"] = self.platform as CKRecordValue
 
         // Encrypt sensitive data
         if let email = accountEmail {
@@ -128,8 +128,7 @@ public struct UsageSnapshotSyncRecord: SyncableRecord {
             accountEmail: accountEmail,
             updatedAt: updatedAt,
             deviceName: deviceName,
-            platform: platform
-        )
+            platform: platform)
     }
 }
 
@@ -164,8 +163,8 @@ public struct UserPreferencesSyncRecord: SyncableRecord {
         notificationsEnabled: Bool = true,
         autoRefreshEnabled: Bool = true,
         theme: String = "system",
-        displayFormat: String = "compact"
-    ) {
+        displayFormat: String = "compact")
+    {
         self.recordID = recordID
         self.version = version
         self.modifiedAt = modifiedAt
@@ -179,17 +178,17 @@ public struct UserPreferencesSyncRecord: SyncableRecord {
     }
 
     public func toCKRecord() throws -> CKRecord {
-        let record = CKRecord(recordType: recordType, recordID: CKRecord.ID(recordName: recordID))
+        let record = CKRecord(recordType: recordType, recordID: CKRecord.ID(recordName: self.recordID))
 
-        record["version"] = version as CKRecordValue
-        record["modifiedAt"] = modifiedAt as CKRecordValue
-        record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
-        record["refreshInterval"] = refreshInterval as CKRecordValue
-        record["enabledProviders"] = enabledProviders as CKRecordValue
-        record["notificationsEnabled"] = (notificationsEnabled ? 1 : 0) as CKRecordValue
-        record["autoRefreshEnabled"] = (autoRefreshEnabled ? 1 : 0) as CKRecordValue
-        record["theme"] = theme as CKRecordValue
-        record["displayFormat"] = displayFormat as CKRecordValue
+        record["version"] = self.version as CKRecordValue
+        record["modifiedAt"] = self.modifiedAt as CKRecordValue
+        record["lastModifiedDeviceID"] = self.lastModifiedDeviceID as? CKRecordValue
+        record["refreshInterval"] = self.refreshInterval as CKRecordValue
+        record["enabledProviders"] = self.enabledProviders as CKRecordValue
+        record["notificationsEnabled"] = (self.notificationsEnabled ? 1 : 0) as CKRecordValue
+        record["autoRefreshEnabled"] = (self.autoRefreshEnabled ? 1 : 0) as CKRecordValue
+        record["theme"] = self.theme as CKRecordValue
+        record["displayFormat"] = self.displayFormat as CKRecordValue
 
         return record
     }
@@ -217,8 +216,7 @@ public struct UserPreferencesSyncRecord: SyncableRecord {
             notificationsEnabled: notificationsEnabled == 1,
             autoRefreshEnabled: autoRefreshEnabled == 1,
             theme: theme,
-            displayFormat: displayFormat
-        )
+            displayFormat: displayFormat)
     }
 }
 
@@ -251,8 +249,8 @@ public struct AlertConfigurationSyncRecord: SyncableRecord {
         warningThreshold: Double = 0.75,
         criticalThreshold: Double = 0.90,
         notificationChannels: [String] = ["system"],
-        enabled: Bool = true
-    ) {
+        enabled: Bool = true)
+    {
         self.recordID = recordID
         self.version = version
         self.modifiedAt = modifiedAt
@@ -265,16 +263,16 @@ public struct AlertConfigurationSyncRecord: SyncableRecord {
     }
 
     public func toCKRecord() throws -> CKRecord {
-        let record = CKRecord(recordType: recordType, recordID: CKRecord.ID(recordName: recordID))
+        let record = CKRecord(recordType: recordType, recordID: CKRecord.ID(recordName: self.recordID))
 
-        record["version"] = version as CKRecordValue
-        record["modifiedAt"] = modifiedAt as CKRecordValue
-        record["lastModifiedDeviceID"] = lastModifiedDeviceID as? CKRecordValue
-        record["providerID"] = providerID as CKRecordValue
-        record["warningThreshold"] = warningThreshold as CKRecordValue
-        record["criticalThreshold"] = criticalThreshold as CKRecordValue
-        record["notificationChannels"] = notificationChannels as CKRecordValue
-        record["enabled"] = (enabled ? 1 : 0) as CKRecordValue
+        record["version"] = self.version as CKRecordValue
+        record["modifiedAt"] = self.modifiedAt as CKRecordValue
+        record["lastModifiedDeviceID"] = self.lastModifiedDeviceID as? CKRecordValue
+        record["providerID"] = self.providerID as CKRecordValue
+        record["warningThreshold"] = self.warningThreshold as CKRecordValue
+        record["criticalThreshold"] = self.criticalThreshold as CKRecordValue
+        record["notificationChannels"] = self.notificationChannels as CKRecordValue
+        record["enabled"] = (self.enabled ? 1 : 0) as CKRecordValue
 
         return record
     }
@@ -300,8 +298,7 @@ public struct AlertConfigurationSyncRecord: SyncableRecord {
             warningThreshold: warningThreshold,
             criticalThreshold: criticalThreshold,
             notificationChannels: notificationChannels,
-            enabled: enabled == 1
-        )
+            enabled: enabled == 1)
     }
 }
 
@@ -378,7 +375,7 @@ private func saveToKeychain(key: String, data: Data) {
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
         kSecValueData as String: data,
-        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
     ]
     SecItemDelete(query as CFDictionary)
     SecItemAdd(query as CFDictionary, nil)
@@ -391,7 +388,7 @@ private func loadFromKeychain(key: String) -> Data? {
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
         kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
-        kSecReturnData as String: true
+        kSecReturnData as String: true,
     ]
     let authContext = LAContext()
     authContext.interactionNotAllowed = true

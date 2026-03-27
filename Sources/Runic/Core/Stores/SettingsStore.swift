@@ -1,6 +1,6 @@
 import AppKit
-import RunicCore
 import Observation
+import RunicCore
 import ServiceManagement
 
 enum RefreshFrequency: String, CaseIterable, Identifiable {
@@ -10,7 +10,9 @@ enum RefreshFrequency: String, CaseIterable, Identifiable {
     case fiveMinutes
     case fifteenMinutes
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var seconds: TimeInterval? {
         switch self {
@@ -38,7 +40,9 @@ enum UsageMetricDisplayMode: String, CaseIterable, Identifiable {
     case barsOnly
     case percentOnly
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
@@ -72,7 +76,9 @@ enum MenuMode: String, CaseIterable, Identifiable {
     case analyst
     case `operator`
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
@@ -80,7 +86,7 @@ enum MenuMode: String, CaseIterable, Identifiable {
             "Glance"
         case .analyst:
             "Analyst"
-        case .`operator`:
+        case .operator:
             "Operator"
         }
     }
@@ -91,13 +97,15 @@ enum ChartStyle: String, CaseIterable, Identifiable {
     case area
     case bar
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
-        case .line: return "Line"
-        case .area: return "Area"
-        case .bar: return "Bar"
+        case .line: "Line"
+        case .area: "Area"
+        case .bar: "Bar"
         }
     }
 }
@@ -106,12 +114,14 @@ enum NumberFormat: String, CaseIterable, Identifiable {
     case abbreviated
     case full
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
-        case .abbreviated: return "Abbreviated"
-        case .full: return "Full"
+        case .abbreviated: "Abbreviated"
+        case .full: "Full"
         }
     }
 }
@@ -120,12 +130,14 @@ enum DateFormat: String, CaseIterable, Identifiable {
     case relative
     case absolute
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
-        case .relative: return "Relative"
-        case .absolute: return "Absolute"
+        case .relative: "Relative"
+        case .absolute: "Absolute"
         }
     }
 }
@@ -135,13 +147,15 @@ enum Theme: String, CaseIterable, Identifiable {
     case light
     case dark
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
-        case .system: return "System"
-        case .light: return "Light"
-        case .dark: return "Dark"
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
         }
     }
 }
@@ -150,12 +164,14 @@ enum ProviderSwitcherLayout: String, CaseIterable, Identifiable {
     case top
     case sidebar
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
-        case .top: return "Top"
-        case .sidebar: return "Sidebar"
+        case .top: "Top"
+        case .sidebar: "Sidebar"
         }
     }
 }
@@ -164,12 +180,14 @@ enum ProviderSwitcherIconSize: String, CaseIterable, Identifiable {
     case small
     case medium
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var label: String {
         switch self {
-        case .small: return "Small"
-        case .medium: return "Medium"
+        case .small: "Small"
+        case .medium: "Medium"
         }
     }
 }
@@ -189,15 +207,21 @@ final class SettingsStore {
     }
 
     var autoDisableRefreshWhenIdleEnabled: Bool {
-        didSet { self.userDefaults.set(self.autoDisableRefreshWhenIdleEnabled, forKey: "autoDisableRefreshWhenIdleEnabled") }
+        didSet { self.userDefaults.set(
+            self.autoDisableRefreshWhenIdleEnabled,
+            forKey: "autoDisableRefreshWhenIdleEnabled") }
     }
 
     var autoDisableRefreshWhenIdleMinutes: Int {
-        didSet { self.userDefaults.set(self.autoDisableRefreshWhenIdleMinutes, forKey: "autoDisableRefreshWhenIdleMinutes") }
+        didSet { self.userDefaults.set(
+            self.autoDisableRefreshWhenIdleMinutes,
+            forKey: "autoDisableRefreshWhenIdleMinutes") }
     }
 
     var autoDisableRefreshOnSleepEnabled: Bool {
-        didSet { self.userDefaults.set(self.autoDisableRefreshOnSleepEnabled, forKey: "autoDisableRefreshOnSleepEnabled") }
+        didSet {
+            self.userDefaults.set(self.autoDisableRefreshOnSleepEnabled, forKey: "autoDisableRefreshOnSleepEnabled")
+        }
     }
 
     var autoRefreshWarningEnabled: Bool {
@@ -210,13 +234,17 @@ final class SettingsStore {
 
     var autoSuspendInactiveProvidersEnabled: Bool {
         didSet {
-            self.userDefaults.set(self.autoSuspendInactiveProvidersEnabled, forKey: "autoSuspendInactiveProvidersEnabled")
+            self.userDefaults.set(
+                self.autoSuspendInactiveProvidersEnabled,
+                forKey: "autoSuspendInactiveProvidersEnabled")
         }
     }
 
     var autoSuspendInactiveProvidersMinutes: Int {
         didSet {
-            self.userDefaults.set(self.autoSuspendInactiveProvidersMinutes, forKey: "autoSuspendInactiveProvidersMinutes")
+            self.userDefaults.set(
+                self.autoSuspendInactiveProvidersMinutes,
+                forKey: "autoSuspendInactiveProvidersMinutes")
         }
     }
 
@@ -227,7 +255,8 @@ final class SettingsStore {
         }
     }
 
-    /// Hidden toggle to reveal debug-only menu items (enable via defaults write com.sriinnu.athena.Runic debugMenuEnabled
+    /// Hidden toggle to reveal debug-only menu items (enable via defaults write com.sriinnu.athena.Runic
+    /// debugMenuEnabled
     /// -bool YES).
     var debugMenuEnabled: Bool {
         didSet { self.userDefaults.set(self.debugMenuEnabled, forKey: "debugMenuEnabled") }
@@ -413,7 +442,7 @@ final class SettingsStore {
     var zaiAPIToken: String {
         didSet {
             self.schedulePersistZaiAPIToken()
-            if !zaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.zaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "zai")
             }
         }
@@ -423,7 +452,7 @@ final class SettingsStore {
     var minimaxAPIToken: String {
         didSet {
             self.schedulePersistMiniMaxAPIToken()
-            if !minimaxAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.minimaxAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "minimax")
             }
         }
@@ -433,7 +462,7 @@ final class SettingsStore {
     var minimaxCookieHeader: String {
         didSet {
             self.schedulePersistMiniMaxCookieHeader()
-            if !minimaxCookieHeader.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.minimaxCookieHeader.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "minimax")
             }
         }
@@ -448,7 +477,7 @@ final class SettingsStore {
     var copilotAPIToken: String {
         didSet {
             self.schedulePersistCopilotAPIToken()
-            if !copilotAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.copilotAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "copilot")
             }
         }
@@ -458,7 +487,7 @@ final class SettingsStore {
     var openRouterAPIToken: String {
         didSet {
             self.schedulePersistOpenRouterAPIToken()
-            if !openRouterAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.openRouterAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "openrouter")
             }
         }
@@ -468,7 +497,7 @@ final class SettingsStore {
     var groqAPIToken: String {
         didSet {
             self.schedulePersistGroqAPIToken()
-            if !groqAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.groqAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "groq")
             }
         }
@@ -478,7 +507,7 @@ final class SettingsStore {
     var deepSeekAPIToken: String {
         didSet {
             self.schedulePersistDeepSeekAPIToken()
-            if !deepSeekAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.deepSeekAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "deepseek")
             }
         }
@@ -488,7 +517,7 @@ final class SettingsStore {
     var fireworksAPIToken: String {
         didSet {
             self.schedulePersistFireworksAPIToken()
-            if !fireworksAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.fireworksAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "fireworks")
             }
         }
@@ -498,7 +527,7 @@ final class SettingsStore {
     var mistralAPIToken: String {
         didSet {
             self.schedulePersistMistralAPIToken()
-            if !mistralAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.mistralAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "mistral")
             }
         }
@@ -508,7 +537,7 @@ final class SettingsStore {
     var perplexityAPIToken: String {
         didSet {
             self.schedulePersistPerplexityAPIToken()
-            if !perplexityAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.perplexityAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "perplexity")
             }
         }
@@ -518,7 +547,7 @@ final class SettingsStore {
     var kimiAPIToken: String {
         didSet {
             self.schedulePersistKimiAPIToken()
-            if !kimiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.kimiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "kimi")
             }
         }
@@ -528,7 +557,7 @@ final class SettingsStore {
     var auggieAPIToken: String {
         didSet {
             self.schedulePersistAuggieAPIToken()
-            if !auggieAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.auggieAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "auggie")
             }
         }
@@ -538,7 +567,7 @@ final class SettingsStore {
     var togetherAPIToken: String {
         didSet {
             self.schedulePersistTogetherAPIToken()
-            if !togetherAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.togetherAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "together")
             }
         }
@@ -548,7 +577,7 @@ final class SettingsStore {
     var cohereAPIToken: String {
         didSet {
             self.schedulePersistCohereAPIToken()
-            if !cohereAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.cohereAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "cohere")
             }
         }
@@ -558,7 +587,7 @@ final class SettingsStore {
     var xaiAPIToken: String {
         didSet {
             self.schedulePersistXAiAPIToken()
-            if !xaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.xaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "xai")
             }
         }
@@ -568,7 +597,7 @@ final class SettingsStore {
     var cerebrasAPIToken: String {
         didSet {
             self.schedulePersistCerebrasAPIToken()
-            if !cerebrasAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.cerebrasAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "cerebras")
             }
         }
@@ -578,7 +607,7 @@ final class SettingsStore {
     var qwenAPIToken: String {
         didSet {
             self.schedulePersistQwenAPIToken()
-            if !qwenAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.qwenAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "qwen")
             }
         }
@@ -588,7 +617,7 @@ final class SettingsStore {
     var sambaNovaAPIToken: String {
         didSet {
             self.schedulePersistSambaNovaAPIToken()
-            if !sambaNovaAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.sambaNovaAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "sambanova")
             }
         }
@@ -613,7 +642,7 @@ final class SettingsStore {
     var azureOpenAIAPIToken: String {
         didSet {
             self.schedulePersistAzureOpenAIAPIToken()
-            if !azureOpenAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !self.azureOpenAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "azure")
             }
         }
@@ -891,7 +920,7 @@ final class SettingsStore {
         let metricDisplayRaw = userDefaults.string(forKey: "usageMetricDisplayMode")
         self.usageMetricDisplayMode = UsageMetricDisplayMode(rawValue: metricDisplayRaw ?? "") ?? .barsAndPercent
         let menuModeRaw = userDefaults.string(forKey: "menuMode")
-        self.menuMode = MenuMode(rawValue: menuModeRaw ?? "") ?? .`operator`
+        self.menuMode = MenuMode(rawValue: menuModeRaw ?? "") ?? .operator
         let chartStyleRaw = userDefaults.string(forKey: "chartStyle")
         self.chartStyle = ChartStyle(rawValue: chartStyleRaw ?? "") ?? .line
         let numberFormatRaw = userDefaults.string(forKey: "numberFormat")

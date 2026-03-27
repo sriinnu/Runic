@@ -24,12 +24,14 @@ struct ProjectBreakdownMenuView: View {
                     .foregroundStyle(.secondary)
             } else {
                 // MARK: - Title
+
                 Text("Projects")
                     .font(RunicFont.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
                 // MARK: - Horizontal bar chart
+
                 Chart {
                     ForEach(model.chartItems) { item in
                         BarMark(
@@ -53,6 +55,7 @@ struct ProjectBreakdownMenuView: View {
                 .accessibilityLabel(Self.chartAccessibilityLabel(model: model))
 
                 // MARK: - Project list
+
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     ForEach(model.chartItems) { item in
                         Self.projectRow(item: item)
@@ -60,6 +63,7 @@ struct ProjectBreakdownMenuView: View {
                 }
 
                 // MARK: - Overflow note
+
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
                         .font(RunicFont.caption2)
@@ -67,6 +71,7 @@ struct ProjectBreakdownMenuView: View {
                 }
 
                 // MARK: - Total summary
+
                 Divider()
                 Self.totalRow(model: model)
             }

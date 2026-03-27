@@ -8,7 +8,7 @@ struct GroqModelsResponse: Decodable {
     }
 }
 
-struct GroqUsageFetcher {
+enum GroqUsageFetcher {
     static let apiURL = URL(string: "https://api.groq.com/openai/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> GroqModelsResponse {
@@ -53,7 +53,7 @@ extension GroqModelsResponse {
     }
 }
 
-enum GroqAPIError: LocalizedError, Sendable {
+enum GroqAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int)
     case decodingError

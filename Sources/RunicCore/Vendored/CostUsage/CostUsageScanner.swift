@@ -1,12 +1,12 @@
 import Foundation
 
 enum CostUsageScanner {
-    struct Options: Sendable {
+    struct Options {
         var codexSessionsRoot: URL?
         var claudeProjectsRoots: [URL]?
         var cacheRoot: URL?
         var refreshMinIntervalSeconds: TimeInterval = 60
-        // Force a full rescan, ignoring per-file cache and incremental offsets.
+        /// Force a full rescan, ignoring per-file cache and incremental offsets.
         var forceRescan: Bool = false
 
         init(
@@ -22,14 +22,14 @@ enum CostUsageScanner {
         }
     }
 
-    struct CodexParseResult: Sendable {
+    struct CodexParseResult {
         let days: [String: [String: [Int]]]
         let parsedBytes: Int64
         let lastModel: String?
         let lastTotals: CostUsageCodexTotals?
     }
 
-    struct ClaudeParseResult: Sendable {
+    struct ClaudeParseResult {
         let days: [String: [String: [Int]]]
         let parsedBytes: Int64
     }
@@ -101,7 +101,7 @@ enum CostUsageScanner {
 
     // MARK: - Day keys
 
-    struct CostUsageDayRange: Sendable {
+    struct CostUsageDayRange {
         let sinceKey: String
         let untilKey: String
         let scanSinceKey: String

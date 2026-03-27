@@ -2,7 +2,6 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct ProviderFetchPipelineTests {
     private struct SlowStrategy: ProviderFetchStrategy {
         let id: String
@@ -90,7 +89,7 @@ struct ProviderFetchPipelineTests {
     }
 
     @Test
-    func hangsAreConvertedToStrategyTimeout() async {
+    func `hangs are converted to strategy timeout`() async {
         let pipeline = ProviderFetchPipeline(
             resolveStrategies: { _ in [SlowStrategy(id: "provider.fetchPipeline.hang", shouldFallbackValue: false)] },
             strategyTimeout: 0.05)
@@ -101,7 +100,7 @@ struct ProviderFetchPipelineTests {
         #expect(outcome.attempts[0].strategyID == "provider.fetchPipeline.hang")
         #expect(outcome.attempts[0].wasAvailable == true)
 
-        guard case .failure(let error) = outcome.result else {
+        guard case let .failure(error) = outcome.result else {
             Issue.record("Expected fetch failure")
             return
         }
@@ -115,7 +114,7 @@ struct ProviderFetchPipelineTests {
     }
 
     @Test
-    func strategyFallbackStillHonorsOrder() async {
+    func `strategy fallback still honors order`() async {
         let expected = Self.makeStubResult()
         let pipeline = ProviderFetchPipeline(
             resolveStrategies: { _ in [

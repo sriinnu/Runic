@@ -33,7 +33,7 @@ struct ProviderTabBarView: View {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 18, height: 18)
                             } else if tab.provider == nil {
-                            Image(systemName: "square.grid.2x2")
+                                Image(systemName: "square.grid.2x2")
                                     .font(.system(size: 14, weight: .medium))
                             }
                             Text(tab.label)
@@ -47,16 +47,14 @@ struct ProviderTabBarView: View {
                             Capsule(style: .continuous)
                                 .fill(tab.isSelected
                                     ? tab.brandColor.opacity(RunicColors.Opacity.medium)
-                                    : Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.subtle))
-                        )
+                                    : Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.subtle)))
                         .overlay(
                             Capsule(style: .continuous)
                                 .stroke(
                                     tab.isSelected
                                         ? tab.brandColor.opacity(RunicColors.Opacity.strong)
                                         : Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.light),
-                                    lineWidth: 0.5)
-                        )
+                                    lineWidth: 0.5))
                         .foregroundStyle(tab.isSelected ? tab.brandColor : .secondary)
                         .shadow(
                             color: tab.isSelected ? tab.brandColor.opacity(0.15) : .clear,

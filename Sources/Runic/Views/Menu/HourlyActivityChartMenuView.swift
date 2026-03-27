@@ -182,12 +182,12 @@ struct HourlyActivityChartMenuView: View {
             let tokens = tokensByHour[hour] ?? 0
             let isPeak = tokens > 0 && tokens == maxTokens
             let bar = HourBar(id: hour, hour: hour, totalTokens: tokens, isPeak: isPeak)
-            if isPeak && tokens > 0 { peakHour = bar }
+            if isPeak, tokens > 0 { peakHour = bar }
             return bar
         }
 
         let totalTokens = tokensByHour.values.reduce(0, +)
-        let activeHours = tokensByHour.values.filter { $0 > 0 }.count
+        let activeHours = tokensByHour.values.count(where: { $0 > 0 })
         let totalRequests = requestsByHour.values.reduce(0, +)
 
         return HourlyModel(

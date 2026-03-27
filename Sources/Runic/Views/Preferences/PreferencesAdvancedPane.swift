@@ -1,6 +1,6 @@
 import AppKit
-import RunicCore
 import KeyboardShortcuts
+import RunicCore
 import SwiftUI
 
 @MainActor
@@ -70,8 +70,8 @@ struct AdvancedPane: View {
                         range: 1...60,
                         valueLabel: { "\($0) min" },
                         value: self.$settings.autoDisableRefreshWhenIdleMinutes)
-                    .disabled(!self.settings.autoDisableRefreshWhenIdleEnabled)
-                    .opacity(self.settings.autoDisableRefreshWhenIdleEnabled ? 1 : 0.5)
+                        .disabled(!self.settings.autoDisableRefreshWhenIdleEnabled)
+                        .opacity(self.settings.autoDisableRefreshWhenIdleEnabled ? 1 : 0.5)
                 }
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -106,8 +106,8 @@ struct AdvancedPane: View {
                         range: 5...100,
                         valueLabel: { "\($0) runs" },
                         value: self.$settings.autoRefreshWarningThreshold)
-                    .disabled(!self.settings.autoRefreshWarningEnabled)
-                    .opacity(self.settings.autoRefreshWarningEnabled ? 1 : 0.5)
+                        .disabled(!self.settings.autoRefreshWarningEnabled)
+                        .opacity(self.settings.autoRefreshWarningEnabled ? 1 : 0.5)
                 }
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -129,8 +129,8 @@ struct AdvancedPane: View {
                         range: 30...10080,
                         valueLabel: { Self.inactiveThresholdLabel(for: $0) },
                         value: self.$settings.autoSuspendInactiveProvidersMinutes)
-                    .disabled(!self.settings.autoSuspendInactiveProvidersEnabled)
-                    .opacity(self.settings.autoSuspendInactiveProvidersEnabled ? 1 : 0.5)
+                        .disabled(!self.settings.autoSuspendInactiveProvidersEnabled)
+                        .opacity(self.settings.autoSuspendInactiveProvidersEnabled ? 1 : 0.5)
                 }
 
                 Text("Auto-refresh can read local logs or browser cookies depending on provider settings.")

@@ -16,10 +16,14 @@ enum PreferencesTab: String, Hashable, CaseIterable, Identifiable {
     case about
     case debug
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     static let windowWidth: CGFloat = 560
     static let windowHeight: CGFloat = 726
 
-    var preferredHeight: CGFloat { PreferencesTab.windowHeight }
+    var preferredHeight: CGFloat {
+        PreferencesTab.windowHeight
+    }
 }

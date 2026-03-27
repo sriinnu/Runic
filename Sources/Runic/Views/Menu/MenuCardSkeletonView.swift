@@ -80,7 +80,7 @@ struct MenuCardSkeletonView: View {
     /// Computes a repeating phase (0...1) from the timeline date for the sliding gradient.
     private func shimmerPhase(date: Date) -> Double {
         let seconds = date.timeIntervalSinceReferenceDate
-        let period: Double = 1.5
+        let period = 1.5
         return (seconds.truncatingRemainder(dividingBy: period)) / period
     }
 

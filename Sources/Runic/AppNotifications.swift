@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 @preconcurrency import UserNotifications
 
 @MainActor
@@ -10,7 +10,9 @@ final class AppNotifications {
     private let logger = RunicLog.logger("notifications")
     private var authorizationTask: Task<Bool, Never>?
 
-    init(centerProvider: @escaping @Sendable () -> UNUserNotificationCenter? = { AppNotifications.safeCurrentCenter() }) {
+    init(centerProvider: @escaping @Sendable ()
+        -> UNUserNotificationCenter? = { AppNotifications.safeCurrentCenter() })
+    {
         self.centerProvider = centerProvider
     }
 
@@ -60,7 +62,7 @@ final class AppNotifications {
     /// Safely obtain the current UNUserNotificationCenter, returning nil when the
     /// bundle proxy is not available (e.g. when running a bare executable outside
     /// a proper .app bundle).
-    nonisolated private static func safeCurrentCenter() -> UNUserNotificationCenter? {
+    private nonisolated static func safeCurrentCenter() -> UNUserNotificationCenter? {
         guard Bundle.main.bundleIdentifier != nil else { return nil }
         return UNUserNotificationCenter.current()
     }

@@ -10,7 +10,7 @@ import CryptoKit
 #endif
 
 public enum CopilotVSCodeTokenReader {
-    private struct VSCodeStoreCandidate: Sendable {
+    private struct VSCodeStoreCandidate {
         let databaseURL: URL
         let safeStorageService: String
     }
@@ -36,9 +36,9 @@ public enum CopilotVSCodeTokenReader {
             guard let password = self.readSafeStoragePassword(
                 service: candidate.safeStorageService,
                 allowUserInteraction: allowUserInteraction),
-                  let legacyKey = self.deriveLegacyKey(from: password),
-                  let decryptedJSON = self.decryptSecretPayload(encryptedPayload, legacyKey: legacyKey),
-                  let token = self.extractToken(fromDecryptedJSON: decryptedJSON)
+                let legacyKey = self.deriveLegacyKey(from: password),
+                let decryptedJSON = self.decryptSecretPayload(encryptedPayload, legacyKey: legacyKey),
+                let token = self.extractToken(fromDecryptedJSON: decryptedJSON)
             else {
                 continue
             }
@@ -217,14 +217,13 @@ public enum CopilotVSCodeTokenReader {
     }
 
     private static func decryptSecretPayload(_ payload: Data, legacyKey: Data) -> String? {
-        let encryptedPayload: Data
-        if payload.count >= 3,
-           let prefix = String(data: payload.prefix(3), encoding: .utf8),
-           prefix == "v10" || prefix == "v11"
+        let encryptedPayload: Data = if payload.count >= 3,
+                                        let prefix = String(data: payload.prefix(3), encoding: .utf8),
+                                        prefix == "v10" || prefix == "v11"
         {
-            encryptedPayload = Data(payload.dropFirst(3))
+            Data(payload.dropFirst(3))
         } else {
-            encryptedPayload = payload
+            payload
         }
 
         let iv = Data(repeating: 0x20, count: kCCBlockSizeAES128)

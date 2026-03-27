@@ -12,15 +12,15 @@ import SwiftUI
 struct UsageProgressBar: View {
     /// Height variants for different use cases
     enum Height {
-        case compact    // 6pt - for dense layouts, team member rows
-        case regular    // 8pt - default, used in most menus
-        case large      // 10pt - for prominent displays
+        case compact // 6pt - for dense layouts, team member rows
+        case regular // 8pt - default, used in most menus
+        case large // 10pt - for prominent displays
 
         var value: CGFloat {
             switch self {
-            case .compact: return 6
-            case .regular: return 8
-            case .large: return 10
+            case .compact: 6
+            case .regular: 8
+            case .large: 10
             }
         }
     }
@@ -59,7 +59,8 @@ struct UsageProgressBar: View {
         GeometryReader { proxy in
             let width = proxy.size.width
             let fillWidth = (self.animatedPercent / 100) * width
-            let trackColor = Color(nsColor: .tertiaryLabelColor).opacity(self.isHighlighted ? RunicColors.Opacity.medium : RunicColors.Opacity.medium)
+            let trackColor = Color(nsColor: .tertiaryLabelColor)
+                .opacity(self.isHighlighted ? RunicColors.Opacity.medium : RunicColors.Opacity.medium)
             let tintColor = self.tint
 
             ZStack(alignment: .leading) {
@@ -77,7 +78,9 @@ struct UsageProgressBar: View {
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        Color.white.opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors.Opacity.light),
+                                        Color.white
+                                            .opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors
+                                                .Opacity.light),
                                         Color.clear,
                                     ],
                                     startPoint: .top,
@@ -181,7 +184,8 @@ struct UsageProgressBar: View {
         return HStack(spacing: RunicSpacing.xxxs) {
             ForEach(0..<count, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(Color.white.opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors.Opacity.light))
+                    .fill(Color.white
+                        .opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors.Opacity.light))
             }
         }
         .padding(.horizontal, RunicSpacing.xxxs)

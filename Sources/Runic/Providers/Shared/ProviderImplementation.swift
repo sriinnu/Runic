@@ -1,5 +1,5 @@
-import RunicCore
 import Foundation
+import RunicCore
 
 /// App-side provider implementation.
 ///
@@ -26,7 +26,10 @@ protocol ProviderImplementation: Sendable {
 }
 
 extension ProviderImplementation {
-    var supportsLoginFlow: Bool { false }
+    var supportsLoginFlow: Bool {
+        false
+    }
+
     @MainActor
     func settingsToggles(context _: ProviderSettingsContext) -> [ProviderSettingsToggleDescriptor] {
         []

@@ -2,10 +2,9 @@ import Foundation
 import Testing
 @testable import RunicCore
 
-@Suite
 struct CopilotVSCodeTokenReaderTests {
     @Test
-    func extractsTokenFromSessionArrayPayload() {
+    func `extracts token from session array payload`() {
         let token = "ghu_abcdefghijklmnopqrstuvwxyz1234567890"
         let json = """
         [
@@ -26,7 +25,7 @@ struct CopilotVSCodeTokenReaderTests {
     }
 
     @Test
-    func extractsTokenFromNestedObjectPayload() {
+    func `extracts token from nested object payload`() {
         let token = "github_pat_abcdefghijklmnopqrstuvwxyz1234567890"
         let json = """
         {
@@ -45,7 +44,7 @@ struct CopilotVSCodeTokenReaderTests {
     }
 
     @Test
-    func ignoresShortTokenValues() {
+    func `ignores short token values`() {
         let json = """
         {
           "sessions": [
@@ -61,7 +60,7 @@ struct CopilotVSCodeTokenReaderTests {
     }
 
     @Test
-    func normalizesNodeBufferSecretWrapper() {
+    func `normalizes node buffer secret wrapper`() {
         let raw = Data("""
         {
           "type": "Buffer",

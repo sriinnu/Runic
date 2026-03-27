@@ -1,6 +1,6 @@
 import AppKit
-import RunicCore
 import Foundation
+import RunicCore
 
 enum GeminiLoginRunner {
     private static let geminiConfigDir = FileManager.default.homeDirectoryForCurrentUser

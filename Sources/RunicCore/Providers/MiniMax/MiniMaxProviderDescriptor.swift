@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -37,7 +37,10 @@ public enum MiniMaxProviderDescriptor {
                 noDataMessage: { "MiniMax cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .api, .web],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [MiniMaxAPIFetchStrategy(), MiniMaxWebFetchStrategy()] })),
+                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [
+                    MiniMaxAPIFetchStrategy(),
+                    MiniMaxWebFetchStrategy(),
+                ] })),
             cli: ProviderCLIConfig(
                 name: "minimax",
                 aliases: ["minimax-api"],
@@ -49,7 +52,9 @@ struct MiniMaxWebFetchStrategy: ProviderFetchStrategy {
     let id: String = "minimax.web"
     let kind: ProviderFetchKind = .web
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool { true }
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        true
+    }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
         let fetcher = MiniMaxWebUsageFetcher()
@@ -78,9 +83,9 @@ struct MiniMaxAPIFetchStrategy: ProviderFetchStrategy {
         guard let tokenRes = ProviderTokenResolver.minimaxApiKeyResolution(environment: context.env) else {
             throw ProviderFetchError.missingCredentials
         }
-        
+
         let snapshot = try await MiniMaxUsageFetcher.fetchUsage(apiKey: tokenRes.token)
-        
+
         return self.makeResult(
             usage: snapshot.toUsageSnapshot(),
             sourceLabel: "API")

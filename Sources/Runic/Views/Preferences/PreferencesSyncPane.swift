@@ -13,19 +13,21 @@ struct SyncPane: View {
         case integrations
         case teams
 
-        var id: String { self.rawValue }
+        var id: String {
+            self.rawValue
+        }
 
         var label: String {
             switch self {
-            case .integrations: return "Integrations"
-            case .teams: return "Teams"
+            case .integrations: "Integrations"
+            case .teams: "Teams"
             }
         }
 
         var icon: String {
             switch self {
-            case .integrations: return "link"
-            case .teams: return "person.3"
+            case .integrations: "link"
+            case .teams: "person.3"
             }
         }
     }

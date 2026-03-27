@@ -8,7 +8,7 @@ struct KimiModelsResponse: Decodable {
     }
 }
 
-struct KimiUsageFetcher {
+enum KimiUsageFetcher {
     static let apiURL = URL(string: "https://api.moonshot.ai/v1/models")!
     private static let requestTimeout: TimeInterval = 20
 
@@ -59,7 +59,7 @@ extension KimiModelsResponse {
     }
 }
 
-enum KimiAPIError: LocalizedError, Sendable {
+enum KimiAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

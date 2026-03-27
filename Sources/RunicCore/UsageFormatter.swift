@@ -97,7 +97,7 @@ public enum UsageFormatter {
         guard tokenCount > 0 else { return nil }
         let rate = costUSD / (Double(tokenCount) / 1000.0)
         guard rate.isFinite, rate >= 0 else { return nil }
-        return "\(usdRateString(rate))/1K"
+        return "\(self.usdRateString(rate))/1K"
     }
 
     public static func usdPerRequestString(costUSD: Double?, requestCount: Int) -> String? {
@@ -105,7 +105,7 @@ public enum UsageFormatter {
         guard requestCount > 0 else { return nil }
         let rate = costUSD / Double(requestCount)
         guard rate.isFinite, rate >= 0 else { return nil }
-        return "\(usdRateString(rate))/req"
+        return "\(self.usdRateString(rate))/req"
     }
 
     public static func usdPerHourFromTokensString(
@@ -120,7 +120,7 @@ public enum UsageFormatter {
         guard per1KValue.isFinite, per1KValue >= 0 else { return nil }
         let hourly = per1KValue * (tokensPerMinute * 60.0 / 1000.0)
         guard hourly.isFinite, hourly >= 0 else { return nil }
-        return "\(usdRateString(hourly))/hr"
+        return "\(self.usdRateString(hourly))/hr"
     }
 
     public static func currencyString(_ value: Double, currencyCode: String) -> String {
@@ -164,21 +164,21 @@ public enum UsageFormatter {
     }
 
     public static func tokenSummaryString(_ totals: UsageLedgerTotals, includeBreakdown: Bool = true) -> String {
-        let total = tokenCountString(totals.totalTokens)
+        let total = self.tokenCountString(totals.totalTokens)
         guard includeBreakdown else {
             return "\(total) tok"
         }
 
         var parts: [String] = []
         if totals.inputTokens > 0 {
-            parts.append("in \(tokenCountString(totals.inputTokens))")
+            parts.append("in \(self.tokenCountString(totals.inputTokens))")
         }
         if totals.outputTokens > 0 {
-            parts.append("out \(tokenCountString(totals.outputTokens))")
+            parts.append("out \(self.tokenCountString(totals.outputTokens))")
         }
         let cached = totals.cacheCreationTokens + totals.cacheReadTokens
         if cached > 0 {
-            parts.append("cache \(tokenCountString(cached))")
+            parts.append("cache \(self.tokenCountString(cached))")
         }
         guard !parts.isEmpty else { return "\(total) tok" }
         return "\(total) tok (\(parts.joined(separator: ", ")))"
@@ -248,8 +248,8 @@ public enum UsageFormatter {
     /// Returns a human-friendly context window label for a model when known.
     /// Examples: "ctx 128k", "ctx 1M".
     public static func modelContextLabel(for model: String) -> String? {
-        guard let context = Self.modelContextWindow(for: model) else { return nil }
-        return "ctx \(tokenCountString(context))"
+        guard let context = modelContextWindow(for: model) else { return nil }
+        return "ctx \(self.tokenCountString(context))"
     }
 
     /// Resolves an approximate context window (in tokens) for common model families.
@@ -285,7 +285,7 @@ public enum UsageFormatter {
         "gpt-4o-mini": 128_000,
         "gpt-4-turbo": 128_000,
         "gpt-4": 128_000,
-        "gpt-3.5-turbo": 16_385,
+        "gpt-3.5-turbo": 16385,
         "gpt-4.1": 1_000_000,
         "gpt-4.1-mini": 1_000_000,
         "gpt-4.1-nano": 1_000_000,
@@ -315,33 +315,33 @@ public enum UsageFormatter {
         "llama-3-1-8b": 128_000,
         "llama-3-3-70b": 128_000,
         "mistral-large": 128_000,
-        "mistral-small": 32_000,
+        "mistral-small": 32000,
         "mistral-medium": 131_072,
-        "deepseek-chat": 64_000,
-        "deepseek-coder": 32_000,
+        "deepseek-chat": 64000,
+        "deepseek-coder": 32000,
         "cohere-command": 128_000,
         "cohere-command-r": 128_000,
         "cohere-command-r-plus": 128_000,
         "qwen-2-5-72b": 128_000,
         "qwen-2-5-32b": 128_000,
-        "qwen1-5-32b": 8_192,
-        "qwen1-5-14b": 8_192,
+        "qwen1-5-32b": 8192,
+        "qwen1-5-14b": 8192,
         "grok-2": 128_000,
         "grok-2-mini": 131_072,
         "grok-2-vision": 131_072,
-        "mixtral-8x7b": 32_768,
-        "mixtral-8x22b": 64_000,
-        "llama-3-8b": 8_192,
-        "llama-3-70b": 8_192,
-        "llama-2-70b": 4_096,
-        "llama-2-13b": 4_096,
+        "mixtral-8x7b": 32768,
+        "mixtral-8x22b": 64000,
+        "llama-3-8b": 8192,
+        "llama-3-70b": 8192,
+        "llama-2-70b": 4096,
+        "llama-2-13b": 4096,
     ]
 
     private static let modelContextPrefixes: [(String, Int)] = [
         ("gpt-4.1", 1_000_000),
         ("gpt-4o", 128_000),
         ("gpt-4-", 128_000),
-        ("gpt-3.5", 16_385),
+        ("gpt-3.5", 16385),
         ("gpt-5", 400_000),
         ("gpt-5-", 400_000),
         ("claude-3", 200_000),
@@ -351,9 +351,9 @@ public enum UsageFormatter {
         ("gemini-1-5", 1_000_000),
         ("gemini-2-0", 1_000_000),
         ("gemini-2-5", 1_000_000),
-        ("llama-3", 8_192),
+        ("llama-3", 8192),
         ("qwen-2-5", 128_000),
-        ("qwen1-5", 8_192),
+        ("qwen1-5", 8192),
     ]
 
     private static func normalizedModelIdentifier(for model: String) -> String {
@@ -370,7 +370,7 @@ public enum UsageFormatter {
         for token in tokens.reversed() {
             let lower = token.lowercased()
             if lower.hasSuffix("k"), let numeric = Int(lower.dropLast()), numeric > 0 {
-                return numeric * 1_000
+                return numeric * 1000
             }
             if lower.hasSuffix("m"), let numeric = Int(lower.dropLast()), numeric > 0 {
                 return numeric * 1_000_000

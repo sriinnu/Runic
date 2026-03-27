@@ -14,8 +14,8 @@ struct MenuCardEntranceModifier: ViewModifier {
             .scaleEffect(self.appeared ? 1 : 0.97, anchor: .top)
             .onAppear {
                 withAnimation(
-                    RunicAnimation.cardEntrance.delay(Double(self.index) * RunicAnimation.cardEntranceStagger)
-                ) {
+                    RunicAnimation.cardEntrance.delay(Double(self.index) * RunicAnimation.cardEntranceStagger))
+                {
                     self.appeared = true
                 }
             }
@@ -41,8 +41,7 @@ struct GlassShimmerModifier: ViewModifier {
                         .frame(width: geo.size.width, height: geo.size.height)
                         .allowsHitTesting(false)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous))
-            )
+                .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)))
             .onAppear {
                 withAnimation(.easeInOut(duration: 2.0).delay(0.5)) {
                     self.shimmerPhase = 1.2

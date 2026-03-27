@@ -29,7 +29,7 @@ public enum OTelGenAILedgerAdapterError: LocalizedError, Sendable, Equatable {
         switch self {
         case .invalidUTF8:
             "OTel payload is not valid UTF-8."
-        case .invalidJSON(let message):
+        case let .invalidJSON(message):
             "OTel JSON parse failed: \(message)"
         }
     }

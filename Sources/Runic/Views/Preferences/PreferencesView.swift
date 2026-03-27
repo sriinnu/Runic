@@ -18,12 +18,14 @@ struct PreferencesView: View {
         case builtIn
         case custom
 
-        var id: String { self.rawValue }
+        var id: String {
+            self.rawValue
+        }
 
         var label: String {
             switch self {
-            case .builtIn: return "Built-in"
-            case .custom: return "Custom"
+            case .builtIn: "Built-in"
+            case .custom: "Custom"
             }
         }
     }
@@ -32,12 +34,14 @@ struct PreferencesView: View {
         case monitoring
         case refresh
 
-        var id: String { self.rawValue }
+        var id: String {
+            self.rawValue
+        }
 
         var label: String {
             switch self {
-            case .monitoring: return "Monitoring"
-            case .refresh: return "Refresh & Safety"
+            case .monitoring: "Monitoring"
+            case .refresh: "Refresh & Safety"
             }
         }
     }
@@ -46,12 +50,14 @@ struct PreferencesView: View {
         case about
         case help
 
-        var id: String { self.rawValue }
+        var id: String {
+            self.rawValue
+        }
 
         var label: String {
             switch self {
-            case .about: return "About"
-            case .help: return "Help"
+            case .about: "About"
+            case .help: "Help"
             }
         }
     }
@@ -72,32 +78,32 @@ struct PreferencesView: View {
                 LiquidMeshBackground().ignoresSafeArea().opacity(0.3)
                 VStack(spacing: 0) {
                     HStack(spacing: RunicSpacing.xs) {
-                    Picker("", selection: self.$providersSection) {
-                        ForEach(ProvidersSubSection.allCases) { section in
-                            Text(section.label).tag(section)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    if self.providersSection == .builtIn {
-                        Picker("", selection: self.$settings.providersPaneSidebar) {
-                            Text("List").tag(false)
-                            Text("Sidebar").tag(true)
+                        Picker("", selection: self.$providersSection) {
+                            ForEach(ProvidersSubSection.allCases) { section in
+                                Text(section.label).tag(section)
+                            }
                         }
                         .pickerStyle(.segmented)
-                        .controlSize(.small)
-                    }
-                }
-                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-                .padding(.top, RunicSpacing.sm)
-                .padding(.bottom, RunicSpacing.xs)
 
-                switch self.providersSection {
-                case .builtIn:
-                    ProvidersPane(settings: self.settings, store: self.store)
-                case .custom:
-                    CustomProvidersPane(settings: self.settings, store: self.store)
-                }
+                        if self.providersSection == .builtIn {
+                            Picker("", selection: self.$settings.providersPaneSidebar) {
+                                Text("List").tag(false)
+                                Text("Sidebar").tag(true)
+                            }
+                            .pickerStyle(.segmented)
+                            .controlSize(.small)
+                        }
+                    }
+                    .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                    .padding(.top, RunicSpacing.sm)
+                    .padding(.bottom, RunicSpacing.xs)
+
+                    switch self.providersSection {
+                    case .builtIn:
+                        ProvidersPane(settings: self.settings, store: self.store)
+                    case .custom:
+                        CustomProvidersPane(settings: self.settings, store: self.store)
+                    }
                 }
             }
             .tabItem {

@@ -25,7 +25,9 @@ enum UsageExporter {
         var lines: [String] = []
 
         // Header
-        lines.append("date,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,models_used")
+        lines
+            .append(
+                "date,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,models_used")
 
         // Daily summaries from token snapshot
         let daily = store.tokenSnapshot(for: provider)?.daily ?? []
@@ -45,7 +47,9 @@ enum UsageExporter {
         if daily.isEmpty, let summary = store.ledgerDailySummary(for: provider) {
             let costStr = summary.totals.costUSD.map { String(format: "%.4f", $0) } ?? ""
             let modelsStr = Self.csvEscape(summary.modelsUsed.joined(separator: "; "))
-            lines.append("\(summary.dayKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(modelsStr)")
+            lines
+                .append(
+                    "\(summary.dayKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(modelsStr)")
         }
 
         return lines.joined(separator: "\n")
@@ -172,8 +176,8 @@ enum UsageExporter {
         guard let data = try? JSONSerialization.data(
             withJSONObject: root,
             options: [.prettyPrinted, .sortedKeys]),
-              let string = String(data: data, encoding: .utf8) else
-        {
+            let string = String(data: data, encoding: .utf8)
+        else {
             return "{}"
         }
         return string

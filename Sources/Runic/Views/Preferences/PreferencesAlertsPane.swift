@@ -19,13 +19,15 @@ struct AlertsPane: View {
         case discord
         case generic
 
-        var id: String { self.rawValue }
+        var id: String {
+            self.rawValue
+        }
 
         var label: String {
             switch self {
-            case .slack: return "Slack"
-            case .discord: return "Discord"
-            case .generic: return "Generic"
+            case .slack: "Slack"
+            case .discord: "Discord"
+            case .generic: "Generic"
             }
         }
     }
@@ -174,8 +176,7 @@ struct AlertsPane: View {
                     } catch {
                         print("Failed to add rule: \(error)")
                     }
-                }
-            )
+                })
         }
         .sheet(item: self.$editingRule) { rule in
             RuleEditorSheet(
@@ -187,8 +188,7 @@ struct AlertsPane: View {
                     } catch {
                         print("Failed to update rule: \(error)")
                     }
-                }
-            )
+                })
         }
     }
 
@@ -201,10 +201,9 @@ struct AlertsPane: View {
                     updatedRule.enabled = enabled
                     try? AlertRuleStore.updateRule(updatedRule)
                     self.alertsData = AlertRuleStore.load()
-                }
-            ))
-            .toggleStyle(.switch)
-            .controlSize(.small)
+                }))
+                .toggleStyle(.switch)
+                .controlSize(.small)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 HStack(spacing: RunicSpacing.xs) {
@@ -277,13 +276,11 @@ struct AlertsPane: View {
     }
 
     private func severityBadge(_ severity: AlertRuleStore.AlertSeverity) -> some View {
-        let color: Color = {
-            switch severity {
-            case .info: return .blue
-            case .warning: return .orange
-            case .critical: return .red
-            }
-        }()
+        let color: Color = switch severity {
+        case .info: .blue
+        case .warning: .orange
+        case .critical: .red
+        }
 
         return Text(severity.rawValue.uppercased())
             .font(RunicFont.caption2.weight(.semibold))
@@ -296,10 +293,10 @@ struct AlertsPane: View {
 
     private func alertTypeLabel(_ type: AlertRuleStore.AlertType) -> String {
         switch type {
-        case .projectBudget: return "Project Budget"
-        case .usageVelocity: return "Usage Velocity"
-        case .costAnomaly: return "Cost Anomaly"
-        case .quotaThreshold: return "Quota Threshold"
+        case .projectBudget: "Project Budget"
+        case .usageVelocity: "Usage Velocity"
+        case .costAnomaly: "Cost Anomaly"
+        case .quotaThreshold: "Quota Threshold"
         }
     }
 
@@ -408,8 +405,7 @@ private struct RuleEditorSheet: View {
                         severity: self.severity,
                         notifyWebhook: self.notifyWebhook,
                         webhookURL: self.webhookURL.isEmpty ? nil : self.webhookURL,
-                        createdAt: self.rule?.createdAt ?? Date()
-                    )
+                        createdAt: self.rule?.createdAt ?? Date())
                     self.onSave(newRule)
                     self.dismiss()
                 }

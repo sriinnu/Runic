@@ -60,11 +60,11 @@ public enum UsageLedgerProjectIdentityResolver {
         projectName: String?,
         budgetNameOverride: String? = nil) -> UsageLedgerProjectIdentity
     {
-        let normalizedProjectID = normalizedIdentifier(projectID)
-        let normalizedProjectName = normalizedDisplay(projectName)
-        let budgetName = normalizedDisplay(budgetNameOverride)
-        let workspaceCandidate = firstPathLikeValue(candidates: [projectID, projectName])
-        let workspaceHash = workspaceCandidate.map(stablePathHash)
+        let normalizedProjectID = self.normalizedIdentifier(projectID)
+        let normalizedProjectName = self.normalizedDisplay(projectName)
+        let budgetName = self.normalizedDisplay(budgetNameOverride)
+        let workspaceCandidate = self.firstPathLikeValue(candidates: [projectID, projectName])
+        let workspaceHash = workspaceCandidate.map(self.stablePathHash)
         let workspaceSuffix = workspaceHash.map { "#w:\($0.prefix(8))" } ?? ""
 
         var displayName: String?
@@ -103,7 +103,7 @@ public enum UsageLedgerProjectIdentityResolver {
         if let normalizedProjectID {
             key = "id:\(normalizedProjectID.lowercased())\(workspaceSuffix)"
         } else if let seed = displayName {
-            let slug = slugify(seed)
+            let slug = self.slugify(seed)
             key = slug.isEmpty ? nil : "name:\(slug)\(workspaceSuffix)"
         } else {
             key = nil
@@ -129,11 +129,11 @@ public enum UsageLedgerProjectIdentityResolver {
         if normalized.contains("/") || normalized.contains("\\") {
             return nil
         }
-        return readableIdentifier(normalized)
+        return self.readableIdentifier(normalized)
     }
 
     private static func normalizedIdentifier(_ value: String?) -> String? {
-        let cleaned = normalizedDisplay(value)
+        let cleaned = self.normalizedDisplay(value)
         guard let cleaned, !cleaned.isEmpty else { return nil }
         return cleaned
     }
@@ -155,7 +155,20 @@ public enum UsageLedgerProjectIdentityResolver {
         if value.hasPrefix("-Users-") || value.hasPrefix("-home-") {
             let parts = value.split(separator: "-").map(String.init)
             // Find the last non-user-path segment — skip Users, username, common dirs
-            let skipPrefixes: Set<String> = ["Users", "home", "Documents", "Desktop", "Projects", "Personal", "repos", "code", "src", "dev", "Work", "Sites"]
+            let skipPrefixes: Set = [
+                "Users",
+                "home",
+                "Documents",
+                "Desktop",
+                "Projects",
+                "Personal",
+                "repos",
+                "code",
+                "src",
+                "dev",
+                "Work",
+                "Sites",
+            ]
             var meaningful: [String] = []
             var pastUserPath = false
             for part in parts where !part.isEmpty {
@@ -180,23 +193,23 @@ public enum UsageLedgerProjectIdentityResolver {
             ch == "/" || ch == "\\"
         }
         guard let last = parts.last else { return nil }
-        let tail = normalizedDisplay(String(last))
+        let tail = self.normalizedDisplay(String(last))
         guard let tail else { return nil }
-        guard !looksOpaqueIdentifier(tail) else { return nil }
+        guard !self.looksOpaqueIdentifier(tail) else { return nil }
         return tail
     }
 
     private static func readableIdentifier(_ value: String?) -> String? {
         guard let value else { return nil }
         guard !value.isEmpty else { return nil }
-        guard !looksOpaqueIdentifier(value) else { return nil }
+        guard !self.looksOpaqueIdentifier(value) else { return nil }
         return value
     }
 
     private static func inferredNameToken(from value: String?) -> String? {
-        let normalized = normalizedDisplay(value)
+        let normalized = self.normalizedDisplay(value)
         guard let normalized, !normalized.isEmpty else { return nil }
-        let slug = slugify(normalized)
+        let slug = self.slugify(normalized)
         guard !slug.isEmpty else { return nil }
         let titleCased = slug.split(separator: "-")
             .map { token -> String in
@@ -221,7 +234,9 @@ public enum UsageLedgerProjectIdentityResolver {
     }
 
     private static func slugify(_ value: String) -> String {
-        let folded = value.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: .init(identifier: "en_US_POSIX"))
+        let folded = value.folding(
+            options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive],
+            locale: .init(identifier: "en_US_POSIX"))
         var scalarBuffer: [UnicodeScalar] = []
         scalarBuffer.reserveCapacity(folded.unicodeScalars.count)
 
@@ -259,10 +274,10 @@ public enum UsageLedgerProjectIdentityResolver {
 
     private static func stablePathHash(_ value: String) -> String {
         let normalized = value.lowercased()
-        var hash: UInt64 = 0xcbf29ce484222325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for byte in normalized.utf8 {
             hash ^= UInt64(byte)
-            hash = hash &* 0x100000001b3
+            hash = hash &* 0x100_0000_01B3
         }
         return String(format: "%016llx", hash)
     }

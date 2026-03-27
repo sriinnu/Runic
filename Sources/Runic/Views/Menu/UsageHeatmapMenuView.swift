@@ -229,4 +229,3 @@ private struct HeatmapCellView: View {
         .cornerRadius(RunicCornerRadius.xs)
     }
 }
-

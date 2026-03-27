@@ -28,7 +28,10 @@ extension StatusItemController {
         }
     }
 
-    private func makeCustomProviderMenuItem(provider: CustomProviderConfig, snapshot: CustomProviderSnapshot) -> NSMenuItem {
+    private func makeCustomProviderMenuItem(
+        provider: CustomProviderConfig,
+        snapshot: CustomProviderSnapshot) -> NSMenuItem
+    {
         let title: String
         if let quota = snapshot.usageData.quota, let used = snapshot.usageData.used, quota > 0 {
             let percent = Int((used / quota) * 100)

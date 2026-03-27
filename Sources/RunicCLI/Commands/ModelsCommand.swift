@@ -1,21 +1,21 @@
-/// ModelsCommand.swift
-/// Runic CLI - Model Usage Breakdown
-///
-/// Displays which AI models were used across different providers,
-/// showing token consumption and cost breakdown by model type.
-///
-/// Usage:
-///   runic models [--provider <name>] [--days <n>] [--json] [--pretty] [--no-color]
-///
-/// Examples:
-///   runic models                           # Show all models used
-///   runic models --provider claude         # Claude models only
-///   runic models --days 7                  # Last 7 days
-///   runic models --json --pretty           # JSON output
+// ModelsCommand.swift
+// Runic CLI - Model Usage Breakdown
+//
+// Displays which AI models were used across different providers,
+// showing token consumption and cost breakdown by model type.
+//
+// Usage:
+//   runic models [--provider <name>] [--days <n>] [--json] [--pretty] [--no-color]
+//
+// Examples:
+//   runic models                           # Show all models used
+//   runic models --provider claude         # Claude models only
+//   runic models --days 7                  # Last 7 days
+//   runic models --json --pretty           # JSON output
 
-import RunicCore
-import Helix
 import Foundation
+import Helix
+import RunicCore
 
 /// Main entry point for the models command
 public enum ModelsCommand {
@@ -112,7 +112,7 @@ public enum ModelsCommand {
 
     /// Execute the models command
     public static func run(_ invocation: CommandInvocation) async {
-        let config = parseConfiguration(invocation)
+        let config = self.parseConfiguration(invocation)
 
         do {
             let entries = try await loadUsageEntries(
@@ -120,7 +120,7 @@ public enum ModelsCommand {
                 maxAgeDays: config.days)
 
             guard !entries.isEmpty else {
-                exitWithError("No model usage data found for the specified criteria.")
+                self.exitWithError("No model usage data found for the specified criteria.")
             }
 
             let summaries = UsageLedgerAggregator.modelSummaries(
@@ -128,12 +128,12 @@ public enum ModelsCommand {
                 groupByProject: config.groupByProject)
 
             if config.isJSON {
-                outputJSON(summaries, pretty: config.isPretty)
+                self.outputJSON(summaries, pretty: config.isPretty)
             } else {
-                outputText(summaries, useColor: config.useColor)
+                self.outputText(summaries, useColor: config.useColor)
             }
         } catch {
-            exitWithError("Failed to load usage data: \(error.localizedDescription)")
+            self.exitWithError("Failed to load usage data: \(error.localizedDescription)")
         }
     }
 
@@ -160,7 +160,7 @@ public enum ModelsCommand {
         let groupByProject = invocation.parsedValues.flags.contains("groupByProject")
 
         let days = daysArg.flatMap(Int.init) ?? 30
-        let providers = resolveProviders(providerArg)
+        let providers = self.resolveProviders(providerArg)
 
         return Configuration(
             providers: providers,
@@ -181,7 +181,7 @@ public enum ModelsCommand {
         }
 
         guard let provider = UsageProvider(rawValue: arg) else {
-            exitWithError("Unknown provider: \(arg)")
+            self.exitWithError("Unknown provider: \(arg)")
         }
 
         return [provider]
@@ -191,8 +191,8 @@ public enum ModelsCommand {
 
     private static func loadUsageEntries(
         providers: [UsageProvider],
-        maxAgeDays: Int
-    ) async throws -> [UsageLedgerEntry] {
+        maxAgeDays: Int) async throws -> [UsageLedgerEntry]
+    {
         let now = Date()
         var allEntries: [UsageLedgerEntry] = []
 
@@ -221,7 +221,8 @@ public enum ModelsCommand {
         let enriched = summaries.map(EnrichedModelSummary.init)
 
         guard let data = try? encoder.encode(enriched),
-              let text = String(data: data, encoding: .utf8) else {
+              let text = String(data: data, encoding: .utf8)
+        else {
             print("[]")
             return
         }
@@ -235,11 +236,11 @@ public enum ModelsCommand {
             return
         }
 
-        printHeader("Model Usage Breakdown", useColor: useColor)
+        self.printHeader("Model Usage Breakdown", useColor: useColor)
         print("")
 
         // Calculate column widths
-        let maxModelWidth = summaries.map { $0.model.count }.max() ?? 20
+        let maxModelWidth = summaries.map(\.model.count).max() ?? 20
         let modelWidth = min(max(maxModelWidth, 15), 40)
         let contextWidth = 11
 
@@ -253,7 +254,7 @@ public enum ModelsCommand {
             "COST",
             "CONTEXT")
         if useColor {
-            print(ansi("1;37", header))
+            print(self.ansi("1;37", header))
             print(String(repeating: "-", count: modelWidth + 58))
         } else {
             print(header)
@@ -265,11 +266,11 @@ public enum ModelsCommand {
         var totalCost = 0.0
 
         for summary in summaries {
-            let model = truncate(summary.model, maxWidth: modelWidth)
+            let model = self.truncate(summary.model, maxWidth: modelWidth)
             let provider = summary.provider.rawValue
-            let tokens = formatNumber(summary.totals.totalTokens)
+            let tokens = self.formatNumber(summary.totals.totalTokens)
             let requests = "\(summary.entryCount)"
-            let cost = formatCost(summary.totals.costUSD)
+            let cost = self.formatCost(summary.totals.costUSD)
             let context = UsageFormatter.modelContextLabel(for: summary.model) ?? "n/a"
 
             let line = String(
@@ -277,7 +278,7 @@ public enum ModelsCommand {
                 model, provider, tokens, requests, cost, context)
 
             if useColor {
-                print(colorizeByUsage(line, tokens: summary.totals.totalTokens))
+                print(self.colorizeByUsage(line, tokens: summary.totals.totalTokens))
             } else {
                 print(line)
             }
@@ -294,10 +295,10 @@ public enum ModelsCommand {
         let totalLine = String(
             format: "%-\(modelWidth)s  %-12s  %15s  %12s  %10s  %-\(contextWidth)s",
             "TOTAL", "", formatNumber(totalTokens), "\(totalRequests)",
-                              formatCost(totalCost > 0 ? totalCost : nil), " ")
+            formatCost(totalCost > 0 ? totalCost : nil), " ")
 
         if useColor {
-            print(ansi("1;36", totalLine))
+            print(self.ansi("1;36", totalLine))
         } else {
             print(totalLine)
         }
@@ -308,14 +309,14 @@ public enum ModelsCommand {
     private static func formatNumber(_ n: Int) -> String {
         if n >= 1_000_000 {
             return String(format: "%.1fM", Double(n) / 1_000_000)
-        } else if n >= 1_000 {
-            return String(format: "%.1fK", Double(n) / 1_000)
+        } else if n >= 1000 {
+            return String(format: "%.1fK", Double(n) / 1000)
         }
         return "\(n)"
     }
 
     private static func formatCost(_ cost: Double?) -> String {
-        guard let cost = cost, cost > 0 else {
+        guard let cost, cost > 0 else {
             return "n/a"
         }
         return String(format: "$%.4f", cost)
@@ -331,7 +332,7 @@ public enum ModelsCommand {
 
     private static func printHeader(_ text: String, useColor: Bool) {
         if useColor {
-            print(ansi("1;36", text))
+            print(self.ansi("1;36", text))
         } else {
             print(text)
         }
@@ -339,12 +340,12 @@ public enum ModelsCommand {
 
     private static func colorizeByUsage(_ text: String, tokens: Int) -> String {
         let code = switch tokens {
-        case 1_000_000...: "35"  // magenta - very high
-        case 500_000...: "33"    // yellow - high
-        case 100_000...: "32"    // green - medium
-        default: "0"             // default
+        case 1_000_000...: "35" // magenta - very high
+        case 500_000...: "33" // yellow - high
+        case 100_000...: "32" // green - medium
+        default: "0" // default
         }
-        return ansi(code, text)
+        return self.ansi(code, text)
     }
 
     private static func ansi(_ code: String, _ text: String) -> String {

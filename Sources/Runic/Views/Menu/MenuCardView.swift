@@ -7,45 +7,45 @@ import SwiftUI
 /// These values are carefully tuned for readability and visual hierarchy.
 enum MenuCardMetrics {
     /// Horizontal padding on left/right edges of card content
-    static let horizontalPadding: CGFloat = RunicSpacing.sm  // 12
+    static let horizontalPadding: CGFloat = RunicSpacing.sm // 12
 
     /// Top padding for the header section (provider name, email)
-    static let headerTopPadding: CGFloat = RunicSpacing.xxs  // 4
+    static let headerTopPadding: CGFloat = RunicSpacing.xxs // 4
 
     /// Bottom padding for the header section
-    static let headerBottomPadding: CGFloat = RunicSpacing.xxs  // 4
+    static let headerBottomPadding: CGFloat = RunicSpacing.xxs // 4
 
     /// Top padding for content sections (usage, credits, cost)
-    static let sectionTopPadding: CGFloat = RunicSpacing.xs  // 8
+    static let sectionTopPadding: CGFloat = RunicSpacing.xs // 8
 
     /// Bottom padding for content sections
-    static let sectionBottomPadding: CGFloat = RunicSpacing.xxs  // 4
+    static let sectionBottomPadding: CGFloat = RunicSpacing.xxs // 4
 
     /// Vertical spacing between major sections (e.g., Session vs Weekly)
-    static let sectionSpacing: CGFloat = RunicSpacing.xs  // 8
+    static let sectionSpacing: CGFloat = RunicSpacing.xs // 8
 
     /// Spacing between related blocks of content
-    static let blockSpacing: CGFloat = RunicSpacing.xs  // 8
+    static let blockSpacing: CGFloat = RunicSpacing.xs // 8
 
     /// Spacing between individual text lines within a section
-    static let lineSpacing: CGFloat = RunicSpacing.xxs  // 4
+    static let lineSpacing: CGFloat = RunicSpacing.xxs // 4
 
     /// Base padding for menu items
-    static let menuItemBasePadding: CGFloat = RunicSpacing.xxs  // 4
+    static let menuItemBasePadding: CGFloat = RunicSpacing.xxs // 4
 
     /// Additional padding for text with descenders (y, g, p, q, j)
-    static let menuItemDescenderPadding: CGFloat = RunicSpacing.xxxs  // 2
+    static let menuItemDescenderPadding: CGFloat = RunicSpacing.xxxs // 2
 
     /// Tail padding at the end of sections
-    static let tailPadding: CGFloat = RunicSpacing.xxs  // 4
-    static let metricCardPadding: CGFloat = RunicSpacing.sm  // 8
+    static let tailPadding: CGFloat = RunicSpacing.xxs // 4
+    static let metricCardPadding: CGFloat = RunicSpacing.sm // 8
     static let metricCardCornerRadius: CGFloat = RunicCornerRadius.sm
 }
 
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
 struct UsageMenuCardView: View {
     struct Model {
-        enum PercentStyle: String, Sendable {
+        enum PercentStyle: String {
             case left
             case used
 
@@ -83,7 +83,7 @@ struct UsageMenuCardView: View {
             case error
         }
 
-        struct TokenUsageSection: Sendable {
+        struct TokenUsageSection {
             let sessionLine: String
             let sessionDetailLine: String?
             let monthLine: String
@@ -94,13 +94,13 @@ struct UsageMenuCardView: View {
             let errorCopyText: String?
         }
 
-        struct ProviderCostSection: Sendable {
+        struct ProviderCostSection {
             let title: String
             let percentUsed: Double
             let spendLine: String
         }
 
-        struct InsightsSection: Sendable {
+        struct InsightsSection {
             let title: String
             let todayLine: String?
             let todayDetail: String?
@@ -157,11 +157,6 @@ struct UsageMenuCardView: View {
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
-    init(model: Model, width: CGFloat) {
-        self.model = model
-        self.width = width
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             UsageMenuCardHeaderView(model: self.model)
@@ -181,7 +176,7 @@ struct UsageMenuCardView: View {
             } else {
                 let hasUsage = !self.model.metrics.isEmpty
                 let includeSummarySections = self.model.menuMode != .glance
-                let includeInsightSections = self.model.menuMode == .`operator`
+                let includeInsightSections = self.model.menuMode == .operator
                 let hasCredits = includeSummarySections && self.model.creditsText != nil
                 let hasExtraUsage = includeSummarySections && self.model.providerCost != nil
                 let hasTokenCost = includeSummarySections && self.model.tokenUsage != nil
@@ -295,7 +290,7 @@ struct UsageMenuCardView: View {
 
     private var hasDetails: Bool {
         let includeSummarySections = self.model.menuMode != .glance
-        let includeInsightSections = self.model.menuMode == .`operator`
+        let includeInsightSections = self.model.menuMode == .operator
         return !self.model.metrics.isEmpty || self.model.placeholder != nil || (includeSummarySections && (
             self.model.tokenUsage != nil || self.model.providerCost != nil)) || (includeInsightSections &&
             self.model.insights != nil)
@@ -394,13 +389,17 @@ private struct UsageMenuCardHeaderView: View {
     }
 
     private var headerBorder: some View {
-        return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+        RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
             .stroke(Color.white.opacity(RunicColors.Opacity.medium), lineWidth: 0.7)
     }
 
     private var brandNSColor: NSColor {
         let color = ProviderDescriptorRegistry.descriptor(for: self.model.provider).branding.color
-        return NSColor(calibratedRed: CGFloat(color.red), green: CGFloat(color.green), blue: CGFloat(color.blue), alpha: 1)
+        return NSColor(
+            calibratedRed: CGFloat(color.red),
+            green: CGFloat(color.green),
+            blue: CGFloat(color.blue),
+            alpha: 1)
     }
 }
 
@@ -467,7 +466,11 @@ private struct ProviderAvatarView: View {
 
     private var brandNSColor: NSColor {
         let color = ProviderDescriptorRegistry.descriptor(for: self.provider).branding.color
-        return NSColor(calibratedRed: CGFloat(color.red), green: CGFloat(color.green), blue: CGFloat(color.blue), alpha: 1)
+        return NSColor(
+            calibratedRed: CGFloat(color.red),
+            green: CGFloat(color.green),
+            blue: CGFloat(color.blue),
+            alpha: 1)
     }
 
     private var fallbackInitials: String {
@@ -509,31 +512,30 @@ private struct ProfilePill: View {
     private var foregroundColor: Color {
         switch self.style {
         case .email:
-            return .secondary
+            .secondary
         case .plan:
-            return self.tint.opacity(RunicColors.Opacity.vivid)
+            self.tint.opacity(RunicColors.Opacity.vivid)
         }
     }
 
     private var backgroundColor: Color {
         switch self.style {
         case .email:
-            return Color(nsColor: .quaternaryLabelColor).opacity(RunicColors.Opacity.emphasis)
+            Color(nsColor: .quaternaryLabelColor).opacity(RunicColors.Opacity.emphasis)
         case .plan:
-            return self.tint.opacity(RunicColors.Opacity.light)
+            self.tint.opacity(RunicColors.Opacity.light)
         }
     }
 
     private var borderColor: Color {
         switch self.style {
         case .email:
-            return Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.strong)
+            Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.strong)
         case .plan:
-            return self.tint.opacity(RunicColors.Opacity.medium)
+            self.tint.opacity(RunicColors.Opacity.medium)
         }
     }
 }
-
 
 private struct MenuHeaderBadgeView: View {
     let badge: UsageMenuCardView.Model.HeaderBadge
@@ -566,42 +568,42 @@ private struct MenuHeaderBadgeView: View {
 
     private var badgeIcon: String {
         switch self.badge.style {
-        case .info: return "arrow.triangle.2.circlepath"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .error: return "xmark.circle.fill"
+        case .info: "arrow.triangle.2.circlepath"
+        case .warning: "exclamationmark.triangle.fill"
+        case .error: "xmark.circle.fill"
         }
     }
 
     private var backgroundColor: Color {
         switch self.badge.style {
         case .info:
-            return Color(nsColor: .systemBlue).opacity(self.isHighlighted ? 0.25 : 0.12)
+            Color(nsColor: .systemBlue).opacity(self.isHighlighted ? 0.25 : 0.12)
         case .warning:
-            return Color(nsColor: .systemOrange).opacity(self.isHighlighted ? 0.35 : 0.15)
+            Color(nsColor: .systemOrange).opacity(self.isHighlighted ? 0.35 : 0.15)
         case .error:
-            return Color(nsColor: .systemRed).opacity(self.isHighlighted ? 0.35 : 0.15)
+            Color(nsColor: .systemRed).opacity(self.isHighlighted ? 0.35 : 0.15)
         }
     }
 
     private var foregroundColor: Color {
         switch self.badge.style {
         case .info:
-            return Color(nsColor: .systemBlue).opacity(RunicColors.Opacity.vivid)
+            Color(nsColor: .systemBlue).opacity(RunicColors.Opacity.vivid)
         case .warning:
-            return Color(nsColor: .systemOrange)
+            Color(nsColor: .systemOrange)
         case .error:
-            return Color(nsColor: .systemRed)
+            Color(nsColor: .systemRed)
         }
     }
 
     private var borderColor: Color {
         switch self.badge.style {
         case .info:
-            return Color(nsColor: .systemBlue).opacity(RunicColors.Opacity.medium)
+            Color(nsColor: .systemBlue).opacity(RunicColors.Opacity.medium)
         case .warning:
-            return Color(nsColor: .systemOrange).opacity(RunicColors.Opacity.strong)
+            Color(nsColor: .systemOrange).opacity(RunicColors.Opacity.strong)
         case .error:
-            return Color(nsColor: .systemRed).opacity(RunicColors.Opacity.strong)
+            Color(nsColor: .systemRed).opacity(RunicColors.Opacity.strong)
         }
     }
 }
@@ -880,14 +882,12 @@ private struct UsageMenuMetricCard: View {
             RoundedRectangle(
                 cornerRadius: MenuCardMetrics.metricCardCornerRadius,
                 style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(self.isHighlighted ? 0.2 : 0.14))
-        )
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(self.isHighlighted ? 0.2 : 0.14)))
         .overlay(
             RoundedRectangle(
                 cornerRadius: MenuCardMetrics.metricCardCornerRadius,
                 style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.25), lineWidth: 1)
-        )
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.25), lineWidth: 1))
     }
 }
 
@@ -935,20 +935,6 @@ struct UsageMenuCardCreditsSectionView: View {
     let topPadding: CGFloat
     let bottomPadding: CGFloat
     let width: CGFloat
-
-    init(
-        model: UsageMenuCardView.Model,
-        showBottomDivider: Bool,
-        topPadding: CGFloat,
-        bottomPadding: CGFloat,
-        width: CGFloat)
-    {
-        self.model = model
-        self.showBottomDivider = showBottomDivider
-        self.topPadding = topPadding
-        self.bottomPadding = bottomPadding
-        self.width = width
-    }
 
     var body: some View {
         if let credits = self.model.creditsText {
@@ -1496,9 +1482,9 @@ extension UsageMenuCardView.Model {
     }
 
     private static func observedUsageDays(_ snapshot: CostUsageTokenSnapshot) -> Int {
-        let nonEmptyDays = snapshot.daily.filter { entry in
+        let nonEmptyDays = snapshot.daily.count(where: { entry in
             (entry.totalTokens ?? 0) > 0 || (entry.costUSD ?? 0) > 0
-        }.count
+        })
         if nonEmptyDays > 0 {
             return min(30, nonEmptyDays)
         }
@@ -1537,8 +1523,9 @@ extension UsageMenuCardView.Model {
             ? input.ledgerTopProjectSpendForecast
             : nil
         let anomaly = input.ledgerAnomaly?.provider == input.provider ? input.ledgerAnomaly : nil
-        let hasData = daily != nil || block != nil || topModel != nil || topProject != nil || spendForecast != nil || anomaly != nil
-        if !hasData && (error?.isEmpty ?? true) {
+        let hasData = daily != nil || block != nil || topModel != nil || topProject != nil || spendForecast != nil ||
+            anomaly != nil
+        if !hasData, error?.isEmpty ?? true {
             return nil
         }
 
@@ -1820,10 +1807,10 @@ extension UsageMenuCardView.Model {
             return nil
         }
 
-        var hash: UInt64 = 0xcbf29ce484222325
+        var hash: UInt64 = 0xCBF2_9CE4_8422_2325
         for byte in projectID.lowercased().utf8 {
             hash ^= UInt64(byte)
-            hash = hash &* 0x100000001b3
+            hash = hash &* 0x100_0000_01B3
         }
         return String(format: "%08llx", hash)
     }
@@ -1889,7 +1876,9 @@ private final class ClickToCopyView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
 
     override func mouseDown(with event: NSEvent) {
         _ = event

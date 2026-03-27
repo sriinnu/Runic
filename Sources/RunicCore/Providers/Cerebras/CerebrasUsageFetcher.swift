@@ -8,7 +8,7 @@ struct CerebrasModelsResponse: Decodable {
     }
 }
 
-struct CerebrasUsageFetcher {
+enum CerebrasUsageFetcher {
     static let apiURL = URL(string: "https://api.cerebras.ai/v1/models")!
 
     static func fetchModels(apiKey: String) async throws -> CerebrasModelsResponse {
@@ -57,7 +57,7 @@ extension CerebrasModelsResponse {
     }
 }
 
-enum CerebrasAPIError: LocalizedError, Sendable {
+enum CerebrasAPIError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, body: String?)
 

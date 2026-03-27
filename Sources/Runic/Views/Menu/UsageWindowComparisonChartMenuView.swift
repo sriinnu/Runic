@@ -64,7 +64,8 @@ struct UsageWindowComparisonChartMenuView: View {
                             x: .value("Date", point.date),
                             y: .value("%", point.percent),
                             series: .value("Window", point.series))
-                            .foregroundStyle(point.series == self.primaryLabel ? Self.primaryColor : Self.secondaryColor)
+                            .foregroundStyle(point.series == self.primaryLabel ? Self.primaryColor : Self
+                                .secondaryColor)
                             .lineStyle(StrokeStyle(lineWidth: 2))
                             .interpolationMethod(.catmullRom)
                     }

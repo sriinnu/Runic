@@ -1,5 +1,5 @@
-import RunicMacroSupport
 import Foundation
+import RunicMacroSupport
 
 @ProviderDescriptorRegistration
 @ProviderDescriptorDefinition
@@ -49,7 +49,9 @@ struct FactoryStatusFetchStrategy: ProviderFetchStrategy {
     let id: String = "factory.web"
     let kind: ProviderFetchKind = .web
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool { true }
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        true
+    }
 
     func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
         let probe = FactoryStatusProbe()

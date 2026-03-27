@@ -123,7 +123,14 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         dailyFormatter.dateFormat = "yyyy-MM-dd"
         dailyFormatter.timeZone = .current
 
-        var dailyBuckets: [String: (input: Int, output: Int, cacheCreate: Int, cacheRead: Int, cost: Double, requests: Int, models: Set<String>)] = [:]
+        var dailyBuckets: [String: (
+            input: Int,
+            output: Int,
+            cacheCreate: Int,
+            cacheRead: Int,
+            cost: Double,
+            requests: Int,
+            models: Set<String>)] = [:]
         for entry in entries {
             let key = dailyFormatter.string(from: entry.timestamp)
             var bucket = dailyBuckets[key] ?? (0, 0, 0, 0, 0, 0, [])
@@ -477,6 +484,7 @@ private final class CodexISO8601FormatterBox: @unchecked Sendable {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+
     let fractional: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -486,8 +494,8 @@ private final class CodexISO8601FormatterBox: @unchecked Sendable {
 
 private let codexISOFormatterBox = CodexISO8601FormatterBox()
 
-private extension FileManager {
-    func directoryExists(at url: URL) -> Bool {
+extension FileManager {
+    fileprivate func directoryExists(at url: URL) -> Bool {
         var isDir: ObjCBool = false
         return self.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
     }

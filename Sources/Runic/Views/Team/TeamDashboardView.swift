@@ -342,14 +342,16 @@ enum TimePeriod: String, CaseIterable, Identifiable {
     case month
     case year
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var displayName: String {
         switch self {
-        case .day: return "Today"
-        case .week: return "Week"
-        case .month: return "Month"
-        case .year: return "Year"
+        case .day: "Today"
+        case .week: "Week"
+        case .month: "Month"
+        case .year: "Year"
         }
     }
 }
@@ -360,7 +362,9 @@ struct MemberUsageItem: Identifiable {
     let usage: Int
     let color: Color
 
-    var id: String { self.memberID }
+    var id: String {
+        self.memberID
+    }
 }
 
 struct ActivityItem: Identifiable {

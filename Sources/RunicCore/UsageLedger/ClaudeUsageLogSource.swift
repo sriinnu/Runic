@@ -56,7 +56,9 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         // Filter to only files modified since last scan (plus today's files which may have grown).
         let todayStart = Calendar.current.startOfDay(for: self.now)
         let filesToScan = allFiles.filter { file in
-            guard let modDate = (try? self.fileManager.attributesOfItem(atPath: file.url.path))?[.modificationDate] as? Date else {
+            guard let modDate = (try? self.fileManager
+                .attributesOfItem(atPath: file.url.path))?[.modificationDate] as? Date
+            else {
                 return true
             }
             return modDate >= incrementalCutoff || modDate >= todayStart
@@ -66,7 +68,9 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             return []
         }
 
-        self.log.info("Scanning \(filesToScan.count) of \(allFiles.count) JSONL files (incremental since \(incrementalCutoff))")
+        self.log
+            .info(
+                "Scanning \(filesToScan.count) of \(allFiles.count) JSONL files (incremental since \(incrementalCutoff))")
 
         // Parse files concurrently (max 16 at a time).
         let maxConcurrency = 16
@@ -118,7 +122,14 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         dailyFormatter.dateFormat = "yyyy-MM-dd"
         dailyFormatter.timeZone = .current
 
-        var dailyBuckets: [String: (input: Int, output: Int, cacheCreate: Int, cacheRead: Int, cost: Double, requests: Int, models: Set<String>)] = [:]
+        var dailyBuckets: [String: (
+            input: Int,
+            output: Int,
+            cacheCreate: Int,
+            cacheRead: Int,
+            cost: Double,
+            requests: Int,
+            models: Set<String>)] = [:]
         for entry in entries {
             let key = dailyFormatter.string(from: entry.timestamp)
             var bucket = dailyBuckets[key] ?? (0, 0, 0, 0, 0, 0, [])
@@ -188,24 +199,22 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
         var candidates: [URL] = []
         if !envPaths.isEmpty {
-            candidates = envPaths.map { expandTilde(path: String($0)) }
+            candidates = envPaths.map { self.expandTilde(path: String($0)) }
         } else {
-            let home = fileManager.homeDirectoryForCurrentUser
+            let home = self.fileManager.homeDirectoryForCurrentUser
             candidates = [
                 home.appendingPathComponent(".config/claude", isDirectory: true),
                 home.appendingPathComponent(".claude", isDirectory: true),
             ]
         }
 
-        let projectsDirs = candidates
+        return candidates
             .map { $0.appendingPathComponent("projects", isDirectory: true) }
             .filter { self.fileManager.directoryExists(at: $0) }
-
-        return projectsDirs
     }
 
     private func normalizePaths(_ urls: [URL]) -> [URL] {
-        urls.map { $0.standardizedFileURL }
+        urls.map(\.standardizedFileURL)
             .filter { self.fileManager.directoryExists(at: $0) }
             .map { $0.appendingPathComponent("projects", isDirectory: true) }
             .filter { self.fileManager.directoryExists(at: $0) }
@@ -236,7 +245,11 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 let projectID = pathComponents[projectsIndex + 1]
                 let projectName = self.derivedProjectName(from: projectID)
                 let sessionID = pathComponents[projectsIndex + 2]
-                results.append(UsageFile(url: fileURL, projectID: projectID, projectName: projectName, sessionID: sessionID))
+                results.append(UsageFile(
+                    url: fileURL,
+                    projectID: projectID,
+                    projectName: projectName,
+                    sessionID: sessionID))
             }
         }
 
@@ -355,7 +368,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
     private func expandTilde(path: String) -> URL {
         if path.hasPrefix("~/") {
-            let home = fileManager.homeDirectoryForCurrentUser
+            let home = self.fileManager.homeDirectoryForCurrentUser
             let trimmed = String(path.dropFirst(2))
             return home.appendingPathComponent(trimmed, isDirectory: true)
         }
@@ -410,6 +423,7 @@ private final class ClaudeISO8601FormatterBox: @unchecked Sendable {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+
     let fractional: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -419,8 +433,8 @@ private final class ClaudeISO8601FormatterBox: @unchecked Sendable {
 
 private let claudeISOFormatterBox = ClaudeISO8601FormatterBox()
 
-private extension FileManager {
-    func directoryExists(at url: URL) -> Bool {
+extension FileManager {
+    fileprivate func directoryExists(at url: URL) -> Bool {
         var isDir: ObjCBool = false
         return self.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
     }

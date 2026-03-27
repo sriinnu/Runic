@@ -1,10 +1,9 @@
-import RunicCore
 import Foundation
+import RunicCore
 import Testing
 
-@Suite
 struct GeminiStatusProbeTests {
-    // Sample /stats output from Gemini CLI (actual format with box-drawing chars)
+    /// Sample /stats output from Gemini CLI (actual format with box-drawing chars)
     static let sampleStatsOutput = """
     │  Model Usage                            Reqs                  Usage left  │
     │  ───────────────────────────────────────────────────────────────────────  │
@@ -17,14 +16,14 @@ struct GeminiStatusProbeTests {
     // MARK: - Legacy CLI parsing tests (kept for fallback support)
 
     @Test
-    func parsesMinimumPercentFromMultipleModels() throws {
+    func `parses minimum percent from multiple models`() throws {
         let snap = try GeminiStatusProbe.parse(text: Self.sampleStatsOutput)
         #expect(snap.dailyPercentLeft == 99.8)
         #expect(snap.resetDescription == "Resets in 20h 37m")
     }
 
     @Test
-    func parsesLowerPercentCorrectly() throws {
+    func `parses lower percent correctly`() throws {
         let output = """
         │  Model Usage                                                  Reqs                  Usage left  │
         │  gemini-2.5-flash                                               10       85.5% (Resets in 12h)  │
@@ -36,7 +35,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func handlesZeroPercentUsage() throws {
+    func `handles zero percent usage`() throws {
         let output = """
         │  gemini-2.5-flash                                               50        0.0% (Resets in 6h)  │
         │  gemini-2.5-pro                                                 20       15.0% (Resets in 6h)  │
@@ -47,7 +46,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func handles100PercentRemaining() throws {
+    func `handles100 percent remaining`() throws {
         let output = """
         │  gemini-2.5-flash                                                -      100.0% (Resets in 24h)  │
         """
@@ -56,14 +55,14 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func throwsOnEmptyOutput() {
+    func `throws on empty output`() {
         #expect(throws: GeminiStatusProbeError.self) {
             try GeminiStatusProbe.parse(text: "")
         }
     }
 
     @Test
-    func throwsOnNoUsageData() {
+    func `throws on no usage data`() {
         let output = """
         Welcome to Gemini CLI!
         Type /help for available commands.
@@ -74,7 +73,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func stripsANSICodesBeforeParsing() throws {
+    func `strips ANSI codes before parsing`() throws {
         // swiftlint:disable:next line_length
         let output = "\u{1B}[32m│\u{1B}[0m  gemini-2.5-flash                                                -       75.5% (Resets in 18h)  │"
         let snap = try GeminiStatusProbe.parse(text: output)
@@ -82,7 +81,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func preservesRawText() throws {
+    func `preserves raw text`() throws {
         let snap = try GeminiStatusProbe.parse(text: Self.sampleStatsOutput)
         #expect(snap.rawText == Self.sampleStatsOutput)
         #expect(snap.accountEmail == nil) // Legacy parse doesn't extract email
@@ -90,7 +89,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func parsesVariousResetDescriptions() throws {
+    func `parses various reset descriptions`() throws {
         let cases: [(String, String)] = [
             ("Resets in 24h", "Resets in 24h"),
             ("Resets in 1h 30m", "Resets in 1h 30m"),
@@ -106,7 +105,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func throwsNotLoggedInOnAuthPrompt() {
+    func `throws not logged in on auth prompt`() {
         let authOutputs = [
             "Waiting for auth... (Press ESC or CTRL+C to cancel)",
             "Login with Google\nUse Gemini API key",
@@ -122,7 +121,7 @@ struct GeminiStatusProbeTests {
     // MARK: - Model quota grouping tests
 
     @Test
-    func parsesModelsIntoQuotaArray() throws {
+    func `parses models into quota array`() throws {
         let snap = try GeminiStatusProbe.parse(text: Self.sampleStatsOutput)
         // Should parse multiple models (exact count may change as Google adds/removes models)
         #expect(snap.modelQuotas.count >= 2)
@@ -134,14 +133,14 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func lowestPercentLeftReturnsMinimum() throws {
+    func `lowest percent left returns minimum`() throws {
         let snap = try GeminiStatusProbe.parse(text: Self.sampleStatsOutput)
         // Flash models are 99.8%, Pro models are 100%, so min should be 99.8
         #expect(snap.lowestPercentLeft == 99.8)
     }
 
     @Test
-    func tierGroupingByKeyword() throws {
+    func `tier grouping by keyword`() throws {
         // Test that flash/pro keyword filtering works (model names may change)
         let snap = try GeminiStatusProbe.parse(text: Self.sampleStatsOutput)
 
@@ -154,7 +153,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func tierMinimumCalculation() throws {
+    func `tier minimum calculation`() throws {
         // Use controlled test data to verify min-per-tier logic
         // Model names must start with "gemini-" to match the parser regex
         let output = """
@@ -176,7 +175,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func quotasHaveResetDescriptions() throws {
+    func `quotas have reset descriptions`() throws {
         let snap = try GeminiStatusProbe.parse(text: Self.sampleStatsOutput)
 
         // At least some quotas should have reset descriptions
@@ -185,7 +184,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func toUsageSnapshotPreservesModelLabelsAndTertiaryWindow() throws {
+    func `to usage snapshot preserves model labels and tertiary window`() throws {
         let output = """
         │  gemini-2.5-pro                               2       40.0% (Resets in 6h)  │
         │  gemini-2.5-flash                             5       65.0% (Resets in 3h)  │
@@ -202,7 +201,7 @@ struct GeminiStatusProbeTests {
     }
 
     @Test
-    func toUsageSnapshotFallsBackWhenProTierIsMissing() throws {
+    func `to usage snapshot falls back when pro tier is missing`() throws {
         let output = """
         │  gemini-2.5-flash                             2       90.0% (Resets in 6h)  │
         │  gemini-2.5-flash-lite                        3       25.0% (Resets in 6h)  │
@@ -216,7 +215,7 @@ struct GeminiStatusProbeTests {
     // MARK: - Live API test
 
     @Test
-    func liveGeminiFetch() async throws {
+    func `live gemini fetch`() async throws {
         guard ProcessInfo.processInfo.environment["LIVE_GEMINI_FETCH"] == "1" else {
             return
         }
