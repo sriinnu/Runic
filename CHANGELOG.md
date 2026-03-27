@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.0 — 2026-03-27
+- Typography: custom font system with 7 bundled families (Fira Code, JetBrains Mono, IBM Plex Mono, Space Mono, Inconsolata, Caveat, SF Pro/Mono)
+- Typography: live font switching from Settings > General — no restart needed
+- Typography: RunicTypography design tokens with dynamic RunicFont scale across 600+ font call sites
+- Typography: drop-in font extensibility — add TTF/OTF to Resources/Fonts, rebuild, auto-discovered
+- Typography: font preview in picker — each choice rendered in its own typeface
+- Typography: NSMenuItem post-processor applies selected font to all plain menu items
+- Typography: xLarge dynamic type for slightly larger text across the app
+- Menu: wider card base width (310→340pt) for monospaced font comfort
+- iOS: RunicFont enum for consistent monospaced typography across widgets and views
+
 ## 0.16.1 — 2025-12-29
 - Menu: reduce layout thrash when opening menus and sizing charts. Thanks @ibehnam!
 - Packaging: default release notarization builds universal (arm64 + x86_64) zip.
