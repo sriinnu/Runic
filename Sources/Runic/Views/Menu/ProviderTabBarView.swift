@@ -37,7 +37,7 @@ struct ProviderTabBarView: View {
                                     .font(.system(size: 14, weight: .medium))
                             }
                             Text(tab.label)
-                                .font(.system(.caption, design: .rounded))
+                                .font(RunicFont.caption)
                                 .fontWeight(tab.isSelected ? .semibold : .regular)
                                 .lineLimit(1)
                         }

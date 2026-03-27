@@ -142,7 +142,7 @@ struct UsageProgressRing: View {
             // Center content
             VStack(spacing: size * 0.05) {
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: size * 0.25, weight: .bold, design: .rounded))
+                    .font(.system(size: size * 0.25, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
 
                 Text("left")
@@ -207,7 +207,7 @@ struct CompactUsageBar: View {
                 Spacer()
 
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
             }
 

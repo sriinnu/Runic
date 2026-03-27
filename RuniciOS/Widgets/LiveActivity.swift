@@ -166,7 +166,7 @@ struct RunicLiveActivity: Widget {
     func expandedTrailing(context: ActivityViewContext<RunicLiveActivityAttributes>) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
             Text("\(Int(context.state.remainingPercent))%")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
 
             Text("remaining")
                 .font(.system(size: 11, weight: .medium))
@@ -210,7 +210,7 @@ struct RunicLiveActivity: Widget {
     @ViewBuilder
     func compactTrailing(context: ActivityViewContext<RunicLiveActivityAttributes>) -> some View {
         Text("\(Int(context.state.remainingPercent))%")
-            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .font(.system(size: 12, weight: .bold, design: .monospaced))
     }
 
     @ViewBuilder

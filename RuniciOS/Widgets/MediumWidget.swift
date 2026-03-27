@@ -117,7 +117,7 @@ struct MediumWidgetView: View {
 
                 // Remaining percentage
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
 
                 Text("left")

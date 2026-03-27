@@ -65,7 +65,7 @@ struct UsageTimelineChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Header on its own line
             Text("Timeline")
-                .font(.system(.subheadline, design: .rounded))
+                .font(RunicFont.subheadline)
                 .fontWeight(.semibold)
 
             // Range picker on its own line
@@ -78,7 +78,7 @@ struct UsageTimelineChartMenuView: View {
 
             if model.points.isEmpty {
                 Text("No data for selected range.")
-                    .font(.system(.footnote, design: .rounded))
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
                     .frame(height: 100)
             } else {
@@ -112,7 +112,7 @@ struct UsageTimelineChartMenuView: View {
                             .symbolSize(60)
                             .annotation(position: .top, spacing: 4) {
                                 Text("Peak")
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .systemYellow))
                             }
                     }
@@ -124,7 +124,7 @@ struct UsageTimelineChartMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
@@ -135,7 +135,7 @@ struct UsageTimelineChartMenuView: View {
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
                             .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
                         AxisValueLabel(format: model.xAxisFormat)
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -163,7 +163,7 @@ struct UsageTimelineChartMenuView: View {
                 // Detail line
                 let detail = self.detailText(model: model)
                 Text(detail)
-                    .font(.system(.caption, design: .rounded))
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -196,10 +196,10 @@ struct UsageTimelineChartMenuView: View {
         var body: some View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                 Text(self.label)
-                    .font(.system(.caption2, design: .rounded))
+                    .font(RunicFont.caption2)
                     .foregroundStyle(.tertiary)
                 Text(self.value)
-                    .font(.system(.caption, design: .rounded))
+                    .font(RunicFont.caption)
                     .fontWeight(.medium)
             }
         }

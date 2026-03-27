@@ -44,7 +44,7 @@ struct ProjectBudgetMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack {
                 Text("Project Budgets")
-                    .font(.headline)
+                    .font(RunicFont.headline)
                     .fontWeight(.semibold)
                 Spacer()
                 Button {
@@ -52,9 +52,9 @@ struct ProjectBudgetMenuView: View {
                 } label: {
                     HStack(spacing: RunicSpacing.xxs) {
                         Image(systemName: "gearshape")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                         Text("Configure")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                     }
                 }
                 .buttonStyle(.plain)
@@ -64,13 +64,13 @@ struct ProjectBudgetMenuView: View {
             if model.isEmpty {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("No budgets configured.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.secondary)
                     Button {
                         self.onOpenPreferences()
                     } label: {
                         Text("Set up budgets in Preferences")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.blue)
@@ -98,20 +98,20 @@ struct ProjectBudgetMenuView: View {
                         if overBudget > 0 {
                             HStack(spacing: RunicSpacing.xxs) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(red: 0.94, green: 0.36, blue: 0.36))
                                 Text("\(overBudget) project\(overBudget == 1 ? "" : "s") over budget")
-                                    .font(.caption)
+                                    .font(RunicFont.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
                         if nearLimit > 0 {
                             HStack(spacing: RunicSpacing.xxs) {
                                 Image(systemName: "exclamationmark.circle.fill")
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(red: 0.94, green: 0.74, blue: 0.26))
                                 Text("\(nearLimit) project\(nearLimit == 1 ? "" : "s") near limit")
-                                    .font(.caption)
+                                    .font(RunicFont.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -168,12 +168,12 @@ private struct ProjectBudgetRow: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack(alignment: .firstTextBaseline) {
                 Text(project.projectName)
-                    .font(.body)
+                    .font(RunicFont.body)
                     .fontWeight(.medium)
                     .lineLimit(1)
                 Spacer()
                 Text(self.budgetText)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
 
@@ -184,17 +184,17 @@ private struct ProjectBudgetRow: View {
 
             HStack(alignment: .firstTextBaseline) {
                 Text(String(format: "%.0f%%", project.percentUsed))
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(self.statusTextColor)
                 Spacer()
                 if project.isOverBudget {
                     Text("Over budget")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(Color(red: 0.94, green: 0.36, blue: 0.36))
                         .fontWeight(.medium)
                 } else if project.isNearLimit {
                     Text("Near limit")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(Color(red: 0.94, green: 0.74, blue: 0.26))
                         .fontWeight(.medium)
                 }

@@ -37,7 +37,7 @@ struct IntegrationsPane: View {
         PreferencesPane {
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("vaayu Integration")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
@@ -50,11 +50,11 @@ struct IntegrationsPane: View {
 
                         if self.vaayuAPIServerEnabled {
                             Text("Running on port \(self.vaayuAPIServerPort)")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.green)
                         } else {
                             Text("Stopped")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -62,21 +62,21 @@ struct IntegrationsPane: View {
                     if self.vaayuAPIServerEnabled {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Port number")
-                                .font(.body)
+                                .font(RunicFont.body)
 
                             TextField("Port", value: self.$vaayuAPIServerPort, format: .number)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(maxWidth: 150)
 
                             Text("Default: 3000. Restart required after changing port.")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.tertiary)
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text("API Key")
-                                    .font(.body)
+                                    .font(RunicFont.body)
 
                                 Spacer()
 
@@ -99,7 +99,7 @@ struct IntegrationsPane: View {
 
                             if !self.vaayuAPIKey.isEmpty {
                                 Text(self.maskedAPIKey)
-                                    .font(.footnote.monospaced())
+                                    .font(RunicFont.footnote.monospaced())
                                     .foregroundStyle(.secondary)
                                     .padding(RunicSpacing.xs)
                                     .background(Color(nsColor: .controlBackgroundColor))
@@ -108,14 +108,14 @@ struct IntegrationsPane: View {
 
                             if let generatedKey = self.generatedAPIKey {
                                 Text("New key generated: \(generatedKey)")
-                                    .font(.footnote)
+                                    .font(RunicFont.footnote)
                                     .foregroundStyle(.green)
                             }
                         }
                     }
 
                     Text("Exposes Runic usage data via REST API for external integrations.")
-                        .font(.footnote)
+                        .font(RunicFont.footnote)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -124,14 +124,14 @@ struct IntegrationsPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("MCP Servers")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
                 VStack(spacing: RunicSpacing.xs) {
                     HStack {
                         Text("Configured servers")
-                            .font(.body)
+                            .font(RunicFont.body)
                         Spacer()
                         Button {
                             self.showingAddServerSheet = true
@@ -148,10 +148,10 @@ struct IntegrationsPane: View {
                                 .font(.system(size: 32))
                                 .foregroundStyle(.tertiary)
                             Text("No MCP servers yet")
-                                .font(.body.weight(.semibold))
+                                .font(RunicFont.body.weight(.semibold))
                                 .foregroundStyle(.secondary)
                             Text("Add a server to manage connection details")
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(.tertiary)
                         }
                         .frame(maxWidth: .infinity)
@@ -161,13 +161,13 @@ struct IntegrationsPane: View {
                             HStack(spacing: RunicSpacing.sm) {
                                 Text(server.statusIndicator)
                                     .foregroundStyle(server.statusColor)
-                                    .font(.title3)
+                                    .font(RunicFont.title3)
 
                                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                     Text(server.name)
-                                        .font(.body)
+                                        .font(RunicFont.body)
                                     Text("Port \(server.port)")
-                                        .font(.footnote)
+                                        .font(RunicFont.footnote)
                                         .foregroundStyle(.secondary)
                                 }
 
@@ -206,7 +206,7 @@ struct IntegrationsPane: View {
                 }
 
                 Text("MCP servers enable Claude Desktop and other tools to access Runic data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.tertiary)
             }
 
@@ -214,26 +214,26 @@ struct IntegrationsPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Webhooks")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Default webhook URL")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         TextField("https://hooks.slack.com/services/...", text: self.$defaultWebhookURL)
                             .textFieldStyle(.roundedBorder)
 
                         Text("Used for all alerts unless overridden in alert rule settings.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Webhook format")
-                            .font(.body)
+                            .font(RunicFont.body)
 
                         Picker("", selection: self.$webhookFormat) {
                             Text("Slack").tag("slack")
@@ -244,7 +244,7 @@ struct IntegrationsPane: View {
                         .frame(maxWidth: 300)
 
                         Text("Formats webhook payloads for different platforms.")
-                            .font(.footnote)
+                            .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
 
@@ -257,7 +257,7 @@ struct IntegrationsPane: View {
 
                         if let result = self.testWebhookResult {
                             Text(result)
-                                .font(.footnote)
+                                .font(RunicFont.footnote)
                                 .foregroundStyle(result.contains("Success") ? .green : .red)
                         }
                     }
@@ -268,7 +268,7 @@ struct IntegrationsPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("GitHub Integration")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
@@ -281,7 +281,7 @@ struct IntegrationsPane: View {
                     if self.githubIntegrationEnabled {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Repository path")
-                                .font(.body)
+                                .font(RunicFont.body)
 
                             HStack {
                                 TextField("/path/to/repo", text: self.$githubRepositoryPath)
@@ -300,7 +300,7 @@ struct IntegrationsPane: View {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(.green)
                                         Text("Valid Git repository")
-                                            .font(.footnote)
+                                            .font(RunicFont.footnote)
                                             .foregroundStyle(.green)
                                     }
                                 } else {
@@ -308,7 +308,7 @@ struct IntegrationsPane: View {
                                         Image(systemName: "xmark.circle.fill")
                                             .foregroundStyle(.red)
                                         Text("Not a valid Git repository")
-                                            .font(.footnote)
+                                            .font(RunicFont.footnote)
                                             .foregroundStyle(.red)
                                     }
                                 }
@@ -479,11 +479,11 @@ private struct AddMCPServerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             Text("Add MCP Server")
-                .font(.title2.weight(.semibold))
+                .font(RunicFont.title2.weight(.semibold))
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Name")
-                    .font(.subheadline.weight(.medium))
+                    .font(RunicFont.subheadline.weight(.medium))
                 TextField("Local MCP Server", text: self.$name)
                     .textFieldStyle(.roundedBorder)
                     .focused(self.$isNameFocused)
@@ -491,7 +491,7 @@ private struct AddMCPServerSheet: View {
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Port")
-                    .font(.subheadline.weight(.medium))
+                    .font(RunicFont.subheadline.weight(.medium))
                 TextField("", value: self.$port, format: .number)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 140)

@@ -144,7 +144,7 @@ struct LargeWidgetView: View {
                 .foregroundColor(color)
 
             Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundColor(.white)
 
             Text(label)
@@ -203,7 +203,7 @@ struct LargeWidgetView: View {
 
                 // Percentage
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
                     .frame(width: 35, alignment: .trailing)
             }

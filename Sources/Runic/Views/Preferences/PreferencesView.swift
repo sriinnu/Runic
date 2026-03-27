@@ -181,6 +181,7 @@ struct PreferencesView: View {
                     .tag(PreferencesTab.debug)
             }
         }
+        .runicTypography()
         .tabViewStyle(.automatic)
         .frame(
             minWidth: PreferencesTab.windowWidth,

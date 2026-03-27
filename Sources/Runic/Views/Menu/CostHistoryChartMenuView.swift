@@ -39,7 +39,7 @@ struct CostHistoryChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No cost history data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 Chart {
@@ -64,7 +64,7 @@ struct CostHistoryChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -94,9 +94,9 @@ struct CostHistoryChartMenuView: View {
                 if self.showHoverHint {
                     HStack(spacing: RunicSpacing.xxs) {
                         Image(systemName: "cursorarrow.click.2")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                         Text("Hover to explore")
-                            .font(.caption2)
+                            .font(RunicFont.caption2)
                     }
                     .foregroundStyle(.tertiary)
                     .transition(.opacity)
@@ -105,13 +105,13 @@ struct CostHistoryChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -122,7 +122,7 @@ struct CostHistoryChartMenuView: View {
 
             if let total = self.totalCostUSD {
                 Text("Total (30d): \(UsageFormatter.usdString(total))")
-                    .font(.system(.caption, design: .rounded))
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
             }
         }

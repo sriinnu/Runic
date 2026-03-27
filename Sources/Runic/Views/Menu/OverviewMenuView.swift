@@ -55,9 +55,9 @@ struct OverviewMenuView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text(UsageFormatter.tokenCountString(self.totalTodayTokens))
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(RunicFont.system(size: 22, weight: .bold))
                     Text("\(self.summaries.count) of \(self.totalProviders) active")
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                 }
 
@@ -65,10 +65,10 @@ struct OverviewMenuView: View {
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("today")
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                     Text("\(Int(self.averageUsedPercent))% avg")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
                 }
@@ -79,7 +79,7 @@ struct OverviewMenuView: View {
             // MARK: - Provider cards
             if self.summaries.isEmpty {
                 Text("No active providers.")
-                    .font(.system(.footnote, design: .rounded))
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, RunicSpacing.md)
@@ -97,7 +97,7 @@ struct OverviewMenuView: View {
 
                 HStack {
                     Text("7-day activity")
-                        .font(.system(.caption2, design: .rounded))
+                        .font(RunicFont.caption2)
                         .foregroundStyle(.tertiary)
                     Spacer()
                     // Mini legend dots
@@ -109,7 +109,7 @@ struct OverviewMenuView: View {
                         }
                         if self.summaries.count > 4 {
                             Text("+\(self.summaries.count - 4)")
-                                .font(.system(size: 8, design: .rounded))
+                                .font(RunicFont.system(size: 8))
                                 .foregroundStyle(.quaternary)
                         }
                     }
@@ -133,7 +133,7 @@ struct OverviewMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(.system(size: 8, design: .rounded))
+                                    .font(RunicFont.system(size: 8))
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
@@ -142,7 +142,7 @@ struct OverviewMenuView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 7)) { _ in
                         AxisValueLabel(format: .dateTime.weekday(.narrow))
-                            .font(.system(size: 8, weight: .medium, design: .rounded))
+                            .font(RunicFont.system(size: 8, weight: .medium))
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -182,7 +182,7 @@ private struct ProviderRow: View {
 
             // Name
             Text(self.summary.name)
-                .font(.system(.caption, design: .rounded))
+                .font(RunicFont.caption)
                 .fontWeight(.medium)
                 .frame(width: 58, alignment: .leading)
                 .lineLimit(1)
@@ -224,14 +224,14 @@ private struct ProviderRow: View {
 
             // Percentage
             Text("\(Int(self.summary.usedPercent))%")
-                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .font(RunicFont.system(size: 9, weight: .semibold))
                 .foregroundStyle(self.summary.usedPercent > 80 ? .primary : .secondary)
                 .frame(width: 28, alignment: .trailing)
 
             // Today's tokens (if any)
             if self.summary.todayTokens > 0 {
                 Text(UsageFormatter.tokenCountString(self.summary.todayTokens))
-                    .font(.system(size: 8, design: .rounded))
+                    .font(RunicFont.system(size: 8))
                     .foregroundStyle(.tertiary)
                     .frame(width: 32, alignment: .trailing)
             }
@@ -267,7 +267,7 @@ private struct InfoPill: View {
 
     var body: some View {
         Text(self.text)
-            .font(.system(size: 8, weight: .medium, design: .rounded))
+            .font(RunicFont.system(size: 8, weight: .medium))
             .foregroundStyle(.tertiary)
             .padding(.horizontal, 4)
             .padding(.vertical, 1)

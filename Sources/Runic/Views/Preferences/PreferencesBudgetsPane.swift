@@ -16,17 +16,17 @@ struct PreferencesBudgetsPane: View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Project Budgets")
-                    .font(.title2)
+                    .font(RunicFont.title2)
                     .fontWeight(.semibold)
                 Text("Set monthly spending limits and alerts for projects.")
-                    .font(.subheadline)
+                    .font(RunicFont.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             if self.budgets.isEmpty {
                 VStack(spacing: RunicSpacing.md) {
                     Text("No budgets configured")
-                        .font(.body)
+                        .font(RunicFont.body)
                         .foregroundStyle(.secondary)
                         .padding(.vertical, RunicSpacing.lg)
 
@@ -44,19 +44,19 @@ struct PreferencesBudgetsPane: View {
                     // Header
                     HStack(alignment: .center, spacing: RunicSpacing.sm) {
                         Text("Project")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .frame(width: 150, alignment: .leading)
                         Text("Monthly Limit")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .frame(width: 120, alignment: .leading)
                         Text("Alert at")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .frame(width: 80, alignment: .leading)
                         Text("Status")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                             .frame(width: 80, alignment: .leading)
                         Spacer()
@@ -107,11 +107,11 @@ struct PreferencesBudgetsPane: View {
             if let error = self.errorMessage {
                 HStack(alignment: .center, spacing: RunicSpacing.xs) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(.red)
                         .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                     Text(error)
-                        .font(.caption)
+                        .font(RunicFont.caption)
                         .foregroundStyle(.red)
                 }
                 .padding(RunicSpacing.xs)
@@ -263,18 +263,18 @@ private struct BudgetRow: View {
                 }
             } else {
                 Text(budget.projectName ?? budget.projectID)
-                    .font(.body)
+                    .font(RunicFont.body)
                     .frame(width: 150, alignment: .leading)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(UsageFormatter.usdString(budget.monthlyLimit))
-                    .font(.body)
+                    .font(RunicFont.body)
                     .frame(width: 120, alignment: .leading)
                 Text(String(format: "%.0f%%", budget.alertThreshold * 100))
-                    .font(.body)
+                    .font(RunicFont.body)
                     .frame(width: 80, alignment: .leading)
                 Text(budget.enabled ? "Enabled" : "Disabled")
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(budget.enabled ? .green : .secondary)
                     .frame(width: 80, alignment: .leading)
                     .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
@@ -284,14 +284,14 @@ private struct BudgetRow: View {
                         self.onEdit()
                     } label: {
                         Image(systemName: "pencil")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                     }
                     .buttonStyle(.plain)
                     Button {
                         self.onDelete()
                     } label: {
                         Image(systemName: "trash")
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.red)
                     }
                     .buttonStyle(.plain)
@@ -316,7 +316,7 @@ private struct AddBudgetSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             Text("Add Budget")
-                .font(.title2)
+                .font(RunicFont.title2)
                 .fontWeight(.semibold)
 
             Form {

@@ -49,12 +49,12 @@ struct UsageWindowComparisonChartMenuView: View {
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Windows")
-                .font(.system(.subheadline, design: .rounded))
+                .font(RunicFont.subheadline)
                 .fontWeight(.semibold)
 
             if model.points.isEmpty {
                 Text("No usage window data available.")
-                    .font(.system(.footnote, design: .rounded))
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
                     .frame(height: 80)
             } else {
@@ -77,7 +77,7 @@ struct UsageWindowComparisonChartMenuView: View {
                         AxisValueLabel {
                             if let pct = value.as(Int.self) {
                                 Text("\(pct)%")
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
@@ -88,7 +88,7 @@ struct UsageWindowComparisonChartMenuView: View {
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
                             .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                     }
                 }
@@ -102,7 +102,7 @@ struct UsageWindowComparisonChartMenuView: View {
                             .fill(Self.primaryColor)
                             .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                         Text(self.primaryLabel)
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.secondary)
                     }
                     if let secondaryLabel = self.secondaryLabel {
@@ -111,7 +111,7 @@ struct UsageWindowComparisonChartMenuView: View {
                                 .fill(Self.secondaryColor)
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(secondaryLabel)
-                                .font(.system(.caption2, design: .rounded))
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.secondary)
                         }
                     }

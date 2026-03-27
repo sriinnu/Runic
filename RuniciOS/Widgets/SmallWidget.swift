@@ -89,7 +89,7 @@ struct SmallWidgetView: View {
                         .foregroundColor(.white.opacity(0.6))
 
                     Text(countdown)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
                         .foregroundColor(.white.opacity(0.9))
                 } else {
                     Text("Updated")

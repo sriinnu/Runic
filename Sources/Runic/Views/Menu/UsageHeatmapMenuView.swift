@@ -46,12 +46,12 @@ struct UsageHeatmapMenuView: View {
         let model = Self.makeModel(from: self.hourlySummaries)
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             Text("Usage Heatmap (24×7)")
-                .font(.headline)
+                .font(RunicFont.headline)
                 .fontWeight(.semibold)
 
             if model.isEmpty {
                 Text("No heatmap data.")
-                    .font(.footnote)
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
             } else {
                 ScrollView(.horizontal, showsIndicators: true) {
@@ -62,7 +62,7 @@ struct UsageHeatmapMenuView: View {
                                 .frame(width: 40, alignment: .leading)
                             ForEach(0..<24, id: \.self) { hour in
                                 Text(self.hourLabel(hour))
-                                    .font(.caption2)
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(.secondary)
                                     .frame(width: 40, alignment: .center)
                                     .lineLimit(1)
@@ -73,7 +73,7 @@ struct UsageHeatmapMenuView: View {
                         ForEach(0..<7, id: \.self) { weekday in
                             HStack(spacing: 2) {
                                 Text(self.weekdayLabel(weekday))
-                                    .font(.caption)
+                                    .font(RunicFont.caption)
                                     .foregroundStyle(.secondary)
                                     .frame(width: 38, alignment: .leading)
 
@@ -99,7 +99,7 @@ struct UsageHeatmapMenuView: View {
                         // Legend
                         HStack(spacing: RunicSpacing.xs) {
                             Text("Low")
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.secondary)
                             HStack(spacing: 2) {
                                 ForEach(0..<5, id: \.self) { level in
@@ -110,7 +110,7 @@ struct UsageHeatmapMenuView: View {
                                 }
                             }
                             Text("High")
-                                .font(.caption2)
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.top, RunicSpacing.xs)
@@ -121,7 +121,7 @@ struct UsageHeatmapMenuView: View {
 
                 let detail = self.detailText(model: model)
                 Text(detail)
-                    .font(.caption)
+                    .font(RunicFont.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .frame(height: 32, alignment: .leading)

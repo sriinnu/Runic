@@ -120,7 +120,7 @@ struct StatView: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(.title2, design: .rounded, weight: .bold))
+                .font(.system(.title2, design: .monospaced, weight: .bold))
                 .foregroundStyle(color)
             Text(label)
                 .font(.caption)
@@ -166,7 +166,7 @@ struct ProviderRowView: View {
 
                 // Usage percentage
                 Text("\(Int(snapshot.primary.usedPercent))%")
-                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                    .font(.system(.title3, design: .monospaced, weight: .semibold))
                     .foregroundStyle(statusColor)
             }
 

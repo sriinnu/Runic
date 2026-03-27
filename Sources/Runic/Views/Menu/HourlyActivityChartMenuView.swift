@@ -38,19 +38,19 @@ struct HourlyActivityChartMenuView: View {
             // Header
             HStack(alignment: .firstTextBaseline) {
                 Text("Today by Hour")
-                    .font(.system(.subheadline, design: .rounded))
+                    .font(RunicFont.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
                 if let peak = model.peakHour {
                     Text("Peak \(peak.label)")
-                        .font(.system(.caption, design: .rounded))
+                        .font(RunicFont.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
                 Text("No usage recorded today.")
-                    .font(.system(.footnote, design: .rounded))
+                    .font(RunicFont.footnote)
                     .foregroundStyle(.secondary)
                     .frame(height: 80)
             } else {
@@ -70,7 +70,7 @@ struct HourlyActivityChartMenuView: View {
                             .foregroundStyle(Color(nsColor: .labelColor).opacity(0.3))
                             .annotation(position: .top, spacing: 4) {
                                 Text(UsageFormatter.tokenCountString(bar.totalTokens))
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .fontWeight(.medium)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -85,7 +85,7 @@ struct HourlyActivityChartMenuView: View {
                         AxisValueLabel {
                             if let hour = value.as(Int.self) {
                                 Text(Self.hourAxisLabel(hour))
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
@@ -98,7 +98,7 @@ struct HourlyActivityChartMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(.system(.caption2, design: .rounded))
+                                    .font(RunicFont.caption2)
                                     .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                             }
                         }
@@ -120,27 +120,27 @@ struct HourlyActivityChartMenuView: View {
                 HStack(spacing: RunicSpacing.md) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Today")
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.tertiary)
                         Text(UsageFormatter.tokenCountString(model.totalTokens))
-                            .font(.system(.caption, design: .rounded))
+                            .font(RunicFont.caption)
                             .fontWeight(.medium)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Active hours")
-                            .font(.system(.caption2, design: .rounded))
+                            .font(RunicFont.caption2)
                             .foregroundStyle(.tertiary)
                         Text("\(model.activeHours)")
-                            .font(.system(.caption, design: .rounded))
+                            .font(RunicFont.caption)
                             .fontWeight(.medium)
                     }
                     if model.totalRequests > 0 {
                         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                             Text("Requests")
-                                .font(.system(.caption2, design: .rounded))
+                                .font(RunicFont.caption2)
                                 .foregroundStyle(.tertiary)
                             Text("\(model.totalRequests)")
-                                .font(.system(.caption, design: .rounded))
+                                .font(RunicFont.caption)
                                 .fontWeight(.medium)
                         }
                     }

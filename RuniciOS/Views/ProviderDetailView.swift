@@ -135,7 +135,7 @@ struct ProviderHeaderView: View {
 
                 VStack(spacing: 4) {
                     Text("\(Int(snapshot.primary.usedPercent))%")
-                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .font(.system(.largeTitle, design: .monospaced, weight: .bold))
                         .foregroundStyle(statusColor)
 
                     Text("Used")
@@ -215,7 +215,7 @@ struct MetricRow: View {
                     .font(.subheadline)
                 Spacer()
                 Text("\(Int(value))%")
-                    .font(.system(.headline, design: .rounded))
+                    .font(.system(.headline, design: .monospaced))
                     .foregroundStyle(color)
             }
 

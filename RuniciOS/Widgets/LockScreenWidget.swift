@@ -78,7 +78,7 @@ struct LockScreenCircularView: View {
                 // Center content
                 VStack(spacing: 1) {
                     Text("\(Int(provider.remainingPercent))")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
 
                     Text("%")
                         .font(.system(size: 10, weight: .semibold))
@@ -132,7 +132,7 @@ struct LockScreenRectangularView: View {
                     Spacer()
 
                     Text("\(Int(provider.remainingPercent))%")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                 }
 
                 // Progress bar

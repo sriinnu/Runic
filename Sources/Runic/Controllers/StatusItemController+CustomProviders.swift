@@ -13,7 +13,7 @@ extension StatusItemController {
 
         let headerItem = NSMenuItem(title: "Custom Providers", action: nil, keyEquivalent: "")
         headerItem.isEnabled = false
-        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+        let font = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
         headerItem.attributedTitle = NSAttributedString(string: "Custom Providers", attributes: [.font: font])
         menu.addItem(headerItem)
 
@@ -61,7 +61,7 @@ extension StatusItemController {
             item.image = image
         }
 
-        let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        let font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
         let subtitle = NSAttributedString(
             string: error,
             attributes: [.font: font, .foregroundColor: NSColor.systemRed])
