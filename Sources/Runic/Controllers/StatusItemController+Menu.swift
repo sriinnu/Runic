@@ -6,7 +6,7 @@ import SwiftUI
 // MARK: - NSMenu construction
 
 extension StatusItemController {
-    static let menuCardBaseWidth: CGFloat = 310
+    static let menuCardBaseWidth: CGFloat = 340
     private static let menuOpenPingDelay: Duration = PerformanceConstants.menuOpenPingDelay
 
     func menuCardWidth(for providers: [UsageProvider], menu: NSMenu? = nil) -> CGFloat {

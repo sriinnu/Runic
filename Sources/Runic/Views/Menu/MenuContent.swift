@@ -16,7 +16,7 @@ enum MenuContentMetrics {
     static let entrySpacing: CGFloat = RunicSpacing.xxs  // 4
 
     /// Minimum menu width
-    static let minWidth: CGFloat = 260
+    static let minWidth: CGFloat = 290
 }
 
 @MainActor

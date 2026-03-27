@@ -62,6 +62,15 @@ struct RunicFontChoice: Identifiable, Hashable {
     static let sfPro = RunicFontChoice(id: "__sf_pro__", displayName: "SF Pro")
     static let sfMono = RunicFontChoice(id: "__sf_mono__", displayName: "SF Mono")
 
+    /// Font used to render this choice's name in the picker (preview in its own typeface).
+    var previewFont: Font {
+        switch id {
+        case Self.sfPro.id: return .system(.body)
+        case Self.sfMono.id: return .system(.body, design: .monospaced)
+        default: return Font.custom(id, fixedSize: 13)
+        }
+    }
+
     /// Build the full list: system fonts first, then bundled custom fonts.
     static func availableChoices() -> [RunicFontChoice] {
         var choices: [RunicFontChoice] = [.sfPro, .sfMono]

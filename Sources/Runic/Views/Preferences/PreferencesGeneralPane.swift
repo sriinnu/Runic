@@ -170,7 +170,9 @@ struct GeneralPane: View {
 
                         Picker("", selection: self.$settings.selectedFontFamily) {
                             ForEach(RunicFontChoice.availableChoices()) { choice in
-                                Text(choice.displayName).tag(choice.id)
+                                Text(choice.displayName)
+                                    .font(choice.previewFont)
+                                    .tag(choice.id)
                             }
                         }
                         .pickerStyle(.menu)

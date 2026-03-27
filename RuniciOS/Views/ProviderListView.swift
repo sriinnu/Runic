@@ -120,10 +120,10 @@ struct StatView: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(.title2, design: .monospaced, weight: .bold))
+                .font(RunicFont.title2.weight(.bold))
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption)
+                .font(RunicFont.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -147,17 +147,17 @@ struct ProviderRowView: View {
             HStack {
                 // Provider icon and name
                 Image(systemName: iconForProvider(snapshot.provider))
-                    .font(.title3)
+                    .font(RunicFont.title3)
                     .foregroundStyle(statusColor)
                     .frame(width: 32)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(snapshot.provider.rawValue.capitalized)
-                        .font(.headline)
+                        .font(RunicFont.headline)
 
                     if let email = snapshot.accountEmail {
                         Text(email)
-                            .font(.caption)
+                            .font(RunicFont.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -166,7 +166,7 @@ struct ProviderRowView: View {
 
                 // Usage percentage
                 Text("\(Int(snapshot.primary.usedPercent))%")
-                    .font(.system(.title3, design: .monospaced, weight: .semibold))
+                    .font(RunicFont.title3.weight(.semibold))
                     .foregroundStyle(statusColor)
             }
 
@@ -189,9 +189,9 @@ struct ProviderRowView: View {
                timeRemaining > 0 {
                 HStack {
                     Image(systemName: "clock")
-                        .font(.caption2)
+                        .font(RunicFont.caption2)
                     Text(resetInfo.resetDescription)
-                        .font(.caption)
+                        .font(RunicFont.caption)
                 }
                 .foregroundStyle(.secondary)
             }
@@ -200,9 +200,9 @@ struct ProviderRowView: View {
             if let model = snapshot.primaryModel {
                 HStack {
                     Image(systemName: "cpu.fill")
-                        .font(.caption2)
+                        .font(RunicFont.caption2)
                     Text(model.modelName)
-                        .font(.caption)
+                        .font(RunicFont.caption)
                 }
                 .foregroundStyle(.blue)
             }

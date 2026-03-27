@@ -78,10 +78,10 @@ struct LockScreenCircularView: View {
                 // Center content
                 VStack(spacing: 1) {
                     Text("\(Int(provider.remainingPercent))")
-                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .font(RunicFont.system(size: 18, weight: .bold))
 
                     Text("%")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(RunicFont.system(size: 10, weight: .semibold))
                         .opacity(0.8)
                 }
             }
@@ -93,7 +93,7 @@ struct LockScreenCircularView: View {
                     .stroke(Color.white.opacity(0.2), lineWidth: 3)
 
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 16))
+                    .font(RunicFont.system(size: 16))
                     .opacity(0.5)
             }
         }
@@ -127,12 +127,12 @@ struct LockScreenRectangularView: View {
                 // Provider name and percentage
                 HStack {
                     Text(provider.displayName)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(RunicFont.system(size: 13, weight: .semibold))
 
                     Spacer()
 
                     Text("\(Int(provider.remainingPercent))%")
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .font(RunicFont.system(size: 13, weight: .bold))
                 }
 
                 // Progress bar
@@ -151,11 +151,11 @@ struct LockScreenRectangularView: View {
                 // Reset countdown
                 if let countdown = provider.resetCountdown {
                     Text("Resets \(countdown)")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(RunicFont.system(size: 11, weight: .medium))
                         .opacity(0.7)
                 } else {
                     Text("Updated \(relativeTime(from: provider.updatedAt))")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(RunicFont.system(size: 11, weight: .medium))
                         .opacity(0.7)
                 }
             }
@@ -165,14 +165,14 @@ struct LockScreenRectangularView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 12))
+                        .font(RunicFont.system(size: 12))
 
                     Text("No Data")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(RunicFont.system(size: 13, weight: .semibold))
                 }
 
                 Text("Open Runic to sync")
-                    .font(.system(size: 11))
+                    .font(RunicFont.system(size: 11))
                     .opacity(0.6)
             }
         }
@@ -214,21 +214,21 @@ struct LockScreenInlineView: View {
         if let provider = primaryProvider {
             HStack(spacing: 4) {
                 Image(systemName: statusIcon(for: provider))
-                    .font(.system(size: 12))
+                    .font(RunicFont.system(size: 12))
 
                 Text("\(provider.displayName):")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(RunicFont.system(size: 12, weight: .medium))
 
                 Text("\(Int(provider.remainingPercent))% left")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(RunicFont.system(size: 12, weight: .semibold))
             }
         } else {
             HStack(spacing: 4) {
                 Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 12))
+                    .font(RunicFont.system(size: 12))
 
                 Text("Runic: No data")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(RunicFont.system(size: 12, weight: .medium))
             }
         }
     }

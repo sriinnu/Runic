@@ -88,18 +88,18 @@ struct LargeWidgetView: View {
             // Title and status
             HStack(spacing: 10) {
                 Image(systemName: entry.systemStatus.iconName)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(RunicFont.system(size: 20, weight: .semibold))
                     .foregroundColor(statusColor)
 
                 Text("Runic Dashboard")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(RunicFont.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
 
                 Spacer()
 
                 // Last update
                 Text("Updated \(relativeTime)")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(RunicFont.system(size: 11, weight: .medium))
                     .foregroundColor(.white.opacity(0.6))
             }
 
@@ -140,15 +140,15 @@ struct LargeWidgetView: View {
     ) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(RunicFont.system(size: 12))
                 .foregroundColor(color)
 
             Text(value)
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(RunicFont.system(size: 14, weight: .bold))
                 .foregroundColor(.white)
 
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(RunicFont.system(size: 11, weight: .medium))
                 .foregroundColor(.white.opacity(0.6))
         }
     }
@@ -158,7 +158,7 @@ struct LargeWidgetView: View {
     private var chartsView: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Usage Trend")
-                .font(.system(size: 11, weight: .semibold))
+                .font(RunicFont.system(size: 11, weight: .semibold))
                 .foregroundColor(.white.opacity(0.7))
 
             if #available(iOS 16.0, *) {
@@ -193,7 +193,7 @@ struct LargeWidgetView: View {
                     .frame(width: 8, height: 8)
 
                 Text(provider.displayName)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(RunicFont.system(size: 12, weight: .semibold))
                     .foregroundColor(.white)
 
                 Spacer()
@@ -203,7 +203,7 @@ struct LargeWidgetView: View {
 
                 // Percentage
                 Text("\(Int(provider.remainingPercent))%")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(RunicFont.system(size: 13, weight: .bold))
                     .foregroundColor(.white)
                     .frame(width: 35, alignment: .trailing)
             }
@@ -225,7 +225,7 @@ struct LargeWidgetView: View {
             if let countdown = provider.resetCountdown {
                 HStack {
                     Text("Resets \(countdown)")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(RunicFont.system(size: 9, weight: .medium))
                         .foregroundColor(.white.opacity(0.4))
 
                     Spacer()
@@ -255,7 +255,7 @@ struct LargeWidgetView: View {
         }
 
         return Image(systemName: "\(icon).circle.fill")
-            .font(.system(size: 10))
+            .font(RunicFont.system(size: 10))
             .foregroundColor(color)
     }
 
@@ -288,9 +288,9 @@ struct LargeWidgetView: View {
     @ViewBuilder
     private var emptyStateView: some View {
         VStack(spacing: 12) {
-            Image(systemName: "chart.bar.doc.horizontal").font(.system(size: 36)).foregroundColor(.white.opacity(0.3))
-            Text("No Data Available").font(.system(size: 16, weight: .semibold)).foregroundColor(.white.opacity(0.6))
-            Text("Open Runic to sync your usage data").font(.system(size: 12)).foregroundColor(.white.opacity(0.4))
+            Image(systemName: "chart.bar.doc.horizontal").font(RunicFont.system(size: 36)).foregroundColor(.white.opacity(0.3))
+            Text("No Data Available").font(RunicFont.system(size: 16, weight: .semibold)).foregroundColor(.white.opacity(0.6))
+            Text("Open Runic to sync your usage data").font(RunicFont.system(size: 12)).foregroundColor(.white.opacity(0.4))
         }
         .padding()
     }

@@ -105,16 +105,16 @@ struct RunicLiveActivity: Widget {
         VStack(spacing: 12) {
             HStack {
                 Circle().fill(providerColor(context: context)).frame(width: 10, height: 10)
-                Text(context.state.providerName).font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                Text(context.state.providerName).font(RunicFont.system(size: 15, weight: .semibold)).foregroundColor(.white)
                 Spacer()
                 statusBadge(for: context.state.status)
             }
 
             VStack(spacing: 6) {
                 HStack {
-                    Text("Session Usage").font(.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.7))
+                    Text("Session Usage").font(RunicFont.system(size: 12, weight: .medium)).foregroundColor(.white.opacity(0.7))
                     Spacer()
-                    Text("\(Int(context.state.remainingPercent))% remaining").font(.system(size: 12, weight: .semibold)).foregroundColor(.white)
+                    Text("\(Int(context.state.remainingPercent))% remaining").font(RunicFont.system(size: 12, weight: .semibold)).foregroundColor(.white)
                 }
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
@@ -128,20 +128,20 @@ struct RunicLiveActivity: Widget {
 
             HStack {
                 HStack(spacing: 4) {
-                    Image(systemName: "clock.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
-                    Text(sessionDuration(from: context.state.sessionStartTime)).font(.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.8))
+                    Image(systemName: "clock.fill").font(RunicFont.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                    Text(sessionDuration(from: context.state.sessionStartTime)).font(RunicFont.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.8))
                 }
                 Spacer()
                 if let tokens = context.state.sessionTokens {
                     HStack(spacing: 4) {
-                        Image(systemName: "number").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
-                        Text(UsageFormatter.tokenCountString(tokens)).font(.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.8))
+                        Image(systemName: "number").font(RunicFont.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                        Text(UsageFormatter.tokenCountString(tokens)).font(RunicFont.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.8))
                     }
                 }
                 if let cost = context.state.estimatedCost {
                     HStack(spacing: 4) {
-                        Image(systemName: "dollarsign.circle.fill").font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
-                        Text(UsageFormatter.usdString(cost)).font(.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.8))
+                        Image(systemName: "dollarsign.circle.fill").font(RunicFont.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                        Text(UsageFormatter.usdString(cost)).font(RunicFont.system(size: 11, weight: .medium)).foregroundColor(.white.opacity(0.8))
                     }
                 }
             }
@@ -154,10 +154,10 @@ struct RunicLiveActivity: Widget {
     func expandedLeading(context: ActivityViewContext<RunicLiveActivityAttributes>) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(context.state.providerName)
-                .font(.system(size: 14, weight: .semibold))
+                .font(RunicFont.system(size: 14, weight: .semibold))
 
             Text(sessionDuration(from: context.state.sessionStartTime))
-                .font(.system(size: 12, weight: .medium))
+                .font(RunicFont.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
         }
     }
@@ -166,10 +166,10 @@ struct RunicLiveActivity: Widget {
     func expandedTrailing(context: ActivityViewContext<RunicLiveActivityAttributes>) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
             Text("\(Int(context.state.remainingPercent))%")
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .font(RunicFont.system(size: 18, weight: .bold))
 
             Text("remaining")
-                .font(.system(size: 11, weight: .medium))
+                .font(RunicFont.system(size: 11, weight: .medium))
                 .foregroundColor(.secondary)
         }
     }
@@ -196,7 +196,7 @@ struct RunicLiveActivity: Widget {
                 if let cost = context.state.estimatedCost { statItem(icon: "dollarsign.circle", value: UsageFormatter.usdString(cost)) }
                 Spacer()
             }
-            .font(.system(size: 11))
+            .font(RunicFont.system(size: 11))
         }
     }
 
@@ -210,7 +210,7 @@ struct RunicLiveActivity: Widget {
     @ViewBuilder
     func compactTrailing(context: ActivityViewContext<RunicLiveActivityAttributes>) -> some View {
         Text("\(Int(context.state.remainingPercent))%")
-            .font(.system(size: 12, weight: .bold, design: .monospaced))
+            .font(RunicFont.system(size: 12, weight: .bold))
     }
 
     @ViewBuilder
@@ -229,8 +229,8 @@ struct RunicLiveActivity: Widget {
             ("Complete", Color.blue, "checkmark.circle.fill")
 
         return HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 10))
-            Text(text).font(.system(size: 11, weight: .semibold))
+            Image(systemName: icon).font(RunicFont.system(size: 10))
+            Text(text).font(RunicFont.system(size: 11, weight: .semibold))
         }
         .foregroundColor(color)
         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -240,8 +240,8 @@ struct RunicLiveActivity: Widget {
 
     private func statItem(icon: String, value: String) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 10)).foregroundColor(.secondary)
-            Text(value).font(.system(size: 11, weight: .medium))
+            Image(systemName: icon).font(RunicFont.system(size: 10)).foregroundColor(.secondary)
+            Text(value).font(RunicFont.system(size: 11, weight: .medium))
         }
     }
 
