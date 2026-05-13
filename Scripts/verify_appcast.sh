@@ -37,11 +37,12 @@ function cleaned_key_path() {
 }
 
 KEY_FILE=$(cleaned_key_path)
-trap 'rm -f "$KEY_FILE" "$TMP_ZIP"' EXIT
 
 TMP_ZIP=$(mktemp /tmp/runic-enclosure.XXXX.zip)
+TMP_META=$(mktemp /tmp/runic-enclosure.XXXX.meta)
+trap 'rm -f "$KEY_FILE" "$TMP_ZIP" "$TMP_META"' EXIT
 
-python3 - "$APPCAST" "$VERSION" >"$TMP_ZIP.meta" <<'PY'
+python3 - "$APPCAST" "$VERSION" >"$TMP_META" <<'PY'
 import sys, xml.etree.ElementTree as ET
 
 appcast = sys.argv[1]
@@ -73,10 +74,9 @@ print(sig)
 print(length)
 PY
 
-readarray -t META <"$TMP_ZIP.meta"
-URL="${META[0]}"
-SIG="${META[1]}"
-LEN_EXPECTED="${META[2]}"
+URL=$(sed -n '1p' "$TMP_META")
+SIG=$(sed -n '2p' "$TMP_META")
+LEN_EXPECTED=$(sed -n '3p' "$TMP_META")
 
 echo "Downloading enclosure: $URL"
 curl -L -o "$TMP_ZIP" "$URL"
