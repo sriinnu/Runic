@@ -12,14 +12,15 @@ extension StatusItemController {
         submenu: NSMenu? = nil) -> NSMenuItem
     {
         let highlightState = MenuCardHighlightState()
-        let wrapped = MenuCardSectionContainerView(
+        let root = MenuCardSectionContainerView(
             highlightState: highlightState,
             showsSubmenuIndicator: submenu != nil)
         {
             view
         }
         .environment(\.runicTheme, self.settings.theme.palette)
-        let hosting = MenuCardItemHostingView(rootView: wrapped, highlightState: highlightState)
+        .runicColorScheme(self.settings.theme.palette)
+        let hosting = MenuCardItemHostingView(rootView: root, highlightState: highlightState)
         hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: 1))
         hosting.needsLayout = true
         hosting.layoutSubtreeIfNeeded()

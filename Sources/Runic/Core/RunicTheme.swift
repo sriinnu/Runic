@@ -103,6 +103,19 @@ struct RunicThemePalette {
         self.nsColor(self.warm, fallback: .systemRed)
     }
 
+    var colorScheme: ColorScheme? {
+        switch self.prefersDarkAppearance {
+        case nil: nil
+        case .some(true): .dark
+        case .some(false): .light
+        }
+    }
+
+    var nsAppearance: NSAppearance? {
+        guard let prefersDarkAppearance else { return nil }
+        return NSAppearance(named: prefersDarkAppearance ? .darkAqua : .aqua)
+    }
+
     var nsCardStrokeColor: NSColor {
         self.nsColor(self.cardStroke, fallback: .separatorColor)
     }
@@ -322,6 +335,15 @@ private struct RunicMenuPanelChrome: ViewModifier {
 }
 
 extension View {
+    @ViewBuilder
+    func runicColorScheme(_ palette: RunicThemePalette) -> some View {
+        if let colorScheme = palette.colorScheme {
+            self.environment(\.colorScheme, colorScheme)
+        } else {
+            self
+        }
+    }
+
     func runicMenuPanelChrome() -> some View {
         self.modifier(RunicMenuPanelChrome())
     }

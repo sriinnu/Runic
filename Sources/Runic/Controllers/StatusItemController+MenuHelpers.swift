@@ -134,10 +134,16 @@ extension StatusItemController {
     }
 
     func themedHostedMenuRoot(_ view: some View) -> some View {
-        view
+        let palette = self.settings.theme.palette
+        return view
             .runicTypography()
-            .environment(\.runicTheme, self.settings.theme.palette)
+            .environment(\.runicTheme, palette)
+            .runicColorScheme(palette)
             .runicMenuPanelChrome()
+    }
+
+    func applyRunicAppearance(to menu: NSMenu) {
+        menu.appearance = self.settings.theme.palette.nsAppearance
     }
 
     @MainActor
@@ -155,6 +161,7 @@ extension StatusItemController {
             self.onSelect = onSelect
             self.theme = theme
             super.init(frame: .zero)
+            self.appearance = theme.nsAppearance
             self.wantsLayer = true
             self.layer?.insertSublayer(self.highlightLayer, at: 0)
             self.highlightLayer.cornerRadius = CGFloat(RunicCornerRadius.sm)
@@ -417,17 +424,19 @@ extension StatusItemController {
 
     /// Recursively apply Fira Code to every NSMenuItem that uses a plain title (no custom view).
     func applyRunicFont(to menu: NSMenu) {
+        self.applyRunicAppearance(to: menu)
         for item in menu.items {
-            guard !item.isSeparatorItem, item.view == nil, !item.title.isEmpty else { continue }
-            let color = item.isEnabled
-                ? self.settings.theme.palette.nsPrimaryTextColor
-                : self.settings.theme.palette.nsSecondaryTextColor
-            item.attributedTitle = NSAttributedString(
-                string: item.title,
-                attributes: [
-                    .font: RunicFont.nsFont(size: NSFont.systemFontSize),
-                    .foregroundColor: color,
-                ])
+            if !item.isSeparatorItem, item.view == nil, !item.title.isEmpty {
+                let color = item.isEnabled
+                    ? self.settings.theme.palette.nsPrimaryTextColor
+                    : self.settings.theme.palette.nsSecondaryTextColor
+                item.attributedTitle = NSAttributedString(
+                    string: item.title,
+                    attributes: [
+                        .font: RunicFont.nsFont(size: NSFont.systemFontSize),
+                        .foregroundColor: color,
+                    ])
+            }
             if let submenu = item.submenu {
                 self.applyRunicFont(to: submenu)
             }

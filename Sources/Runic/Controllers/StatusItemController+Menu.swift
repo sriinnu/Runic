@@ -30,6 +30,7 @@ extension StatusItemController {
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.delegate = self
+        self.applyRunicAppearance(to: menu)
         return menu
     }
 
@@ -88,6 +89,7 @@ extension StatusItemController {
 
     func populateMenu(_ menu: NSMenu, provider: UsageProvider?) {
         menu.removeAllItems()
+        self.applyRunicAppearance(to: menu)
 
         let selectedProvider = provider
         let enabledProviders = self.store.enabledProviders()
@@ -332,6 +334,7 @@ extension StatusItemController {
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.delegate = self
+        self.applyRunicAppearance(to: menu)
         if let provider {
             self.menuProviders[ObjectIdentifier(menu)] = provider
         }
