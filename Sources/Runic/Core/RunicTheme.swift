@@ -25,66 +25,97 @@ struct RunicThemePalette {
         [self.primary, self.accent, self.highlight, self.tertiary]
     }
 
+    var isTerminalHUD: Bool {
+        self.id == "terminal"
+    }
+
     var meshColors: [Color] {
-        [self.primary, self.secondary, self.accent, self.warm, self.tertiary]
+        if self.isTerminalHUD {
+            [self.surface, self.accent, self.highlight, self.secondary, self.tertiary]
+        } else {
+            [self.primary, self.secondary, self.accent, self.warm, self.tertiary]
+        }
     }
 
     func chartColor(at index: Int) -> Color {
-        let palette = [self.accent, self.highlight, self.tertiary, self.warm, self.secondary, self.primary]
+        let palette = self.isTerminalHUD
+            ? [self.accent, self.highlight, self.secondary, self.warm, self.tertiary, self.primary]
+            : [self.accent, self.highlight, self.tertiary, self.warm, self.secondary, self.primary]
         return palette[index % palette.count]
     }
 
     var menuSurfaceGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                self.surface.opacity(self.isCustom ? 0.98 : 0.88),
-                self.surfaceAlt.opacity(self.isCustom ? 0.92 : 0.62),
-                self.cardFill.opacity(self.isCustom ? 0.72 : 0.44),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing)
+        if self.isTerminalHUD {
+            LinearGradient(
+                colors: [
+                    self.surface,
+                    self.surfaceAlt.opacity(0.72),
+                    self.surface,
+                ],
+                startPoint: .top,
+                endPoint: .bottom)
+        } else {
+            LinearGradient(
+                colors: [
+                    self.surface.opacity(self.isCustom ? 0.98 : 0.88),
+                    self.surfaceAlt.opacity(self.isCustom ? 0.92 : 0.62),
+                    self.cardFill.opacity(self.isCustom ? 0.72 : 0.44),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
+        }
     }
 
     var menuCardGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                self.cardFill.opacity(self.isCustom ? 0.92 : 0.52),
-                self.surfaceAlt.opacity(self.isCustom ? 0.72 : 0.38),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing)
+        if self.isTerminalHUD {
+            LinearGradient(
+                colors: [
+                    self.cardFill.opacity(0.88),
+                    self.surface.opacity(0.98),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
+        } else {
+            LinearGradient(
+                colors: [
+                    self.cardFill.opacity(self.isCustom ? 0.92 : 0.52),
+                    self.surfaceAlt.opacity(self.isCustom ? 0.72 : 0.38),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
+        }
     }
 
     var menuTrackColor: Color {
-        self.cardStroke.opacity(self.isCustom ? 0.42 : 0.26)
+        self.isTerminalHUD ? Color.white.opacity(0.10) : self.cardStroke.opacity(self.isCustom ? 0.42 : 0.26)
     }
 
     var menuSubtleFill: Color {
-        self.cardFill.opacity(self.isCustom ? 0.62 : 0.34)
+        self.isTerminalHUD ? self.cardFill.opacity(0.46) : self.cardFill.opacity(self.isCustom ? 0.62 : 0.34)
     }
 
     var chartGridColor: Color {
-        self.cardStroke.opacity(self.isCustom ? 0.58 : 0.42)
+        self.isTerminalHUD ? self.accent.opacity(0.18) : self.cardStroke.opacity(self.isCustom ? 0.58 : 0.42)
     }
 
     var chartAxisLabelColor: Color {
-        self.secondaryText.opacity(self.isCustom ? 0.78 : 0.70)
+        self.isTerminalHUD ? Color.white.opacity(0.54) : self.secondaryText.opacity(self.isCustom ? 0.78 : 0.70)
     }
 
     var chartSelectionBandColor: Color {
-        self.primaryText.opacity(self.isCustom ? 0.12 : 0.08)
+        self.isTerminalHUD ? self.accent.opacity(0.10) : self.primaryText.opacity(self.isCustom ? 0.12 : 0.08)
     }
 
     var chartPeakColor: Color {
-        self.highlight
+        self.isTerminalHUD ? self.highlight : self.highlight
     }
 
     var menuHoverFill: Color {
-        self.accent.opacity(self.isCustom ? 0.20 : 0.14)
+        self.isTerminalHUD ? self.accent.opacity(0.16) : self.accent.opacity(self.isCustom ? 0.20 : 0.14)
     }
 
     var menuSeparatorColor: Color {
-        self.cardStroke.opacity(self.isCustom ? 0.70 : 0.48)
+        self.isTerminalHUD ? self.accent.opacity(0.42) : self.cardStroke.opacity(self.isCustom ? 0.70 : 0.48)
     }
 
     var nsPrimaryTextColor: NSColor {
@@ -309,6 +340,97 @@ extension EnvironmentValues {
 }
 
 @MainActor
+struct RunicTerminalScanlineOverlay: View {
+    let opacity: Double
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        Canvas { context, size in
+            guard size.width > 0, size.height > 0 else { return }
+
+            let lineColor = self.runicTheme.accent.opacity(0.060 * self.opacity)
+            let faintColor = self.runicTheme.accent.opacity(0.030 * self.opacity)
+            var y: CGFloat = 1.5
+            while y < size.height {
+                var line = Path()
+                line.move(to: CGPoint(x: 0, y: y))
+                line.addLine(to: CGPoint(x: size.width, y: y))
+                context.stroke(line, with: .color(lineColor), lineWidth: 0.5)
+                y += 4
+            }
+
+            var gridY: CGFloat = 16
+            while gridY < size.height {
+                var line = Path()
+                line.move(to: CGPoint(x: 0, y: gridY))
+                line.addLine(to: CGPoint(x: size.width, y: gridY))
+                context.stroke(line, with: .color(faintColor), lineWidth: 0.7)
+                gridY += 16
+            }
+
+            let glowHeight = min(72, size.height * 0.28)
+            context.fill(
+                Path(CGRect(x: 0, y: 0, width: size.width, height: glowHeight)),
+                with: .linearGradient(
+                    Gradient(colors: [
+                        self.runicTheme.accent.opacity(0.050 * self.opacity),
+                        .clear,
+                    ]),
+                    startPoint: CGPoint(x: size.width / 2, y: 0),
+                    endPoint: CGPoint(x: size.width / 2, y: glowHeight)))
+        }
+        .blendMode(.screen)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+@MainActor
+struct RunicTerminalCornerOverlay: View {
+    let inset: CGFloat
+    let length: CGFloat
+    let lineWidth: CGFloat
+    let opacity: Double
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        Canvas { context, size in
+            guard size.width > self.inset * 2, size.height > self.inset * 2 else { return }
+
+            let left = self.inset
+            let right = size.width - self.inset
+            let top = self.inset
+            let bottom = size.height - self.inset
+            let length = min(self.length, min(size.width, size.height) / 3)
+            let style = StrokeStyle(lineWidth: self.lineWidth, lineCap: .square, lineJoin: .miter)
+            let color = self.runicTheme.accent.opacity(self.opacity)
+
+            var path = Path()
+            path.move(to: CGPoint(x: left, y: top + length))
+            path.addLine(to: CGPoint(x: left, y: top))
+            path.addLine(to: CGPoint(x: left + length, y: top))
+
+            path.move(to: CGPoint(x: right - length, y: top))
+            path.addLine(to: CGPoint(x: right, y: top))
+            path.addLine(to: CGPoint(x: right, y: top + length))
+
+            path.move(to: CGPoint(x: right, y: bottom - length))
+            path.addLine(to: CGPoint(x: right, y: bottom))
+            path.addLine(to: CGPoint(x: right - length, y: bottom))
+
+            path.move(to: CGPoint(x: left + length, y: bottom))
+            path.addLine(to: CGPoint(x: left, y: bottom))
+            path.addLine(to: CGPoint(x: left, y: bottom - length))
+
+            context.stroke(path, with: .color(color), style: style)
+        }
+        .blendMode(.screen)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+@MainActor
 private struct RunicMenuPanelChrome: ViewModifier {
     @Environment(\.runicTheme) private var runicTheme
 
@@ -317,7 +439,12 @@ private struct RunicMenuPanelChrome: ViewModifier {
             .foregroundStyle(self.runicTheme.primaryText)
             .tint(self.runicTheme.accent)
             .background {
-                self.runicTheme.menuSurfaceGradient
+                ZStack {
+                    self.runicTheme.menuSurfaceGradient
+                    if self.runicTheme.isTerminalHUD {
+                        RunicTerminalScanlineOverlay(opacity: 0.95)
+                    }
+                }
             }
     }
 }

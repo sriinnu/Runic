@@ -22,6 +22,7 @@ struct IntegrationsPane: View {
     @State private var newServerPort = 8001
     @State private var testWebhookResult: String?
     @State private var generatedAPIKey: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     struct MCPServer: Identifiable, Codable, Hashable {
         let id: String
@@ -107,8 +108,12 @@ struct IntegrationsPane: View {
                                     .font(RunicFont.footnote.monospaced())
                                     .foregroundStyle(.secondary)
                                     .padding(RunicSpacing.xs)
-                                    .background(Color(nsColor: .controlBackgroundColor))
-                                    .cornerRadius(RunicCornerRadius.xs)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                            .fill(self.runicTheme.menuSubtleFill))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                            .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
                             }
 
                             if let generatedKey = self.generatedAPIKey {
@@ -204,8 +209,12 @@ struct IntegrationsPane: View {
                                 }
                             }
                             .padding(RunicSpacing.xs)
-                            .background(Color(nsColor: .controlBackgroundColor))
-                            .cornerRadius(RunicCornerRadius.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                    .fill(self.runicTheme.menuSubtleFill))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                    .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
                         }
                     }
                 }

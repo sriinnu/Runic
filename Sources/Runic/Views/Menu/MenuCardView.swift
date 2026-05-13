@@ -383,27 +383,32 @@ private struct UsageMenuCardHeaderView: View {
     private var headerBackground: some View {
         let base = self.brandNSColor
         let top = base.blended(withFraction: 0.35, of: .white) ?? base
+        let accentTop = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : Color(nsColor: top)
+        let accentBase = self.runicTheme.isTerminalHUD ? self.runicTheme.tertiary : Color(nsColor: base)
         return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
             .fill(self.runicTheme.menuCardGradient)
             .overlay(
                 ZStack {
                     LinearGradient(
                         colors: [
-                            Color(nsColor: top).opacity(0.14),
-                            Color(nsColor: base).opacity(0.04),
+                            accentTop.opacity(self.runicTheme.isTerminalHUD ? 0.10 : 0.14),
+                            accentBase.opacity(self.runicTheme.isTerminalHUD ? 0.04 : 0.04),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing)
+                    if self.runicTheme.isTerminalHUD {
+                        RunicTerminalScanlineOverlay(opacity: 0.55)
+                    }
                 }
                     .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)))
     }
 
     private var headerBorder: some View {
-        let base = Color(nsColor: self.brandNSColor)
+        let base = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : Color(nsColor: self.brandNSColor)
         return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
             .stroke(
-                base.opacity(self.isHighlighted ? 0.45 : 0.28),
-                lineWidth: 0.7)
+                base.opacity(self.isHighlighted ? 0.76 : 0.45),
+                lineWidth: self.runicTheme.isTerminalHUD ? 0.9 : 0.7)
     }
 
     private var brandNSColor: NSColor {

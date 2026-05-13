@@ -576,6 +576,7 @@ private struct RunicOperationsCenterView: View {
     let guardrailStatus: String?
     let onCopyDiagnostics: () -> Void
     let onInstallGuardrails: () -> Void
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         let health = RunicDiagnosticsReport.providerHealthRows(settings: self.settings, store: self.store)
@@ -669,7 +670,10 @@ private struct RunicOperationsCenterView: View {
         .padding(.vertical, RunicSpacing.xxxs)
         .background(
             Capsule(style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7)))
+                .fill(self.runicTheme.menuSubtleFill))
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.55), lineWidth: 0.7))
     }
 }
 

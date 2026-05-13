@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.6 — 2026-05-13
+- Themes: deepen Terminal into a Tokmeter-style HUD across menu panels, Settings panes, provider cards, chart panels, alerts, budgets, integrations, team views, and rating cards.
+- Themes: add shared scanline and corner-bracket overlays for Terminal surfaces while keeping glass/material effects limited to non-Terminal skins.
+- Themes: replace remaining macOS gray panel fills in shared app surfaces with Runic theme tokens so selected skins propagate consistently.
+
 ## 2.1.5 — 2026-05-13
 - Themes: make Settings theme previews use the same menu surface, card, separator, track, and provider chip tokens as the main menubar panels.
 - Themes: remove uncontrolled AppKit vibrancy/material bleed from hosted menu panels so selected skins do not inherit the color of whatever window is behind them.

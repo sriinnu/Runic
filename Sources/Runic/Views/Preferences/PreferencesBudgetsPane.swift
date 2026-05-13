@@ -207,6 +207,7 @@ private struct BudgetRow: View {
     @State private var editName: String
     @State private var editLimit: String
     @State private var editThreshold: String
+    @Environment(\.runicTheme) private var runicTheme
 
     init(
         budget: ProjectBudgetStore.ProjectBudget,
@@ -300,8 +301,12 @@ private struct BudgetRow: View {
         }
         .padding(.horizontal, RunicSpacing.xs)
         .padding(.vertical, RunicSpacing.xxs)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(RunicCornerRadius.xs)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                .fill(self.runicTheme.menuSubtleFill))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 }
 

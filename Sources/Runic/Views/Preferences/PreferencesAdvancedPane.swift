@@ -9,6 +9,7 @@ struct AdvancedPane: View {
     @Bindable var store: UsageStore
     @State private var isInstallingCLI = false
     @State private var cliStatus: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         PreferencesPane {
@@ -34,8 +35,8 @@ struct AdvancedPane: View {
                         .font(RunicFont.caption2.weight(.medium))
                         .padding(.horizontal, RunicSpacing.xs)
                         .padding(.vertical, RunicSpacing.xxs)
-                        .background(Color(nsColor: .controlBackgroundColor))
-                        .clipShape(Capsule())
+                        .background(Capsule(style: .continuous).fill(self.runicTheme.menuSubtleFill))
+                        .overlay(Capsule(style: .continuous).stroke(self.runicTheme.menuSeparatorColor.opacity(0.55), lineWidth: 0.7))
                         .foregroundStyle(.secondary)
                 }
                 Text("Auto-refresh can switch to Manual when your Mac is idle or sleeps/locks. Adjust below.")

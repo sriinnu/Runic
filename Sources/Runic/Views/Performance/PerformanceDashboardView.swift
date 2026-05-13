@@ -580,6 +580,7 @@ private struct MetricCard: View {
     let value: String
     let icon: String
     var color: Color = .primary
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -598,8 +599,18 @@ private struct MetricCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(RunicSpacing.xs)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(self.runicTheme.menuCardGradient)
+                if self.runicTheme.isTerminalHUD {
+                    RunicTerminalScanlineOverlay(opacity: 0.45)
+                }
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.62), lineWidth: 0.7))
     }
 }
 

@@ -36,6 +36,7 @@ private struct LiquidLinkButton: View {
     let title: String
     let url: String
     @State private var hovering = false
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Button {
@@ -48,18 +49,18 @@ private struct LiquidLinkButton: View {
                 Text(self.title)
                     .font(.system(size: 12.5, weight: .medium))
             }
-            .foregroundStyle(self.hovering ? .primary : .secondary)
+            .foregroundStyle(self.hovering ? self.runicTheme.primaryText : self.runicTheme.secondaryText)
             .padding(.horizontal, RunicSpacing.sm)
             .padding(.vertical, RunicSpacing.compact)
             .background(
                 Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .opacity(self.hovering ? 1 : 0))
+                    .fill(self.runicTheme.menuSubtleFill)
+                    .opacity(self.hovering || self.runicTheme.isTerminalHUD ? 1 : 0))
             .overlay(
                 Capsule(style: .continuous)
                     .strokeBorder(
-                        Color.white.opacity(self.hovering ? 0.18 : 0),
-                        lineWidth: 0.5))
+                        self.runicTheme.menuSeparatorColor.opacity(self.hovering ? 0.72 : (self.runicTheme.isTerminalHUD ? 0.34 : 0)),
+                        lineWidth: self.runicTheme.isTerminalHUD ? 0.8 : 0.5))
         }
         .buttonStyle(.plain)
         .contentShape(Capsule())
