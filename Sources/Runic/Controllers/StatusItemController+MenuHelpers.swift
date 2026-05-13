@@ -37,7 +37,7 @@ extension StatusItemController {
 
     final class MenuHostingView<Content: View>: NSHostingView<Content> {
         override var allowsVibrancy: Bool {
-            true
+            false
         }
 
         override var isOpaque: Bool {
@@ -50,7 +50,7 @@ extension StatusItemController {
     MenuCardMeasuring {
         private let highlightState: MenuCardHighlightState
         override var allowsVibrancy: Bool {
-            true
+            false
         }
 
         override var isOpaque: Bool {

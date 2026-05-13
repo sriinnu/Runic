@@ -384,14 +384,13 @@ private struct UsageMenuCardHeaderView: View {
         let base = self.brandNSColor
         let top = base.blended(withFraction: 0.35, of: .white) ?? base
         return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-            .fill(.ultraThinMaterial)
+            .fill(self.runicTheme.menuCardGradient)
             .overlay(
                 ZStack {
-                    self.runicTheme.menuCardGradient
                     LinearGradient(
                         colors: [
-                            Color(nsColor: top).opacity(0.18),
-                            Color(nsColor: base).opacity(0.06),
+                            Color(nsColor: top).opacity(0.14),
+                            Color(nsColor: base).opacity(0.04),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing)
