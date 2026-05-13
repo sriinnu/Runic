@@ -727,6 +727,7 @@ final class UsageStore {
         case .copilot: nil
         case .minimax: nil
         case .openrouter: nil
+        case .vercelai: nil
         case .groq: nil
         case .deepseek: nil
         case .fireworks: nil
@@ -1100,6 +1101,7 @@ final class UsageStore {
              .zai,
              .minimax,
              .openrouter,
+             .vercelai,
              .groq,
              .deepseek,
              .fireworks,
@@ -1113,7 +1115,9 @@ final class UsageStore {
              .cerebras,
              .sambanova,
              .azure,
-             .bedrock:
+             .bedrock,
+             .vertexai,
+             .qwen:
             return self.providerOTelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:
             return nil
@@ -1168,6 +1172,7 @@ final class UsageStore {
             .uppercased()
 
         let candidatePaths = [
+            Self.splitPathList(self.settings.otelGenAILogPaths),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATH"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATHS"]),
@@ -1255,7 +1260,7 @@ final class UsageStore {
             generatedAt: generatedAt,
             days: [],
             isSupported: false,
-            note: "History is currently available for Claude/Codex local ledgers and configured OTel sources.",
+            note: "History is currently available for Claude/Codex local ledgers and configured OTel log sources.",
             error: nil)
     }
 
@@ -2004,7 +2009,7 @@ final class UsageStore {
             }
         }
 
-        let modelBreakdowns = UsageLedgerAggregator.modelSummaries(entries: todayEntries, groupByProject: true)
+        let modelBreakdowns = UsageLedgerAggregator.modelSummaries(entries: todayEntries)
             .map { self.resolvedModelSummary($0, budgetProjectNames: budgetProjectNames) }
         var modelBreakdownsByProvider: [UsageProvider: [UsageLedgerModelSummary]] = [:]
         for summary in modelBreakdowns {
@@ -2869,10 +2874,13 @@ extension UsageStore {
                         webExtrasEnabled: claudeWebExtrasEnabled,
                         hasWebSession: hasKey,
                         hasOAuthCredentials: hasOAuthCredentials)
+                    let automaticCLIFallbackSkipped = strategy.dataSource == .cli && !claudeDebugMenuEnabled
 
-                    await MainActor.run {
-                        if self.settings.claudeUsageDataSource != strategy.dataSource {
-                            self.settings.claudeUsageDataSource = strategy.dataSource
+                    if !automaticCLIFallbackSkipped {
+                        await MainActor.run {
+                            if self.settings.claudeUsageDataSource != strategy.dataSource {
+                                self.settings.claudeUsageDataSource = strategy.dataSource
+                            }
                         }
                     }
 
@@ -2881,6 +2889,12 @@ extension UsageStore {
                     lines.append("hasOAuthCredentials=\(hasOAuthCredentials)")
                     if strategy.useWebExtras {
                         lines.append("web_extras=enabled")
+                    }
+                    if automaticCLIFallbackSkipped {
+                        lines.append("cli_auto_fallback=skipped_to_avoid_password_prompt")
+                        lines.append("")
+                        lines.append("Enable the Debug menu and choose Claude CLI source only when you want Runic to launch the Claude CLI explicitly.")
+                        return lines.joined(separator: "\n")
                     }
                     lines.append("")
 
@@ -2998,6 +3012,15 @@ extension UsageStore {
                         settings: settingsSnapshot)
                 }
                 await MainActor.run { self.probeLogs[.openrouter] = text }
+                return text
+            case .vercelai:
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .vercelai,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
+                await MainActor.run { self.probeLogs[.vercelai] = text }
                 return text
             case .groq:
                 let text = await self.runWithTimeout(seconds: 15) {
@@ -3201,6 +3224,10 @@ extension UsageStore {
             return [self.debugTokenSummary(
                 provider: "openrouter",
                 resolution: ProviderTokenResolver.openRouterResolution())]
+        case .vercelai:
+            return [self.debugTokenSummary(
+                provider: "vercelai",
+                resolution: ProviderTokenResolver.vercelAIResolution())]
         case .groq:
             return [self.debugTokenSummary(provider: "groq", resolution: ProviderTokenResolver.groqResolution())]
         case .deepseek:

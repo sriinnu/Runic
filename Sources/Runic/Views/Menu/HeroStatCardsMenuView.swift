@@ -13,6 +13,7 @@ struct HeroTodayStatView: View {
     let costUSD: Double?
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(alignment: .center, spacing: RunicSpacing.xs) {
@@ -20,17 +21,17 @@ struct HeroTodayStatView: View {
                 Image(nsImage: icon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 30, height: 30)
                     .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
             }
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xxs) {
                     Text(UsageFormatter.tokenCountString(self.tokenCount))
                         .font(RunicFont.system(size: 26, weight: .bold))
-                        .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
+                        .foregroundStyle(self.runicTheme.primaryText)
                     Text("today")
                         .font(RunicFont.subheadline)
-                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
             Spacer()
@@ -38,12 +39,12 @@ struct HeroTodayStatView: View {
                 Text(UsageFormatter.usdString(cost))
                     .font(RunicFont.subheadline)
                     .fontWeight(.medium)
-                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .padding(.horizontal, RunicSpacing.xs)
                     .padding(.vertical, RunicSpacing.xxxs)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.light)))
+                            .fill(self.runicTheme.menuSubtleFill))
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -67,6 +68,7 @@ struct GlassmorphismStatCardsView: View {
     let dailySparkline: [Int]
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
@@ -75,14 +77,14 @@ struct GlassmorphismStatCardsView: View {
                 value: self.peakHourLabel,
                 detail: self.peakHourTokens,
                 sparkline: self.hourlySparkline,
-                sparkColor: RunicColors.chartColor(at: 0),
+                sparkColor: self.runicTheme.accent,
                 isHighlighted: self.isHighlighted)
             GlassStatCard(
                 title: "This Week",
                 value: self.weekTotalTokens,
                 detail: nil,
                 sparkline: self.dailySparkline,
-                sparkColor: Color(nsColor: .systemGray),
+                sparkColor: self.runicTheme.highlight,
                 isHighlighted: self.isHighlighted)
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -101,34 +103,36 @@ private struct GlassStatCard: View {
     let sparkline: [Int]
     let sparkColor: Color
     let isHighlighted: Bool
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             Text(self.title)
                 .font(RunicFont.caption2)
                 .fontWeight(.medium)
-                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                .foregroundStyle(self.runicTheme.secondaryText)
             MiniSparklineView(data: self.sparkline, color: self.sparkColor)
                 .frame(height: 24)
             Text(self.value)
                 .font(RunicFont.title3)
                 .fontWeight(.bold)
-                .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
+                .foregroundStyle(self.runicTheme.primaryText)
             if let detail {
                 Text(detail)
                     .font(RunicFont.caption2)
-                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
         }
         .padding(RunicSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                .fill(.ultraThinMaterial))
+                .fill(.ultraThinMaterial)
+                .overlay(self.runicTheme.menuCardGradient))
         .overlay(
             RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                .stroke(Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.medium), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                .stroke(self.runicTheme.cardStroke.opacity(RunicColors.Opacity.medium), lineWidth: 0.5))
+        .shadow(color: self.runicTheme.accent.opacity(0.10), radius: 4, y: 2)
         .glassShimmer()
     }
 }
@@ -197,13 +201,14 @@ struct UpdatedTimestampView: View {
     let updatedAt: Date
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
             let text = Self.relativeString(from: self.updatedAt, to: context.date)
             Text(text)
                 .font(RunicFont.caption2)
-                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted).opacity(0.7))
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
         .padding(.vertical, RunicSpacing.xxxs)

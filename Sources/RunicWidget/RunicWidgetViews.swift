@@ -267,6 +267,7 @@ private struct ProviderSwitchChip: View {
         case .copilot: "Copilot"
         case .minimax: "MiniMax"
         case .openrouter: "OR"
+        case .vercelai: "Vercel"
         case .groq: "Groq"
         case .deepseek: "DeepSeek"
         case .fireworks: "Fireworks"
@@ -597,6 +598,8 @@ enum WidgetColors {
             Color(red: 99 / 255, green: 102 / 255, blue: 241 / 255) // Indigo
         case .openrouter:
             Color(red: 255 / 255, green: 90 / 255, blue: 0 / 255) // OpenRouter orange
+        case .vercelai:
+            Color(red: 0 / 255, green: 0 / 255, blue: 0 / 255)
         case .groq:
             Color(red: 0 / 255, green: 200 / 255, blue: 150 / 255) // Groq teal
         case .deepseek:

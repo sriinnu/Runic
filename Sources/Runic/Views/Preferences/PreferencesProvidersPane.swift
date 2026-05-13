@@ -35,7 +35,7 @@ private enum ProviderListMetrics {
     static let sectionEdgeInset: CGFloat = RunicSpacing.md
     static let dividerBottomInset: CGFloat = RunicSpacing.xxs
     static let checkboxSize: CGFloat = 20
-    static let iconSize: CGFloat = 30
+    static let iconSize: CGFloat = 34
     static let dividerLeadingInset: CGFloat = contentInset
     static let dividerTrailingInset: CGFloat = contentInset
     static let providerCardPadding = EdgeInsets(
@@ -955,6 +955,7 @@ struct ProvidersPane: View {
         let apiBackedProviders: Set<UsageProvider> = [
             .zai,
             .openrouter,
+            .vercelai,
             .groq,
             .deepseek,
             .fireworks,
@@ -1021,10 +1022,35 @@ struct ProvidersPane: View {
     }
 
     private func extraSettingsFields(for provider: UsageProvider) -> [ProviderSettingsFieldDescriptor] {
-        guard let impl = ProviderCatalog.implementation(for: provider) else { return [] }
         let context = self.makeSettingsContext(provider: provider)
-        return impl.settingsFields(context: context)
+        let providerFields = ProviderCatalog.implementation(for: provider)?
+            .settingsFields(context: context) ?? []
+        return (providerFields + [self.otelUsageLogField(provider: provider, context: context)])
             .filter { $0.isVisible?() ?? true }
+    }
+
+    private func otelUsageLogField(
+        provider: UsageProvider,
+        context: ProviderSettingsContext) -> ProviderSettingsFieldDescriptor
+    {
+        ProviderSettingsFieldDescriptor(
+            id: "\(provider.rawValue)-otel-genai-log-paths",
+            title: "Usage log paths",
+            subtitle: "JSON/JSONL OpenTelemetry GenAI files or folders. Comma or newline separated.",
+            kind: .plain,
+            placeholder: "~/Library/Logs/ai-usage.jsonl, /path/to/otel-logs",
+            binding: context.stringBinding(\.otelGenAILogPaths),
+            actions: [
+                ProviderSettingsActionDescriptor(
+                    id: "\(provider.rawValue)-refresh-otel-usage",
+                    title: "Refresh usage",
+                    style: .bordered,
+                    isVisible: nil,
+                    perform: {
+                        await context.store.refresh(trigger: .manual, forceTokenUsage: true)
+                    }),
+            ],
+            isVisible: nil)
     }
 
     private func makeSettingsContext(provider: UsageProvider) -> ProviderSettingsContext {
@@ -1850,17 +1876,17 @@ private struct ProviderSidebarRow: View {
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
-            if let brand = ProviderBrandIcon.image(for: self.provider, size: 20) {
+            if let brand = ProviderBrandIcon.image(for: self.provider, size: 22) {
                 Image(nsImage: brand)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 20, height: 20)
-                    .foregroundStyle(self.isEnabled ? .primary : .tertiary)
+                    .frame(width: 22, height: 22)
+                    .opacity(self.isEnabled ? 1 : 0.48)
             } else {
                 Image(systemName: "circle.dotted")
                     .font(.system(size: 16))
                     .foregroundStyle(.tertiary)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 22, height: 22)
             }
             Text(self.store.metadata(for: self.provider).displayName)
                 .font(RunicFont.body)

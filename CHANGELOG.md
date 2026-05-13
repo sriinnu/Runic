@@ -1,5 +1,36 @@
 # Changelog
 
+## 2.1.3 — 2026-05-12
+- Themes: apply the selected palette to the main menubar panels, overview panel, provider tabs, sidebar switcher, chart submenus, progress bars, and Preferences panes.
+- Themes: make themed surfaces use palette backgrounds, strokes, text, track colors, and accent tints instead of falling back to macOS system grays.
+- Preferences: make the full settings window reflect the active theme behind every tab, not only the appearance preview.
+
+## 2.1.2 — 2026-05-12
+- Icons: replace the handcrafted provider SVG set with brand marks from the LobeHub AI icon set where available.
+- Icons: add polished custom Auggie and Droid marks for providers without reliable public SVG coverage.
+- Icons: make provider marks larger in menu tabs, hero rows, settings previews, and provider health rows.
+- Menu: remove the glossy rounded backing behind the provider hero mark so official logos render as logos, not tiny app badges.
+- Tests: update provider icon checks to require the new 24px brand-mark grid and reject old 64px plate-style assets.
+
+## 2.1.1 — 2026-05-12
+- Icons: render provider marks as larger, colorful brand SVGs without the badge plate/border.
+- Themes: add a Glass theme with stronger frosted depth, aurora color, and livelier glass motion.
+- Preferences: add an appearance preview and make theme/font changes repaint immediately.
+- Typography: resolve bundled font face names so custom font changes actually apply in SwiftUI and menu text.
+- Claude: stop automatic app refreshes from falling back to CLI probing, preventing repeated macOS password prompts unless CLI is explicitly selected.
+- Menu: collapse duplicate display-equivalent model rows in the Models submenu.
+- Operations: add provider credential/data health, default guardrail installation, and redacted diagnostics export.
+- Tests: guard provider SVGs and brand icon rendering so bordered assets do not sneak back in.
+
+## 2.1.0 — 2026-05-12
+- Providers: add Vercel AI Gateway support, plus Qwen and Vertex AI provider wiring.
+- Usage: show token/cost/model/project summaries for any provider with local ledger or OpenTelemetry GenAI logs.
+- Preferences: add shared Usage log paths and refresh controls across provider settings.
+- Icons: regenerate all provider SVGs as compact 64px template marks and render them as high-contrast badges.
+- Themes: add Pine, Nocturne, Prism, and Terminal skins alongside System, Light, and Dark.
+- Packaging: use a stable Developer ID signing identity for release builds to avoid Keychain trust churn.
+- Keychain: skip rewriting unchanged provider secrets so saved API keys stay quiet across upgrades.
+
 ## 2.0.0 — 2026-03-27
 - Typography: custom font system with 7 bundled families (Fira Code, JetBrains Mono, IBM Plex Mono, Space Mono, Inconsolata, Caveat, SF Pro/Mono)
 - Typography: live font switching from Settings > General — no restart needed

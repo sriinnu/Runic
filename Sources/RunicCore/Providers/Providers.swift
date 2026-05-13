@@ -13,6 +13,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case zai
     case minimax
     case openrouter
+    case vercelai
     case groq
     case deepseek
     case fireworks
@@ -44,6 +45,7 @@ public enum IconStyle: Sendable {
     case copilot
     case minimax
     case openrouter
+    case vercelai
     case groq
     case deepseek
     case fireworks

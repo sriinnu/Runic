@@ -87,7 +87,7 @@ public enum GitHubIntegration {
 
     private static func parseCommitLine(_ line: String) -> GitCommit? {
         // Format: old_sha new_sha Author Name <email> timestamp timezone\tcommit: message
-        // Example: 0000000000000000000000000000000000000000 538b8f7ef4110664c161b13326a2ebe65b6a1fb0 Sriinnu <hello@srinivas.dev> 1767822510 +0100\tcommit (initial): Add Runic sources
+        // Example: 0000000000000000000000000000000000000000 538b8f7ef4110664c161b13326a2ebe65b6a1fb0 Sriinnu <5410488+sriinnu@users.noreply.github.com> 1767822510 +0100\tcommit (initial): Add Runic sources
 
         let parts = line.components(separatedBy: "\t")
         guard parts.count >= 2 else {

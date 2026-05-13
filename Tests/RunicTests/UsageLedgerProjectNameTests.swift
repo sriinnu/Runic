@@ -51,6 +51,52 @@ struct UsageLedgerProjectNameTests {
     }
 
     @Test
+    func `model summaries collapse duplicate models across projects by default`() {
+        let now = Date()
+        let entries = [
+            UsageLedgerEntry(
+                provider: .codex,
+                timestamp: now,
+                sessionID: "s1",
+                projectID: "proj-alpha",
+                projectName: "Alpha",
+                model: "gpt-5.5",
+                inputTokens: 100,
+                outputTokens: 20,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: 0.15,
+                requestID: "ra",
+                messageID: nil,
+                version: nil,
+                source: .codexLog),
+            UsageLedgerEntry(
+                provider: .codex,
+                timestamp: now.addingTimeInterval(1),
+                sessionID: "s2",
+                projectID: "proj-beta",
+                projectName: "Beta",
+                model: "gpt-5.5",
+                inputTokens: 200,
+                outputTokens: 40,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: 0.30,
+                requestID: "rb",
+                messageID: nil,
+                version: nil,
+                source: .codexLog),
+        ]
+
+        let summaries = UsageLedgerAggregator.modelSummaries(entries: entries)
+
+        #expect(summaries.count == 1)
+        #expect(summaries.first?.model == "gpt-5.5")
+        #expect(summaries.first?.totals.totalTokens == 360)
+        #expect(summaries.first?.projectID == nil)
+    }
+
+    @Test
     func `project summaries group by inferred name when project ID is missing`() {
         let now = Date()
         let entries = [

@@ -1,8 +1,8 @@
 {
   "name": "@sriinnu/runic",
-  "version": "2.0.0",
-  "description": "AI usage monitoring for your Mac menubar. Track usage, costs, and quotas across 26 AI providers.",
-  "author": "Srinivas Pendela <sriinnu@users.noreply.github.com>",
+  "version": "2.1.3",
+  "description": "AI usage monitoring for your Mac menubar. Track usage, costs, and quotas across 27 AI providers.",
+  "author": "Sriinnu <5410488+sriinnu@users.noreply.github.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

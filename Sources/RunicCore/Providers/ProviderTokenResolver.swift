@@ -34,6 +34,7 @@ public enum ProviderTokenResolver {
     private static let minimaxCookieAccount = "minimax-cookie-header"
     private static let minimaxGroupAccount = "minimax-group-id"
     private static let openRouterAccount = "openrouter-api-token"
+    private static let vercelAIAccount = "vercelai-api-token"
     private static let groqAccount = "groq-api-token"
     private static let deepSeekAccount = "deepseek-api-token"
     private static let fireworksAccount = "fireworks-api-token"
@@ -81,6 +82,12 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
         self.openRouterResolution(environment: environment)?.token
+    }
+
+    public static func vercelAIToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.vercelAIResolution(environment: environment)?.token
     }
 
     public static func groqToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
@@ -242,6 +249,21 @@ public enum ProviderTokenResolver {
         }
         if let token = self.cleaned(environment["OPENROUTER_API_KEY"]) {
             return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func vercelAIResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.vercelAIAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["AI_GATEWAY_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment, sourceKey: "AI_GATEWAY_API_KEY")
+        }
+        if let token = self.cleaned(environment["VERCEL_OIDC_TOKEN"]) {
+            return ProviderTokenResolution(token: token, source: .environment, sourceKey: "VERCEL_OIDC_TOKEN")
         }
         return nil
     }
@@ -465,7 +487,7 @@ public enum ProviderTokenResolver {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecUseAuthenticationUI as String: "kSecUseAuthenticationUIFail" as CFString,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]

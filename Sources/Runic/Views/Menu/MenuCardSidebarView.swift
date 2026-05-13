@@ -19,8 +19,8 @@ enum MenuCardSidebarMetrics {
 
     private static func smallStyle() -> Style {
         Style(
-            iconSize: 18,
-            buttonSize: 26,
+            iconSize: 20,
+            buttonSize: 28,
             spacing: RunicSpacing.compact,
             padding: RunicSpacing.xs,
             cornerRadius: 7,
@@ -30,8 +30,8 @@ enum MenuCardSidebarMetrics {
 
     private static func mediumStyle() -> Style {
         Style(
-            iconSize: 22,
-            buttonSize: 30,
+            iconSize: 24,
+            buttonSize: 32,
             spacing: RunicSpacing.xs,
             padding: 10,
             cornerRadius: RunicCornerRadius.md,
@@ -100,12 +100,14 @@ private struct ProviderSidebarRailView: View {
     let onSelect: (UsageProvider) -> Void
 
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     private var railBackground: LinearGradient {
-        let base = Color(nsColor: .controlTextColor)
-            .opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors.Opacity.nano)
         return LinearGradient(
-            colors: [base, base.opacity(0.6)],
+            colors: [
+                self.runicTheme.surfaceAlt.opacity(self.isHighlighted ? 0.68 : 0.48),
+                self.runicTheme.cardFill.opacity(self.isHighlighted ? 0.54 : 0.34),
+            ],
             startPoint: .top,
             endPoint: .bottom)
     }
@@ -143,7 +145,7 @@ private struct ProviderSidebarRailView: View {
             }
 
             Rectangle()
-                .fill(Color(nsColor: .separatorColor)
+                .fill(self.runicTheme.cardStroke
                     .opacity(self.isHighlighted ? RunicColors.Opacity.emphasis : RunicColors.Opacity.strong))
                 .frame(width: 1)
                 .padding(.top, MenuCardMetrics.headerTopPadding + 4)
@@ -161,6 +163,7 @@ private struct ProviderSidebarIconButton: View {
     let onSelect: () -> Void
 
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Button(action: self.onSelect) {
@@ -238,7 +241,7 @@ private struct ProviderSidebarIconButton: View {
         let trackWidth = self.style.buttonSize - self.style.barInset * 2
         return ZStack(alignment: .leading) {
             Capsule()
-                .fill(Color(nsColor: .tertiaryLabelColor).opacity(RunicColors.Opacity.strong))
+                .fill(self.runicTheme.menuTrackColor)
             Capsule()
                 .fill(self.brandColor)
                 .frame(width: trackWidth * ratio)

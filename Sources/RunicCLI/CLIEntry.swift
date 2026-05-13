@@ -811,7 +811,7 @@ enum RunicCLI {
             print("")
             print(
                 "  Providers: codex, claude, cursor, gemini, factory, copilot, zai, antigravity, minimax, " +
-                    "openrouter, groq, deepseek, fireworks, mistral, perplexity, kimi, auggie, together, " +
+                    "openrouter, vercelai, groq, deepseek, fireworks, mistral, perplexity, kimi, auggie, together, " +
                     "cohere, xai, cerebras, sambanova, azure, bedrock")
         }
         if command == "cost" || command == nil {

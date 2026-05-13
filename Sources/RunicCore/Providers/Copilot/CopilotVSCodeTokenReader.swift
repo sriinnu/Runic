@@ -180,9 +180,9 @@ public enum CopilotVSCodeTokenReader {
         ]
 
         if allowUserInteraction {
-            query[kSecUseAuthenticationUI as String] = "kSecUseAuthenticationUIAllow" as CFString
+            query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIAllow
         } else {
-            query[kSecUseAuthenticationUI as String] = "kSecUseAuthenticationUIFail" as CFString
+            query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
             let authContext = LAContext()
             authContext.interactionNotAllowed = true
             query[kSecUseAuthenticationContext as String] = authContext

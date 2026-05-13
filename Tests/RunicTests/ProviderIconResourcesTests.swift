@@ -1,23 +1,33 @@
 import AppKit
 import Foundation
+import RunicCore
 import Testing
 
 @MainActor
 struct ProviderIconResourcesTests {
     @Test
-    func `provider icon SV gs exist`() throws {
+    func `provider icon SVGs exist`() throws {
         let root = try Self.repoRoot()
         let resources = root.appending(path: "Sources/Runic/Resources", directoryHint: .isDirectory)
 
-        let slugs = ["codex", "claude", "zai", "cursor", "gemini", "antigravity", "factory", "copilot"]
-        for slug in slugs {
-            let url = resources.appending(path: "ProviderIcon-\(slug).svg")
+        for descriptor in ProviderDescriptorRegistry.all {
+            let resource = descriptor.branding.iconResourceName
+            let url = resources.appending(path: "\(resource).svg")
             #expect(
                 FileManager.default.fileExists(atPath: url.path(percentEncoded: false)),
-                "Missing SVG for \(slug)")
+                "Missing SVG for \(descriptor.id.rawValue)")
+
+            let data = try Data(contentsOf: url)
+            #expect(data.count < 32_768, "Provider SVG is too large for menu rendering: \(descriptor.id.rawValue)")
+            let source = String(decoding: data, as: UTF8.self)
+            #expect(source.contains("<svg"), "Provider SVG must contain an SVG root: \(descriptor.id.rawValue)")
+            #expect(source.contains("viewBox=\"0 0 24 24\""), "Provider SVG must use the brand-mark icon grid: \(descriptor.id.rawValue)")
+            #expect(
+                !source.contains("<rect x=\"0\"") && !source.contains("viewBox=\"0 0 64 64\""),
+                "Provider SVG must not include an outer icon plate: \(descriptor.id.rawValue)")
 
             let image = NSImage(contentsOf: url)
-            #expect(image != nil, "Could not load SVG as NSImage for \(slug)")
+            #expect(image != nil, "Could not load SVG as NSImage for \(descriptor.id.rawValue)")
         }
     }
 

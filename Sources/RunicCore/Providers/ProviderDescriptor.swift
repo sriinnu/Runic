@@ -64,6 +64,7 @@ public enum ProviderDescriptorRegistry {
         _ = ProviderDescriptorRegistry.register(CopilotProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(MiniMaxProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(OpenRouterProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(VercelAIProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(GroqProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(DeepSeekProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(FireworksProviderDescriptor.descriptor)

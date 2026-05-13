@@ -91,6 +91,7 @@ extension StatusItemController {
 
         let selectedProvider = provider
         let enabledProviders = self.store.enabledProviders()
+        let isOverviewMode = selectedProvider == nil && enabledProviders.count > 1
         let menuWidth = self.menuCardWidth(for: enabledProviders, menu: menu)
         let descriptor = MenuDescriptor.build(
             provider: selectedProvider,
@@ -100,12 +101,14 @@ extension StatusItemController {
             updateReady: self.updater.updateStatus.isUpdateReady)
         let dashboard = self.store.openAIDashboard
         let currentProvider = selectedProvider ?? enabledProviders.first ?? .codex
-        let openAIWebEligible = currentProvider == .codex &&
+        let openAIWebEligible = !isOverviewMode &&
+            currentProvider == .codex &&
             self.store.openAIDashboardRequiresLogin == false &&
             dashboard != nil
         let hasCreditsHistory = openAIWebEligible && !(dashboard?.dailyBreakdown ?? []).isEmpty
         let hasUsageBreakdown = openAIWebEligible && !(dashboard?.usageBreakdown ?? []).isEmpty
-        let hasCostHistory = self.settings.isCostUsageEffectivelyEnabled(for: currentProvider) &&
+        let hasCostHistory = !isOverviewMode &&
+            self.settings.isCostUsageEffectivelyEnabled(for: currentProvider) &&
             (self.store.tokenSnapshot(for: currentProvider)?.daily.isEmpty == false)
         let hasOpenAIWebMenuItems = hasCreditsHistory || hasUsageBreakdown || hasCostHistory
         var addedOpenAIWebItems = false
@@ -148,7 +151,7 @@ extension StatusItemController {
                 width: menuWidth,
                 menu: menu)
             if let tabBarView {
-                let monoTabBar = tabBarView.runicTypography()
+                let monoTabBar = self.themedHostedMenuRoot(tabBarView)
                 let hosting = MenuHostingView(rootView: monoTabBar)
                 let controller = NSHostingController(rootView: monoTabBar)
                 let size = controller.sizeThatFits(in: CGSize(width: menuWidth, height: .greatestFiniteMagnitude))
@@ -169,11 +172,11 @@ extension StatusItemController {
         }
 
         // Overview tab — show all providers at a glance
-        if selectedProvider == nil, enabledProviders.count > 1 {
+        if isOverviewMode {
             let overviewView = self.makeOverviewView(
                 providers: enabledProviders,
                 width: menuWidth)
-            let monoOverview = overviewView.runicTypography()
+            let monoOverview = self.themedHostedMenuRoot(overviewView)
             let hosting = MenuHostingView(rootView: monoOverview)
             let controller = NSHostingController(rootView: monoOverview)
             let size = controller.sizeThatFits(in: CGSize(width: menuWidth, height: .greatestFiniteMagnitude))
@@ -186,7 +189,7 @@ extension StatusItemController {
             menu.addItem(.separator())
         }
 
-        if let model = self.menuCardModel(for: selectedProvider) {
+        if !isOverviewMode, let model = self.menuCardModel(for: selectedProvider) {
             if hasOpenAIWebMenuItems, !useSidebarSwitcher {
                 let webItems = OpenAIWebMenuItems(
                     hasUsageBreakdown: hasUsageBreakdown,
@@ -212,7 +215,7 @@ extension StatusItemController {
             }
         }
 
-        if hasOpenAIWebMenuItems {
+        if !isOverviewMode, hasOpenAIWebMenuItems {
             if !addedOpenAIWebItems {
                 if hasUsageBreakdown {
                     _ = self.addUsageBreakdownSubmenu(to: menu)
@@ -227,26 +230,28 @@ extension StatusItemController {
             menu.addItem(.separator())
         }
 
-        // Timeline & activity chart submenus
-        let hasTimeline = self.addUsageTimelineSubmenu(to: menu, provider: currentProvider)
-        let hasHourly = self.addHourlyActivitySubmenu(to: menu, provider: currentProvider)
-        let hasWeekly = self.addWeeklyActivitySubmenu(to: menu, provider: currentProvider)
-        if hasTimeline || hasHourly || hasWeekly {
-            menu.addItem(.separator())
-        }
+        if !isOverviewMode {
+            // Timeline & activity chart submenus
+            let hasTimeline = self.addUsageTimelineSubmenu(to: menu, provider: currentProvider)
+            let hasHourly = self.addHourlyActivitySubmenu(to: menu, provider: currentProvider)
+            let hasWeekly = self.addWeeklyActivitySubmenu(to: menu, provider: currentProvider)
+            if hasTimeline || hasHourly || hasWeekly {
+                menu.addItem(.separator())
+            }
 
-        // Utilization & window comparison chart submenus
-        let hasUtilization = self.addSubscriptionUtilizationSubmenu(to: menu, provider: currentProvider)
-        let hasWindowComparison = self.addUsageWindowComparisonSubmenu(to: menu, provider: currentProvider)
-        if hasUtilization || hasWindowComparison {
-            menu.addItem(.separator())
-        }
+            // Utilization & window comparison chart submenus
+            let hasUtilization = self.addSubscriptionUtilizationSubmenu(to: menu, provider: currentProvider)
+            let hasWindowComparison = self.addUsageWindowComparisonSubmenu(to: menu, provider: currentProvider)
+            if hasUtilization || hasWindowComparison {
+                menu.addItem(.separator())
+            }
 
-        // Project & model breakdown submenus
-        let hasProjectBreakdown = self.addProjectBreakdownSubmenu(to: menu, provider: currentProvider)
-        let hasModelBreakdown = self.addModelBreakdownSubmenu(to: menu, provider: currentProvider)
-        if hasProjectBreakdown || hasModelBreakdown {
-            menu.addItem(.separator())
+            // Project & model breakdown submenus
+            let hasProjectBreakdown = self.addProjectBreakdownSubmenu(to: menu, provider: currentProvider)
+            let hasModelBreakdown = self.addModelBreakdownSubmenu(to: menu, provider: currentProvider)
+            if hasProjectBreakdown || hasModelBreakdown {
+                menu.addItem(.separator())
+            }
         }
 
         // Export Usage submenu
@@ -278,6 +283,14 @@ extension StatusItemController {
                     }
                     menu.addItem(item)
                 case let .action(title, action):
+                    if isOverviewMode {
+                        switch action {
+                        case .switchAccount, .dashboard, .statusPage:
+                            continue
+                        case .installUpdate, .refresh, .settings, .about, .quit, .copyError:
+                            break
+                        }
+                    }
                     if case .refresh = action {
                         menu.addItem(self.makePersistentRefreshItem(title: title))
                         break
@@ -361,7 +374,7 @@ extension StatusItemController {
         menu: NSMenu) -> ProviderTabBarView?
     {
         guard providers.count > 1 else { return nil }
-        let overviewColor = Color(nsColor: .controlAccentColor)
+        let overviewColor = self.settings.theme.palette.accent
 
         var tabs: [ProviderTabBarView.TabItem] = [
             ProviderTabBarView.TabItem(
@@ -375,7 +388,7 @@ extension StatusItemController {
 
         for provider in providers {
             let meta = self.store.metadata(for: provider)
-            let icon = ProviderBrandIcon.image(for: provider, size: 18)
+            let icon = ProviderBrandIcon.image(for: provider, size: 22)
             let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
             let brandColor = Color(
                 red: Double(descriptor.branding.color.red),
@@ -425,7 +438,7 @@ extension StatusItemController {
         for provider in providers {
             let meta = self.store.metadata(for: provider)
             let snapshot = self.store.snapshot(for: provider)
-            let icon = ProviderBrandIcon.image(for: provider, size: 16)
+            let icon = ProviderBrandIcon.image(for: provider, size: 20)
             let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
             let brandColor = Color(
                 red: Double(descriptor.branding.color.red),
@@ -438,11 +451,9 @@ extension StatusItemController {
             let resetDesc = snapshot?.primary.resetDescription
             let windowLabel = snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines)
             let topModel = self.store.ledgerTopModel(for: provider)
-            let topModelContext: String? = if let model = topModel?.model {
-                UsageFormatter.modelContextLabel(for: model)
-            } else {
-                Self.defaultContextLabel(for: provider)
-            }
+            let topModelContext = ProviderContextWindowRegistry.shared
+                .contextLabel(for: provider, model: topModel?.model)?
+                .text
 
             summaries.append(OverviewMenuView.ProviderSummary(
                 id: provider.rawValue,
@@ -475,7 +486,7 @@ extension StatusItemController {
             summaries: activeSummaries.isEmpty ? summaries : activeSummaries,
             chartPoints: chartPoints,
             totalTodayTokens: totalToday,
-            totalProviders: UsageProvider.allCases.count,
+            totalProviders: providers.count,
             width: width)
     }
 
@@ -490,23 +501,6 @@ extension StatusItemController {
             "Azure OpenAI": "Azure",
         ]
         return abbreviations[name] ?? String(name.prefix(6))
-    }
-
-    /// Default flagship model context window per provider, loaded from
-    /// `Resources/provider-context-windows.json`. Update the JSON to add/change
-    /// context windows without recompiling.
-    private static let defaultContextWindows: [String: Int] = {
-        struct Entry: Decodable { let contextK: Int }
-        guard let url = Bundle.main.url(forResource: "provider-context-windows", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let dict = try? JSONDecoder().decode([String: Entry].self, from: data)
-        else { return [:] }
-        return dict.mapValues(\.contextK)
-    }()
-
-    private static func defaultContextLabel(for provider: UsageProvider) -> String? {
-        guard let k = self.defaultContextWindows[provider.rawValue] else { return nil }
-        return k >= 1000 ? "ctx \(k / 1000)M" : "ctx \(k)K"
     }
 
     private func resolvedMenuProvider() -> UsageProvider? {

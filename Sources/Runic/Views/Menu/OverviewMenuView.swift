@@ -33,6 +33,7 @@ struct OverviewMenuView: View {
     let totalTodayTokens: Int
     let totalProviders: Int
     let width: CGFloat
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
@@ -42,12 +43,12 @@ struct OverviewMenuView: View {
                 // Ring indicator showing overall usage
                 ZStack {
                     Circle()
-                        .stroke(Color(nsColor: .separatorColor).opacity(0.15), lineWidth: 3)
+                        .stroke(self.runicTheme.menuTrackColor, lineWidth: 3)
                     Circle()
                         .trim(from: 0, to: min(1, self.averageUsedPercent / 100))
                         .stroke(
                             AngularGradient(
-                                colors: [RunicColors.chartColor(at: 4), RunicColors.chartColor(at: 0)],
+                                colors: [self.runicTheme.highlight, self.runicTheme.accent],
                                 center: .center),
                             style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
@@ -59,7 +60,7 @@ struct OverviewMenuView: View {
                         .font(RunicFont.system(size: 22, weight: .bold))
                     Text("\(self.summaries.count) of \(self.totalProviders) active")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
 
                 Spacer()
@@ -67,22 +68,22 @@ struct OverviewMenuView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("today")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                     Text("\(Int(self.averageUsedPercent))% avg")
                         .font(RunicFont.caption)
                         .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.primaryText)
                 }
             }
 
-            Divider().opacity(0.5)
+            Divider().overlay(self.runicTheme.cardStroke.opacity(0.5))
 
             // MARK: - Provider cards
 
             if self.summaries.isEmpty {
                 Text("No active providers.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, RunicSpacing.md)
             } else {
@@ -96,12 +97,12 @@ struct OverviewMenuView: View {
             // MARK: - Combined 7-day chart
 
             if !self.chartPoints.isEmpty {
-                Divider().opacity(0.5)
+                Divider().overlay(self.runicTheme.cardStroke.opacity(0.5))
 
                 HStack {
                     Text("7-day activity")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                     Spacer()
                     // Mini legend dots
                     HStack(spacing: RunicSpacing.xxs) {
@@ -113,7 +114,7 @@ struct OverviewMenuView: View {
                         if self.summaries.count > 4 {
                             Text("+\(self.summaries.count - 4)")
                                 .font(RunicFont.system(size: 8))
-                                .foregroundStyle(.quaternary)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.75))
                         }
                     }
                 }
@@ -132,12 +133,12 @@ struct OverviewMenuView: View {
                 .chartYAxis {
                     AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
+                            .foregroundStyle(self.runicTheme.cardStroke.opacity(0.45))
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(RunicFont.system(size: 8))
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.secondaryText)
                             }
                         }
                     }
@@ -146,12 +147,13 @@ struct OverviewMenuView: View {
                     AxisMarks(values: .automatic(desiredCount: 7)) { _ in
                         AxisValueLabel(format: .dateTime.weekday(.narrow))
                             .font(RunicFont.system(size: 8, weight: .medium))
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
                 }
                 .frame(height: 80)
             }
         }
+        .foregroundStyle(self.runicTheme.primaryText)
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
         .padding(.vertical, RunicSpacing.sm)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
@@ -172,6 +174,7 @@ struct OverviewMenuView: View {
 
 private struct ProviderRow: View {
     let summary: OverviewMenuView.ProviderSummary
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
@@ -196,7 +199,7 @@ private struct ProviderRow: View {
                 ZStack(alignment: .leading) {
                     // Track
                     Capsule()
-                        .fill(Color(nsColor: .separatorColor).opacity(0.12))
+                        .fill(self.runicTheme.menuTrackColor)
 
                     // Fill with gradient
                     Capsule()
@@ -228,14 +231,14 @@ private struct ProviderRow: View {
             // Percentage
             Text("\(Int(self.summary.usedPercent))%")
                 .font(RunicFont.system(size: 9, weight: .semibold))
-                .foregroundStyle(self.summary.usedPercent > 80 ? .primary : .secondary)
+                .foregroundStyle(self.summary.usedPercent > 80 ? self.runicTheme.primaryText : self.runicTheme.secondaryText)
                 .frame(width: 28, alignment: .trailing)
 
             // Today's tokens (if any)
             if self.summary.todayTokens > 0 {
                 Text(UsageFormatter.tokenCountString(self.summary.todayTokens))
                     .font(RunicFont.system(size: 8))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(width: 32, alignment: .trailing)
             }
         }
@@ -267,15 +270,16 @@ private struct ProviderRow: View {
 
 private struct InfoPill: View {
     let text: String
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Text(self.text)
             .font(RunicFont.system(size: 8, weight: .medium))
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(self.runicTheme.secondaryText)
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.subtle)))
+                    .fill(self.runicTheme.menuSubtleFill))
     }
 }

@@ -174,6 +174,7 @@ enum IconRenderer {
         case copilot
         case minimax
         case openrouter
+        case vercelai
         case groq
         case deepseek
         case fireworks
@@ -281,6 +282,7 @@ enum IconRenderer {
         case .copilot: .copilot
         case .minimax: .minimax
         case .openrouter: .openrouter
+        case .vercelai: .vercelai
         case .groq: .groq
         case .deepseek: .deepseek
         case .fireworks: .fireworks
@@ -780,6 +782,13 @@ enum IconRenderer {
             NSGraphicsContext.current?.cgContext.setFillColor(NSColor.clear.cgColor)
             ctx.setBlendMode(.clear)
             NSBezierPath(ovalIn: innerRect).fill()
+        case .vercelai:
+            let path = NSBezierPath()
+            path.move(to: point(x: centerXPx, y: centerYPx + 6))
+            path.line(to: point(x: centerXPx + 6, y: centerYPx - 5))
+            path.line(to: point(x: centerXPx - 6, y: centerYPx - 5))
+            path.close()
+            path.fill()
         case .combined:
             let diamondRadiusPx = 4
             let cx = Self.grid.pt(centerXPx)
@@ -939,6 +948,7 @@ enum IconRenderer {
         case .copilot: 7
         case .minimax: 8
         case .openrouter: 9
+        case .vercelai: 26
         case .groq: 10
         case .deepseek: 11
         case .fireworks: 12

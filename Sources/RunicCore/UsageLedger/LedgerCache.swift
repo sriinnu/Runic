@@ -21,9 +21,13 @@ public actor LedgerCache {
         return f
     }()
 
-    public init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        self.cacheDir = appSupport.appendingPathComponent("Runic/ledger-cache", isDirectory: true)
+    public init(cacheDir: URL? = nil) {
+        if let cacheDir {
+            self.cacheDir = cacheDir
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            self.cacheDir = appSupport.appendingPathComponent("Runic/ledger-cache", isDirectory: true)
+        }
         try? FileManager.default.createDirectory(at: self.cacheDir, withIntermediateDirectories: true)
     }
 
@@ -46,7 +50,7 @@ public actor LedgerCache {
 
     /// Merge new daily entries into existing cache. Deque behavior:
     /// - Existing days are NOT overwritten (immutable history)
-    /// - Today's entry is ACCUMULATED (adds to existing totals for partial scans)
+    /// - Today's entry is REPLACED because log sources rescan today's active files
     /// - New days are appended
     public func mergeDailies(provider: String, newDailies: [CachedDaily], scanDate: Date, todayKey: String? = nil) {
         var ledger = self.loadCachedDailies(provider: provider) ?? CachedLedger(
@@ -61,20 +65,8 @@ public actor LedgerCache {
         }
 
         for newDaily in newDailies {
-            if newDaily.dayKey == resolvedTodayKey, let existing = existingByKey[newDaily.dayKey] {
-                // Accumulate today's partial scan results onto existing totals.
-                var mergedModels = Set(existing.modelsUsed)
-                mergedModels.formUnion(newDaily.modelsUsed)
-                existingByKey[newDaily.dayKey] = CachedDaily(
-                    dayKey: newDaily.dayKey,
-                    inputTokens: existing.inputTokens + newDaily.inputTokens,
-                    outputTokens: existing.outputTokens + newDaily.outputTokens,
-                    cacheCreationTokens: existing.cacheCreationTokens + newDaily.cacheCreationTokens,
-                    cacheReadTokens: existing.cacheReadTokens + newDaily.cacheReadTokens,
-                    costUSD: (existing.costUSD ?? 0) + (newDaily.costUSD ?? 0) > 0
-                        ? (existing.costUSD ?? 0) + (newDaily.costUSD ?? 0) : nil,
-                    requestCount: existing.requestCount + newDaily.requestCount,
-                    modelsUsed: Array(mergedModels))
+            if newDaily.dayKey == resolvedTodayKey {
+                existingByKey[newDaily.dayKey] = newDaily
             } else if existingByKey[newDaily.dayKey] == nil {
                 existingByKey[newDaily.dayKey] = newDaily
             }
