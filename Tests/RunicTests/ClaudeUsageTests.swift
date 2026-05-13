@@ -45,7 +45,7 @@ struct ClaudeUsageTests {
           "session_5h": { "pct_used": 2, "resets": "10:59pm (Europe/Vienna)" },
           "week_all_models": { "pct_used": 13, "resets": "Nov 21 at 4:59am (Europe/Vienna)" },
           "week_opus": { "pct_used": 0, "resets": "" },
-          "account_email": " sriinnu@icloud.com ",
+          "account_email": " claude-user@example.com ",
           "account_org": ""
         }
         """
@@ -53,7 +53,7 @@ struct ClaudeUsageTests {
         let snap = ClaudeUsageFetcher.parse(json: data)
         #expect(snap?.opus?.usedPercent == 0)
         #expect(snap?.opus?.resetDescription?.isEmpty == true)
-        #expect(snap?.accountEmail == "sriinnu@icloud.com")
+        #expect(snap?.accountEmail == "claude-user@example.com")
         #expect(snap?.accountOrganization == nil)
     }
 
@@ -77,7 +77,7 @@ struct ClaudeUsageTests {
     @Test
     func `trims account fields`() throws {
         let cases: [[String: String?]] = [
-            ["email": " sriinnu@icloud.com ", "org": "  Org  "],
+            ["email": " claude-user@example.com ", "org": "  Org  "],
             ["email": "", "org": " Claude Max Account "],
             ["email": nil, "org": " "],
         ]
@@ -273,7 +273,7 @@ struct ClaudeUsageTests {
     func `parses claude web API account info`() {
         let json = """
         {
-          "email_address": "sriinnu@icloud.com",
+          "email_address": "claude-user@example.com",
           "memberships": [
             {
               "organization": {
@@ -288,7 +288,7 @@ struct ClaudeUsageTests {
         """
         let data = Data(json.utf8)
         let info = ClaudeWebAPIFetcher._parseAccountInfoForTesting(data, orgId: "org-123")
-        #expect(info?.email == "sriinnu@icloud.com")
+        #expect(info?.email == "claude-user@example.com")
         #expect(info?.loginMethod == "Claude Max")
     }
 
@@ -296,7 +296,7 @@ struct ClaudeUsageTests {
     func `parses claude web API account info selects matching org`() {
         let json = """
         {
-          "email_address": "sriinnu@icloud.com",
+          "email_address": "claude-user@example.com",
           "memberships": [
             {
               "organization": {
@@ -326,7 +326,7 @@ struct ClaudeUsageTests {
     func `parses claude web API account info falls back to first membership`() {
         let json = """
         {
-          "email_address": "sriinnu@icloud.com",
+          "email_address": "claude-user@example.com",
           "memberships": [
             {
               "organization": {
