@@ -1,9 +1,15 @@
 # Changelog
 
-## 2.1.3 — 2026-05-12
+## 2.1.3 — 2026-05-13
+- Context: add provider-level context transparency that separates advertised/configured max context from observed usage and context-health messaging.
+- Context: read provider context windows from the Kosha TTL-backed registry when available, with static fallbacks for every built-in provider.
+- Providers: include Vercel AI Gateway in the provider surface and usage plumbing.
+- Icons: polish the Codex mark into a larger colorful transparent SVG without the old badge border.
 - Themes: apply the selected palette to the main menubar panels, overview panel, provider tabs, sidebar switcher, chart submenus, progress bars, and Preferences panes.
 - Themes: make themed surfaces use palette backgrounds, strokes, text, track colors, and accent tints instead of falling back to macOS system grays.
 - Preferences: make the full settings window reflect the active theme behind every tab, not only the appearance preview.
+- Privacy: sanitize public contact/package metadata to use the GitHub noreply identity.
+- Release: add `Scripts/clean-local-builds.sh` for wiping generated local build artifacts safely.
 
 ## 2.1.2 — 2026-05-12
 - Icons: replace the handcrafted provider SVG set with brand marks from the LobeHub AI icon set where available.
