@@ -382,10 +382,7 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
     }
 
     private static func bundledFallbackURL() -> URL? {
-        Bundle.main.url(forResource: "provider-context-windows", withExtension: "json")
-            ?? Bundle.main.url(forResource: "provider-context-windows", withExtension: "json", subdirectory: "Resources")
-            ?? Bundle.module.url(forResource: "provider-context-windows", withExtension: "json")
-            ?? Bundle.module.url(forResource: "provider-context-windows", withExtension: "json", subdirectory: "Resources")
+        RunicResourceLocator.url(forResource: "provider-context-windows", withExtension: "json")
     }
 }
 

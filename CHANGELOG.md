@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.4 — 2026-05-13
+- Packaging: fix launch crash in packaged builds by avoiding SwiftPM `Bundle.module` resource lookup at app startup.
+- Resources: route fonts, provider SVGs, and provider context fallbacks through a packaged-app-safe resource locator.
+
 ## 2.1.3 — 2026-05-13
 - Context: add provider-level context transparency that separates advertised/configured max context from observed usage and context-health messaging.
 - Context: read provider context windows from the Kosha TTL-backed registry when available, with static fallbacks for every built-in provider.

@@ -86,25 +86,7 @@ enum RunicTypography {
     }
 
     private static func fontDirectories() -> [URL] {
-        let candidates = [
-            Bundle.main.url(forResource: "Fonts", withExtension: nil),
-            Bundle.main.url(forResource: "Fonts", withExtension: nil, subdirectory: "Resources"),
-            Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
-            Bundle.main.resourceURL?.appendingPathComponent("Resources/Fonts"),
-            Bundle.module.url(forResource: "Fonts", withExtension: nil),
-            Bundle.module.url(forResource: "Fonts", withExtension: nil, subdirectory: "Resources"),
-        ]
-        var seen: Set<String> = []
-        return candidates.compactMap { url in
-            guard let url else { return nil }
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
-                return nil
-            }
-            let key = url.standardizedFileURL.path
-            guard seen.insert(key).inserted else { return nil }
-            return url
-        }
+        RunicResourceLocator.directories(named: "Fonts")
     }
 }
 
