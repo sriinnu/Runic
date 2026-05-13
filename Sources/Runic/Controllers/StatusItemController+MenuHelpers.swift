@@ -423,19 +423,24 @@ extension StatusItemController {
     // MARK: - Fira Code menu font post-processor
 
     /// Recursively apply Fira Code to every NSMenuItem that uses a plain title (no custom view).
+    ///
+    /// We intentionally do NOT set `.foregroundColor` on `attributedTitle`. The
+    /// theme palettes encode their primary/secondary text as `Color.x.opacity(α)`
+    /// for visual layering, and NSMenu renders that alpha against the *menu
+    /// background* — which produces a washed-out muddy color regardless of the
+    /// theme. Letting NSMenu use its own `labelColor` (driven by `menu.appearance`
+    /// set in `applyRunicAppearance`) keeps every theme's text at full contrast.
+    ///
+    /// If we ever want per-theme text tinting for these rows, the reliable path
+    /// is the `MenuActionButtonView` pattern (custom NSView per item) used by
+    /// `makePersistentRefreshItem`, not `.foregroundColor` on `attributedTitle`.
     func applyRunicFont(to menu: NSMenu) {
         self.applyRunicAppearance(to: menu)
         for item in menu.items {
             if !item.isSeparatorItem, item.view == nil, !item.title.isEmpty {
-                let color = item.isEnabled
-                    ? self.settings.theme.palette.nsPrimaryTextColor
-                    : self.settings.theme.palette.nsSecondaryTextColor
                 item.attributedTitle = NSAttributedString(
                     string: item.title,
-                    attributes: [
-                        .font: RunicFont.nsFont(size: NSFont.systemFontSize),
-                        .foregroundColor: color,
-                    ])
+                    attributes: [.font: RunicFont.nsFont(size: NSFont.systemFontSize)])
             }
             if let submenu = item.submenu {
                 self.applyRunicFont(to: submenu)
