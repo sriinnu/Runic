@@ -9,82 +9,77 @@ extension StatusItemController {
         let customProviders = CustomProviderStore.getEnabledProviders()
         guard !customProviders.isEmpty else { return }
 
-        menu.addItem(.separator())
+        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
+        self.addMenuSeparator(to: menu, width: rowWidth, id: "customProviders.separator")
 
-        let headerItem = NSMenuItem(title: "Custom Providers", action: nil, keyEquivalent: "")
-        headerItem.isEnabled = false
-        let font = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
-        headerItem.attributedTitle = NSAttributedString(string: "Custom Providers", attributes: [.font: font])
-        menu.addItem(headerItem)
+        menu.addItem(self.makeMenuActionRowItem(
+            id: "customProviders.header",
+            title: "Custom Providers",
+            width: rowWidth,
+            isEnabled: false))
 
         for provider in customProviders {
             if let snapshot = self.store.customProviderSnapshots[provider.id] {
-                menu.addItem(self.makeCustomProviderMenuItem(provider: provider, snapshot: snapshot))
+                menu.addItem(self.makeCustomProviderMenuItem(
+                    provider: provider,
+                    snapshot: snapshot,
+                    width: rowWidth))
             } else if let error = self.store.customProviderErrors[provider.id] {
-                menu.addItem(self.makeCustomProviderErrorItem(provider: provider, error: error))
+                menu.addItem(self.makeCustomProviderErrorItem(
+                    provider: provider,
+                    error: error,
+                    width: rowWidth))
             } else {
-                menu.addItem(self.makeCustomProviderLoadingItem(provider: provider))
+                menu.addItem(self.makeCustomProviderLoadingItem(provider: provider, width: rowWidth))
             }
         }
     }
 
     private func makeCustomProviderMenuItem(
         provider: CustomProviderConfig,
-        snapshot: CustomProviderSnapshot) -> NSMenuItem
+        snapshot: CustomProviderSnapshot,
+        width: CGFloat) -> NSMenuItem
     {
-        let title: String
+        let subtitle: String?
         if let quota = snapshot.usageData.quota, let used = snapshot.usageData.used, quota > 0 {
             let percent = Int((used / quota) * 100)
-            title = "\(provider.name): \(percent)% used"
+            subtitle = "\(percent)% used"
         } else if let remaining = snapshot.usageData.remaining {
-            title = "\(provider.name): \(Int(remaining)) remaining"
+            subtitle = "\(Int(remaining)) remaining"
         } else {
-            title = provider.name
+            subtitle = nil
         }
 
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.isEnabled = false
-
-        if let image = NSImage(systemSymbolName: provider.icon, accessibilityDescription: nil) {
-            image.isTemplate = true
-            image.size = NSSize(width: 16, height: 16)
-            item.image = image
-        }
-
-        return item
+        return self.makeMenuActionRowItem(
+            id: "customProviders.\(provider.id)",
+            title: provider.name,
+            icon: provider.icon,
+            subtitle: subtitle,
+            width: width,
+            isEnabled: false)
     }
 
-    private func makeCustomProviderErrorItem(provider: CustomProviderConfig, error: String) -> NSMenuItem {
-        let item = NSMenuItem(title: "\(provider.name): Error", action: nil, keyEquivalent: "")
-        item.isEnabled = false
-
-        if let image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil) {
-            image.isTemplate = true
-            image.size = NSSize(width: 16, height: 16)
-            item.image = image
-        }
-
-        let font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
-        let subtitle = NSAttributedString(
-            string: error,
-            attributes: [.font: font, .foregroundColor: self.settings.theme.palette.nsWarmColor])
-        let attributed = NSMutableAttributedString(string: "\(provider.name): Error\n")
-        attributed.append(subtitle)
-        item.attributedTitle = attributed
-
-        return item
+    private func makeCustomProviderErrorItem(
+        provider: CustomProviderConfig,
+        error: String,
+        width: CGFloat) -> NSMenuItem
+    {
+        self.makeMenuActionRowItem(
+            id: "customProviders.error.\(provider.id)",
+            title: "\(provider.name): Error",
+            icon: "exclamationmark.triangle",
+            subtitle: error,
+            width: width,
+            isEnabled: false)
     }
 
-    private func makeCustomProviderLoadingItem(provider: CustomProviderConfig) -> NSMenuItem {
-        let item = NSMenuItem(title: "\(provider.name): Loading...", action: nil, keyEquivalent: "")
-        item.isEnabled = false
-
-        if let image = NSImage(systemSymbolName: provider.icon, accessibilityDescription: nil) {
-            image.isTemplate = true
-            image.size = NSSize(width: 16, height: 16)
-            item.image = image
-        }
-
-        return item
+    private func makeCustomProviderLoadingItem(provider: CustomProviderConfig, width: CGFloat) -> NSMenuItem {
+        self.makeMenuActionRowItem(
+            id: "customProviders.loading.\(provider.id)",
+            title: provider.name,
+            icon: provider.icon,
+            subtitle: "Loading...",
+            width: width,
+            isEnabled: false)
     }
 }

@@ -170,7 +170,7 @@ extension StatusItemController {
                     menu: menu)
                 menu.addItem(switcherItem)
             }
-            menu.addItem(.separator())
+            self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.providerTabs")
         }
 
         // Overview tab — show all providers at a glance
@@ -188,7 +188,7 @@ extension StatusItemController {
             overviewItem.isEnabled = false
             overviewItem.representedObject = "overviewCard"
             menu.addItem(overviewItem)
-            menu.addItem(.separator())
+            self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.overview")
         }
 
         if !isOverviewMode, let model = self.menuCardModel(for: selectedProvider) {
@@ -211,9 +211,9 @@ extension StatusItemController {
                 }
                 menu.addItem(self.makeMenuCardItem(cardView, id: "menuCard", width: menuWidth))
                 if currentProvider == .codex, model.creditsText != nil {
-                    menu.addItem(self.makeBuyCreditsItem())
+                    menu.addItem(self.makeBuyCreditsItem(width: menuWidth))
                 }
-                menu.addItem(.separator())
+                self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.menuCard")
             }
         }
 
@@ -229,7 +229,7 @@ extension StatusItemController {
                     _ = self.addCostHistorySubmenu(to: menu, provider: currentProvider)
                 }
             }
-            menu.addItem(.separator())
+            self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.webItems")
         }
 
         if !isOverviewMode {
@@ -238,21 +238,21 @@ extension StatusItemController {
             let hasHourly = self.addHourlyActivitySubmenu(to: menu, provider: currentProvider)
             let hasWeekly = self.addWeeklyActivitySubmenu(to: menu, provider: currentProvider)
             if hasTimeline || hasHourly || hasWeekly {
-                menu.addItem(.separator())
+                self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.timeline")
             }
 
             // Utilization & window comparison chart submenus
             let hasUtilization = self.addSubscriptionUtilizationSubmenu(to: menu, provider: currentProvider)
             let hasWindowComparison = self.addUsageWindowComparisonSubmenu(to: menu, provider: currentProvider)
             if hasUtilization || hasWindowComparison {
-                menu.addItem(.separator())
+                self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.windows")
             }
 
             // Project & model breakdown submenus
             let hasProjectBreakdown = self.addProjectBreakdownSubmenu(to: menu, provider: currentProvider)
             let hasModelBreakdown = self.addModelBreakdownSubmenu(to: menu, provider: currentProvider)
             if hasProjectBreakdown || hasModelBreakdown {
-                menu.addItem(.separator())
+                self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.breakdowns")
             }
         }
 
@@ -271,21 +271,12 @@ extension StatusItemController {
         for (index, section) in actionableSections.enumerated() {
             for entry in section.entries {
                 switch entry {
-                case let .text(text, style):
-                    let item = NSMenuItem(title: text, action: nil, keyEquivalent: "")
-                    item.isEnabled = false
-                    if style == .headline {
-                        let font = RunicFont.nsFont(size: NSFont.systemFontSize, weight: .semibold)
-                        item.attributedTitle = NSAttributedString(string: text, attributes: [.font: font])
-                    } else if style == .secondary {
-                        let font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
-                        item.attributedTitle = NSAttributedString(
-                            string: text,
-                            attributes: [
-                                .font: font,
-                                .foregroundColor: self.settings.theme.palette.nsSecondaryTextColor,
-                            ])
-                    }
+                case let .text(text, _):
+                    let item = self.makeMenuActionRowItem(
+                        id: "textRow.\(text)",
+                        title: text,
+                        width: menuWidth,
+                        isEnabled: false)
                     menu.addItem(item)
                 case let .action(title, action):
                     if isOverviewMode {
@@ -297,33 +288,36 @@ extension StatusItemController {
                         }
                     }
                     if case .refresh = action {
-                        menu.addItem(self.makePersistentRefreshItem(title: title))
+                        menu.addItem(self.makePersistentRefreshItem(title: title, width: menuWidth))
                         break
                     }
                     let (selector, represented) = self.selector(for: action)
-                    let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
-                    item.target = self
-                    item.representedObject = represented
-                    if let iconName = action.systemImageName,
-                       let image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
-                    {
-                        image.isTemplate = true
-                        image.size = NSSize(width: 16, height: 16)
-                        item.image = image
-                    }
+
+                    var rowIsEnabled = true
+                    var rowSubtitle: String?
                     if case let .switchAccount(targetProvider) = action,
                        let subtitle = self.switchAccountSubtitle(for: targetProvider)
                     {
-                        item.isEnabled = false
-                        self.applySubtitle(subtitle, to: item, title: title)
+                        rowIsEnabled = false
+                        rowSubtitle = subtitle
                     }
+
+                    let item = self.makeMenuActionRowItem(
+                        id: "actionRow.\(title)",
+                        title: title,
+                        icon: action.systemImageName,
+                        subtitle: rowSubtitle,
+                        width: menuWidth,
+                        action: rowIsEnabled ? selector : nil,
+                        representedObject: represented,
+                        isEnabled: rowIsEnabled)
                     menu.addItem(item)
                 case .divider:
-                    menu.addItem(.separator())
+                    self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.divider")
                 }
             }
             if index < actionableSections.count - 1 {
-                menu.addItem(.separator())
+                self.addMenuSeparator(to: menu, width: menuWidth, id: "menu.separator.actionSection.\(index)")
             }
         }
 
@@ -640,13 +634,9 @@ extension StatusItemController {
     }
 
     private func addExportUsageSubmenu(to menu: NSMenu) {
-        let exportItem = NSMenuItem(title: "Export Usage\u{2026}", action: nil, keyEquivalent: "")
-        if let image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Export") {
-            image.isTemplate = true
-            image.size = NSSize(width: 16, height: 16)
-            exportItem.image = image
-        }
         let submenu = NSMenu(title: "Export Usage")
+        submenu.autoenablesItems = false
+        self.applyRunicAppearance(to: submenu)
         let csvItem = NSMenuItem(
             title: "Export as CSV\u{2026}",
             action: #selector(self.exportUsageCSV(_:)),
@@ -659,9 +649,15 @@ extension StatusItemController {
         jsonItem.target = self
         submenu.addItem(csvItem)
         submenu.addItem(jsonItem)
-        exportItem.submenu = submenu
+        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
+        let exportItem = self.makeMenuActionRowItem(
+            id: "submenuRow.exportUsage",
+            title: "Export Usage\u{2026}",
+            icon: "square.and.arrow.up",
+            width: rowWidth,
+            submenu: submenu)
         menu.addItem(exportItem)
-        menu.addItem(.separator())
+        self.addMenuSeparator(to: menu, width: rowWidth, id: "menu.separator.exportUsage")
     }
 
     private func selector(for action: MenuDescriptor.MenuAction) -> (Selector, Any?) {

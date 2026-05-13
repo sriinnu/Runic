@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.7 — 2026-05-13
+- Menu: render lower action, text, custom-provider, export, chart-link, and divider rows through the same themed hosted surface as the top provider cards.
+- Menu: keep row clicks routed through the original menu actions so Settings, Ping, Quit, and provider account actions remain functional after the themed row conversion.
+- Themes: remove the Pine/System split where the upper menu honored the selected palette but the lower main-panel rows fell back to native AppKit styling.
+
 ## 2.1.6 — 2026-05-13
 - Themes: deepen Terminal into a Tokmeter-style HUD across menu panels, Settings panes, provider cards, chart panels, alerts, budgets, integrations, team views, and rating cards.
 - Themes: add shared scanline and corner-bracket overlays for Terminal surfaces while keeping glass/material effects limited to non-Terminal skins.

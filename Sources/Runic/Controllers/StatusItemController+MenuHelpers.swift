@@ -30,6 +30,11 @@ extension StatusItemController {
     }
 
     @MainActor
+    protocol MenuCardSelectable: AnyObject {
+        var onSelect: (() -> Void)? { get set }
+    }
+
+    @MainActor
     @Observable
     final class MenuCardHighlightState {
         var isHighlighted = false
@@ -47,8 +52,10 @@ extension StatusItemController {
 
     @MainActor
     final class MenuCardItemHostingView<Content: View>: NSHostingView<Content>, MenuCardHighlighting,
-    MenuCardMeasuring {
+    MenuCardMeasuring, MenuCardSelectable {
         private let highlightState: MenuCardHighlightState
+        var onSelect: (() -> Void)?
+
         override var allowsVibrancy: Bool {
             false
         }
@@ -88,6 +95,15 @@ extension StatusItemController {
         func setHighlighted(_ highlighted: Bool) {
             guard self.highlightState.isHighlighted != highlighted else { return }
             self.highlightState.isHighlighted = highlighted
+        }
+
+        override func mouseUp(with event: NSEvent) {
+            guard let onSelect else {
+                super.mouseUp(with: event)
+                return
+            }
+            onSelect()
+            self.enclosingMenuItem?.menu?.cancelTracking()
         }
     }
 
@@ -348,29 +364,13 @@ extension StatusItemController {
 
     // MARK: - Persistent refresh item
 
-    func makePersistentRefreshItem(title: String) -> NSMenuItem {
-        let image = NSImage(
-            systemSymbolName: MenuDescriptor.MenuActionSystemImage.refresh.rawValue,
-            accessibilityDescription: nil) ?? NSImage(
-            systemSymbolName: "arrow.triangle.2.circlepath",
-            accessibilityDescription: nil)
-        image?.isTemplate = true
-        image?.size = NSSize(width: 16, height: 16)
-        let view = MenuActionButtonView(title: title, image: image, theme: self.settings.theme.palette) { [weak self] in
-            self?.refreshNow()
-        }
-        let size = view.fittingSize
-        if size.height <= 1 {
-            let fallback = NSMenuItem(title: title, action: #selector(self.refreshNow), keyEquivalent: "")
-            fallback.target = self
-            fallback.image = image
-            return fallback
-        }
-        view.frame = NSRect(origin: .zero, size: size)
-        let item = NSMenuItem()
-        item.view = view
-        item.isEnabled = true
-        return item
+    func makePersistentRefreshItem(title: String, width: CGFloat = StatusItemController.menuCardBaseWidth) -> NSMenuItem {
+        self.makeMenuActionRowItem(
+            id: "actionRow.refresh",
+            title: title,
+            icon: MenuDescriptor.MenuActionSystemImage.refresh.rawValue,
+            width: width,
+            action: #selector(self.refreshNow))
     }
 
     // MARK: - Subtitle helpers
