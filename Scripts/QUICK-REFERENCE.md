@@ -45,6 +45,16 @@
 ./scripts/build-windows.sh
 ```
 
+### Cleanup
+
+```bash
+# Preview local generated build artifacts
+./Scripts/clean-local-builds.sh --dry-run
+
+# Remove SwiftPM/build/package artifacts from the repo
+./Scripts/clean-local-builds.sh
+```
+
 ## Common Flags
 
 | Flag | Description |

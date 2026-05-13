@@ -38,6 +38,7 @@
 | build-ios.sh | Build iOS app | builds/ios/*.ipa | 13K |
 | build-android.sh | Build Android app | builds/android/*.apk | 13K |
 | build-windows.sh | Build Windows app | builds/windows/*.exe | 14K |
+| clean-local-builds.sh | Remove local generated build artifacts | frees repo disk space | 2K |
 
 **Quick Build**: `./scripts/build-macos.sh`
 
@@ -83,8 +84,9 @@
 
 ### Troubleshooting
 1. Try: `./scripts/build-macos.sh --dry-run --verbose`
-2. Read: [README-SCRIPTS.md](README-SCRIPTS.md) → Troubleshooting
-3. Check: Script output with `--verbose` flag
+2. Clean local generated artifacts: `./Scripts/clean-local-builds.sh --dry-run`
+3. Read: [README-SCRIPTS.md](README-SCRIPTS.md) → Troubleshooting
+4. Check: Script output with `--verbose` flag
 
 ### CI/CD Setup
 1. Copy: `cp scripts/ci-config.yml .github/workflows/ci.yml`
