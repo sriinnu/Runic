@@ -107,4 +107,47 @@ struct OTelGenAILedgerAdapterTests {
         #expect(entries.first?.provider == .openrouter)
         #expect(entries.first?.model == "custom-model-v1")
     }
+
+    @Test
+    func `maps all provider systems from telemetry`() throws {
+        let systems: [(String, UsageProvider)] = [
+            ("anthropic", .claude),
+            ("openai", .codex),
+            ("z.ai", .zai),
+            ("google-gemini", .gemini),
+            ("antigravity", .antigravity),
+            ("cursor", .cursor),
+            ("factory-ai", .factory),
+            ("github-copilot", .copilot),
+            ("minimax", .minimax),
+            ("openrouter", .openrouter),
+            ("vercel-ai-gateway", .vercelai),
+            ("groq", .groq),
+            ("deepseek", .deepseek),
+            ("fireworks-ai", .fireworks),
+            ("mistral", .mistral),
+            ("perplexity", .perplexity),
+            ("moonshot-ai", .kimi),
+            ("auggie", .auggie),
+            ("together", .together),
+            ("cohere", .cohere),
+            ("xai", .xai),
+            ("cerebras", .cerebras),
+            ("sambanova", .sambanova),
+            ("azure-openai", .azure),
+            ("aws-bedrock", .bedrock),
+            ("vertex-ai", .vertexai),
+            ("dashscope", .qwen),
+        ]
+
+        for (system, provider) in systems {
+            let payload = """
+            {"attributes":{"gen_ai.system":"\(system)","gen_ai.request.model":"model","gen_ai.usage.input_tokens":1}}
+            """
+            let entries = try OTelGenAILedgerAdapter.parseData(
+                Data(payload.utf8),
+                options: OTelGenAIIngestionOptions(enabled: true))
+            #expect(entries.first?.provider == provider, "\(system) should map to \(provider.rawValue)")
+        }
+    }
 }

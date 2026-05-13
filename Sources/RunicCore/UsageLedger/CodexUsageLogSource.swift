@@ -67,6 +67,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private let maxAgeDays: Int?
     private let now: Date
     private let log: RunicLogger
+    private let cache: LedgerCache
 
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -74,7 +75,8 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         sessionsRoot: URL? = nil,
         maxAgeDays: Int? = 3,
         now: Date = Date(),
-        log: RunicLogger = RunicLog.logger("codex-usage-ledger"))
+        log: RunicLogger = RunicLog.logger("codex-usage-ledger"),
+        cache: LedgerCache = .shared)
     {
         self.environment = environment
         self.fileManager = fileManager
@@ -82,6 +84,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         self.maxAgeDays = maxAgeDays
         self.now = now
         self.log = log
+        self.cache = cache
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
@@ -89,7 +92,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let minDate = self.minDate()
 
         // Incremental scan: only parse files modified since our last scan.
-        let cache = LedgerCache.shared
+        let cache = self.cache
         let lastScan = await cache.lastScanDate(provider: "codex")
         let incrementalCutoff = lastScan ?? minDate ?? self.now.addingTimeInterval(-86400)
         let todayStart = Calendar.current.startOfDay(for: self.now)
@@ -156,7 +159,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 modelsUsed: Array(bucket.models))
         }
 
-        let todayKey = await LedgerCache.dayKey(for: self.now)
+        let todayKey = LedgerCache.dayKey(for: self.now)
         await cache.mergeDailies(provider: "codex", newDailies: cachedDailies, scanDate: self.now, todayKey: todayKey)
 
         return entries
@@ -332,10 +335,12 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     let cached = self.toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"])
                     let output = self.toInt(total["output_tokens"])
 
-                    let prev = previousTotals
-                    deltaInput = max(0, input - (prev?.input ?? 0))
-                    deltaCached = max(0, cached - (prev?.cached ?? 0))
-                    deltaOutput = max(0, output - (prev?.output ?? 0))
+                    let delta = Self.deltaTotals(
+                        current: CodexTotals(input: input, cached: cached, output: output),
+                        previous: previousTotals)
+                    deltaInput = delta.input
+                    deltaCached = delta.cached
+                    deltaOutput = delta.output
                     previousTotals = CodexTotals(input: input, cached: cached, output: output)
                 } else if let last {
                     deltaInput = max(0, self.toInt(last["input_tokens"]))
@@ -450,6 +455,14 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private func toInt(_ value: Any?) -> Int {
         if let num = value as? NSNumber { return num.intValue }
         return 0
+    }
+
+    private static func deltaTotals(current: CodexTotals, previous: CodexTotals?) -> CodexTotals {
+        guard let previous else { return current }
+        return CodexTotals(
+            input: current.input >= previous.input ? current.input - previous.input : current.input,
+            cached: current.cached >= previous.cached ? current.cached - previous.cached : current.cached,
+            output: current.output >= previous.output ? current.output - previous.output : current.output)
     }
 
     private func firstString(from dict: [String: Any]?, keys: [String]) -> String? {

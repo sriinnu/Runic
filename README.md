@@ -6,7 +6,7 @@
 
 **AI usage monitoring for your Mac menubar.**
 
-Track usage, costs, and quotas across 26 AI providers in real time.
+Monitor usage, quotas, context labels, and best-effort cost signals across 27 AI providers.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000?logo=apple)
 ![Swift 6.2](https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white)
@@ -26,22 +26,22 @@ Runic sits in your menubar and shows how much of your AI subscription you've use
 |---|---|---|
 | Claude (1M ctx) | Codex (400K ctx) | Cursor (128K ctx) |
 | Gemini (1M ctx) | Copilot (128K ctx) | z.ai (205K ctx) |
-| OpenRouter | Groq (128K ctx) | DeepSeek (64K ctx) |
+| OpenRouter (ctx varies) | Groq (128K ctx) | DeepSeek (64K ctx) |
 | Fireworks (128K ctx) | Mistral (128K ctx) | Perplexity (128K ctx) |
 | Kimi (128K ctx) | Together (128K ctx) | Cohere (128K ctx) |
 | xAI (128K ctx) | Cerebras (128K ctx) | SambaNova (128K ctx) |
-| Azure OpenAI | Bedrock | Vertex AI |
-| Qwen (128K ctx) | MiniMax | Auggie |
-| Antigravity | Factory (Droid) | |
+| Azure OpenAI (ctx varies) | Bedrock (ctx varies) | Vertex AI (ctx varies) |
+| Qwen (128K ctx) | MiniMax (ctx varies) | Auggie (ctx varies) |
+| Antigravity (ctx varies) | Factory (Droid, ctx varies) | Vercel AI (ctx varies) |
 
-Context windows are configurable via `Resources/provider-context-windows.json`.
+Context labels prefer Kosha-discovery 1.2.0's local TTL-backed capability registry at `~/.kosha/registry.json` when it is present. Runic reads that file only as local metadata, marks Kosha model/provider capability data stale after 24 hours, and falls back to `Sources/Runic/Resources/provider-context-windows.json`. Fixed labels describe known model context capacity; `ctx varies` means the selected model or deployment context capacity depends on the hosted model, deployment, or upstream provider.
 
 ## Features
 
 **Overview dashboard**
 - All providers at a glance with brand icons and progress bars
 - Activity ring showing average usage across providers
-- Context window, reset countdown, and usage window per provider
+- Model context capacity, reset countdown, and usage window per provider
 - Combined 7-day stacked bar chart
 
 **Per-provider view**
@@ -74,7 +74,7 @@ Context windows are configurable via `Resources/provider-context-windows.json`.
 - CLI tool (`RunicCLI`)
 
 **Design**
-- Dark / Light / System theme
+- System, Light, Dark, Pine, Nocturne, Prism, and Terminal themes
 - Liquid UI with glass materials and animated progress bars
 - Staggered entrance animations and glass shimmer effects
 - Custom font system — 7 bundled families (Fira Code, JetBrains Mono, IBM Plex Mono, Space Mono, Inconsolata, Caveat, SF Pro/Mono) with live switching
@@ -82,6 +82,18 @@ Context windows are configurable via `Resources/provider-context-windows.json`.
 - Design tokens for typography, colors, spacing, corner radius, animation
 - VoiceOver accessible
 - Sparkle auto-updates
+
+## Accuracy & Transparency
+
+Runic reports what each provider or local client exposes. Claude and Codex currently provide the richest local usage signals; API providers vary by endpoint, account tier, and whether token usage, cache usage, quota, or model inventory is returned by their APIs.
+
+Context labels are model capacity labels, not proof that every token is still semantically retained in the active conversation. When Kosha-discovery 1.2.0 is available, Runic uses its schema-v1 model/provider registry as the freshest capability source; otherwise it uses built-in static fallbacks. Provider-side summarization or compaction may reduce effective retained context even when the model's maximum window is larger.
+
+Compaction itself can consume tokens when the provider performs it through a model call. Runic counts those tokens when they appear in provider/API/local usage records, but it does not yet label them separately as "compaction tax" or estimate semantic context loss.
+
+Cost and quota numbers are best-effort local calculations from logs, API responses, and pricing tables. When a provider does not expose a metric, Runic avoids inventing precision and falls back to the nearest honest label.
+
+Usage windows and reset countdowns are provider-reported when available. A five-hour session window is published for Claude user plans and may appear in some local client surfaces, but it is not a cross-provider standard; many API providers expose minute/day rate limits, monthly spend caps, or no reset window at all.
 
 ## Install
 
@@ -99,15 +111,15 @@ cd Runic
 
 Open **Preferences** from the menubar. Each provider has its own settings:
 
-- **API-based** (Groq, Mistral, z.ai, etc.): Paste your API key — provider auto-enables
+- **API-based** (Groq, Mistral, z.ai, etc.): Paste your API key; provider auto-enables
 - **CLI-based** (Claude, Codex): Detected automatically from local CLI
 - **Cloud** (Bedrock, Vertex AI): Set environment variables
 
-All tokens stored in macOS Keychain with no password prompts.
+API keys and locally entered secrets are stored in macOS Keychain. CLI or browser-backed providers still depend on the provider's own local session and may require re-login if that external session expires or mismatches.
 
 ## Privacy
 
-Zero telemetry. No analytics. No crash reporting. All data stays on your Mac.
+Zero telemetry. No analytics. No crash reporting. Runic stores usage data locally and makes network requests only for enabled provider fetches, status/update checks, and optional web-dashboard features.
 
 ## Roadmap
 

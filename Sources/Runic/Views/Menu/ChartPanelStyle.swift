@@ -5,13 +5,17 @@ import SwiftUI
 /// and a subtle top-edge gloss for polish without creating a double-border.
 struct ChartPanelStyle: ViewModifier {
     let width: CGFloat
+    @Environment(\.runicTheme) private var runicTheme
 
     func body(content: Content) -> some View {
         content
+            .foregroundStyle(self.runicTheme.primaryText)
+            .tint(self.runicTheme.accent)
             .padding(.horizontal, MenuCardMetrics.horizontalPadding)
             .padding(.top, RunicSpacing.sm)
             .padding(.bottom, RunicSpacing.xs)
             .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
+            .background(self.runicTheme.menuSurfaceGradient)
     }
 }
 

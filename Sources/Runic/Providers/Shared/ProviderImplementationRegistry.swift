@@ -20,6 +20,7 @@ enum ProviderImplementationRegistry {
         _ = ProviderImplementationRegistry.register(CopilotProviderImplementation())
         _ = ProviderImplementationRegistry.register(MiniMaxProviderImplementation())
         _ = ProviderImplementationRegistry.register(OpenRouterProviderImplementation())
+        _ = ProviderImplementationRegistry.register(VercelAIProviderImplementation())
         _ = ProviderImplementationRegistry.register(GroqProviderImplementation())
         _ = ProviderImplementationRegistry.register(DeepSeekProviderImplementation())
         _ = ProviderImplementationRegistry.register(FireworksProviderImplementation())
@@ -34,6 +35,8 @@ enum ProviderImplementationRegistry {
         _ = ProviderImplementationRegistry.register(SambaNovaProviderImplementation())
         _ = ProviderImplementationRegistry.register(AzureProviderImplementation())
         _ = ProviderImplementationRegistry.register(BedrockProviderImplementation())
+        _ = ProviderImplementationRegistry.register(VertexAIProviderImplementation())
+        _ = ProviderImplementationRegistry.register(QwenProviderImplementation())
     }()
 
     private static func ensureBootstrapped() {

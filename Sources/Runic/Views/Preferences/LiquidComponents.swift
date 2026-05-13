@@ -7,14 +7,7 @@ import SwiftUI
 struct LiquidMeshBackground: View {
     @State private var phase: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private static let palette: [Color] = [
-        Color(red: 0.30, green: 0.52, blue: 0.96),
-        Color(red: 0.62, green: 0.34, blue: 0.92),
-        Color(red: 0.24, green: 0.78, blue: 0.76),
-        Color(red: 0.44, green: 0.28, blue: 0.88),
-        Color(red: 0.18, green: 0.60, blue: 0.94),
-    ]
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 30.0, paused: self.reduceMotion)) { timeline in
@@ -22,8 +15,9 @@ struct LiquidMeshBackground: View {
                 let t = self.reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
                 let cx = size.width / 2
                 let cy = size.height / 2
+                let palette = self.runicTheme.meshColors
 
-                for (i, color) in Self.palette.enumerated() {
+                for (i, color) in palette.enumerated() {
                     let fi = Double(i)
                     let angle = t * (0.12 + fi * 0.03) + fi * 1.25
                     let r = min(cx, cy) * (0.28 + 0.18 * sin(t * 0.15 + fi * 0.9))
@@ -156,30 +150,38 @@ private struct LiquidGlassCore: ViewModifier {
     @State private var hovering = false
     @State private var cursorUnit: UnitPoint = .center
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.runicTheme) private var runicTheme
 
     func body(content: Content) -> some View {
+        let isGlassTheme = self.runicTheme.id == "glass"
         content
             .padding(RunicSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
                     .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                            .fill(self.runicTheme.cardFill.opacity(isGlassTheme ? 1.0 : 0.45)))
                     .shadow(
-                        color: self.hovering ? Color.accentColor.opacity(0.12) : .black.opacity(0.04),
-                        radius: self.hovering ? 12 : 4,
-                        y: self.hovering ? 4 : 2))
+                        color: self.hovering
+                            ? self.runicTheme.accent.opacity(isGlassTheme ? 0.22 : 0.12)
+                            : .black.opacity(isGlassTheme ? 0.18 : 0.04),
+                        radius: self.hovering ? (isGlassTheme ? 18 : 12) : (isGlassTheme ? 10 : 4),
+                        y: self.hovering ? 6 : 2))
             .overlay(
                 RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.primary.opacity(self.hovering ? 0.18 : 0.10),
-                                Color.primary.opacity(self.hovering ? 0.06 : 0.03),
+                                self.runicTheme.highlight.opacity(self.hovering ? 0.26 : 0.12),
+                                self.runicTheme.cardStroke.opacity(self.hovering ? 0.34 : 0.18),
+                                self.runicTheme.accent.opacity(self.hovering ? 0.20 : 0.08),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing),
-                        lineWidth: 0.5))
-            .overlay { RotatingGradientBorder(cornerRadius: RunicCornerRadius.lg, isActive: self.hovering) }
+                        lineWidth: isGlassTheme ? 0.9 : 0.5))
+            .overlay { RotatingGradientBorder(cornerRadius: RunicCornerRadius.lg, isActive: self.hovering || isGlassTheme) }
             .overlay {
                 GeometryReader { geo in
                     CursorSpotlight(

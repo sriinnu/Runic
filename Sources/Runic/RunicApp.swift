@@ -66,13 +66,10 @@ struct RunicApp: App {
 
     static func applyTheme(_ theme: Theme) {
         guard let app = NSApp else { return }
-        switch theme {
-        case .system:
+        if let appearanceName = theme.appearanceName {
+            app.appearance = NSAppearance(named: appearanceName)
+        } else {
             app.appearance = nil
-        case .light:
-            app.appearance = NSAppearance(named: .aqua)
-        case .dark:
-            app.appearance = NSAppearance(named: .darkAqua)
         }
     }
 

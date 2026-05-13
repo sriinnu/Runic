@@ -191,8 +191,13 @@ struct ClaudeCLIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .cli
     let useWebExtras: Bool
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
-        true
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        if context.runtime == .app, context.sourceMode == .auto {
+            let debugMenuEnabled = context.settings?.debugMenuEnabled ?? false
+            let selectedDataSource = context.settings?.claude?.usageDataSource ?? .oauth
+            return debugMenuEnabled && selectedDataSource == .cli
+        }
+        return true
     }
 
     func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {

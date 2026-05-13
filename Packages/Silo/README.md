@@ -463,4 +463,4 @@ MIT License - Copyright (c) 2026 Srinivas Pendela
 ---
 
 **GitHub:** https://github.com/sriinnu/Silo  
-**Author:** Srinivas Pendela (hello@srinivas.dev)
+**Author:** Sriinnu (5410488+sriinnu@users.noreply.github.com)

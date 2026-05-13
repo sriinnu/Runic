@@ -20,6 +20,7 @@ enum UsageLedgerSourceFactory {
              .zai,
              .minimax,
              .openrouter,
+             .vercelai,
              .groq,
              .deepseek,
              .fireworks,

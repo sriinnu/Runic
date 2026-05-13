@@ -81,6 +81,66 @@ struct RunicTests {
         #expect(transparentPixels > 0)
     }
 
+    @MainActor
+    @Test
+    func `provider brand icons render as colorful plain marks`() {
+        for provider in UsageProvider.allCases {
+            let image = ProviderBrandIcon.image(for: provider, size: 20)
+
+            #expect(image != nil, "Missing brand icon for \(provider.rawValue)")
+            #expect(image?.isTemplate == false, "Brand icon must not be template-rendered for \(provider.rawValue)")
+            #expect(image?.size == NSSize(width: 20, height: 20))
+        }
+    }
+
+    @MainActor
+    @Test
+    func `bundled font families resolve to real font names`() {
+        RunicTypography.registerFonts()
+
+        let resolved = RunicTypography.fontName(for: "Fira Code")
+
+        #expect(resolved == "FiraCode-Regular")
+        #expect(NSFont(name: resolved, size: 13) != nil)
+    }
+
+    @MainActor
+    @Test
+    func `model breakdown collapses duplicate display rows`() {
+        let summaries = [
+            UsageLedgerModelSummary(
+                provider: .codex,
+                projectID: "alpha",
+                model: "gpt-5.5",
+                entryCount: 2,
+                totals: UsageLedgerTotals(
+                    inputTokens: 90,
+                    outputTokens: 30,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 20,
+                    costUSD: 0.20)),
+            UsageLedgerModelSummary(
+                provider: .codex,
+                projectID: "beta",
+                model: "gpt-5.5",
+                entryCount: 1,
+                totals: UsageLedgerTotals(
+                    inputTokens: 70,
+                    outputTokens: 10,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 10,
+                    costUSD: 0.10)),
+        ]
+
+        let model = ModelBreakdownMenuView.makeModel(from: summaries)
+
+        #expect(model.items.count == 1)
+        #expect(model.items.first?.displayName == "gpt-5.5")
+        #expect(model.items.first?.totalTokens == 230)
+        #expect(model.items.first?.requestCount == 3)
+        #expect(model.grandTotalCostText?.contains("0.30") == true)
+    }
+
     @Test
     func `account info parses auth token`() throws {
         let tmp = try FileManager.default.url(

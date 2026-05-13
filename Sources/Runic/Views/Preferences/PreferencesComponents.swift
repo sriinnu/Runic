@@ -15,6 +15,7 @@ enum PreferencesLayoutMetrics {
 struct PreferencesPane<Content: View>: View {
     let showsIndicators: Bool
     private let content: () -> Content
+    @Environment(\.runicTheme) private var runicTheme
 
     init(
         showsIndicators: Bool = true,
@@ -33,6 +34,8 @@ struct PreferencesPane<Content: View>: View {
             .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
             .padding(.vertical, PreferencesLayoutMetrics.paneVertical)
         }
+        .foregroundStyle(self.runicTheme.primaryText)
+        .background(self.runicTheme.surface.opacity(0.42))
     }
 }
 
@@ -41,6 +44,7 @@ struct PreferencesListPane<Content: View>: View {
     let horizontalPadding: CGFloat
     let verticalPadding: CGFloat
     private let content: () -> Content
+    @Environment(\.runicTheme) private var runicTheme
 
     init(
         horizontalPadding: CGFloat = PreferencesLayoutMetrics.paneHorizontal,
@@ -57,6 +61,8 @@ struct PreferencesListPane<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, self.horizontalPadding)
             .padding(.vertical, self.verticalPadding)
+            .foregroundStyle(self.runicTheme.primaryText)
+            .background(self.runicTheme.surface.opacity(0.42))
     }
 }
 

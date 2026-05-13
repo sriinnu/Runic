@@ -200,11 +200,11 @@ public enum UsageLedgerAggregator {
             UsageLedgerModelSummary(
                 provider: key.provider,
                 projectKey: key.projectKey,
-                projectID: acc.projectID,
-                projectName: acc.projectName,
-                projectNameConfidence: acc.projectNameConfidence,
-                projectNameSource: acc.projectNameSource,
-                projectNameProvenance: acc.projectNameProvenance,
+                projectID: groupByProject ? acc.projectID : nil,
+                projectName: groupByProject ? acc.projectName : nil,
+                projectNameConfidence: groupByProject ? acc.projectNameConfidence : .none,
+                projectNameSource: groupByProject ? acc.projectNameSource : .unknown,
+                projectNameProvenance: groupByProject ? acc.projectNameProvenance : nil,
                 model: key.model,
                 entryCount: acc.entryCount,
                 totals: acc.totals)

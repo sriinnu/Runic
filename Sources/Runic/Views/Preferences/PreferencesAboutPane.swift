@@ -218,7 +218,7 @@ struct AboutPane: View {
                 LiquidLinkButton(
                     icon: "envelope",
                     title: "Email",
-                    url: "mailto:sriinnu@users.noreply.github.com")
+                    url: "mailto:5410488+sriinnu@users.noreply.github.com")
             }
             .frame(maxWidth: .infinity)
         }

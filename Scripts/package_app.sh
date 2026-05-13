@@ -314,13 +314,13 @@ if [[ -f "$(build_product_path "RunicWidget" "${ARCH_LIST[0]}")" ]]; then
 PLIST
   install_binary "RunicWidget" "$WIDGET_APP/Contents/MacOS/RunicWidget"
 fi
-# Embed Sparkle.framework
-if [[ -d ".build/$CONF/Sparkle.framework" ]]; then
-  cp -R ".build/$CONF/Sparkle.framework" "$APP/Contents/Frameworks/"
-  chmod -R a+rX "$APP/Contents/Frameworks/Sparkle.framework"
-  install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/${APP_NAME}"
-  # Re-sign Sparkle and all nested components with Developer ID + timestamp
-  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+
+function find_codesign_identity() {
+  local pattern="$1"
+  security find-identity -v -p codesigning 2>/dev/null \
+    | awk -F'"' -v pattern="$pattern" '$0 ~ pattern { print $2; exit }'
+}
+
 if [[ "$SIGNING_MODE" == "adhoc" ]]; then
   CODESIGN_ID="-"
   CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
@@ -328,10 +328,30 @@ elif [[ "$ALLOW_LLDB" == "1" ]]; then
   CODESIGN_ID="-"
   CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
 else
-  CODESIGN_ID="${APP_IDENTITY:-Developer ID Application: YOUR_NAME (TEAMID)}"
-  CODESIGN_ARGS=(--force --timestamp --options runtime --sign "$CODESIGN_ID")
+  CODESIGN_ID="${APP_IDENTITY:-$(find_codesign_identity "Developer ID Application")}"
+  if [[ -z "$CODESIGN_ID" ]]; then
+    CODESIGN_ID="$(find_codesign_identity "Apple Development")"
+    if [[ -z "$CODESIGN_ID" ]]; then
+      echo "No codesigning identity found. Set APP_IDENTITY, install a Developer ID/Apple Development cert, or explicitly set RUNIC_SIGNING=adhoc." >&2
+      exit 1
+    fi
+    echo "Using Apple Development signing identity: $CODESIGN_ID"
+    CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
+  else
+    echo "Using Developer ID signing identity: $CODESIGN_ID"
+    CODESIGN_ARGS=(--force --timestamp --options runtime --sign "$CODESIGN_ID")
+  fi
 fi
+
 function resign() { codesign "${CODESIGN_ARGS[@]}" "$1"; }
+
+# Embed Sparkle.framework
+if [[ -d ".build/$CONF/Sparkle.framework" ]]; then
+  cp -R ".build/$CONF/Sparkle.framework" "$APP/Contents/Frameworks/"
+  chmod -R a+rX "$APP/Contents/Frameworks/Sparkle.framework"
+  install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/${APP_NAME}"
+  # Re-sign Sparkle and all nested components with a stable identity.
+  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
   # Sign innermost binaries first, then the framework root to seal resources
   resign "$SPARKLE"
   resign "$SPARKLE/Versions/B/Sparkle"

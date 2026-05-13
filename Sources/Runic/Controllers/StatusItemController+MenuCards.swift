@@ -18,6 +18,7 @@ extension StatusItemController {
         {
             view
         }
+        .environment(\.runicTheme, self.settings.theme.palette)
         let hosting = MenuCardItemHostingView(rootView: wrapped, highlightState: highlightState)
         hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: 1))
         hosting.needsLayout = true
@@ -215,7 +216,7 @@ extension StatusItemController {
 
         // Hero today stat with provider icon (staggered entrance index 0)
         if let daily, daily.totals.totalTokens > 0 {
-            let providerIcon = ProviderBrandIcon.image(for: provider, size: 28)
+            let providerIcon = ProviderBrandIcon.image(for: provider, size: 30)
             let heroView = self.menuCardContent(width: width, sidebar: sidebar, showIcons: true) {
                 HeroTodayStatView(
                     providerIcon: providerIcon,

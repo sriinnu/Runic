@@ -52,11 +52,16 @@ struct KeychainAuggieTokenStore: AuggieTokenStoring {
             return
         }
 
-        let data = cleaned!.data(using: .utf8)!
+        let normalized = cleaned!
+        if let current = try self.readToken(dataProtection: false), current == normalized {
+            return
+        }
 
-        // Always delete-then-add to ensure SecAccess ACL is set.
+        let data = normalized.data(using: .utf8)!
+
+        // When the value changes, delete-then-add to ensure SecAccess ACL is set.
         // SecItemUpdate does NOT update the ACL, so existing items with
-        // missing or stale ACLs would continue to prompt for passwords.
+        // missing or stale ACLs would keep failing access after an app upgrade.
         try? self.deleteToken(dataProtection: false)
         try? self.deleteToken(dataProtection: true)
 

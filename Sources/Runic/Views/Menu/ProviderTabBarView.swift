@@ -18,6 +18,7 @@ struct ProviderTabBarView: View {
     let tabs: [TabItem]
     let width: CGFloat
     let onSelect: (UsageProvider?) -> Void
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -31,7 +32,7 @@ struct ProviderTabBarView: View {
                                 Image(nsImage: nsImage)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
-                                    .frame(width: 18, height: 18)
+                                    .frame(width: 22, height: 22)
                             } else if tab.provider == nil {
                                 Image(systemName: "square.grid.2x2")
                                     .font(.system(size: 14, weight: .medium))
@@ -47,15 +48,15 @@ struct ProviderTabBarView: View {
                             Capsule(style: .continuous)
                                 .fill(tab.isSelected
                                     ? tab.brandColor.opacity(RunicColors.Opacity.medium)
-                                    : Color(nsColor: .controlBackgroundColor).opacity(RunicColors.Opacity.subtle)))
+                                    : self.runicTheme.menuSubtleFill))
                         .overlay(
                             Capsule(style: .continuous)
                                 .stroke(
                                     tab.isSelected
                                         ? tab.brandColor.opacity(RunicColors.Opacity.strong)
-                                        : Color(nsColor: .separatorColor).opacity(RunicColors.Opacity.light),
+                                        : self.runicTheme.cardStroke.opacity(RunicColors.Opacity.medium),
                                     lineWidth: 0.5))
-                        .foregroundStyle(tab.isSelected ? tab.brandColor : .secondary)
+                        .foregroundStyle(tab.isSelected ? tab.brandColor : self.runicTheme.secondaryText)
                         .shadow(
                             color: tab.isSelected ? tab.brandColor.opacity(0.15) : .clear,
                             radius: 4, y: 1)
@@ -67,6 +68,7 @@ struct ProviderTabBarView: View {
             .padding(.vertical, RunicSpacing.xs)
         }
         .frame(minWidth: self.width, maxWidth: .infinity)
+        .background(self.runicTheme.menuSurfaceGradient)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Provider tabs")
     }

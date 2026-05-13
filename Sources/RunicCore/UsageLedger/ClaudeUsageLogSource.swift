@@ -21,6 +21,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private let maxAgeDays: Int?
     private let now: Date
     private let log: RunicLogger
+    private let cache: LedgerCache
 
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -28,7 +29,8 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         basePaths: [URL]? = nil,
         maxAgeDays: Int? = 3,
         now: Date = Date(),
-        log: RunicLogger = RunicLog.logger("claude-usage-ledger"))
+        log: RunicLogger = RunicLog.logger("claude-usage-ledger"),
+        cache: LedgerCache = .shared)
     {
         self.environment = environment
         self.fileManager = fileManager
@@ -36,6 +38,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         self.maxAgeDays = maxAgeDays
         self.now = now
         self.log = log
+        self.cache = cache
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
@@ -46,7 +49,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
         // Only scan files modified since our last scan (incremental).
         // On first run, scans the last `maxAgeDays` worth of files.
-        let cache = LedgerCache.shared
+        let cache = self.cache
         let lastScan = await cache.lastScanDate(provider: "claude")
         let incrementalCutoff = lastScan ?? self.minDate() ?? self.now.addingTimeInterval(-86400)
         let minDate = self.minDate()
@@ -155,7 +158,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 modelsUsed: Array(bucket.models))
         }
 
-        let todayKey = await LedgerCache.dayKey(for: self.now)
+        let todayKey = LedgerCache.dayKey(for: self.now)
         await cache.mergeDailies(provider: "claude", newDailies: cachedDailies, scanDate: self.now, todayKey: todayKey)
 
         return entries

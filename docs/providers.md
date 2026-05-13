@@ -1,5 +1,5 @@
 ---
-summary: "Provider data sources and parsing overview (Codex, Claude, Gemini, Antigravity, Cursor, Droid/Factory, MiniMax, z.ai, Copilot)."
+summary: "Provider data sources and parsing overview (Codex, Claude, Gemini, Antigravity, Cursor, Droid/Factory, MiniMax, z.ai, Copilot, Vercel AI)."
 read_when:
   - Adding or modifying provider fetch/parsing
   - Adjusting provider labels, toggles, or metadata
@@ -23,6 +23,11 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, plus p
 | MiniMax | Web cookies + Chromium local storage token (`web`). |
 | z.ai | API token (Keychain/env) → quota API (`api`). |
 | Copilot | API token (device flow/env) → copilot_internal API (`api`). |
+| Vercel AI | API token (Keychain/env) → AI Gateway credits API (`api`). |
+
+## Capability metadata
+
+Usage fetch strategies answer "what did this account use?" Capability metadata answers "what can this model/provider support?" Runic reads Kosha-discovery 1.2.0's local schema-v1 registry at `~/.kosha/registry.json` for model context windows when available, marks records older than 24 hours as stale, and falls back to `Sources/Runic/Resources/provider-context-windows.json`. It does not call provider APIs from menu rendering.
 
 ## Codex
 - Web dashboard (when enabled): `https://chatgpt.com/codex/settings/usage` via WebView + browser cookies.
@@ -82,5 +87,11 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, plus p
 - GitHub device flow OAuth token + `api.github.com/copilot_internal/user`.
 - Status: Statuspage.io (GitHub).
 - Details: `docs/copilot.md`.
+
+## Vercel AI
+- API token from Keychain, `AI_GATEWAY_API_KEY`, or `VERCEL_OIDC_TOKEN`.
+- Credits endpoint: `GET https://ai-gateway.vercel.sh/v1/credits`.
+- Model availability endpoint: `GET https://ai-gateway.vercel.sh/v1/models` (best effort).
+- Status: none yet.
 
 See also: `docs/provider.md` for architecture notes.

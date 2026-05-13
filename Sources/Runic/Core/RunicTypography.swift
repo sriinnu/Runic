@@ -1,4 +1,5 @@
 import CoreText
+import AppKit
 import SwiftUI
 
 // MARK: - Typography tokens
@@ -10,44 +11,100 @@ enum RunicTypography {
     /// Register all TTF/OTF fonts found in the app bundle's Fonts directory.
     /// Call once at launch before any UI is created.
     static func registerFonts() {
-        guard let fontsURL = Bundle.main.url(forResource: "Fonts", withExtension: nil)
-            ?? Bundle.main.resourceURL?.appendingPathComponent("Fonts")
-        else { return }
-        guard let enumerator = FileManager.default.enumerator(
-            at: fontsURL,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles])
-        else { return }
-        for case let fileURL as URL in enumerator
-            where fileURL.pathExtension.lowercased() == "ttf" || fileURL.pathExtension.lowercased() == "otf"
-        {
-            CTFontManagerRegisterFontsForURL(fileURL as CFURL, .process, nil)
+        for fontsURL in self.fontDirectories() {
+            guard let enumerator = FileManager.default.enumerator(
+                at: fontsURL,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles])
+            else { continue }
+            for case let fileURL as URL in enumerator
+                where fileURL.pathExtension.lowercased() == "ttf" || fileURL.pathExtension.lowercased() == "otf"
+            {
+                CTFontManagerRegisterFontsForURL(fileURL as CFURL, .process, nil)
+            }
         }
     }
 
     /// Discover bundled font family names from the Fonts directory.
     static func discoverBundledFontFamilies() -> [String] {
-        guard let fontsURL = Bundle.main.url(forResource: "Fonts", withExtension: nil)
-            ?? Bundle.main.resourceURL?.appendingPathComponent("Fonts")
-        else { return [] }
-        guard let enumerator = FileManager.default.enumerator(
-            at: fontsURL,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles])
-        else { return [] }
         var families = Set<String>()
-        for case let fileURL as URL in enumerator
-            where fileURL.pathExtension.lowercased() == "ttf" || fileURL.pathExtension.lowercased() == "otf"
-        {
-            if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(fileURL as CFURL) as? [CTFontDescriptor] {
-                for desc in descriptors {
-                    if let name = CTFontDescriptorCopyAttribute(desc, kCTFontFamilyNameAttribute) as? String {
-                        families.insert(name)
+        for fontsURL in self.fontDirectories() {
+            guard let enumerator = FileManager.default.enumerator(
+                at: fontsURL,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles])
+            else { continue }
+            for case let fileURL as URL in enumerator
+                where fileURL.pathExtension.lowercased() == "ttf" || fileURL.pathExtension.lowercased() == "otf"
+            {
+                if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(fileURL as CFURL) as? [CTFontDescriptor] {
+                    for desc in descriptors {
+                        if let name = CTFontDescriptorCopyAttribute(desc, kCTFontFamilyNameAttribute) as? String {
+                            families.insert(name)
+                        }
                     }
                 }
             }
         }
         return families.sorted()
+    }
+
+    static func fontName(for family: String, nsWeight: NSFont.Weight = .regular) -> String {
+        guard !family.hasPrefix("__") else { return family }
+        guard let members = NSFontManager.shared.availableMembers(ofFontFamily: family), !members.isEmpty else {
+            return family
+        }
+
+        let preferredFaces = self.preferredFaceNames(for: nsWeight)
+        for preferredFace in preferredFaces {
+            if let match = members.first(where: { member in
+                guard member.count >= 2, let face = member[1] as? String else { return false }
+                return face.range(of: preferredFace, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            }), let fontName = match.first as? String {
+                return fontName
+            }
+        }
+
+        return members.compactMap { $0.first as? String }.first ?? family
+    }
+
+    private static func preferredFaceNames(for weight: NSFont.Weight) -> [String] {
+        let raw = weight.rawValue
+        if raw >= NSFont.Weight.bold.rawValue {
+            return ["Bold", "SemiBold", "Medium", "Regular"]
+        }
+        if raw >= NSFont.Weight.semibold.rawValue {
+            return ["SemiBold", "DemiBold", "Medium", "Bold", "Regular"]
+        }
+        if raw >= NSFont.Weight.medium.rawValue {
+            return ["Medium", "Regular", "SemiBold"]
+        }
+        if raw <= NSFont.Weight.light.rawValue {
+            return ["Light", "Regular"]
+        }
+        return ["Regular", "Book", "Medium"]
+    }
+
+    private static func fontDirectories() -> [URL] {
+        let candidates = [
+            Bundle.main.url(forResource: "Fonts", withExtension: nil),
+            Bundle.main.url(forResource: "Fonts", withExtension: nil, subdirectory: "Resources"),
+            Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
+            Bundle.main.resourceURL?.appendingPathComponent("Resources/Fonts"),
+            Bundle.module.url(forResource: "Fonts", withExtension: nil),
+            Bundle.module.url(forResource: "Fonts", withExtension: nil, subdirectory: "Resources"),
+        ]
+        var seen: Set<String> = []
+        return candidates.compactMap { url in
+            guard let url else { return nil }
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+                return nil
+            }
+            let key = url.standardizedFileURL.path
+            guard seen.insert(key).inserted else { return nil }
+            return url
+        }
     }
 }
 
@@ -67,7 +124,7 @@ struct RunicFontChoice: Identifiable, Hashable {
         switch self.id {
         case Self.sfPro.id: .system(.body)
         case Self.sfMono.id: .system(.body, design: .monospaced)
-        default: Font.custom(self.id, fixedSize: 13)
+        default: Font.custom(RunicTypography.fontName(for: self.id), fixedSize: 13)
         }
     }
 
@@ -148,7 +205,7 @@ enum RunicFont {
         switch self.family {
         case RunicFontChoice.sfPro.id: .system(size: size)
         case RunicFontChoice.sfMono.id: .system(size: size, design: .monospaced)
-        default: Font.custom(self.family, fixedSize: size)
+        default: Font.custom(RunicTypography.fontName(for: self.family), fixedSize: size)
         }
     }
 
@@ -157,7 +214,7 @@ enum RunicFont {
         switch self.family {
         case RunicFontChoice.sfPro.id: .system(size: size, weight: weight)
         case RunicFontChoice.sfMono.id: .system(size: size, weight: weight, design: .monospaced)
-        default: Font.custom(self.family, fixedSize: size).weight(weight)
+        default: Font.custom(RunicTypography.fontName(for: self.family), fixedSize: size).weight(weight)
         }
     }
 
@@ -167,7 +224,7 @@ enum RunicFont {
         switch self.family {
         case RunicFontChoice.sfPro.id: .system(style)
         case RunicFontChoice.sfMono.id: .system(style, design: .monospaced)
-        default: Font.custom(self.family, size: size, relativeTo: style)
+        default: Font.custom(RunicTypography.fontName(for: self.family), size: size, relativeTo: style)
         }
     }
 }
@@ -182,6 +239,10 @@ extension RunicFont {
         case RunicFontChoice.sfMono.id:
             return .monospacedSystemFont(ofSize: size, weight: weight)
         default:
+            let fontName = RunicTypography.fontName(for: self.family, nsWeight: weight)
+            if let font = NSFont(name: fontName, size: size) {
+                return font
+            }
             let traits: [NSFontDescriptor.TraitKey: Any] = [.weight: weight]
             let descriptor = NSFontDescriptor(fontAttributes: [
                 .family: family,

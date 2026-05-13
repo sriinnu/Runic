@@ -188,6 +188,18 @@ struct PreferencesView: View {
             }
         }
         .runicTypography()
+        .id(self.settings.visualSettingsRevision)
+        .environment(\.runicTheme, self.settings.theme.palette)
+        .foregroundStyle(self.settings.theme.palette.primaryText)
+        .tint(self.settings.theme.palette.accent)
+        .background {
+            ZStack {
+                self.settings.theme.palette.surface
+                LiquidMeshBackground()
+                    .opacity(self.settings.theme.palette.isCustom ? 0.38 : 0.12)
+            }
+            .ignoresSafeArea()
+        }
         .tabViewStyle(.automatic)
         .frame(
             minWidth: PreferencesTab.windowWidth,

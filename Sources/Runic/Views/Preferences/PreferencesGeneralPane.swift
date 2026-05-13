@@ -7,6 +7,8 @@ struct GeneralPane: View {
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     @State private var appeared = false
+    @State private var diagnosticsStatus: String?
+    @State private var guardrailStatus: String?
 
     var body: some View {
         LiquidPreferencesPane {
@@ -148,18 +150,37 @@ struct GeneralPane: View {
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        AppearancePreviewCard(
+                            theme: self.settings.theme,
+                            fontFamily: self.settings.selectedFontFamily,
+                            providers: Array(self.store.enabledProviders().prefix(4)))
+                            .id(self.settings.visualSettingsRevision)
+                            .padding(.bottom, RunicSpacing.xs)
+
                         Text("Theme")
                             .font(RunicFont.body)
 
-                        Picker("", selection: self.$settings.theme) {
-                            Text("System").tag(Theme.system)
-                            Text("Light").tag(Theme.light)
-                            Text("Dark").tag(Theme.dark)
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.adaptive(minimum: 142, maximum: 176), spacing: RunicSpacing.xs),
+                            ],
+                            alignment: .leading,
+                            spacing: RunicSpacing.xs)
+                        {
+                            ForEach(Theme.allCases) { theme in
+                                ThemeChoiceButton(
+                                    theme: theme,
+                                    isSelected: self.settings.theme == theme)
+                                {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+                                        self.settings.theme = theme
+                                    }
+                                }
+                            }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 360)
+                        .frame(maxWidth: 560, alignment: .leading)
 
-                        Text("App appearance (requires restart).")
+                        Text("Custom skins apply immediately to Runic panels; System/Light/Dark follow macOS chrome.")
                             .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
                     }
@@ -186,17 +207,44 @@ struct GeneralPane: View {
             }
             .liquidEntrance(appeared: self.appeared, index: 4)
 
+            LiquidSection(title: "Operations") {
+                RunicOperationsCenterView(
+                    settings: self.settings,
+                    store: self.store,
+                    diagnosticsStatus: self.diagnosticsStatus,
+                    guardrailStatus: self.guardrailStatus,
+                    onCopyDiagnostics: self.copyDiagnostics,
+                    onInstallGuardrails: self.installGuardrails)
+            }
+            .liquidEntrance(appeared: self.appeared, index: 5)
+
             HStack {
                 Spacer()
                 Button("Quit Runic") { NSApp.terminate(nil) }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
             }
-            .liquidEntrance(appeared: self.appeared, index: 5)
+            .liquidEntrance(appeared: self.appeared, index: 6)
         }
         .onAppear {
             guard !self.appeared else { return }
             withAnimation(.easeOut(duration: 0.6)) { self.appeared = true }
+        }
+    }
+
+    private func copyDiagnostics() {
+        let report = RunicDiagnosticsReport.makeText(settings: self.settings, store: self.store)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report, forType: .string)
+        self.diagnosticsStatus = "Copied redacted diagnostics"
+    }
+
+    private func installGuardrails() {
+        do {
+            let count = try RunicDiagnosticsReport.installDefaultGuardrails()
+            self.guardrailStatus = count == 0 ? "Guardrails already installed" : "Installed \(count) guardrails"
+        } catch {
+            self.guardrailStatus = "Failed: \(error.localizedDescription)"
         }
     }
 
@@ -246,5 +294,330 @@ struct GeneralPane: View {
         return Text("\(name): no data yet")
             .font(RunicFont.footnote)
             .foregroundStyle(.tertiary)
+    }
+}
+
+private struct ThemeChoiceButton: View {
+    let theme: Theme
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        let palette = self.theme.palette
+        Button(action: self.action) {
+            HStack(spacing: RunicSpacing.xs) {
+                ThemeSwatch(palette: palette, isSelected: self.isSelected)
+                    .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(palette.displayName)
+                        .font(RunicFont.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text(palette.tagline)
+                        .font(RunicFont.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, RunicSpacing.xs)
+            .padding(.vertical, RunicSpacing.xs)
+            .frame(minHeight: 50, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    .fill(self.isSelected ? palette.accent.opacity(0.14) : Color.primary.opacity(0.035)))
+            .overlay(
+                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    .stroke(
+                        self.isSelected ? palette.accent.opacity(0.72) : Color.primary.opacity(0.08),
+                        lineWidth: self.isSelected ? 1.3 : 0.7))
+        }
+        .buttonStyle(.plain)
+        .help(palette.displayName)
+    }
+}
+
+private struct ThemeSwatch: View {
+    let palette: RunicThemePalette
+    let isSelected: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: palette.swatchColors,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing))
+            Image(systemName: palette.symbolName)
+                .font(RunicFont.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.22), radius: 1, x: 0, y: 1)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.isSelected ? palette.highlight : Color.white.opacity(0.28), lineWidth: 1))
+    }
+}
+
+private struct AppearancePreviewCard: View {
+    let theme: Theme
+    let fontFamily: String
+    let providers: [UsageProvider]
+
+    var body: some View {
+        let palette = self.theme.palette
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+            HStack(alignment: .top, spacing: RunicSpacing.sm) {
+                VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+                    Text("Live preview")
+                        .font(RunicFont.caption.weight(.semibold))
+                        .foregroundStyle(palette.secondaryText)
+                    Text("Runic")
+                        .font(RunicFont.title3.weight(.bold))
+                        .foregroundStyle(palette.primaryText)
+                    Text("\(palette.displayName) · \(self.fontLabel)")
+                        .font(RunicFont.caption)
+                        .foregroundStyle(palette.secondaryText)
+                }
+
+                Spacer()
+
+                HStack(spacing: RunicSpacing.xxs) {
+                    ForEach(self.previewProviders, id: \.self) { provider in
+                        if let icon = ProviderBrandIcon.image(for: provider, size: 21) {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 21, height: 21)
+                        }
+                    }
+                }
+            }
+
+            HStack(spacing: RunicSpacing.xs) {
+                self.metricPreview(title: "Session", value: "42%", color: palette.accent, fill: 0.42)
+                self.metricPreview(title: "Weekly", value: "71%", color: palette.highlight, fill: 0.71)
+            }
+        }
+        .padding(RunicSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [palette.surfaceAlt.opacity(0.94), palette.cardFill.opacity(0.70)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing)))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                .stroke(palette.cardStroke.opacity(0.9), lineWidth: 1))
+    }
+
+    private var previewProviders: [UsageProvider] {
+        self.providers.isEmpty ? [.codex, .claude, .gemini, .vercelai] : self.providers
+    }
+
+    private var fontLabel: String {
+        switch self.fontFamily {
+        case RunicFontChoice.sfPro.id: RunicFontChoice.sfPro.displayName
+        case RunicFontChoice.sfMono.id: RunicFontChoice.sfMono.displayName
+        default: self.fontFamily
+        }
+    }
+
+    private func metricPreview(title: String, value: String, color: Color, fill: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+            HStack {
+                Text(title)
+                    .font(RunicFont.caption)
+                    .foregroundStyle(self.theme.palette.secondaryText)
+                Spacer()
+                Text(value)
+                    .font(RunicFont.caption.weight(.semibold))
+                    .foregroundStyle(self.theme.palette.primaryText)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule(style: .continuous)
+                        .fill(self.theme.palette.primaryText.opacity(0.10))
+                    Capsule(style: .continuous)
+                        .fill(color)
+                        .frame(width: max(8, proxy.size.width * min(max(fill, 0), 1)))
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(RunicSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.theme.palette.surface.opacity(0.28)))
+    }
+
+    private func providerColor(_ provider: UsageProvider) -> Color {
+        let color = ProviderDescriptorRegistry.descriptor(for: provider).branding.color
+        return Color(red: color.red, green: color.green, blue: color.blue)
+    }
+}
+
+private struct RunicOperationsCenterView: View {
+    @Bindable var settings: SettingsStore
+    @Bindable var store: UsageStore
+    let diagnosticsStatus: String?
+    let guardrailStatus: String?
+    let onCopyDiagnostics: () -> Void
+    let onInstallGuardrails: () -> Void
+
+    var body: some View {
+        let health = RunicDiagnosticsReport.providerHealthRows(settings: self.settings, store: self.store)
+        let recommendations = RunicDiagnosticsReport.recommendations(settings: self.settings, store: self.store)
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+            HStack(spacing: RunicSpacing.xs) {
+                self.summaryPill(
+                    title: "Credentials",
+                    value: "\(health.count(where: { $0.credentialState == .connected || $0.credentialState == .configured || $0.credentialState == .local }))/\(max(health.count, 1))",
+                    systemImage: "key.horizontal")
+                self.summaryPill(
+                    title: "Alerts",
+                    value: "\(AlertRuleStore.load().rules.count)",
+                    systemImage: "bell.badge")
+                self.summaryPill(
+                    title: "Budgets",
+                    value: "\(ProjectBudgetStore.getAllBudgets().count)",
+                    systemImage: "target")
+            }
+
+            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                Text("Provider health")
+                    .font(RunicFont.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(Array(health.prefix(6))) { row in
+                    ProviderHealthCompactRow(row: row)
+                }
+                if health.count > 6 {
+                    Text("+ \(health.count - 6) more providers")
+                        .font(RunicFont.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                Text("Recommended next actions")
+                    .font(RunicFont.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(recommendations.prefix(4)) { recommendation in
+                    HStack(alignment: .top, spacing: RunicSpacing.xs) {
+                        Image(systemName: recommendation.systemImage)
+                            .font(RunicFont.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 16)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(recommendation.title)
+                                .font(RunicFont.caption.weight(.semibold))
+                            Text(recommendation.detail)
+                                .font(RunicFont.caption2)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+
+            HStack(spacing: RunicSpacing.xs) {
+                Button {
+                    self.onInstallGuardrails()
+                } label: {
+                    Label("Install Guardrails", systemImage: "shield.checkered")
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    self.onCopyDiagnostics()
+                } label: {
+                    Label("Copy Diagnostics", systemImage: "doc.on.doc")
+                }
+                .buttonStyle(.bordered)
+
+                if let status = self.guardrailStatus ?? self.diagnosticsStatus {
+                    Text(status)
+                        .font(RunicFont.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+    private func summaryPill(title: String, value: String, systemImage: String) -> some View {
+        HStack(spacing: RunicSpacing.xxs) {
+            Image(systemName: systemImage)
+                .font(RunicFont.caption)
+            Text(title)
+                .font(RunicFont.caption2)
+            Text(value)
+                .font(RunicFont.caption2.weight(.semibold))
+        }
+        .padding(.horizontal, RunicSpacing.xs)
+        .padding(.vertical, RunicSpacing.xxxs)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7)))
+    }
+}
+
+private struct ProviderHealthCompactRow: View {
+    let row: RunicProviderHealthRow
+
+    var body: some View {
+        HStack(alignment: .center, spacing: RunicSpacing.xs) {
+            if let icon = ProviderBrandIcon.image(for: self.row.provider, size: 20) {
+                Image(nsImage: icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: RunicSpacing.xxs) {
+                    Text(self.row.name)
+                        .font(RunicFont.caption.weight(.semibold))
+                        .lineLimit(1)
+                    Text(self.row.source)
+                        .font(RunicFont.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Text("\(self.row.credentialDetail) · \(self.row.dataDetail)")
+                    .font(RunicFont.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: RunicSpacing.xs)
+
+            Text(self.row.credentialState.label)
+                .font(RunicFont.caption2.weight(.semibold))
+                .foregroundStyle(self.stateColor)
+                .padding(.horizontal, RunicSpacing.xs)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(self.stateColor.opacity(0.12)))
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var brandColor: Color {
+        let color = ProviderDescriptorRegistry.descriptor(for: self.row.provider).branding.color
+        return Color(red: color.red, green: color.green, blue: color.blue)
+    }
+
+    private var stateColor: Color {
+        switch self.row.credentialState {
+        case .connected, .configured: .green
+        case .local: .blue
+        case .missing: .orange
+        case .attention: .red
+        }
     }
 }

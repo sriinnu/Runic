@@ -64,6 +64,8 @@ enum CostUsageScanner {
             return CostUsageDailyReport(data: [], summary: nil)
         case .openrouter:
             return CostUsageDailyReport(data: [], summary: nil)
+        case .vercelai:
+            return CostUsageDailyReport(data: [], summary: nil)
         case .groq:
             return CostUsageDailyReport(data: [], summary: nil)
         case .deepseek:
@@ -268,10 +270,12 @@ enum CostUsageScanner {
                     let cached = toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"])
                     let output = toInt(total["output_tokens"])
 
-                    let prev = previousTotals
-                    deltaInput = max(0, input - (prev?.input ?? 0))
-                    deltaCached = max(0, cached - (prev?.cached ?? 0))
-                    deltaOutput = max(0, output - (prev?.output ?? 0))
+                    let delta = Self.deltaCodexTotals(
+                        current: CostUsageCodexTotals(input: input, cached: cached, output: output),
+                        previous: previousTotals)
+                    deltaInput = delta.input
+                    deltaCached = delta.cached
+                    deltaOutput = delta.output
                     previousTotals = CostUsageCodexTotals(input: input, cached: cached, output: output)
                 } else if let last {
                     deltaInput = max(0, toInt(last["input_tokens"]))
@@ -541,6 +545,17 @@ enum CostUsageScanner {
             out[idx] = max(0, next)
         }
         return out
+    }
+
+    static func deltaCodexTotals(
+        current: CostUsageCodexTotals,
+        previous: CostUsageCodexTotals?) -> CostUsageCodexTotals
+    {
+        guard let previous else { return current }
+        return CostUsageCodexTotals(
+            input: current.input >= previous.input ? current.input - previous.input : current.input,
+            cached: current.cached >= previous.cached ? current.cached - previous.cached : current.cached,
+            output: current.output >= previous.output ? current.output - previous.output : current.output)
     }
 
     // MARK: - Date parsing

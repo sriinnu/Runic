@@ -37,7 +37,7 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 - `runic cost` prints local token cost usage (Claude + Codex) without web/CLI access.
   - `--format text|json` (default: text).
   - `--refresh` ignores cached scans.
-- `--provider codex|claude|zai|gemini|antigravity|cursor|factory|copilot|both|all` (default: your in-app toggles; falls back to Codex).
+- `--provider codex|claude|zai|gemini|antigravity|cursor|factory|copilot|vercelai|both|all` (default: your in-app toggles; falls back to Codex).
   - `--no-credits` (hide Codex credits in text output).
   - `--pretty` (pretty-print JSON).
   - `--status` (fetch provider status pages and include them in output).

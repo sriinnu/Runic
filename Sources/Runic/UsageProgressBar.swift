@@ -31,6 +31,7 @@ struct UsageProgressBar: View {
     let height: Height
 
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
     @State private var animatedPercent: Double = 0
     @State private var sheenPhase: CGFloat = 0
     @State private var sheenTask: Task<Void, Never>?
@@ -59,8 +60,8 @@ struct UsageProgressBar: View {
         GeometryReader { proxy in
             let width = proxy.size.width
             let fillWidth = (self.animatedPercent / 100) * width
-            let trackColor = Color(nsColor: .tertiaryLabelColor)
-                .opacity(self.isHighlighted ? RunicColors.Opacity.medium : RunicColors.Opacity.medium)
+            let trackColor = self.runicTheme.menuTrackColor
+                .opacity(self.isHighlighted ? 1.0 : 0.82)
             let tintColor = self.tint
 
             ZStack(alignment: .leading) {
@@ -90,7 +91,7 @@ struct UsageProgressBar: View {
                 // Tick marks (subtle)
                 ForEach([0.25, 0.5, 0.75], id: \.self) { fraction in
                     Rectangle()
-                        .fill(Color.white.opacity(RunicColors.Opacity.light))
+                        .fill(self.runicTheme.primaryText.opacity(RunicColors.Opacity.light))
                         .frame(width: 1, height: self.barHeight - 2)
                         .offset(x: width * fraction - 0.5)
                         .blendMode(.screen)

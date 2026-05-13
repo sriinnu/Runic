@@ -195,8 +195,9 @@ struct ModelBreakdownMenuView: View {
         return label
     }
 
-    private static func makeModel(from breakdown: [UsageLedgerModelSummary]) -> ModelModel {
-        let sorted = breakdown.sorted { lhs, rhs in
+    static func makeModel(from breakdown: [UsageLedgerModelSummary]) -> ModelModel {
+        let collapsed = self.collapsedSummaries(from: breakdown)
+        let sorted = collapsed.sorted { lhs, rhs in
             lhs.totals.totalTokens > rhs.totals.totalTokens
         }
 
@@ -237,5 +238,71 @@ struct ModelBreakdownMenuView: View {
             grandTotalRequests: grandRequests,
             grandTotalCostText: grandCostText,
             cacheHitRateText: cacheHitRateText)
+    }
+
+    private static func collapsedSummaries(from breakdown: [UsageLedgerModelSummary]) -> [UsageLedgerModelSummary] {
+        var buckets: [String: ModelAccumulator] = [:]
+
+        for summary in breakdown {
+            let displayName = UsageFormatter.modelDisplayName(summary.model)
+            let key = displayName
+                .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+                .lowercased()
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !key.isEmpty else { continue }
+            buckets[key, default: ModelAccumulator(summary: summary, displayName: displayName)]
+                .consume(summary)
+        }
+
+        return buckets.values.map(\.summary)
+    }
+
+    private struct ModelAccumulator {
+        private(set) var provider: UsageProvider
+        private(set) var model: String
+        private(set) var displayName: String
+        private(set) var representativeTokens: Int
+        private(set) var entryCount = 0
+        private(set) var inputTokens = 0
+        private(set) var outputTokens = 0
+        private(set) var cacheCreationTokens = 0
+        private(set) var cacheReadTokens = 0
+        private(set) var costUSD: Double?
+
+        init(summary: UsageLedgerModelSummary, displayName: String) {
+            self.provider = summary.provider
+            self.model = summary.model
+            self.displayName = displayName
+            self.representativeTokens = summary.totals.totalTokens
+        }
+
+        mutating func consume(_ summary: UsageLedgerModelSummary) {
+            self.entryCount += summary.entryCount
+            self.inputTokens += summary.totals.inputTokens
+            self.outputTokens += summary.totals.outputTokens
+            self.cacheCreationTokens += summary.totals.cacheCreationTokens
+            self.cacheReadTokens += summary.totals.cacheReadTokens
+            if let cost = summary.totals.costUSD {
+                self.costUSD = (self.costUSD ?? 0) + cost
+            }
+            if summary.totals.totalTokens > self.representativeTokens {
+                self.model = summary.model
+                self.representativeTokens = summary.totals.totalTokens
+            }
+        }
+
+        var summary: UsageLedgerModelSummary {
+            UsageLedgerModelSummary(
+                provider: self.provider,
+                projectID: nil,
+                model: self.model,
+                entryCount: self.entryCount,
+                totals: UsageLedgerTotals(
+                    inputTokens: self.inputTokens,
+                    outputTokens: self.outputTokens,
+                    cacheCreationTokens: self.cacheCreationTokens,
+                    cacheReadTokens: self.cacheReadTokens,
+                    costUSD: self.costUSD))
+        }
     }
 }

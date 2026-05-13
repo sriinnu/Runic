@@ -19,6 +19,7 @@ This doc describes the **current provider architecture** (post-macro registry) a
 ## Terms
 - **Provider**: a source of usage/quota/status data (Codex, Claude, Gemini, Antigravity, Cursor, …).
 - **Descriptor**: the single source of truth for labels, URLs, defaults, and fetch strategies.
+- **Capability source**: refreshable model/provider metadata such as context windows and pricing. Kosha-discovery owns this when its local TTL-backed registry is present; descriptors keep only stable wiring and fallback defaults.
 - **Fetch strategy**: one concrete way to obtain usage (CLI, web cookies, OAuth API, local probe, etc.).
 - **Host APIs**: shared capabilities we provide to providers (Keychain, browser cookies, PTY, HTTP, WebView scrape, token-cost).
 - **Identity fields**: email/org/plan/loginMethod. Must stay **siloed per provider**.
@@ -31,6 +32,7 @@ This doc describes the **current provider architecture** (post-macro registry) a
   - `ProviderDescriptor` owns labels, URLs, default enablement, and fetch pipeline.
   - `ProviderFetchStrategy` objects implement concrete fetch paths.
   - CLI + app both call the same descriptor/fetch pipeline.
+- Dynamic capability labels are not descriptor constants. Runic reads Kosha-discovery 1.2.0's schema-v1 manifest at `~/.kosha/registry.json` when available, treats records older than 24 hours as stale, and then falls back to `Resources/provider-context-windows.json`.
 
 Common building blocks already exist:
 - PTY: `TTYCommandRunner`

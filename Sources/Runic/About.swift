@@ -37,7 +37,7 @@ func showAbout() {
     credits.append(separator)
     credits.append(makeLink("Twitter", urlString: "https://x.com/sriinnu"))
     credits.append(separator)
-    credits.append(makeLink("Email", urlString: "mailto:hello@srinivas.dev"))
+    credits.append(makeLink("Email", urlString: "mailto:5410488+sriinnu@users.noreply.github.com"))
     if let buildTimestamp, let formatted = formattedBuildTimestamp(buildTimestamp) {
         var builtLine = "Built \(formatted)"
         if let gitCommit, !gitCommit.isEmpty, gitCommit != "unknown" {

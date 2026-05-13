@@ -146,6 +146,11 @@ enum Theme: String, CaseIterable, Identifiable {
     case system
     case light
     case dark
+    case pine
+    case nocturne
+    case prism
+    case glass
+    case terminal
 
     var id: String {
         self.rawValue
@@ -156,6 +161,11 @@ enum Theme: String, CaseIterable, Identifiable {
         case .system: "System"
         case .light: "Light"
         case .dark: "Dark"
+        case .pine: "Pine"
+        case .nocturne: "Nocturne"
+        case .prism: "Prism"
+        case .glass: "Glass"
+        case .terminal: "Terminal"
         }
     }
 }
@@ -322,6 +332,7 @@ final class SettingsStore {
         didSet {
             self.userDefaults.set(self.theme.rawValue, forKey: "theme")
             RunicApp.applyTheme(self.theme)
+            self.bumpVisualSettingsRevision()
         }
     }
 
@@ -329,8 +340,11 @@ final class SettingsStore {
         didSet {
             self.userDefaults.set(self.selectedFontFamily, forKey: "selectedFontFamily")
             RunicFont.family = self.selectedFontFamily
+            self.bumpVisualSettingsRevision()
         }
     }
+
+    private(set) var visualSettingsRevision: Int = 0
 
     /// Optional: use provider branding icons with a percentage in the menu bar.
     var menuBarShowsBrandIconWithPercent: Bool {
@@ -346,9 +360,14 @@ final class SettingsStore {
         }
     }
 
-    /// Optional: show provider cost summary from local usage logs (Codex + Claude).
+    /// Optional: show provider token/cost summaries from local usage logs.
     var costUsageEnabled: Bool {
         didSet { self.userDefaults.set(self.costUsageEnabled, forKey: "tokenCostUsageEnabled") }
+    }
+
+    /// Comma/newline separated OpenTelemetry GenAI JSON/JSONL files or folders.
+    var otelGenAILogPaths: String {
+        didSet { self.userDefaults.set(self.otelGenAILogPaths, forKey: "otelGenAILogPaths") }
     }
 
     /// Optional: limit how many insight rows appear in the menu before "More…".
@@ -489,6 +508,16 @@ final class SettingsStore {
             self.schedulePersistOpenRouterAPIToken()
             if !self.openRouterAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 self.autoEnableProviderIfNeeded(cliName: "openrouter")
+            }
+        }
+    }
+
+    /// Vercel AI Gateway API key (stored in Keychain).
+    var vercelAIAPIToken: String {
+        didSet {
+            self.schedulePersistVercelAIAPIToken()
+            if !self.vercelAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                self.autoEnableProviderIfNeeded(cliName: "vercelai")
             }
         }
     }
@@ -736,9 +765,12 @@ final class SettingsStore {
         _ = self.numberFormat
         _ = self.dateFormat
         _ = self.theme
+        _ = self.selectedFontFamily
+        _ = self.visualSettingsRevision
         _ = self.menuBarShowsBrandIconWithPercent
         _ = self.menuBarVibrantIconEnabled
         _ = self.costUsageEnabled
+        _ = self.otelGenAILogPaths
         _ = self.insightsMenuMaxItems
         _ = self.insightsReportDays
         _ = self.ledgerMaxAgeDays
@@ -758,6 +790,7 @@ final class SettingsStore {
         _ = self.minimaxGroupID
         _ = self.copilotAPIToken
         _ = self.openRouterAPIToken
+        _ = self.vercelAIAPIToken
         _ = self.groqAPIToken
         _ = self.deepSeekAPIToken
         _ = self.fireworksAPIToken
@@ -786,6 +819,10 @@ final class SettingsStore {
         return 0
     }
 
+    private func bumpVisualSettingsRevision() {
+        self.visualSettingsRevision &+= 1
+    }
+
     private var providerDetectionCompleted: Bool {
         didSet { self.userDefaults.set(self.providerDetectionCompleted, forKey: "providerDetectionCompleted") }
     }
@@ -804,6 +841,8 @@ final class SettingsStore {
     @ObservationIgnored private var copilotTokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let openRouterTokenStore: any OpenRouterTokenStoring
     @ObservationIgnored private var openRouterTokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored private let vercelAITokenStore: any VercelAITokenStoring
+    @ObservationIgnored private var vercelAITokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let groqTokenStore: any GroqTokenStoring
     @ObservationIgnored private var groqTokenPersistTask: Task<Void, Never>?
     @ObservationIgnored private let deepSeekTokenStore: any DeepSeekTokenStoring
@@ -851,6 +890,7 @@ final class SettingsStore {
         minimaxGroupIDStore: any MiniMaxGroupIDStoring = KeychainMiniMaxGroupIDStore(),
         copilotTokenStore: any CopilotTokenStoring = KeychainCopilotTokenStore(),
         openRouterTokenStore: any OpenRouterTokenStoring = KeychainOpenRouterTokenStore(),
+        vercelAITokenStore: any VercelAITokenStoring = KeychainVercelAITokenStore(),
         groqTokenStore: any GroqTokenStoring = KeychainGroqTokenStore(),
         deepSeekTokenStore: any DeepSeekTokenStoring = KeychainDeepSeekTokenStore(),
         fireworksTokenStore: any FireworksTokenStoring = KeychainFireworksTokenStore(),
@@ -873,6 +913,7 @@ final class SettingsStore {
         self.minimaxGroupIDStore = minimaxGroupIDStore
         self.copilotTokenStore = copilotTokenStore
         self.openRouterTokenStore = openRouterTokenStore
+        self.vercelAITokenStore = vercelAITokenStore
         self.groqTokenStore = groqTokenStore
         self.deepSeekTokenStore = deepSeekTokenStore
         self.fireworksTokenStore = fireworksTokenStore
@@ -935,6 +976,7 @@ final class SettingsStore {
         self.menuBarVibrantIconEnabled = userDefaults.object(
             forKey: "menuBarVibrantIconEnabled") as? Bool ?? true
         self.costUsageEnabled = userDefaults.object(forKey: "tokenCostUsageEnabled") as? Bool ?? true
+        self.otelGenAILogPaths = userDefaults.string(forKey: "otelGenAILogPaths") ?? ""
         self.insightsMenuMaxItems = userDefaults.object(forKey: "insightsMenuMaxItems") as? Int ?? 4
         self.insightsReportDays = userDefaults.object(forKey: "insightsReportDays") as? Int ?? 7
         self.ledgerMaxAgeDays = userDefaults.object(forKey: "ledgerMaxAgeDays") as? Int ?? 30
@@ -976,6 +1018,7 @@ final class SettingsStore {
         self.minimaxGroupID = (try? minimaxGroupIDStore.loadGroupID()) ?? ""
         self.copilotAPIToken = (try? copilotTokenStore.loadToken()) ?? ""
         self.openRouterAPIToken = (try? openRouterTokenStore.loadToken()) ?? ""
+        self.vercelAIAPIToken = (try? vercelAITokenStore.loadToken()) ?? ""
         self.groqAPIToken = (try? groqTokenStore.loadToken()) ?? ""
         self.deepSeekAPIToken = (try? deepSeekTokenStore.loadToken()) ?? ""
         self.fireworksAPIToken = (try? fireworksTokenStore.loadToken()) ?? ""
@@ -990,8 +1033,8 @@ final class SettingsStore {
         self.sambaNovaAPIToken = (try? sambaNovaTokenStore.loadToken()) ?? ""
         self.qwenAPIToken = (try? qwenTokenStore.loadToken()) ?? ""
         self.azureOpenAIAPIToken = (try? azureOpenAITokenStore.loadToken()) ?? ""
-        // Always start on Overview tab.
-        self.selectedMenuProviderRaw = nil
+        let selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
+        self.selectedMenuProviderRaw = selectedMenuProviderRaw.flatMap { UsageProvider(rawValue: $0)?.rawValue }
         self.providerDetectionCompleted = userDefaults.object(
             forKey: "providerDetectionCompleted") as? Bool ?? false
         self.toggleStore = ProviderToggleStore(userDefaults: userDefaults)
@@ -1379,6 +1422,31 @@ final class SettingsStore {
             }.value
             if let error {
                 RunicLog.logger("openrouter-token-store").error("Failed to persist OpenRouter token: \(error)")
+            }
+        }
+    }
+
+    private func schedulePersistVercelAIAPIToken() {
+        self.vercelAITokenPersistTask?.cancel()
+        let token = self.vercelAIAPIToken
+        let tokenStore = self.vercelAITokenStore
+        self.vercelAITokenPersistTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 350_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
+                do {
+                    try tokenStore.storeToken(token)
+                    return nil
+                } catch {
+                    return error
+                }
+            }.value
+            if let error {
+                RunicLog.logger("vercelai-token-store").error("Failed to persist Vercel AI token: \(error)")
             }
         }
     }

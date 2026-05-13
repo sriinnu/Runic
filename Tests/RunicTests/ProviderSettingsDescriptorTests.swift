@@ -185,7 +185,10 @@ struct ProviderSettingsDescriptorTests {
             .kimi: ["kimi-api-token"],
             .auggie: ["auggie-api-token"],
             .openrouter: ["openrouter-api-token"],
+            .vercelai: ["vercelai-api-token"],
             .bedrock: ["bedrock-region", "bedrock-aws-profile", "bedrock-model-id"],
+            .vertexai: ["vertexai-project", "vertexai-location"],
+            .qwen: ["qwen-api-token"],
         ]
 
         for (provider, expected) in expectedFields {

@@ -1,8 +1,22 @@
 import Foundation
-import RunicCore
 import Testing
+@testable import RunicCore
 
 struct ClaudeOAuthTests {
+    private final class DummyClaudeFetcher: ClaudeUsageFetching, @unchecked Sendable {
+        func loadLatestUsage(model: String) async throws -> ClaudeUsageSnapshot {
+            throw URLError(.unsupportedURL)
+        }
+
+        func debugRawProbe(model: String) async -> String {
+            ""
+        }
+
+        func detectVersion() -> String? {
+            nil
+        }
+    }
+
     @Test
     func `parses O auth credentials`() throws {
         let json = """
@@ -159,5 +173,59 @@ struct ClaudeOAuthTests {
             hasWebSession: false,
             hasOAuthCredentials: false)
         #expect(strategy.dataSource == .cli)
+    }
+
+    @Test
+    func `app auto refresh does not launch Claude CLI unless debug explicitly selects it`() async {
+        let strategy = ClaudeCLIFetchStrategy(useWebExtras: false)
+
+        let autoContext = self.makeContext(
+            runtime: .app,
+            sourceMode: .auto,
+            debugMenuEnabled: false,
+            selectedDataSource: .oauth)
+        #expect(await strategy.isAvailable(autoContext) == false)
+
+        let debugCLIContext = self.makeContext(
+            runtime: .app,
+            sourceMode: .auto,
+            debugMenuEnabled: true,
+            selectedDataSource: .cli)
+        #expect(await strategy.isAvailable(debugCLIContext) == true)
+
+        let cliContext = self.makeContext(
+            runtime: .cli,
+            sourceMode: .cli,
+            debugMenuEnabled: false,
+            selectedDataSource: .oauth)
+        #expect(await strategy.isAvailable(cliContext) == true)
+    }
+
+    private func makeContext(
+        runtime: ProviderRuntime,
+        sourceMode: ProviderSourceMode,
+        debugMenuEnabled: Bool,
+        selectedDataSource: ClaudeUsageDataSource) -> ProviderFetchContext
+    {
+        ProviderFetchContext(
+            runtime: runtime,
+            sourceMode: sourceMode,
+            includeCredits: false,
+            webTimeout: 60,
+            webDebugDumpHTML: false,
+            verbose: false,
+            env: [:],
+            settings: ProviderSettingsSnapshot(
+                debugMenuEnabled: debugMenuEnabled,
+                codex: nil,
+                claude: ProviderSettingsSnapshot.ClaudeProviderSettings(
+                    usageDataSource: selectedDataSource,
+                    webExtrasEnabled: false),
+                zai: nil,
+                copilot: nil,
+                azure: nil,
+                bedrock: nil),
+            fetcher: UsageFetcher(environment: [:]),
+            claudeFetcher: DummyClaudeFetcher())
     }
 }

@@ -385,12 +385,32 @@ public enum OTelGenAILedgerAdapter {
             return .codex
         case "anthropic", "claude":
             return .claude
-        case "google", "googlegemini", "gemini", "vertexai", "vertex":
+        case "google", "googlegemini", "gemini":
             return .gemini
+        case "vertexai", "googlevertexai", "vertex":
+            return .vertexai
+        case "zai", "zaiapi", "zhipu", "zhipuai":
+            return .zai
         case "github", "githubcopilot", "copilot":
             return .copilot
+        case "cursor":
+            return .cursor
+        case "factory", "factoryai":
+            return .factory
+        case "antigravity":
+            return .antigravity
+        case "minimax":
+            return .minimax
         case "openrouter":
             return .openrouter
+        case "vercel", "vercelai", "vercelaigateway", "aigateway":
+            return .vercelai
+        case "groq":
+            return .groq
+        case "deepseek":
+            return .deepseek
+        case "fireworks", "fireworksai":
+            return .fireworks
         case "bedrock", "awsbedrock", "amazonbedrock":
             return .bedrock
         case "azure", "azureopenai":
@@ -399,12 +419,22 @@ public enum OTelGenAILedgerAdapter {
             return .mistral
         case "perplexity":
             return .perplexity
+        case "kimi", "moonshot", "moonshotai":
+            return .kimi
+        case "auggie":
+            return .auggie
         case "cohere":
             return .cohere
         case "xai":
             return .xai
         case "together":
             return .together
+        case "cerebras":
+            return .cerebras
+        case "sambanova":
+            return .sambanova
+        case "qwen", "dashscope", "alibabacloud":
+            return .qwen
         default:
             return UsageProvider(rawValue: normalized)
         }
@@ -414,11 +444,19 @@ public enum OTelGenAILedgerAdapter {
         let lower = model.lowercased()
         if lower.contains("claude") { return .claude }
         if lower.contains("gemini") { return .gemini }
+        if lower.contains("deepseek") { return .deepseek }
+        if lower.contains("qwen") { return .qwen }
+        if lower.contains("kimi") { return .kimi }
+        if lower.contains("moonshot") { return .kimi }
+        if lower.contains("mistral") { return .mistral }
+        if lower.contains("mixtral") { return .mistral }
+        if lower.contains("groq") { return .groq }
+        if lower.contains("minimax") { return .minimax }
+        if lower.contains("command") { return .cohere }
         if lower.contains("gpt") || lower.contains("o1") || lower.contains("o3") || lower.contains("o4") {
             return .codex
         }
         if lower.contains("copilot") { return .copilot }
-        if lower.contains("mistral") { return .mistral }
         return nil
     }
 

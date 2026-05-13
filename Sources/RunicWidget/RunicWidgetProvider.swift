@@ -45,6 +45,7 @@ enum ProviderChoice: String, AppEnum {
         case .copilot: self = .copilot
         case .minimax: return nil // MiniMax not yet supported in widgets
         case .openrouter: return nil // OpenRouter not yet supported in widgets
+        case .vercelai: return nil // Vercel AI not yet supported in widgets
         case .groq: return nil // Groq not yet supported in widgets
         case .deepseek: return nil // DeepSeek not yet supported in widgets
         case .fireworks: return nil // Fireworks not yet supported in widgets

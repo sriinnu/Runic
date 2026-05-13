@@ -1,3 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <path d="M12 82L40 18H60L88 82H72L50 34L28 82H12Z" fill="black"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+  <title>Auggie</title>
+  <defs>
+    <linearGradient id="auggie-a" x1="3" x2="21" y1="21" y2="3" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF6B35"/>
+      <stop offset=".48" stop-color="#FFB400"/>
+      <stop offset="1" stop-color="#FFE36E"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#auggie-a)" d="M11.13 2.15a1.1 1.1 0 0 1 1.74 0l9.05 15.73a1.1 1.1 0 0 1-.95 1.65h-4.18l-1.58-2.84h2.5L12 6.78 6.29 16.69h2.5l-1.58 2.84H3.03a1.1 1.1 0 0 1-.95-1.65L11.13 2.15Z"/>
+  <path fill="#1C1C22" opacity=".82" d="M9.46 14.03h5.08L12 9.54l-2.54 4.49Z"/>
+  <circle cx="18.85" cy="5.12" r="1.85" fill="#FFF3B8"/>
 </svg>

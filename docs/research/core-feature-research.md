@@ -19,6 +19,45 @@ This file is updated incrementally during research to avoid context loss.
 - [x] Synthesize feature candidates with implementation notes
 - [x] Prioritize roadmap (Now / Next / Later)
 
+## 2026-05-12 Addendum: Context Health + Provider Capability TTL
+
+Trigger:
+- A user asked how Runic handles context loss from compaction.
+- Current implementation exposes model context capacity labels; it does not yet estimate effective retained context after provider/client compaction.
+- Kosha-discovery 1.2.0 now has the right source-of-truth shape for model/provider metadata through its local schema-v1 registry and TTL cache policy.
+
+Product direction:
+- Split context into three distinct concepts:
+  1. `max_context_tokens`: model/provider advertised capacity.
+  2. `observed_context_tokens`: what the local/API usage stream proves for a request/session.
+  3. `effective_context_health`: a conservative signal derived from compaction/reset boundaries, summarization events, context-window errors, and long-context risk.
+
+Provider metadata structure:
+- Replace brittle hardcoded tables over time with a TTL-backed provider capability snapshot:
+  - provider id
+  - model id or deployment id
+  - max context/input/output tokens
+  - pricing dimensions
+  - token metric availability
+  - quota/reset metric availability
+  - compaction/reset signal availability
+  - source URL or source kind
+  - confidence
+  - fetched_at / expires_at / stale reason
+
+Implementation note:
+- `provider-context-windows.json` remains the local fallback.
+- Kosha-discovery 1.2.0 is the refresh layer via `~/.kosha/registry.json` (`schemaVersion == 1`).
+- Runic treats Kosha model/provider records older than 24 hours as stale last-known capability data; it still displays them with a stale caveat rather than deleting context visibility.
+- Kosha manifest v1 does not yet expose provider prompt-cache TTL tiers, so Runic must not claim cache retention TTL from that file until the contract adds it.
+- UI should show `ctx varies`, `verified`, or `stale` instead of pretending dynamic providers have one universal number.
+- Usage/reset windows must be provider-reported, not normalized into a fake universal 5h concept. Claude publishes a five-hour session reset; Codex/local OpenAI surfaces can expose window duration fields; many API providers expose minute/day/month limits or no reset window at all.
+
+Research signal:
+- OpenTelemetry GenAI says token usage should only be reported when token counts are readily available; otherwise tooling should not invent token usage metrics.
+- Long-context papers show a large context window does not mean information is reliably used, especially when relevant facts sit in the middle of long contexts.
+- Gateway projects expose context-window fallbacks, routing, caching, rate limits, and traces as production controls. Runic should turn those into local diagnostics, not just charts.
+
 ## External Evidence Snapshot
 
 ### arXiv evidence (routing, caching, cost/quality)
@@ -88,6 +127,16 @@ This file is updated incrementally during research to avoid context loss.
 - Prompts: https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
 - Signal: Standardized tool invocation and prompt serving surface for agentic systems.
 - Relevance: Runic can add MCP-specific analytics (tool error rate, latency, prompt-template performance).
+
+8. Lost in the Middle (2023)
+- Link: https://arxiv.org/abs/2307.03172
+- Signal: Long context models can still fail to use relevant information depending on where it appears in the context.
+- Relevance: Runic should avoid treating a large context window as a guarantee of retained working memory.
+
+9. LongLLMLingua (2023)
+- Link: https://arxiv.org/abs/2310.06839
+- Signal: Prompt/context compression is an active optimization area, but compression changes what information survives.
+- Relevance: Runic can surface context compression/compaction as a cost and context-health concern when provider logs expose the boundary.
 
 ## Feature Candidates (for Runic core)
 
@@ -177,6 +226,26 @@ Why now:
 Implementation sketch:
 - Add MCP event model in `RunicCore`.
 - New menu views under `Sources/Runic/Views/Menu/`.
+
+### G) Context Health and Compaction Tax
+
+What:
+- Distinguish advertised context capacity from observed context usage and effective retained context health.
+- Detect reset/compaction boundaries where logs expose them.
+- Show compaction token cost separately when the provider emits enough signal.
+
+Why now:
+- Directly answers the "context loss from compaction" question.
+- Prevents Runic from over-claiming context precision.
+
+Implementation sketch:
+- Extend provider capability metadata with TTL/provenance/confidence.
+- Add compaction/reset boundary events to usage ledger models.
+- Add a "Context health" row in provider panels:
+  - Max context
+  - Observed latest context
+  - Compaction/reset seen
+  - Confidence / source freshness
 
 ## Data Product Improvements (directly for your current concern)
 

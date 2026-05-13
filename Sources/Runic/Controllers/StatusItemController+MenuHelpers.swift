@@ -95,6 +95,7 @@ extension StatusItemController {
         @Bindable var highlightState: MenuCardHighlightState
         let showsSubmenuIndicator: Bool
         let content: Content
+        @Environment(\.runicTheme) private var runicTheme
 
         init(
             highlightState: MenuCardHighlightState,
@@ -109,12 +110,13 @@ extension StatusItemController {
         var body: some View {
             self.content
                 .runicTypography()
-                .environment(\.menuItemHighlighted, self.highlightState.isHighlighted)
-                .foregroundStyle(MenuHighlightStyle.primary(self.highlightState.isHighlighted))
+                .environment(\.menuItemHighlighted, false)
+                .foregroundStyle(self.runicTheme.primaryText)
+                .runicMenuPanelChrome()
                 .background(alignment: .topLeading) {
                     if self.highlightState.isHighlighted {
                         RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                            .fill(MenuHighlightStyle.selectionBackground(true))
+                            .fill(self.runicTheme.accent.opacity(0.18))
                             .padding(.horizontal, RunicSpacing.compact)
                             .padding(.vertical, RunicSpacing.xxxs)
                     }
@@ -123,12 +125,19 @@ extension StatusItemController {
                     if self.showsSubmenuIndicator {
                         Image(systemName: "chevron.right")
                             .font(RunicFont.caption2.weight(.semibold))
-                            .foregroundStyle(MenuHighlightStyle.secondary(self.highlightState.isHighlighted))
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .padding(.top, RunicSpacing.xs)
                             .padding(.trailing, RunicSpacing.xs)
-                    }
+                        }
                 }
         }
+    }
+
+    func themedHostedMenuRoot(_ view: some View) -> some View {
+        view
+            .runicTypography()
+            .environment(\.runicTheme, self.settings.theme.palette)
+            .runicMenuPanelChrome()
     }
 
     @MainActor
@@ -261,11 +270,14 @@ extension StatusItemController {
         let creditsError: String?
         let dashboard: OpenAIDashboardSnapshot?
         let dashboardError: String?
-        let tokenSnapshot: CostUsageTokenSnapshot?
-        let tokenError: String?
+        let tokenSnapshot = self.store.tokenSnapshot(for: target)
+        let tokenError = self.store.tokenError(for: target)
         let ledgerDaily = self.store.ledgerDailySummary(for: target)
         let ledgerActiveBlock = self.store.ledgerActiveBlock(for: target)
         let ledgerTopModel = self.store.ledgerTopModel(for: target)
+        let ledgerTopModelContextLabel = ledgerTopModel.flatMap {
+            ProviderContextWindowRegistry.shared.contextLabel(for: target, model: $0.model)?.text
+        }
         let ledgerTopProject = self.store.ledgerTopProject(for: target)
         let ledgerSpendForecast = self.store.ledgerSpendForecast(for: target)
         let ledgerTopProjectSpendForecast = self.store.ledgerTopProjectSpendForecast(for: target)
@@ -279,22 +291,16 @@ extension StatusItemController {
             creditsError = self.store.lastCreditsError
             dashboard = self.store.openAIDashboardRequiresLogin ? nil : self.store.openAIDashboard
             dashboardError = self.store.lastOpenAIDashboardError
-            tokenSnapshot = self.store.tokenSnapshot(for: target)
-            tokenError = self.store.tokenError(for: target)
         } else if target == .claude {
             credits = nil
             creditsError = nil
             dashboard = nil
             dashboardError = nil
-            tokenSnapshot = self.store.tokenSnapshot(for: target)
-            tokenError = self.store.tokenError(for: target)
         } else {
             credits = nil
             creditsError = nil
             dashboard = nil
             dashboardError = nil
-            tokenSnapshot = nil
-            tokenError = nil
         }
 
         let input = UsageMenuCardView.Model.Input(
@@ -310,6 +316,7 @@ extension StatusItemController {
             ledgerDaily: ledgerDaily,
             ledgerActiveBlock: ledgerActiveBlock,
             ledgerTopModel: ledgerTopModel,
+            ledgerTopModelContextLabel: ledgerTopModelContextLabel,
             ledgerTopProject: ledgerTopProject,
             ledgerSpendForecast: ledgerSpendForecast,
             ledgerTopProjectSpendForecast: ledgerTopProjectSpendForecast,
@@ -410,11 +417,9 @@ extension StatusItemController {
     func applyRunicFont(to menu: NSMenu) {
         for item in menu.items {
             guard !item.isSeparatorItem, item.view == nil, !item.title.isEmpty else { continue }
-            if item.attributedTitle == nil {
-                item.attributedTitle = NSAttributedString(
-                    string: item.title,
-                    attributes: [.font: RunicFont.nsFont(size: NSFont.systemFontSize)])
-            }
+            item.attributedTitle = NSAttributedString(
+                string: item.title,
+                attributes: [.font: RunicFont.nsFont(size: NSFont.systemFontSize)])
             if let submenu = item.submenu {
                 self.applyRunicFont(to: submenu)
             }

@@ -336,8 +336,7 @@ extension StatusItemController {
 
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = UsageBreakdownChartMenuView(breakdown: breakdown, width: width)
-            .runicTypography()
+        let chartView = self.themedHostedMenuRoot(UsageBreakdownChartMenuView(breakdown: breakdown, width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -358,8 +357,7 @@ extension StatusItemController {
 
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = CreditsHistoryChartMenuView(breakdown: breakdown, width: width)
-            .runicTypography()
+        let chartView = self.themedHostedMenuRoot(CreditsHistoryChartMenuView(breakdown: breakdown, width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -381,12 +379,11 @@ extension StatusItemController {
 
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = CostHistoryChartMenuView(
+        let chartView = self.themedHostedMenuRoot(CostHistoryChartMenuView(
             provider: provider,
             daily: tokenSnapshot.daily,
             totalCostUSD: tokenSnapshot.last30DaysCostUSD,
-            width: width)
-            .runicTypography()
+            width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -411,11 +408,10 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = UsageTimelineChartMenuView(
+        let chartView = self.themedHostedMenuRoot(UsageTimelineChartMenuView(
             dailySummaries: dailySummaries,
             hourlySummaries: hourlySummaries,
-            width: width)
-            .runicTypography()
+            width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -442,8 +438,7 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = HourlyActivityChartMenuView(hourlySummaries: hourlySummaries, width: width)
-            .runicTypography()
+        let chartView = self.themedHostedMenuRoot(HourlyActivityChartMenuView(hourlySummaries: hourlySummaries, width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -470,8 +465,7 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = WeeklyActivityChartMenuView(dailySummaries: dailySummaries, width: width)
-            .runicTypography()
+        let chartView = self.themedHostedMenuRoot(WeeklyActivityChartMenuView(dailySummaries: dailySummaries, width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -504,12 +498,11 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = SubscriptionUtilizationChartMenuView(
+        let chartView = self.themedHostedMenuRoot(SubscriptionUtilizationChartMenuView(
             dailySummaries: dailySummaries,
             currentUsedPercent: currentUsedPercent,
             todayTokens: todayTokens,
-            width: width)
-            .runicTypography()
+            width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -545,14 +538,13 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = UsageWindowComparisonChartMenuView(
+        let chartView = self.themedHostedMenuRoot(UsageWindowComparisonChartMenuView(
             dailySummaries: dailySummaries,
             primaryLabel: primaryLabel,
             secondaryLabel: secondaryLabel,
             primaryPercent: primaryPercent,
             secondaryPercent: secondaryPercent,
-            width: width)
-            .runicTypography()
+            width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -580,8 +572,7 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = ProjectBreakdownMenuView(breakdown: breakdown, width: width)
-            .runicTypography()
+        let chartView = self.themedHostedMenuRoot(ProjectBreakdownMenuView(breakdown: breakdown, width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -607,8 +598,7 @@ extension StatusItemController {
 
         if !breakdown.isEmpty {
             let width = Self.menuCardBaseWidth
-            let chartView = ModelBreakdownMenuView(breakdown: breakdown, width: width)
-                .runicTypography()
+            let chartView = self.themedHostedMenuRoot(ModelBreakdownMenuView(breakdown: breakdown, width: width))
             let hosting = MenuHostingView(rootView: chartView)
             let controller = NSHostingController(rootView: chartView)
             let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
