@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.5 — 2026-05-13
+- Themes: make Settings theme previews use the same menu surface, card, separator, track, and provider chip tokens as the main menubar panels.
+- Themes: remove uncontrolled AppKit vibrancy/material bleed from hosted menu panels so selected skins do not inherit the color of whatever window is behind them.
+- Themes: tune Terminal into a Tokmeter-style retro HUD with black surfaces, neon green accents, amber highlights, cyan support color, and readable off-white text.
+
 ## 2.1.4 — 2026-05-13
 - Packaging: fix launch crash in packaged builds by avoiding SwiftPM `Bundle.module` resource lookup at app startup.
 - Resources: route fonts, provider SVGs, and provider context fallbacks through a packaged-app-safe resource locator.

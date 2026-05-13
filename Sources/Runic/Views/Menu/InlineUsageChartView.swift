@@ -39,11 +39,11 @@ struct InlineUsageChartView: View {
     let width: CGFloat
     @State private var selectedRange: TimeRange = .sevenDays
     @Environment(\.menuItemHighlighted) private var isHighlighted
-
-    private static let lineColor = RunicColors.chartColor(at: 0)
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         let points = Self.dailyPoints(from: self.dailySummaries, range: self.selectedRange)
+        let lineColor = self.runicTheme.chartColor(at: 0)
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Time range picker
@@ -61,7 +61,7 @@ struct InlineUsageChartView: View {
                     Spacer()
                     Text("No data")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     Spacer()
                 }
                 .frame(height: 70)
@@ -75,8 +75,8 @@ struct InlineUsageChartView: View {
                                 .foregroundStyle(
                                     LinearGradient(
                                         colors: [
-                                            Self.lineColor.opacity(0.2),
-                                            Self.lineColor.opacity(0.02),
+                                            lineColor.opacity(0.2),
+                                            lineColor.opacity(0.02),
                                         ],
                                         startPoint: .top,
                                         endPoint: .bottom))
@@ -84,7 +84,7 @@ struct InlineUsageChartView: View {
                             LineMark(
                                 x: .value("Time", point.date),
                                 y: .value("Tokens", point.tokens))
-                                .foregroundStyle(Self.lineColor)
+                                .foregroundStyle(lineColor)
                                 .lineStyle(StrokeStyle(lineWidth: 1.5))
                                 .interpolationMethod(.catmullRom)
                         }
@@ -92,12 +92,12 @@ struct InlineUsageChartView: View {
                     .chartYAxis {
                         AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
                             AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
-                                .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
+                                .foregroundStyle(self.runicTheme.chartGridColor)
                             AxisValueLabel {
                                 if let tokens = value.as(Int.self) {
                                     Text(UsageFormatter.tokenCountString(tokens))
                                         .font(RunicFont.system(size: 8))
-                                        .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                        .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                                 }
                             }
                         }
@@ -106,7 +106,7 @@ struct InlineUsageChartView: View {
                         AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                             AxisValueLabel(format: self.xAxisFormat)
                                 .font(RunicFont.system(size: 8))
-                                .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                         }
                     }
                     .chartLegend(.hidden)
@@ -116,12 +116,12 @@ struct InlineUsageChartView: View {
                     if let peak = points.max(by: { $0.tokens < $1.tokens }), peak.tokens > 0 {
                         Text("Peak \(UsageFormatter.tokenCountString(peak.tokens))")
                             .font(RunicFont.system(size: 8, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
                             .background(
                                 Capsule(style: .continuous)
-                                    .fill(.ultraThinMaterial))
+                                    .fill(self.runicTheme.menuSubtleFill))
                             .padding(4)
                     }
                 }

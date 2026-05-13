@@ -19,16 +19,17 @@ struct WeeklyActivityChartMenuView: View {
 
     private let dailySummaries: [UsageLedgerDailySummary]
     private let width: CGFloat
+    @Environment(\.runicTheme) private var runicTheme
+
     init(dailySummaries: [UsageLedgerDailySummary], width: CGFloat) {
         self.dailySummaries = dailySummaries
         self.width = width
     }
 
-    private static let barColor = Color(nsColor: .systemGray).opacity(0.4)
-    private static let todayColor = RunicColors.chartColor(at: 0)
-
     var body: some View {
         let model = Self.makeModel(from: self.dailySummaries)
+        let todayColor = self.runicTheme.chartColor(at: 0)
+        let barColor = self.runicTheme.menuTrackColor.opacity(0.85)
 
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
@@ -40,14 +41,14 @@ struct WeeklyActivityChartMenuView: View {
                     let avg = model.totalTokens / max(1, model.bars.count(where: { $0.totalTokens > 0 }))
                     Text("\(UsageFormatter.tokenCountString(avg)) avg")
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
                 Text("No usage in the last 7 days.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
                 Chart {
@@ -55,7 +56,7 @@ struct WeeklyActivityChartMenuView: View {
                         BarMark(
                             x: .value("Day", bar.weekdayShort),
                             y: .value("Tokens", bar.totalTokens))
-                            .foregroundStyle(bar.isToday ? Self.todayColor : Self.barColor)
+                            .foregroundStyle(bar.isToday ? todayColor : barColor)
                             .cornerRadius(RunicCornerRadius.sm)
                     }
                 }
@@ -63,18 +64,18 @@ struct WeeklyActivityChartMenuView: View {
                     AxisMarks { _ in
                         AxisValueLabel()
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .trailing) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.5))
+                            .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }

@@ -345,19 +345,24 @@ private struct ThemeSwatch: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: palette.swatchColors,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing))
+                .fill(palette.menuSurfaceGradient)
+            HStack(spacing: 3) {
+                ForEach(Array(palette.swatchColors.enumerated()), id: \.offset) { _, color in
+                    Circle()
+                        .fill(color)
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 5)
             Image(systemName: palette.symbolName)
                 .font(RunicFont.caption.weight(.bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(palette.primaryText)
                 .shadow(color: .black.opacity(0.22), radius: 1, x: 0, y: 1)
         }
         .overlay(
             RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .stroke(self.isSelected ? palette.highlight : Color.white.opacity(0.28), lineWidth: 1))
+                .stroke(self.isSelected ? palette.highlight : palette.menuSeparatorColor, lineWidth: 1))
     }
 }
 
@@ -368,50 +373,90 @@ private struct AppearancePreviewCard: View {
 
     var body: some View {
         let palette = self.theme.palette
-        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-            HStack(alignment: .top, spacing: RunicSpacing.sm) {
-                VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
-                    Text("Live preview")
-                        .font(RunicFont.caption.weight(.semibold))
-                        .foregroundStyle(palette.secondaryText)
-                    Text("Runic")
-                        .font(RunicFont.title3.weight(.bold))
+        let selectedProvider = self.previewProviders.first ?? .codex
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            HStack(spacing: RunicSpacing.xxs) {
+                self.providerChip(title: "Overview", systemImage: "square.grid.2x2", tint: palette.secondary, isSelected: false)
+                self.providerChip(
+                    title: self.providerLabel(selectedProvider),
+                    provider: selectedProvider,
+                    tint: self.providerColor(selectedProvider),
+                    isSelected: true)
+                Spacer(minLength: 0)
+            }
+
+            Rectangle()
+                .fill(palette.menuSeparatorColor)
+                .frame(height: 1)
+
+            HStack(spacing: RunicSpacing.sm) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                        .fill(palette.menuSubtleFill)
+                    if let icon = ProviderBrandIcon.image(for: selectedProvider, size: 24) {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                    }
+                }
+                .frame(width: 40, height: 40)
+                .overlay(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                        .stroke(palette.menuSeparatorColor, lineWidth: 1))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(self.providerLabel(selectedProvider))
+                        .font(RunicFont.body.weight(.bold))
                         .foregroundStyle(palette.primaryText)
+                        .lineLimit(1)
                     Text("\(palette.displayName) · \(self.fontLabel)")
                         .font(RunicFont.caption)
                         .foregroundStyle(palette.secondaryText)
+                        .lineLimit(1)
+                    Text("Top model · 42M tokens · 118 req")
+                        .font(RunicFont.caption2)
+                        .foregroundStyle(palette.secondaryText)
+                        .lineLimit(1)
                 }
+                .layoutPriority(1)
 
                 Spacer()
 
-                HStack(spacing: RunicSpacing.xxs) {
-                    ForEach(self.previewProviders, id: \.self) { provider in
-                        if let icon = ProviderBrandIcon.image(for: provider, size: 21) {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 21, height: 21)
-                        }
-                    }
-                }
+                Text("Pro")
+                    .font(RunicFont.caption.weight(.semibold))
+                    .foregroundStyle(palette.primaryText)
+                    .padding(.horizontal, RunicSpacing.xs)
+                    .padding(.vertical, 4)
+                    .background(Capsule(style: .continuous).fill(palette.accent.opacity(0.22)))
             }
+            .padding(RunicSpacing.xs)
+            .background(
+                RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                    .fill(palette.menuCardGradient))
+            .overlay(
+                RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                    .stroke(palette.menuSeparatorColor, lineWidth: 1))
 
             HStack(spacing: RunicSpacing.xs) {
                 self.metricPreview(title: "Session", value: "42%", color: palette.accent, fill: 0.42)
                 self.metricPreview(title: "Weekly", value: "71%", color: palette.highlight, fill: 0.71)
             }
+
+            VStack(spacing: 0) {
+                self.actionPreviewRow(title: "Usage timeline", systemImage: "chart.xyaxis.line")
+                self.actionPreviewRow(title: "Models", systemImage: "square.stack.3d.up")
+            }
+            .padding(.top, 1)
         }
         .padding(RunicSpacing.sm)
         .background(
             RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [palette.surfaceAlt.opacity(0.94), palette.cardFill.opacity(0.70)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing)))
+                .fill(palette.menuSurfaceGradient))
         .overlay(
             RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                .stroke(palette.cardStroke.opacity(0.9), lineWidth: 1))
+                .stroke(palette.menuSeparatorColor, lineWidth: 1))
+        .runicColorScheme(palette)
     }
 
     private var previewProviders: [UsageProvider] {
@@ -441,7 +486,7 @@ private struct AppearancePreviewCard: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule(style: .continuous)
-                        .fill(self.theme.palette.primaryText.opacity(0.10))
+                        .fill(self.theme.palette.menuTrackColor)
                     Capsule(style: .continuous)
                         .fill(color)
                         .frame(width: max(8, proxy.size.width * min(max(fill, 0), 1)))
@@ -452,12 +497,75 @@ private struct AppearancePreviewCard: View {
         .padding(RunicSpacing.xs)
         .background(
             RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .fill(self.theme.palette.surface.opacity(0.28)))
+                .fill(self.theme.palette.menuSubtleFill))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.theme.palette.menuSeparatorColor.opacity(0.72), lineWidth: 0.7))
+    }
+
+    private func providerChip(
+        title: String,
+        systemImage: String? = nil,
+        provider: UsageProvider? = nil,
+        tint: Color,
+        isSelected: Bool)
+        -> some View
+    {
+        HStack(spacing: 5) {
+            if let provider, let icon = ProviderBrandIcon.image(for: provider, size: 14) {
+                Image(nsImage: icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 14, height: 14)
+            } else if let systemImage {
+                Image(systemName: systemImage)
+                    .font(RunicFont.caption.weight(.semibold))
+                    .foregroundStyle(tint)
+            }
+            Text(title)
+                .font(RunicFont.caption.weight(.semibold))
+                .foregroundStyle(isSelected ? self.theme.palette.primaryText : self.theme.palette.secondaryText)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, RunicSpacing.xs)
+        .padding(.vertical, 5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(isSelected ? tint.opacity(0.24) : self.theme.palette.menuSubtleFill))
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(isSelected ? tint.opacity(0.55) : self.theme.palette.menuSeparatorColor.opacity(0.45), lineWidth: 0.7))
+    }
+
+    private func actionPreviewRow(title: String, systemImage: String) -> some View {
+        HStack(spacing: RunicSpacing.xs) {
+            Image(systemName: systemImage)
+                .font(RunicFont.caption.weight(.semibold))
+                .foregroundStyle(self.theme.palette.secondaryText)
+                .frame(width: 16)
+            Text(title)
+                .font(RunicFont.caption.weight(.semibold))
+                .foregroundStyle(self.theme.palette.primaryText)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(RunicFont.caption2.weight(.semibold))
+                .foregroundStyle(self.theme.palette.secondaryText)
+        }
+        .padding(.vertical, 5)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(self.theme.palette.menuSeparatorColor.opacity(0.55))
+                .frame(height: 0.7)
+        }
     }
 
     private func providerColor(_ provider: UsageProvider) -> Color {
         let color = ProviderDescriptorRegistry.descriptor(for: provider).branding.color
         return Color(red: color.red, green: color.green, blue: color.blue)
+    }
+
+    private func providerLabel(_ provider: UsageProvider) -> String {
+        ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName
     }
 }
 

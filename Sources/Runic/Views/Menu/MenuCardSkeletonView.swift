@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 struct MenuCardSkeletonView: View {
     let width: CGFloat
+    @Environment(\.runicTheme) private var runicTheme
 
     // MARK: - Placeholder dimensions
 
@@ -86,8 +87,8 @@ struct MenuCardSkeletonView: View {
 
     /// A sliding `LinearGradient` that produces the shimmer effect.
     private func shimmerGradient(phase: Double) -> LinearGradient {
-        let baseColor = Color(nsColor: .separatorColor).opacity(0.3)
-        let highlightColor = Color(nsColor: .separatorColor).opacity(0.6)
+        let baseColor = self.runicTheme.menuTrackColor.opacity(0.45)
+        let highlightColor = self.runicTheme.cardStroke.opacity(0.7)
 
         let leading = max(0, phase - 0.3)
         let trailing = min(1, phase + 0.3)

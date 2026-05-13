@@ -16,6 +16,7 @@ struct AlertsMenuView: View {
     @State private var isRefreshing = false
     private let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     // MARK: - Initialization
 
@@ -67,7 +68,7 @@ struct AlertsMenuView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(RunicFont.caption)
-                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                        .foregroundStyle(self.secondaryTextColor)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Refresh alerts")
@@ -109,11 +110,11 @@ struct AlertsMenuView: View {
         VStack(spacing: RunicSpacing.xs) {
             Image(systemName: "checkmark.shield")
                 .font(RunicFont.title2)
-                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                .foregroundStyle(self.secondaryTextColor)
 
             Text("No active alerts")
                 .font(RunicFont.subheadline)
-                .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                .foregroundStyle(self.secondaryTextColor)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, RunicSpacing.sm)
@@ -141,6 +142,10 @@ struct AlertsMenuView: View {
             print("[AlertsMenuView] Failed to acknowledge alert: \(error)")
         }
     }
+
+    private var secondaryTextColor: Color {
+        self.isHighlighted ? MenuHighlightStyle.selectionText : self.runicTheme.secondaryText
+    }
 }
 
 // MARK: - Alert Row
@@ -151,6 +156,7 @@ private struct AlertRow: View {
 
     @State private var isAcknowledging = false
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(alignment: .top, spacing: RunicSpacing.xs) {
@@ -159,13 +165,13 @@ private struct AlertRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(self.alert.message)
                     .font(RunicFont.footnote)
-                    .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
+                    .foregroundStyle(self.primaryTextColor)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(self.timeAgo(from: self.alert.triggeredAt))
                     .font(RunicFont.caption2)
-                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .foregroundStyle(self.secondaryTextColor)
             }
 
             Spacer()
@@ -199,16 +205,16 @@ private struct AlertRow: View {
 
     private var severityColor: Color {
         switch self.alert.severity {
-        case .info: .green
-        case .warning: .yellow
-        case .critical: .red
+        case .info: self.runicTheme.tertiary
+        case .warning: self.runicTheme.highlight
+        case .critical: self.runicTheme.warm
         }
     }
 
     private var backgroundStyle: some View {
         self.alert.acknowledged
-            ? Color(nsColor: .controlBackgroundColor).opacity(0.5)
-            : Color(nsColor: .controlBackgroundColor)
+            ? self.runicTheme.menuSubtleFill.opacity(0.55)
+            : self.runicTheme.menuSubtleFill
     }
 
     private var acknowledgeButton: some View {
@@ -226,7 +232,7 @@ private struct AlertRow: View {
             } else {
                 Image(systemName: "checkmark.circle")
                     .font(RunicFont.caption)
-                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .foregroundStyle(self.secondaryTextColor)
             }
         }
         .buttonStyle(.plain)
@@ -250,5 +256,13 @@ private struct AlertRow: View {
             let days = Int(interval / 86400)
             return "\(days)d ago"
         }
+    }
+
+    private var primaryTextColor: Color {
+        self.isHighlighted ? MenuHighlightStyle.selectionText : self.runicTheme.primaryText
+    }
+
+    private var secondaryTextColor: Color {
+        self.isHighlighted ? MenuHighlightStyle.selectionText : self.runicTheme.secondaryText
     }
 }

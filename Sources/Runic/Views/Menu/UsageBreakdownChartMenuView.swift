@@ -21,6 +21,7 @@ struct UsageBreakdownChartMenuView: View {
     private let breakdown: [OpenAIDashboardDailyBreakdown]
     private let width: CGFloat
     @State private var selectedDayKey: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(breakdown: [OpenAIDashboardDailyBreakdown], width: CGFloat) {
         self.breakdown = breakdown
@@ -29,11 +30,12 @@ struct UsageBreakdownChartMenuView: View {
 
     var body: some View {
         let model = Self.makeModel(from: self.breakdown)
+        let serviceColors = model.services.indices.map { self.runicTheme.chartColor(at: $0) }
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No usage breakdown data.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
                     ForEach(model.points) { point in
@@ -48,10 +50,10 @@ struct UsageBreakdownChartMenuView: View {
                             x: .value("Day", peak.date, unit: .day),
                             yStart: .value("Cap start", capStart),
                             yEnd: .value("Cap end", peak.creditsUsed))
-                            .foregroundStyle(Color(nsColor: .systemYellow))
+                            .foregroundStyle(self.runicTheme.chartPeakColor)
                     }
                 }
-                .chartForegroundStyleScale(domain: model.services, range: model.serviceColors)
+                .chartForegroundStyleScale(domain: model.services, range: serviceColors)
                 .chartYAxis(.hidden)
                 .chartXAxis {
                     AxisMarks(values: model.axisDates) { _ in
@@ -59,7 +61,7 @@ struct UsageBreakdownChartMenuView: View {
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
@@ -71,7 +73,7 @@ struct UsageBreakdownChartMenuView: View {
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
                                 Rectangle()
-                                    .fill(Self.selectionBandColor)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
                                     .allowsHitTesting(false)
@@ -89,13 +91,13 @@ struct UsageBreakdownChartMenuView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
@@ -107,14 +109,14 @@ struct UsageBreakdownChartMenuView: View {
                     alignment: .leading,
                     spacing: RunicSpacing.compact)
                 {
-                    ForEach(model.services, id: \.self) { service in
+                    ForEach(Array(model.services.enumerated()), id: \.element) { index, service in
                         HStack(spacing: RunicSpacing.compact) {
                             Circle()
-                                .fill(model.color(for: service))
+                                .fill(serviceColors.indices.contains(index) ? serviceColors[index] : self.runicTheme.accent)
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(service)
                                 .font(RunicFont.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                                 .lineLimit(1)
                         }
                     }
@@ -143,8 +145,6 @@ struct UsageBreakdownChartMenuView: View {
             return self.serviceColors[idx]
         }
     }
-
-    private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
 
     private static func makeModel(from breakdown: [OpenAIDashboardDailyBreakdown]) -> Model {
         let sorted = breakdown

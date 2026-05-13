@@ -30,6 +30,7 @@ extension StatusItemController {
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.delegate = self
+        self.applyRunicAppearance(to: menu)
         return menu
     }
 
@@ -88,6 +89,7 @@ extension StatusItemController {
 
     func populateMenu(_ menu: NSMenu, provider: UsageProvider?) {
         menu.removeAllItems()
+        self.applyRunicAppearance(to: menu)
 
         let selectedProvider = provider
         let enabledProviders = self.store.enabledProviders()
@@ -279,7 +281,10 @@ extension StatusItemController {
                         let font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
                         item.attributedTitle = NSAttributedString(
                             string: text,
-                            attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor])
+                            attributes: [
+                                .font: font,
+                                .foregroundColor: self.settings.theme.palette.nsSecondaryTextColor,
+                            ])
                     }
                     menu.addItem(item)
                 case let .action(title, action):
@@ -329,6 +334,7 @@ extension StatusItemController {
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.delegate = self
+        self.applyRunicAppearance(to: menu)
         if let provider {
             self.menuProviders[ObjectIdentifier(menu)] = provider
         }
@@ -346,6 +352,7 @@ extension StatusItemController {
             width: self.menuCardWidth(for: providers, menu: menu),
             showsIcons: self.settings.switcherShowsIcons,
             iconSizePreference: self.settings.providerSwitcherIconSize,
+            theme: self.settings.theme.palette,
             iconProvider: { [weak self] provider, iconSize in
                 self?.switcherIcon(for: provider, size: iconSize) ?? NSImage()
             },
@@ -726,10 +733,8 @@ private final class ProviderSwitcherView: NSView {
     private var weeklyIndicators: [ObjectIdentifier: WeeklyIndicator] = [:]
     private var hoverTrackingArea: NSTrackingArea?
     private var segmentWidths: [CGFloat] = []
-    private let selectedBackground = NSColor.controlAccentColor.cgColor
-    private let unselectedBackground = NSColor.clear.cgColor
+    private let theme: RunicThemePalette
     private let selectedTextColor = NSColor.white
-    private let unselectedTextColor = NSColor.secondaryLabelColor
     private let stackedIcons: Bool
     private let useTwoRows: Bool
     private let rowSpacing: CGFloat
@@ -744,6 +749,7 @@ private final class ProviderSwitcherView: NSView {
         width: CGFloat,
         showsIcons: Bool,
         iconSizePreference: ProviderSwitcherIconSize,
+        theme: RunicThemePalette,
         iconProvider: (UsageProvider, CGFloat) -> NSImage,
         weeklyRemainingProvider: @escaping (UsageProvider) -> Double?,
         onSelect: @escaping (UsageProvider) -> Void)
@@ -762,6 +768,7 @@ private final class ProviderSwitcherView: NSView {
         self.onSelect = onSelect
         self.showsIcons = showsIcons
         self.weeklyRemainingProvider = weeklyRemainingProvider
+        self.theme = theme
         self.stackedIcons = showsIcons && providers.count > 3
         let initialOuterPadding = Self.switcherOuterPadding(
             for: width,
@@ -784,6 +791,8 @@ private final class ProviderSwitcherView: NSView {
         Self.clearButtonWidthCache()
         self.wantsLayer = true
         self.layer?.masksToBounds = false
+        self.layer?.backgroundColor = theme.nsMenuSubtleFillColor.withAlphaComponent(0.20).cgColor
+        self.layer?.cornerRadius = CGFloat(RunicCornerRadius.sm)
         self.lightModeOverlayLayer.masksToBounds = false
         self.layer?.insertSublayer(self.lightModeOverlayLayer, at: 0)
         self.updateLightModeStyling()
@@ -838,7 +847,7 @@ private final class ProviderSwitcherView: NSView {
             button.controlSize = .small
             button.font = RunicFont.nsFont(size: 12, weight: .medium)
             button.setButtonType(.toggle)
-            button.contentTintColor = self.unselectedTextColor
+            button.contentTintColor = self.theme.nsSecondaryTextColor
             button.alignment = .center
             button.wantsLayer = true
             button.layer?.cornerRadius = CGFloat(RunicCornerRadius.md)
@@ -1150,13 +1159,13 @@ private final class ProviderSwitcherView: NSView {
         for button in self.buttons {
             let isSelected = button.state == .on
             let isHovered = self.hoveredButtonTag == button.tag
-            button.contentTintColor = isSelected ? self.selectedTextColor : self.unselectedTextColor
+            button.contentTintColor = isSelected ? self.selectedTextColor : self.theme.nsSecondaryTextColor
             button.layer?.backgroundColor = if isSelected {
-                self.selectedBackground
+                self.theme.nsAccentColor.withAlphaComponent(0.78).cgColor
             } else if isHovered {
                 self.hoverPlateColor()
             } else {
-                self.unselectedBackground
+                NSColor.clear.cgColor
             }
             self.updateWeeklyIndicatorVisibility(for: button)
             (button as? StackedToggleButton)?.setContentTintColor(button.contentTintColor)
@@ -1169,18 +1178,13 @@ private final class ProviderSwitcherView: NSView {
     }
 
     private func updateLightModeStyling() {
-        guard self.isLightMode() else {
-            self.lightModeOverlayLayer.backgroundColor = nil
-            return
-        }
-        self.lightModeOverlayLayer.backgroundColor = NSColor.black.withAlphaComponent(0.035).cgColor
+        self.lightModeOverlayLayer.backgroundColor = self.theme.nsMenuSubtleFillColor
+            .withAlphaComponent(self.isLightMode() ? 0.24 : 0.16)
+            .cgColor
     }
 
     private func hoverPlateColor() -> CGColor {
-        if self.isLightMode() {
-            return NSColor.black.withAlphaComponent(0.095).cgColor
-        }
-        return NSColor.labelColor.withAlphaComponent(0.06).cgColor
+        self.theme.nsAccentColor.withAlphaComponent(self.isLightMode() ? 0.18 : 0.14).cgColor
     }
 
     private static var buttonWidthCache: [ObjectIdentifier: CGFloat] = [:]
@@ -1356,8 +1360,8 @@ private final class ProviderSwitcherView: NSView {
 
         let track = NSView()
         track.wantsLayer = true
-        track.layer?.backgroundColor = NSColor.tertiaryLabelColor
-            .withAlphaComponent(CGFloat(RunicColors.Opacity.medium)).cgColor
+        track.layer?.backgroundColor = self.theme.nsCardStrokeColor
+            .withAlphaComponent(CGFloat(RunicColors.Opacity.strong)).cgColor
         track.layer?.cornerRadius = 3
         track.layer?.masksToBounds = true
         track.translatesAutoresizingMaskIntoConstraints = false

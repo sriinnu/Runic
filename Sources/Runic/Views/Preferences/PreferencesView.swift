@@ -190,6 +190,7 @@ struct PreferencesView: View {
         .runicTypography()
         .id(self.settings.visualSettingsRevision)
         .environment(\.runicTheme, self.settings.theme.palette)
+        .runicColorScheme(self.settings.theme.palette)
         .foregroundStyle(self.settings.theme.palette.primaryText)
         .tint(self.settings.theme.palette.accent)
         .background {

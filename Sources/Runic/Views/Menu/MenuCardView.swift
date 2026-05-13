@@ -258,7 +258,7 @@ struct UsageMenuCardView: View {
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
                                         .font(RunicFont.footnote)
-                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
+                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
@@ -371,7 +371,7 @@ private struct UsageMenuCardHeaderView: View {
         switch self.model.subtitleStyle {
         case .info: self.runicTheme.secondaryText
         case .loading: self.runicTheme.secondaryText
-        case .error: MenuHighlightStyle.error(self.isHighlighted)
+        case .error: MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme)
         }
     }
 
@@ -384,14 +384,13 @@ private struct UsageMenuCardHeaderView: View {
         let base = self.brandNSColor
         let top = base.blended(withFraction: 0.35, of: .white) ?? base
         return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-            .fill(.ultraThinMaterial)
+            .fill(self.runicTheme.menuCardGradient)
             .overlay(
                 ZStack {
-                    self.runicTheme.menuCardGradient
                     LinearGradient(
                         colors: [
-                            Color(nsColor: top).opacity(0.18),
-                            Color(nsColor: base).opacity(0.06),
+                            Color(nsColor: top).opacity(0.14),
+                            Color(nsColor: base).opacity(0.04),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing)
@@ -557,7 +556,7 @@ private struct MenuHeaderBadgeView: View {
         case .warning:
             self.runicTheme.highlight.opacity(self.isHighlighted ? 0.35 : 0.15)
         case .error:
-            Color(nsColor: .systemRed).opacity(self.isHighlighted ? 0.35 : 0.15)
+            RunicColors.error.opacity(self.isHighlighted ? 0.35 : 0.15)
         }
     }
 
@@ -568,7 +567,7 @@ private struct MenuHeaderBadgeView: View {
         case .warning:
             self.runicTheme.highlight
         case .error:
-            Color(nsColor: .systemRed)
+            RunicColors.error
         }
     }
 
@@ -579,7 +578,7 @@ private struct MenuHeaderBadgeView: View {
         case .warning:
             self.runicTheme.highlight.opacity(RunicColors.Opacity.strong)
         case .error:
-            Color(nsColor: .systemRed).opacity(RunicColors.Opacity.strong)
+            RunicColors.error.opacity(RunicColors.Opacity.strong)
         }
     }
 }
@@ -780,7 +779,7 @@ private struct InsightsContent: View {
                         .foregroundStyle(RunicColors.error)
                     Text(error)
                         .font(RunicFont.footnote)
-                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
+                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
                         .lineLimit(4)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1064,7 +1063,7 @@ struct UsageMenuCardCostSectionView: View {
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
                                         .font(RunicFont.footnote)
-                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted))
+                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }

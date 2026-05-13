@@ -27,6 +27,7 @@ struct MenuContent: View {
     let updater: UpdaterProviding
     let provider: UsageProvider?
     let actions: MenuActions
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         let descriptor = MenuDescriptor.build(
@@ -65,7 +66,7 @@ struct MenuContent: View {
             case .primary:
                 Text(text)
             case .secondary:
-                Text(text).foregroundStyle(.secondary).font(RunicFont.footnote)
+                Text(text).foregroundStyle(self.runicTheme.secondaryText).font(RunicFont.footnote)
             }
         case let .action(title, action):
             Button {
@@ -78,9 +79,10 @@ struct MenuContent: View {
                             .frame(width: 18, alignment: .center)
                         Text(title)
                     }
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(self.runicTheme.primaryText)
                 } else {
                     Text(title)
+                        .foregroundStyle(self.runicTheme.primaryText)
                 }
             }
             .buttonStyle(.plain)

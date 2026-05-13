@@ -6,6 +6,7 @@ import SwiftUI
 struct ProjectBreakdownMenuView: View {
     private let breakdown: [UsageLedgerProjectSummary]
     private let width: CGFloat
+    @Environment(\.runicTheme) private var runicTheme
 
     /// Maximum number of projects to show before truncating with "and N more".
     private static let maxDisplayed = 8
@@ -16,19 +17,19 @@ struct ProjectBreakdownMenuView: View {
     }
 
     var body: some View {
-        let model = Self.makeModel(from: self.breakdown)
+        let model = Self.makeModel(from: self.breakdown, theme: self.runicTheme)
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.items.isEmpty {
                 Text("No project data.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 // MARK: - Title
 
                 Text("Projects")
                     .font(RunicFont.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(self.runicTheme.primaryText)
 
                 // MARK: - Horizontal bar chart
 
@@ -46,7 +47,7 @@ struct ProjectBreakdownMenuView: View {
                     AxisMarks { _ in
                         AxisValueLabel()
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
@@ -58,7 +59,7 @@ struct ProjectBreakdownMenuView: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     ForEach(model.chartItems) { item in
-                        Self.projectRow(item: item)
+                        Self.projectRow(item: item, theme: self.runicTheme)
                     }
                 }
 
@@ -67,13 +68,14 @@ struct ProjectBreakdownMenuView: View {
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                 }
 
                 // MARK: - Total summary
 
                 Divider()
-                Self.totalRow(model: model)
+                    .overlay(self.runicTheme.menuSeparatorColor)
+                Self.totalRow(model: model, theme: self.runicTheme)
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -83,52 +85,52 @@ struct ProjectBreakdownMenuView: View {
 
     // MARK: - Row views
 
-    private static func projectRow(item: ProjectItem) -> some View {
+    private static func projectRow(item: ProjectItem, theme: RunicThemePalette) -> some View {
         HStack(spacing: RunicSpacing.xxs) {
             Circle()
                 .fill(item.color)
                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
             Text(item.name)
                 .font(RunicFont.caption)
-                .foregroundStyle(.primary)
+                .foregroundStyle(theme.primaryText)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(item.totalTokens)) tokens")
                     .font(RunicFont.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.secondaryText)
                 HStack(spacing: RunicSpacing.xxxs) {
                     if let cost = item.costText {
                         Text(cost)
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(theme.chartAxisLabelColor)
                     }
                     if item.modelCount > 0 {
                         Text("\(item.modelCount) model\(item.modelCount == 1 ? "" : "s")")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(theme.chartAxisLabelColor)
                     }
                 }
             }
         }
     }
 
-    private static func totalRow(model: ProjectModel) -> some View {
+    private static func totalRow(model: ProjectModel, theme: RunicThemePalette) -> some View {
         HStack {
             Text("Total")
                 .font(RunicFont.caption)
                 .fontWeight(.medium)
-                .foregroundStyle(.primary)
+                .foregroundStyle(theme.primaryText)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(model.grandTotalTokens)) tokens")
                     .font(RunicFont.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.secondaryText)
                 if let cost = model.grandTotalCostText {
                     Text(cost)
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(theme.chartAxisLabelColor)
                 }
             }
         }
@@ -180,7 +182,7 @@ struct ProjectBreakdownMenuView: View {
         return label
     }
 
-    private static func makeModel(from breakdown: [UsageLedgerProjectSummary]) -> ProjectModel {
+    private static func makeModel(from breakdown: [UsageLedgerProjectSummary], theme: RunicThemePalette) -> ProjectModel {
         let sorted = breakdown.sorted { lhs, rhs in
             lhs.totals.totalTokens > rhs.totals.totalTokens
         }
@@ -194,7 +196,7 @@ struct ProjectBreakdownMenuView: View {
                 totalTokens: summary.totals.totalTokens,
                 costText: costText,
                 modelCount: summary.modelsUsed.count,
-                color: RunicColors.chartColor(at: index))
+                color: theme.chartColor(at: index))
         }
 
         let displayed = Array(items.prefix(self.maxDisplayed))

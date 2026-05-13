@@ -62,6 +62,71 @@ struct RunicThemePalette {
     var menuSubtleFill: Color {
         self.cardFill.opacity(self.isCustom ? 0.62 : 0.34)
     }
+
+    var chartGridColor: Color {
+        self.cardStroke.opacity(self.isCustom ? 0.58 : 0.42)
+    }
+
+    var chartAxisLabelColor: Color {
+        self.secondaryText.opacity(self.isCustom ? 0.78 : 0.70)
+    }
+
+    var chartSelectionBandColor: Color {
+        self.primaryText.opacity(self.isCustom ? 0.12 : 0.08)
+    }
+
+    var chartPeakColor: Color {
+        self.highlight
+    }
+
+    var menuHoverFill: Color {
+        self.accent.opacity(self.isCustom ? 0.20 : 0.14)
+    }
+
+    var menuSeparatorColor: Color {
+        self.cardStroke.opacity(self.isCustom ? 0.70 : 0.48)
+    }
+
+    var nsPrimaryTextColor: NSColor {
+        self.nsColor(self.primaryText, fallback: .labelColor)
+    }
+
+    var nsSecondaryTextColor: NSColor {
+        self.nsColor(self.secondaryText, fallback: .secondaryLabelColor)
+    }
+
+    var nsAccentColor: NSColor {
+        self.nsColor(self.accent, fallback: .controlAccentColor)
+    }
+
+    var nsWarmColor: NSColor {
+        self.nsColor(self.warm, fallback: .systemRed)
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self.prefersDarkAppearance {
+        case nil: nil
+        case .some(true): .dark
+        case .some(false): .light
+        }
+    }
+
+    var nsAppearance: NSAppearance? {
+        guard let prefersDarkAppearance else { return nil }
+        return NSAppearance(named: prefersDarkAppearance ? .darkAqua : .aqua)
+    }
+
+    var nsCardStrokeColor: NSColor {
+        self.nsColor(self.cardStroke, fallback: .separatorColor)
+    }
+
+    var nsMenuSubtleFillColor: NSColor {
+        self.nsColor(self.menuSubtleFill, fallback: .controlBackgroundColor)
+    }
+
+    private func nsColor(_ color: Color, fallback: NSColor) -> NSColor {
+        NSColor(color).usingColorSpace(.deviceRGB) ?? fallback
+    }
 }
 
 extension Theme {
@@ -211,22 +276,22 @@ extension Theme {
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Phosphor HUD",
+                tagline: "Retro terminal",
                 symbolName: "terminal.fill",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.000, green: 0.100, blue: 0.030),
-                secondary: Color(red: 0.000, green: 1.000, blue: 0.255),
-                accent: Color(red: 0.180, green: 1.000, blue: 0.400),
-                highlight: Color(red: 1.000, green: 0.690, blue: 0.000),
-                warm: Color(red: 0.545, green: 1.000, blue: 0.325),
-                tertiary: Color(red: 0.000, green: 0.800, blue: 0.200),
-                surface: Color(red: 0.000, green: 0.020, blue: 0.010),
-                surfaceAlt: Color(red: 0.000, green: 0.100, blue: 0.030).opacity(0.80),
-                cardFill: Color(red: 0.000, green: 0.100, blue: 0.030).opacity(0.42),
-                cardStroke: Color(red: 0.180, green: 1.000, blue: 0.400).opacity(0.26),
-                primaryText: Color(red: 0.650, green: 1.000, blue: 0.700),
-                secondaryText: Color(red: 0.650, green: 1.000, blue: 0.700).opacity(0.62))
+                primary: Color(red: 0.000, green: 0.957, blue: 0.451),
+                secondary: Color(red: 0.160, green: 0.835, blue: 1.000),
+                accent: Color(red: 0.000, green: 1.000, blue: 0.533),
+                highlight: Color(red: 1.000, green: 0.706, blue: 0.000),
+                warm: Color(red: 1.000, green: 0.361, blue: 0.420),
+                tertiary: Color(red: 0.267, green: 0.929, blue: 0.720),
+                surface: Color(red: 0.000, green: 0.015, blue: 0.012),
+                surfaceAlt: Color(red: 0.000, green: 0.080, blue: 0.055).opacity(0.92),
+                cardFill: Color(red: 0.000, green: 0.120, blue: 0.078).opacity(0.64),
+                cardStroke: Color(red: 0.000, green: 1.000, blue: 0.533).opacity(0.34),
+                primaryText: Color(red: 0.880, green: 0.965, blue: 0.905),
+                secondaryText: Color(red: 0.640, green: 0.760, blue: 0.690))
         }
     }
 
@@ -252,24 +317,21 @@ private struct RunicMenuPanelChrome: ViewModifier {
             .foregroundStyle(self.runicTheme.primaryText)
             .tint(self.runicTheme.accent)
             .background {
-                ZStack {
-                    self.runicTheme.menuSurfaceGradient
-                    if self.runicTheme.isCustom {
-                        LinearGradient(
-                            colors: [
-                                self.runicTheme.accent.opacity(0.10),
-                                self.runicTheme.warm.opacity(0.06),
-                                self.runicTheme.tertiary.opacity(0.08),
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing)
-                    }
-                }
+                self.runicTheme.menuSurfaceGradient
             }
     }
 }
 
 extension View {
+    @ViewBuilder
+    func runicColorScheme(_ palette: RunicThemePalette) -> some View {
+        if let colorScheme = palette.colorScheme {
+            self.environment(\.colorScheme, colorScheme)
+        } else {
+            self
+        }
+    }
+
     func runicMenuPanelChrome() -> some View {
         self.modifier(RunicMenuPanelChrome())
     }

@@ -6,6 +6,7 @@ import SwiftUI
 struct ModelBreakdownMenuView: View {
     private let breakdown: [UsageLedgerModelSummary]
     private let width: CGFloat
+    @Environment(\.runicTheme) private var runicTheme
 
     /// Maximum number of models to show before truncating.
     private static let maxDisplayed = 10
@@ -21,14 +22,14 @@ struct ModelBreakdownMenuView: View {
             if model.items.isEmpty {
                 Text("No model data.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 // MARK: - Title
 
                 Text("Models")
                     .font(RunicFont.caption)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(self.runicTheme.primaryText)
 
                 // MARK: - Donut chart
 
@@ -50,7 +51,7 @@ struct ModelBreakdownMenuView: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     ForEach(model.chartItems) { item in
-                        Self.modelRow(item: item)
+                        Self.modelRow(item: item, theme: self.runicTheme)
                     }
                 }
 
@@ -59,29 +60,31 @@ struct ModelBreakdownMenuView: View {
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                 }
 
                 // MARK: - Cache hit rate
 
                 if let cacheRate = model.cacheHitRateText {
                     Divider()
+                        .overlay(self.runicTheme.menuSeparatorColor)
                     HStack(spacing: RunicSpacing.xxs) {
                         Text("Cache hit rate")
                             .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                         Spacer(minLength: RunicSpacing.xxs)
                         Text(cacheRate)
                             .font(RunicFont.caption)
                             .fontWeight(.medium)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(self.runicTheme.primaryText)
                     }
                 }
 
                 // MARK: - Total summary
 
                 Divider()
-                Self.totalRow(model: model)
+                    .overlay(self.runicTheme.menuSeparatorColor)
+                Self.totalRow(model: model, theme: self.runicTheme)
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -91,59 +94,59 @@ struct ModelBreakdownMenuView: View {
 
     // MARK: - Row views
 
-    private static func modelRow(item: ModelItem) -> some View {
+    private static func modelRow(item: ModelItem, theme: RunicThemePalette) -> some View {
         HStack(spacing: RunicSpacing.xxs) {
             Circle()
                 .fill(item.color)
                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
             Text(item.displayName)
                 .font(RunicFont.caption)
-                .foregroundStyle(.primary)
+                .foregroundStyle(theme.primaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(item.totalTokens)) tokens")
                     .font(RunicFont.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.secondaryText)
                 if let context = UsageFormatter.modelContextLabel(for: item.model) {
                     Text(context)
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(theme.chartAxisLabelColor)
                 }
                 HStack(spacing: RunicSpacing.xxxs) {
                     Text("\(item.requestCount) req\(item.requestCount == 1 ? "" : "s")")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(theme.chartAxisLabelColor)
                     if let cost = item.costText {
                         Text(cost)
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(theme.chartAxisLabelColor)
                     }
                 }
             }
         }
     }
 
-    private static func totalRow(model: ModelModel) -> some View {
+    private static func totalRow(model: ModelModel, theme: RunicThemePalette) -> some View {
         HStack {
             Text("Total")
                 .font(RunicFont.caption)
                 .fontWeight(.medium)
-                .foregroundStyle(.primary)
+                .foregroundStyle(theme.primaryText)
             Spacer(minLength: RunicSpacing.xxs)
             VStack(alignment: .trailing, spacing: 0) {
                 Text("\(UsageFormatter.tokenCountString(model.grandTotalTokens)) tokens")
                     .font(RunicFont.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.secondaryText)
                 HStack(spacing: RunicSpacing.xxxs) {
                     Text("\(model.grandTotalRequests) requests")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(theme.chartAxisLabelColor)
                     if let cost = model.grandTotalCostText {
                         Text(cost)
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(theme.chartAxisLabelColor)
                     }
                 }
             }
