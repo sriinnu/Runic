@@ -46,8 +46,9 @@ struct MenuActionRowView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, RunicSpacing.sm)
-        .padding(.vertical, RunicSpacing.xs)
+        .padding(.leading, RunicSpacing.sm)
+        .padding(.trailing, RunicSpacing.lg)
+        .padding(.vertical, RunicSpacing.xxs)
         .opacity(self.isEnabled ? 1 : 0.55)
     }
 }
@@ -60,6 +61,5 @@ struct MenuSeparatorRowView: View {
             .fill(self.theme.menuSeparatorColor.opacity(0.70))
             .frame(height: 1)
             .padding(.horizontal, RunicSpacing.sm)
-            .padding(.vertical, RunicSpacing.xxxs)
     }
 }

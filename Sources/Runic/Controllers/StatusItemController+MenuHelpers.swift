@@ -149,6 +149,53 @@ extension StatusItemController {
         }
     }
 
+    struct MenuRowSectionContainerView<Content: View>: View {
+        @Bindable var highlightState: MenuCardHighlightState
+        let showsSubmenuIndicator: Bool
+        let content: Content
+        @Environment(\.runicTheme) private var runicTheme
+
+        init(
+            highlightState: MenuCardHighlightState,
+            showsSubmenuIndicator: Bool,
+            @ViewBuilder content: () -> Content)
+        {
+            self.highlightState = highlightState
+            self.showsSubmenuIndicator = showsSubmenuIndicator
+            self.content = content()
+        }
+
+        var body: some View {
+            self.content
+                .runicTypography()
+                .environment(\.menuItemHighlighted, false)
+                .foregroundStyle(self.runicTheme.primaryText)
+                .background {
+                    if self.runicTheme.isTerminalHUD {
+                        self.runicTheme.surface.opacity(0.96)
+                    } else {
+                        self.runicTheme.surfaceAlt.opacity(self.runicTheme.isCustom ? 0.58 : 0.36)
+                    }
+                }
+                .background(alignment: .topLeading) {
+                    if self.highlightState.isHighlighted {
+                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                            .fill(self.runicTheme.menuHoverFill)
+                            .padding(.horizontal, RunicSpacing.xxs)
+                            .padding(.vertical, RunicSpacing.xxxs)
+                    }
+                }
+                .overlay(alignment: .trailing) {
+                    if self.showsSubmenuIndicator {
+                        Image(systemName: "chevron.right")
+                            .font(RunicFont.caption.weight(.semibold))
+                            .foregroundStyle(self.runicTheme.secondaryText)
+                            .padding(.trailing, RunicSpacing.xs)
+                    }
+                }
+        }
+    }
+
     func themedHostedMenuRoot(_ view: some View) -> some View {
         let palette = self.settings.theme.palette
         return view

@@ -38,6 +38,39 @@ extension StatusItemController {
         return item
     }
 
+    func makeMenuRowItem(
+        _ view: some View,
+        id: String,
+        width: CGFloat,
+        submenu: NSMenu? = nil) -> NSMenuItem
+    {
+        let highlightState = MenuCardHighlightState()
+        let root = MenuRowSectionContainerView(
+            highlightState: highlightState,
+            showsSubmenuIndicator: submenu != nil)
+        {
+            view
+        }
+        .environment(\.runicTheme, self.settings.theme.palette)
+        .runicColorScheme(self.settings.theme.palette)
+        let hosting = MenuCardItemHostingView(rootView: root, highlightState: highlightState)
+        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: 1))
+        hosting.needsLayout = true
+        hosting.layoutSubtreeIfNeeded()
+        let height = self.menuCardHeight(for: hosting, width: width)
+        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: height))
+        let item = NSMenuItem()
+        item.view = hosting
+        item.isEnabled = true
+        item.representedObject = id
+        item.submenu = submenu
+        if submenu != nil {
+            item.target = self
+            item.action = #selector(self.menuCardNoOp(_:))
+        }
+        return item
+    }
+
     func makeMenuActionRowItem(
         id: String,
         title: String,
@@ -54,7 +87,7 @@ extension StatusItemController {
             title: title,
             subtitle: subtitle,
             isEnabled: isEnabled)
-        let item = self.makeMenuCardItem(rowView, id: id, width: width, submenu: submenu)
+        let item = self.makeMenuRowItem(rowView, id: id, width: width, submenu: submenu)
         if submenu == nil, let action {
             item.target = self
             item.action = action
@@ -73,7 +106,7 @@ extension StatusItemController {
     }
 
     func makeMenuSeparatorItem(id: String, width: CGFloat) -> NSMenuItem {
-        let item = self.makeMenuCardItem(MenuSeparatorRowView(), id: id, width: width)
+        let item = self.makeMenuRowItem(MenuSeparatorRowView(), id: id, width: width)
         item.isEnabled = false
         return item
     }
