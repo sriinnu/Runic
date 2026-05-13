@@ -26,6 +26,7 @@ struct CostHistoryChartMenuView: View {
     private let width: CGFloat
     @State private var selectedDateKey: String?
     @State private var showHoverHint = true
+    @Environment(\.runicTheme) private var runicTheme
 
     init(provider: UsageProvider, daily: [DailyEntry], totalCostUSD: Double?, width: CGFloat) {
         self.provider = provider
@@ -40,7 +41,7 @@ struct CostHistoryChartMenuView: View {
             if model.points.isEmpty {
                 Text("No cost history data.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
                     ForEach(model.points) { point in
@@ -55,7 +56,7 @@ struct CostHistoryChartMenuView: View {
                             x: .value("Day", peak.date, unit: .day),
                             yStart: .value("Cap start", capStart),
                             yEnd: .value("Cap end", peak.costUSD))
-                            .foregroundStyle(Color(nsColor: .systemYellow))
+                            .foregroundStyle(self.runicTheme.chartPeakColor)
                     }
                 }
                 .chartYAxis(.hidden)
@@ -65,7 +66,7 @@ struct CostHistoryChartMenuView: View {
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
@@ -77,7 +78,7 @@ struct CostHistoryChartMenuView: View {
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
                                 Rectangle()
-                                    .fill(Self.selectionBandColor)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
                                     .allowsHitTesting(false)
@@ -98,7 +99,7 @@ struct CostHistoryChartMenuView: View {
                         Text("Hover to explore")
                             .font(RunicFont.caption2)
                     }
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     .transition(.opacity)
                 }
 
@@ -106,13 +107,13 @@ struct CostHistoryChartMenuView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
@@ -123,7 +124,7 @@ struct CostHistoryChartMenuView: View {
             if let total = self.totalCostUSD {
                 Text("Total (30d): \(UsageFormatter.usdString(total))")
                     .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
@@ -148,8 +149,6 @@ struct CostHistoryChartMenuView: View {
         let peakKey: String?
         let maxCostUSD: Double
     }
-
-    private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
 
     private static func capHeight(maxValue: Double) -> Double {
         maxValue * 0.05

@@ -147,18 +147,20 @@ extension StatusItemController {
         private let stack = NSStackView()
         private let highlightLayer = CALayer()
         private let onSelect: () -> Void
+        private let theme: RunicThemePalette
         private var isHighlighted = false
 
-        init(title: String, image: NSImage?, onSelect: @escaping () -> Void) {
+        init(title: String, image: NSImage?, theme: RunicThemePalette, onSelect: @escaping () -> Void) {
             self.titleField = NSTextField(labelWithString: title)
             self.onSelect = onSelect
+            self.theme = theme
             super.init(frame: .zero)
             self.wantsLayer = true
             self.layer?.insertSublayer(self.highlightLayer, at: 0)
             self.highlightLayer.cornerRadius = CGFloat(RunicCornerRadius.sm)
 
             self.iconView.image = image
-            self.iconView.contentTintColor = NSColor.secondaryLabelColor
+            self.iconView.contentTintColor = theme.nsSecondaryTextColor
             self.iconView.imageScaling = .scaleNone
             self.iconView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -216,8 +218,8 @@ extension StatusItemController {
         }
 
         private func updateColors() {
-            let textColor = self.isHighlighted ? NSColor.selectedMenuItemTextColor : NSColor.controlTextColor
-            let iconColor = self.isHighlighted ? NSColor.selectedMenuItemTextColor : NSColor.secondaryLabelColor
+            let textColor = self.isHighlighted ? self.theme.nsPrimaryTextColor : self.theme.nsPrimaryTextColor
+            let iconColor = self.isHighlighted ? self.theme.nsPrimaryTextColor : self.theme.nsSecondaryTextColor
             self.titleField.textColor = textColor
             if self.iconView.image?.isTemplate == true {
                 self.iconView.contentTintColor = iconColor
@@ -225,7 +227,7 @@ extension StatusItemController {
                 self.iconView.contentTintColor = nil
             }
             self.highlightLayer.backgroundColor = self.isHighlighted
-                ? NSColor.selectedContentBackgroundColor.cgColor
+                ? self.theme.nsAccentColor.withAlphaComponent(0.22).cgColor
                 : NSColor.clear.cgColor
         }
 
@@ -347,7 +349,7 @@ extension StatusItemController {
             accessibilityDescription: nil)
         image?.isTemplate = true
         image?.size = NSSize(width: 16, height: 16)
-        let view = MenuActionButtonView(title: title, image: image) { [weak self] in
+        let view = MenuActionButtonView(title: title, image: image, theme: self.settings.theme.palette) { [weak self] in
             self?.refreshNow()
         }
         let size = view.fittingSize
@@ -382,14 +384,14 @@ extension StatusItemController {
 
         let titleField = NSTextField(labelWithString: title)
         titleField.font = RunicFont.nsFont(size: NSFont.systemFontSize)
-        titleField.textColor = NSColor.labelColor
+        titleField.textColor = self.settings.theme.palette.nsPrimaryTextColor
         titleField.lineBreakMode = .byTruncatingTail
         titleField.maximumNumberOfLines = 1
         titleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         let subtitleField = NSTextField(labelWithString: subtitle)
         subtitleField.font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
-        subtitleField.textColor = NSColor.secondaryLabelColor
+        subtitleField.textColor = self.settings.theme.palette.nsSecondaryTextColor
         subtitleField.lineBreakMode = .byTruncatingTail
         subtitleField.maximumNumberOfLines = 1
         subtitleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -417,9 +419,15 @@ extension StatusItemController {
     func applyRunicFont(to menu: NSMenu) {
         for item in menu.items {
             guard !item.isSeparatorItem, item.view == nil, !item.title.isEmpty else { continue }
+            let color = item.isEnabled
+                ? self.settings.theme.palette.nsPrimaryTextColor
+                : self.settings.theme.palette.nsSecondaryTextColor
             item.attributedTitle = NSAttributedString(
                 string: item.title,
-                attributes: [.font: RunicFont.nsFont(size: NSFont.systemFontSize)])
+                attributes: [
+                    .font: RunicFont.nsFont(size: NSFont.systemFontSize),
+                    .foregroundColor: color,
+                ])
             if let submenu = item.submenu {
                 self.applyRunicFont(to: submenu)
             }

@@ -25,6 +25,7 @@ struct SubscriptionUtilizationChartMenuView: View {
     private let todayTokens: Int
     private let width: CGFloat
     @State private var selectedPeriod: Period = .daily
+    @Environment(\.runicTheme) private var runicTheme
 
     init(
         dailySummaries: [UsageLedgerDailySummary],
@@ -38,15 +39,13 @@ struct SubscriptionUtilizationChartMenuView: View {
         self.width = width
     }
 
-    private static let barColor = RunicColors.chartColor(at: 4) // teal
-    private static let wastedColor = Color(nsColor: .systemGray).opacity(0.2)
-
     var body: some View {
         let model = Self.makeModel(
             from: self.dailySummaries,
             period: self.selectedPeriod,
             currentUsedPercent: self.currentUsedPercent,
             todayTokens: self.todayTokens)
+        let barColor = self.runicTheme.chartColor(at: 4)
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Utilization")
@@ -63,7 +62,7 @@ struct SubscriptionUtilizationChartMenuView: View {
             if model.bars.isEmpty {
                 Text("No utilization data available.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
                 Chart {
@@ -71,7 +70,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                         BarMark(
                             x: .value("Period", bar.label),
                             y: .value("Used %", bar.usedPercent))
-                            .foregroundStyle(bar.isToday ? Self.barColor : Self.barColor.opacity(0.6))
+                            .foregroundStyle(bar.isToday ? barColor : barColor.opacity(0.6))
                             .cornerRadius(RunicCornerRadius.xs)
                     }
                 }
@@ -79,12 +78,12 @@ struct SubscriptionUtilizationChartMenuView: View {
                 .chartYAxis {
                     AxisMarks(values: [0, 25, 50, 75, 100]) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.5))
+                            .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let pct = value.as(Int.self) {
                                 Text("\(pct)%")
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }
@@ -93,7 +92,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisValueLabel()
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
@@ -105,7 +104,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                     let unused = max(0, 100 - used)
                     Text("\(latest.label): \(used)% used, \(unused)% unused")
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
         }

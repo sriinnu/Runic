@@ -22,17 +22,16 @@ struct HourlyActivityChartMenuView: View {
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
     @State private var selectedHour: Int?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(hourlySummaries: [UsageLedgerHourlySummary], width: CGFloat) {
         self.hourlySummaries = hourlySummaries
         self.width = width
     }
 
-    private static let barColor = RunicColors.chartColor(at: 0)
-    private static let peakColor = Color(nsColor: .systemYellow)
-
     var body: some View {
         let model = Self.makeModel(from: self.hourlySummaries)
+        let barColor = self.runicTheme.chartColor(at: 0)
 
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             // Header
@@ -44,14 +43,14 @@ struct HourlyActivityChartMenuView: View {
                 if let peak = model.peakHour {
                     Text("Peak \(peak.label)")
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
                 Text("No usage recorded today.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
                 Chart {
@@ -59,7 +58,7 @@ struct HourlyActivityChartMenuView: View {
                         BarMark(
                             x: .value("Hour", bar.hour),
                             y: .value("Tokens", bar.totalTokens))
-                            .foregroundStyle(bar.isPeak ? Self.peakColor : Self.barColor)
+                            .foregroundStyle(bar.isPeak ? self.runicTheme.chartPeakColor : barColor)
                             .cornerRadius(RunicCornerRadius.xs)
                     }
                     if let selected = self.selectedHour,
@@ -67,7 +66,7 @@ struct HourlyActivityChartMenuView: View {
                     {
                         RuleMark(x: .value("Hour", selected))
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                            .foregroundStyle(Color(nsColor: .labelColor).opacity(0.3))
+                            .foregroundStyle(self.runicTheme.primaryText.opacity(0.30))
                             .annotation(position: .top, spacing: 4) {
                                 Text(UsageFormatter.tokenCountString(bar.totalTokens))
                                     .font(RunicFont.caption2)
@@ -76,7 +75,7 @@ struct HourlyActivityChartMenuView: View {
                                     .padding(.vertical, 2)
                                     .background(
                                         RoundedRectangle(cornerRadius: RunicCornerRadius.xs)
-                                            .fill(.ultraThinMaterial))
+                                            .fill(self.runicTheme.menuSubtleFill))
                             }
                     }
                 }
@@ -86,7 +85,7 @@ struct HourlyActivityChartMenuView: View {
                             if let hour = value.as(Int.self) {
                                 Text(Self.hourAxisLabel(hour))
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }
@@ -94,12 +93,12 @@ struct HourlyActivityChartMenuView: View {
                 .chartYAxis {
                     AxisMarks(position: .trailing) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.5))
+                            .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }
@@ -121,27 +120,30 @@ struct HourlyActivityChartMenuView: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Today")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                         Text(UsageFormatter.tokenCountString(model.totalTokens))
                             .font(RunicFont.caption)
                             .fontWeight(.medium)
+                            .foregroundStyle(self.runicTheme.primaryText)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Active hours")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                         Text("\(model.activeHours)")
                             .font(RunicFont.caption)
                             .fontWeight(.medium)
+                            .foregroundStyle(self.runicTheme.primaryText)
                     }
                     if model.totalRequests > 0 {
                         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                             Text("Requests")
                                 .font(RunicFont.caption2)
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             Text("\(model.totalRequests)")
                                 .font(RunicFont.caption)
                                 .fontWeight(.medium)
+                                .foregroundStyle(self.runicTheme.primaryText)
                         }
                     }
                 }

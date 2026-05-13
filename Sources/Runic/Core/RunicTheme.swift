@@ -62,6 +62,58 @@ struct RunicThemePalette {
     var menuSubtleFill: Color {
         self.cardFill.opacity(self.isCustom ? 0.62 : 0.34)
     }
+
+    var chartGridColor: Color {
+        self.cardStroke.opacity(self.isCustom ? 0.58 : 0.42)
+    }
+
+    var chartAxisLabelColor: Color {
+        self.secondaryText.opacity(self.isCustom ? 0.78 : 0.70)
+    }
+
+    var chartSelectionBandColor: Color {
+        self.primaryText.opacity(self.isCustom ? 0.12 : 0.08)
+    }
+
+    var chartPeakColor: Color {
+        self.highlight
+    }
+
+    var menuHoverFill: Color {
+        self.accent.opacity(self.isCustom ? 0.20 : 0.14)
+    }
+
+    var menuSeparatorColor: Color {
+        self.cardStroke.opacity(self.isCustom ? 0.70 : 0.48)
+    }
+
+    var nsPrimaryTextColor: NSColor {
+        self.nsColor(self.primaryText, fallback: .labelColor)
+    }
+
+    var nsSecondaryTextColor: NSColor {
+        self.nsColor(self.secondaryText, fallback: .secondaryLabelColor)
+    }
+
+    var nsAccentColor: NSColor {
+        self.nsColor(self.accent, fallback: .controlAccentColor)
+    }
+
+    var nsWarmColor: NSColor {
+        self.nsColor(self.warm, fallback: .systemRed)
+    }
+
+    var nsCardStrokeColor: NSColor {
+        self.nsColor(self.cardStroke, fallback: .separatorColor)
+    }
+
+    var nsMenuSubtleFillColor: NSColor {
+        self.nsColor(self.menuSubtleFill, fallback: .controlBackgroundColor)
+    }
+
+    private func nsColor(_ color: Color, fallback: NSColor) -> NSColor {
+        NSColor(color).usingColorSpace(.deviceRGB) ?? fallback
+    }
 }
 
 extension Theme {

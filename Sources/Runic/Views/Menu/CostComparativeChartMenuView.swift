@@ -25,6 +25,7 @@ struct CostComparativeChartMenuView: View {
     private let modelSummaries: [UsageLedgerModelSummary]
     private let width: CGFloat
     @State private var selectedModelID: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(modelSummaries: [UsageLedgerModelSummary], width: CGFloat) {
         self.modelSummaries = modelSummaries
@@ -37,26 +38,26 @@ struct CostComparativeChartMenuView: View {
             if model.isEmpty {
                 Text("No cost comparison data.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
                     ForEach(model) { data in
                         BarMark(
                             x: .value("Cost per token", data.costPerToken * 1_000_000),
                             y: .value("Model", UsageFormatter.modelDisplayName(data.modelName)))
-                            .foregroundStyle(Self.colorForExpensiveness(data.relativeExpensiveness))
+                            .foregroundStyle(Self.colorForExpensiveness(data.relativeExpensiveness, theme: self.runicTheme))
                     }
                 }
                 .chartXAxisLabel("Cost per 1M tokens (USD)")
                 .chartXAxis {
                     AxisMarks { value in
-                        AxisGridLine()
-                        AxisTick()
+                        AxisGridLine().foregroundStyle(self.runicTheme.chartGridColor)
+                        AxisTick().foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let cost = value.as(Double.self) {
                                 Text(UsageFormatter.usdString(cost))
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }
@@ -67,7 +68,7 @@ struct CostComparativeChartMenuView: View {
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel()
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .labelColor))
+                            .foregroundStyle(self.runicTheme.primaryText)
                     }
                 }
                 .chartLegend(.hidden)
@@ -77,7 +78,7 @@ struct CostComparativeChartMenuView: View {
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
                                 Rectangle()
-                                    .fill(Self.selectionBandColor)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
                                     .allowsHitTesting(false)
@@ -95,14 +96,14 @@ struct CostComparativeChartMenuView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(2)
                         .truncationMode(.tail)
                         .frame(height: 32, alignment: .leading)
                     if let secondary = detail.secondary {
                         Text(secondary)
                             .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .lineLimit(1)
                             .truncationMode(.tail)
                             .frame(height: 16, alignment: .leading)
@@ -113,27 +114,27 @@ struct CostComparativeChartMenuView: View {
                 HStack(spacing: RunicSpacing.md) {
                     HStack(spacing: RunicSpacing.xxs) {
                         Circle()
-                            .fill(Self.cheapColor)
+                            .fill(self.runicTheme.tertiary)
                             .frame(width: 8, height: 8)
                         Text("Low cost")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     HStack(spacing: RunicSpacing.xxs) {
                         Circle()
-                            .fill(Self.mediumColor)
+                            .fill(self.runicTheme.highlight)
                             .frame(width: 8, height: 8)
                         Text("Medium cost")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     HStack(spacing: RunicSpacing.xxs) {
                         Circle()
-                            .fill(Self.expensiveColor)
+                            .fill(self.runicTheme.warm)
                             .frame(width: 8, height: 8)
                         Text("High cost")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
                 }
             }
@@ -142,11 +143,6 @@ struct CostComparativeChartMenuView: View {
         .padding(.vertical, RunicSpacing.xs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
     }
-
-    private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
-    private static let cheapColor = Color(red: 0.46, green: 0.75, blue: 0.36)
-    private static let mediumColor = Color(red: 0.94, green: 0.74, blue: 0.26)
-    private static let expensiveColor = Color(red: 0.94, green: 0.36, blue: 0.36)
 
     private static func makeModel(from summaries: [UsageLedgerModelSummary]) -> [ModelCostData] {
         let withCost = summaries.compactMap { summary -> ModelCostData? in
@@ -170,13 +166,13 @@ struct CostComparativeChartMenuView: View {
         return withCost.sorted { $0.costPerToken > $1.costPerToken }
     }
 
-    private static func colorForExpensiveness(_ relative: Double) -> Color {
+    private static func colorForExpensiveness(_ relative: Double, theme: RunicThemePalette) -> Color {
         if relative < 0.7 {
-            self.cheapColor
+            theme.tertiary
         } else if relative < 1.5 {
-            self.mediumColor
+            theme.highlight
         } else {
-            self.expensiveColor
+            theme.warm
         }
     }
 

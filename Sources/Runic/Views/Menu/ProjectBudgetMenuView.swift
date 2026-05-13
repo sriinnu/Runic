@@ -28,6 +28,7 @@ struct ProjectBudgetMenuView: View {
     private let onOpenPreferences: () -> Void
 
     @State private var hoveredProjectID: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(
         projectSummaries: [UsageLedgerProjectSummary],
@@ -58,14 +59,14 @@ struct ProjectBudgetMenuView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.blue)
+                .foregroundStyle(self.runicTheme.accent)
             }
 
             if model.isEmpty {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("No budgets configured.")
                         .font(RunicFont.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                     Button {
                         self.onOpenPreferences()
                     } label: {
@@ -73,7 +74,7 @@ struct ProjectBudgetMenuView: View {
                             .font(RunicFont.caption)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(self.runicTheme.accent)
                 }
             } else {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -92,6 +93,7 @@ struct ProjectBudgetMenuView: View {
                 let nearLimit = model.count(where: { $0.isNearLimit && !$0.isOverBudget })
                 if overBudget > 0 || nearLimit > 0 {
                     Divider()
+                        .overlay(self.runicTheme.menuSeparatorColor)
                         .padding(.vertical, RunicSpacing.xxs)
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -102,7 +104,7 @@ struct ProjectBudgetMenuView: View {
                                     .foregroundStyle(Color(red: 0.94, green: 0.36, blue: 0.36))
                                 Text("\(overBudget) project\(overBudget == 1 ? "" : "s") over budget")
                                     .font(RunicFont.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
                             }
                         }
                         if nearLimit > 0 {
@@ -112,7 +114,7 @@ struct ProjectBudgetMenuView: View {
                                     .foregroundStyle(Color(red: 0.94, green: 0.74, blue: 0.26))
                                 Text("\(nearLimit) project\(nearLimit == 1 ? "" : "s") near limit")
                                     .font(RunicFont.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
                             }
                         }
                     }
@@ -163,6 +165,7 @@ private struct ProjectBudgetRow: View {
     let project: ProjectBudgetMenuView.ProjectUsage
     let isHovered: Bool
     @Environment(\.menuItemHighlighted) private var isHighlighted
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -170,11 +173,12 @@ private struct ProjectBudgetRow: View {
                 Text(self.project.projectName)
                     .font(RunicFont.body)
                     .fontWeight(.medium)
+                    .foregroundStyle(self.rowPrimaryColor)
                     .lineLimit(1)
                 Spacer()
                 Text(self.budgetText)
                     .font(RunicFont.caption)
-                    .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                    .foregroundStyle(self.rowSecondaryColor)
             }
 
             UsageProgressBar(
@@ -190,12 +194,12 @@ private struct ProjectBudgetRow: View {
                 if self.project.isOverBudget {
                     Text("Over budget")
                         .font(RunicFont.caption)
-                        .foregroundStyle(Color(red: 0.94, green: 0.36, blue: 0.36))
+                        .foregroundStyle(self.runicTheme.warm)
                         .fontWeight(.medium)
                 } else if self.project.isNearLimit {
                     Text("Near limit")
                         .font(RunicFont.caption)
-                        .foregroundStyle(Color(red: 0.94, green: 0.74, blue: 0.26))
+                        .foregroundStyle(self.runicTheme.highlight)
                         .fontWeight(.medium)
                 }
             }
@@ -203,7 +207,7 @@ private struct ProjectBudgetRow: View {
         .padding(RunicSpacing.xs)
         .background {
             RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .fill(self.isHovered ? Color(nsColor: .separatorColor).opacity(0.15) : Color.clear)
+                .fill(self.isHovered ? self.runicTheme.menuHoverFill : Color.clear)
         }
     }
 
@@ -216,5 +220,13 @@ private struct ProjectBudgetRow: View {
             return MenuHighlightStyle.selectionText
         }
         return self.project.statusColor
+    }
+
+    private var rowPrimaryColor: Color {
+        self.isHighlighted ? MenuHighlightStyle.selectionText : self.runicTheme.primaryText
+    }
+
+    private var rowSecondaryColor: Color {
+        self.isHighlighted ? MenuHighlightStyle.selectionText : self.runicTheme.secondaryText
     }
 }

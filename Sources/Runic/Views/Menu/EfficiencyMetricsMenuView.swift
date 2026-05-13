@@ -51,6 +51,7 @@ struct EfficiencyMetricsMenuView: View {
     @State private var sortColumn: SortColumn = .tokensPerRequest
     @State private var sortAscending = false
     @State private var hoveredModelID: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(modelSummaries: [UsageLedgerModelSummary], width: CGFloat) {
         self.modelSummaries = modelSummaries
@@ -71,7 +72,7 @@ struct EfficiencyMetricsMenuView: View {
             if model.isEmpty {
                 Text("No efficiency metrics available.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     // Header
@@ -107,10 +108,11 @@ struct EfficiencyMetricsMenuView: View {
                     }
                     .padding(.horizontal, RunicSpacing.xs)
                     .padding(.vertical, RunicSpacing.xxs)
-                    .background(Color(nsColor: .controlBackgroundColor))
+                    .background(self.runicTheme.menuSubtleFill)
                     .cornerRadius(RunicCornerRadius.xs)
 
                     Divider()
+                        .overlay(self.runicTheme.menuSeparatorColor)
 
                     ScrollView {
                         VStack(spacing: RunicSpacing.xxxs) {
@@ -129,13 +131,14 @@ struct EfficiencyMetricsMenuView: View {
 
                 // Summary stats
                 Divider()
+                    .overlay(self.runicTheme.menuSeparatorColor)
                     .padding(.vertical, RunicSpacing.xxs)
 
                 HStack(spacing: RunicSpacing.lg) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Total Requests")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                         Text("\(Self.totalRequests(model))")
                             .font(RunicFont.caption)
                             .fontWeight(.medium)
@@ -143,7 +146,7 @@ struct EfficiencyMetricsMenuView: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Avg Tokens/Req")
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                         Text(UsageFormatter.tokenCountString(Self.averageTokensPerRequest(model)))
                             .font(RunicFont.caption)
                             .fontWeight(.medium)
@@ -152,7 +155,7 @@ struct EfficiencyMetricsMenuView: View {
                         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                             Text("Avg Cost/Req")
                                 .font(RunicFont.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                             Text(UsageFormatter.usdString(Self.averageCostPerRequest(model)))
                                 .font(RunicFont.caption)
                                 .fontWeight(.medium)
@@ -229,6 +232,7 @@ private struct SortableColumnHeader: View {
     let ascending: Bool
     let width: CGFloat
     let onSort: (EfficiencyMetricsMenuView.SortColumn) -> Void
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Button {
@@ -237,12 +241,12 @@ private struct SortableColumnHeader: View {
             HStack(spacing: RunicSpacing.xxs) {
                 Text(self.title)
                     .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .fontWeight(.medium)
                 if self.currentSort == self.column {
                     Image(systemName: self.ascending ? "chevron.up" : "chevron.down")
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.accent)
                 }
             }
             .frame(width: self.width, alignment: .leading)
@@ -254,6 +258,7 @@ private struct SortableColumnHeader: View {
 private struct MetricsRow: View {
     let metrics: EfficiencyMetricsMenuView.ModelMetrics
     let isHovered: Bool
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(spacing: 0) {
@@ -265,7 +270,7 @@ private struct MetricsRow: View {
                 if let context = UsageFormatter.modelContextLabel(for: metrics.modelName) {
                     Text(context)
                         .font(RunicFont.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -281,7 +286,7 @@ private struct MetricsRow: View {
             } else {
                 Text("—")
                     .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(width: 80, alignment: .leading)
             }
             Text(String(format: "%.1f%%", self.metrics.cacheHitRate * 100))
@@ -294,18 +299,18 @@ private struct MetricsRow: View {
         .background {
             if self.isHovered {
                 RoundedRectangle(cornerRadius: RunicSpacing.xxs, style: .continuous)
-                    .fill(Color(nsColor: .separatorColor).opacity(0.15))
+                    .fill(self.runicTheme.menuHoverFill)
             }
         }
     }
 
     private var cacheHitColor: Color {
         if self.metrics.cacheHitRate > 0.5 {
-            Color(red: 0.46, green: 0.75, blue: 0.36)
+            self.runicTheme.tertiary
         } else if self.metrics.cacheHitRate > 0.2 {
-            Color(red: 0.94, green: 0.74, blue: 0.26)
+            self.runicTheme.highlight
         } else {
-            .secondary
+            self.runicTheme.secondaryText
         }
     }
 }

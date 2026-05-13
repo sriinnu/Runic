@@ -19,6 +19,7 @@ struct CreditsHistoryChartMenuView: View {
     private let breakdown: [OpenAIDashboardDailyBreakdown]
     private let width: CGFloat
     @State private var selectedDayKey: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(breakdown: [OpenAIDashboardDailyBreakdown], width: CGFloat) {
         self.breakdown = breakdown
@@ -27,18 +28,19 @@ struct CreditsHistoryChartMenuView: View {
 
     var body: some View {
         let model = Self.makeModel(from: self.breakdown)
+        let barColor = self.runicTheme.chartColor(at: 4)
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No credits history data.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
                     ForEach(model.points) { point in
                         BarMark(
                             x: .value("Day", point.date, unit: .day),
                             y: .value("Credits used", point.creditsUsed))
-                            .foregroundStyle(Self.barColor)
+                            .foregroundStyle(barColor)
                     }
                     if let peak = Self.peakPoint(model: model) {
                         let capStart = max(peak.creditsUsed - Self.capHeight(maxValue: model.maxCreditsUsed), 0)
@@ -46,7 +48,7 @@ struct CreditsHistoryChartMenuView: View {
                             x: .value("Day", peak.date, unit: .day),
                             yStart: .value("Cap start", capStart),
                             yEnd: .value("Cap end", peak.creditsUsed))
-                            .foregroundStyle(Color(nsColor: .systemYellow))
+                            .foregroundStyle(self.runicTheme.chartPeakColor)
                     }
                 }
                 .chartYAxis(.hidden)
@@ -56,7 +58,7 @@ struct CreditsHistoryChartMenuView: View {
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
@@ -66,7 +68,7 @@ struct CreditsHistoryChartMenuView: View {
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
                                 Rectangle()
-                                    .fill(Self.selectionBandColor)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
                                     .allowsHitTesting(false)
@@ -84,13 +86,13 @@ struct CreditsHistoryChartMenuView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
@@ -100,7 +102,7 @@ struct CreditsHistoryChartMenuView: View {
                 if let total = model.totalCreditsUsed {
                     Text("Total (30d): \(total.formatted(.number.precision(.fractionLength(0...2)))) credits")
                         .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
         }
@@ -120,8 +122,6 @@ struct CreditsHistoryChartMenuView: View {
         let maxCreditsUsed: Double
     }
 
-    private static let barColor = RunicColors.creditsChartBar
-    private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
     private static func capHeight(maxValue: Double) -> Double {
         maxValue * 0.05
     }

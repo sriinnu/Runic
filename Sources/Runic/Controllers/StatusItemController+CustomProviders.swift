@@ -67,7 +67,7 @@ extension StatusItemController {
         let font = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
         let subtitle = NSAttributedString(
             string: error,
-            attributes: [.font: font, .foregroundColor: NSColor.systemRed])
+            attributes: [.font: font, .foregroundColor: self.settings.theme.palette.nsWarmColor])
         let attributed = NSMutableAttributedString(string: "\(provider.name): Error\n")
         attributed.append(subtitle)
         item.attributedTitle = attributed

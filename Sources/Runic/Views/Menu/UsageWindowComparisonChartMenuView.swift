@@ -19,6 +19,7 @@ struct UsageWindowComparisonChartMenuView: View {
     private let primaryPercent: Double
     private let secondaryPercent: Double?
     private let width: CGFloat
+    @Environment(\.runicTheme) private var runicTheme
 
     init(
         dailySummaries: [UsageLedgerDailySummary],
@@ -36,9 +37,6 @@ struct UsageWindowComparisonChartMenuView: View {
         self.width = width
     }
 
-    private static let primaryColor = RunicColors.chartColor(at: 0)
-    private static let secondaryColor = RunicColors.chartColor(at: 1)
-
     var body: some View {
         let model = Self.makeModel(
             from: self.dailySummaries,
@@ -46,6 +44,8 @@ struct UsageWindowComparisonChartMenuView: View {
             secondaryLabel: self.secondaryLabel,
             primaryPercent: self.primaryPercent,
             secondaryPercent: self.secondaryPercent)
+        let primaryColor = self.runicTheme.chartColor(at: 0)
+        let secondaryColor = self.runicTheme.chartColor(at: 1)
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Windows")
@@ -55,7 +55,7 @@ struct UsageWindowComparisonChartMenuView: View {
             if model.points.isEmpty {
                 Text("No usage window data available.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
                 Chart {
@@ -64,8 +64,7 @@ struct UsageWindowComparisonChartMenuView: View {
                             x: .value("Date", point.date),
                             y: .value("%", point.percent),
                             series: .value("Window", point.series))
-                            .foregroundStyle(point.series == self.primaryLabel ? Self.primaryColor : Self
-                                .secondaryColor)
+                            .foregroundStyle(point.series == self.primaryLabel ? primaryColor : secondaryColor)
                             .lineStyle(StrokeStyle(lineWidth: 2))
                             .interpolationMethod(.catmullRom)
                     }
@@ -74,12 +73,12 @@ struct UsageWindowComparisonChartMenuView: View {
                 .chartYAxis {
                     AxisMarks(values: [0, 25, 50, 75, 100]) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.5))
+                            .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let pct = value.as(Int.self) {
                                 Text("\(pct)%")
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }
@@ -87,10 +86,10 @@ struct UsageWindowComparisonChartMenuView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
+                            .foregroundStyle(self.runicTheme.chartGridColor.opacity(0.7))
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
@@ -100,20 +99,20 @@ struct UsageWindowComparisonChartMenuView: View {
                 HStack(spacing: RunicSpacing.md) {
                     HStack(spacing: RunicSpacing.xxs) {
                         Circle()
-                            .fill(Self.primaryColor)
+                            .fill(primaryColor)
                             .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                         Text(self.primaryLabel)
                             .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     if let secondaryLabel = self.secondaryLabel {
                         HStack(spacing: RunicSpacing.xxs) {
                             Circle()
-                                .fill(Self.secondaryColor)
+                                .fill(secondaryColor)
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(secondaryLabel)
                                 .font(RunicFont.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                         }
                     }
                 }

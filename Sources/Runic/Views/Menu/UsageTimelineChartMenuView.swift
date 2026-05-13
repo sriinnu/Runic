@@ -49,6 +49,7 @@ struct UsageTimelineChartMenuView: View {
     private let width: CGFloat
     @State private var selectedTimeRange: TimeRange = .sevenDays
     @State private var selectedKey: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(
         dailySummaries: [UsageLedgerDailySummary],
@@ -60,11 +61,9 @@ struct UsageTimelineChartMenuView: View {
         self.width = width
     }
 
-    private static let lineColor = RunicColors.chartColor(at: 0)
-    private static let selectionBandColor = Color(nsColor: .labelColor).opacity(0.1)
-
     var body: some View {
         let model = Self.makeDailyModel(from: self.dailySummaries, timeRange: self.selectedTimeRange)
+        let lineColor = self.runicTheme.chartColor(at: 0)
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Header on its own line
@@ -83,7 +82,7 @@ struct UsageTimelineChartMenuView: View {
             if model.points.isEmpty {
                 Text("No data for selected range.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 100)
             } else {
                 // Line chart
@@ -95,8 +94,8 @@ struct UsageTimelineChartMenuView: View {
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [
-                                        Self.lineColor.opacity(0.25),
-                                        Self.lineColor.opacity(0.03),
+                                        lineColor.opacity(0.25),
+                                        lineColor.opacity(0.03),
                                     ],
                                     startPoint: .top,
                                     endPoint: .bottom))
@@ -104,7 +103,7 @@ struct UsageTimelineChartMenuView: View {
                         LineMark(
                             x: .value("Time", point.date),
                             y: .value("Tokens", point.totalTokens))
-                            .foregroundStyle(Self.lineColor)
+                            .foregroundStyle(lineColor)
                             .lineStyle(StrokeStyle(lineWidth: 2))
                             .interpolationMethod(.catmullRom)
                     }
@@ -112,24 +111,24 @@ struct UsageTimelineChartMenuView: View {
                         PointMark(
                             x: .value("Time", peak.date),
                             y: .value("Tokens", peak.totalTokens))
-                            .foregroundStyle(Color(nsColor: .systemYellow))
+                            .foregroundStyle(self.runicTheme.chartPeakColor)
                             .symbolSize(60)
                             .annotation(position: .top, spacing: 4) {
                                 Text("Peak")
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .systemYellow))
+                                    .foregroundStyle(self.runicTheme.chartPeakColor)
                             }
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .trailing) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.5))
+                            .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }
@@ -137,10 +136,10 @@ struct UsageTimelineChartMenuView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: model.desiredAxisCount)) { _ in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
-                            .foregroundStyle(Color(nsColor: .separatorColor).opacity(0.3))
+                            .foregroundStyle(self.runicTheme.chartGridColor.opacity(0.7))
                         AxisValueLabel(format: model.xAxisFormat)
                             .font(RunicFont.caption2)
-                            .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
@@ -150,7 +149,7 @@ struct UsageTimelineChartMenuView: View {
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
                                 Rectangle()
-                                    .fill(Self.selectionBandColor)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
                                     .allowsHitTesting(false)
@@ -168,7 +167,7 @@ struct UsageTimelineChartMenuView: View {
                 let detail = self.detailText(model: model)
                 Text(detail)
                     .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(height: 16, alignment: .leading)
@@ -197,15 +196,17 @@ struct UsageTimelineChartMenuView: View {
     private struct StatCell: View {
         let label: String
         let value: String
+        @Environment(\.runicTheme) private var runicTheme
 
         var body: some View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                 Text(self.label)
                     .font(RunicFont.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                 Text(self.value)
                     .font(RunicFont.caption)
                     .fontWeight(.medium)
+                    .foregroundStyle(self.runicTheme.primaryText)
             }
         }
     }

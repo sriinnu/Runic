@@ -711,7 +711,7 @@ extension StatusItemController {
             let summaryFont = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
             summaryItem.attributedTitle = NSAttributedString(
                 string: summaryItem.title,
-                attributes: [.font: summaryFont, .foregroundColor: NSColor.secondaryLabelColor])
+                attributes: [.font: summaryFont, .foregroundColor: self.settings.theme.palette.nsSecondaryTextColor])
             submenu.addItem(summaryItem)
             submenu.addItem(.separator())
 
@@ -749,7 +749,7 @@ extension StatusItemController {
             let totalFont = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
             totalItem.attributedTitle = NSAttributedString(
                 string: totalItem.title,
-                attributes: [.font: totalFont, .foregroundColor: NSColor.secondaryLabelColor])
+                attributes: [.font: totalFont, .foregroundColor: self.settings.theme.palette.nsSecondaryTextColor])
             submenu.addItem(totalItem)
             submenu.addItem(.separator())
 

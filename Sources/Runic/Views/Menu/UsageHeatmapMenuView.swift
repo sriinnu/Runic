@@ -36,6 +36,7 @@ struct UsageHeatmapMenuView: View {
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
     @State private var selectedCellID: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     init(hourlySummaries: [UsageLedgerHourlySummary], width: CGFloat) {
         self.hourlySummaries = hourlySummaries
@@ -52,7 +53,7 @@ struct UsageHeatmapMenuView: View {
             if model.isEmpty {
                 Text("No heatmap data.")
                     .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 ScrollView(.horizontal, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -63,7 +64,7 @@ struct UsageHeatmapMenuView: View {
                             ForEach(0..<24, id: \.self) { hour in
                                 Text(self.hourLabel(hour))
                                     .font(RunicFont.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                                     .frame(width: 40, alignment: .center)
                                     .lineLimit(1)
                             }
@@ -74,7 +75,7 @@ struct UsageHeatmapMenuView: View {
                             HStack(spacing: 2) {
                                 Text(self.weekdayLabel(weekday))
                                     .font(RunicFont.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                                     .frame(width: 38, alignment: .leading)
 
                                 ForEach(0..<24, id: \.self) { hour in
@@ -100,18 +101,18 @@ struct UsageHeatmapMenuView: View {
                         HStack(spacing: RunicSpacing.xs) {
                             Text("Low")
                                 .font(RunicFont.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                             HStack(spacing: 2) {
                                 ForEach(0..<5, id: \.self) { level in
                                     Rectangle()
-                                        .fill(Self.colorForIntensity(Double(level) / 4.0))
+                                        .fill(Self.colorForIntensity(Double(level) / 4.0, theme: self.runicTheme))
                                         .frame(width: 16, height: 16)
                                         .cornerRadius(RunicCornerRadius.xs)
                                 }
                             }
                             Text("High")
                                 .font(RunicFont.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                         }
                         .padding(.top, RunicSpacing.xs)
                     }
@@ -122,7 +123,7 @@ struct UsageHeatmapMenuView: View {
                 let detail = self.detailText(model: model)
                 Text(detail)
                     .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(2)
                     .frame(height: 32, alignment: .leading)
             }
@@ -164,18 +165,18 @@ struct UsageHeatmapMenuView: View {
         return cells
     }
 
-    fileprivate static func colorForIntensity(_ intensity: Double) -> Color {
+    fileprivate static func colorForIntensity(_ intensity: Double, theme: RunicThemePalette) -> Color {
         if intensity == 0 {
-            return Color(nsColor: .separatorColor).opacity(0.3)
+            return theme.menuTrackColor.opacity(0.6)
         }
         if intensity < 0.25 {
-            return Color(red: 0.46, green: 0.75, blue: 0.36).opacity(0.3)
+            return theme.tertiary.opacity(0.32)
         } else if intensity < 0.5 {
-            return Color(red: 0.46, green: 0.75, blue: 0.36).opacity(0.6)
+            return theme.tertiary.opacity(0.62)
         } else if intensity < 0.75 {
-            return Color(red: 0.94, green: 0.74, blue: 0.26).opacity(0.7)
+            return theme.highlight.opacity(0.76)
         } else {
-            return Color(red: 0.94, green: 0.36, blue: 0.36).opacity(0.8)
+            return theme.warm.opacity(0.86)
         }
     }
 
@@ -208,21 +209,22 @@ struct UsageHeatmapMenuView: View {
 private struct HeatmapCellView: View {
     let cell: UsageHeatmapMenuView.HeatmapCell?
     let isSelected: Bool
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Group {
             if let cell {
                 Rectangle()
-                    .fill(UsageHeatmapMenuView.colorForIntensity(cell.intensity))
+                    .fill(UsageHeatmapMenuView.colorForIntensity(cell.intensity, theme: self.runicTheme))
                     .overlay {
                         if self.isSelected {
                             Rectangle()
-                                .strokeBorder(Color.blue, lineWidth: 2)
+                                .strokeBorder(self.runicTheme.accent, lineWidth: 2)
                         }
                     }
             } else {
                 Rectangle()
-                    .fill(Color(nsColor: .separatorColor).opacity(0.2))
+                    .fill(self.runicTheme.menuTrackColor.opacity(0.45))
             }
         }
         .frame(width: 38, height: 30)
