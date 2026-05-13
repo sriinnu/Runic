@@ -88,10 +88,7 @@ enum ProviderBrandIcon {
     }
 
     private static func resourceURL(named baseName: String) -> URL? {
-        Bundle.main.url(forResource: baseName, withExtension: "svg")
-            ?? Bundle.main.url(forResource: baseName, withExtension: "svg", subdirectory: "Resources")
-            ?? Bundle.module.url(forResource: baseName, withExtension: "svg")
-            ?? Bundle.module.url(forResource: baseName, withExtension: "svg", subdirectory: "Resources")
+        RunicResourceLocator.url(forResource: baseName, withExtension: "svg")
     }
 
     private static func brandHexColor(for provider: UsageProvider) -> String {
