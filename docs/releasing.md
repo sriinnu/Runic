@@ -86,7 +86,7 @@ After publishing the GitHub release, update the tap cask (see `docs/releasing-ho
 - [ ] `./Scripts/build_icon.sh` if icon changed
 - [ ] `./Scripts/sign-and-notarize.sh`
 - [ ] Generate Sparkle appcast with private key
-  - Sparkle ed25519 private key path: `/Users/sriinnu/Library/CloudStorage/Dropbox/Backup/Sparkle/sparkle-private-key-KEEP-SECURE.txt` (primary) and `/Users/sriinnu/Library/CloudStorage/Dropbox/Backup/Sparkle-VibeTunnel/sparkle-private-key-KEEP-SECURE.txt` (older backup)
+  - Set `SPARKLE_PRIVATE_KEY_FILE` to the local ed25519 private key path. Do not commit or document the real private key location.
   - Upload the dSYM archive alongside the app zip on the GitHub release; the release script now automates this and will fail if it’s missing.
   - After publishing the release, run `Scripts/check-release-assets.sh <tag>` to confirm both the app zip and dSYM zip are present on GitHub.
   - Generate the appcast + HTML release notes: `./Scripts/make_appcast.sh Runic-<ver>.zip https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml`

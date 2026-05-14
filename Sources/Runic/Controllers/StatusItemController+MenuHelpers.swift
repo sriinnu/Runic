@@ -30,11 +30,6 @@ extension StatusItemController {
     }
 
     @MainActor
-    protocol MenuCardSelectable: AnyObject {
-        var onSelect: (() -> Void)? { get set }
-    }
-
-    @MainActor
     @Observable
     final class MenuCardHighlightState {
         var isHighlighted = false
@@ -52,10 +47,8 @@ extension StatusItemController {
 
     @MainActor
     final class MenuCardItemHostingView<Content: View>: NSHostingView<Content>, MenuCardHighlighting,
-    MenuCardMeasuring, MenuCardSelectable {
+    MenuCardMeasuring {
         private let highlightState: MenuCardHighlightState
-        var onSelect: (() -> Void)?
-
         override var allowsVibrancy: Bool {
             false
         }
@@ -95,15 +88,6 @@ extension StatusItemController {
         func setHighlighted(_ highlighted: Bool) {
             guard self.highlightState.isHighlighted != highlighted else { return }
             self.highlightState.isHighlighted = highlighted
-        }
-
-        override func mouseUp(with event: NSEvent) {
-            guard let onSelect else {
-                super.mouseUp(with: event)
-                return
-            }
-            onSelect()
-            self.enclosingMenuItem?.menu?.cancelTracking()
         }
     }
 
@@ -145,53 +129,6 @@ extension StatusItemController {
                             .padding(.top, RunicSpacing.xs)
                             .padding(.trailing, RunicSpacing.xs)
                         }
-                }
-        }
-    }
-
-    struct MenuRowSectionContainerView<Content: View>: View {
-        @Bindable var highlightState: MenuCardHighlightState
-        let showsSubmenuIndicator: Bool
-        let content: Content
-        @Environment(\.runicTheme) private var runicTheme
-
-        init(
-            highlightState: MenuCardHighlightState,
-            showsSubmenuIndicator: Bool,
-            @ViewBuilder content: () -> Content)
-        {
-            self.highlightState = highlightState
-            self.showsSubmenuIndicator = showsSubmenuIndicator
-            self.content = content()
-        }
-
-        var body: some View {
-            self.content
-                .runicTypography()
-                .environment(\.menuItemHighlighted, false)
-                .foregroundStyle(self.runicTheme.primaryText)
-                .background {
-                    if self.runicTheme.isTerminalHUD {
-                        self.runicTheme.surface.opacity(0.96)
-                    } else {
-                        self.runicTheme.surfaceAlt.opacity(self.runicTheme.isCustom ? 0.58 : 0.36)
-                    }
-                }
-                .background(alignment: .topLeading) {
-                    if self.highlightState.isHighlighted {
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
-                            .fill(self.runicTheme.menuHoverFill)
-                            .padding(.horizontal, RunicSpacing.xxs)
-                            .padding(.vertical, RunicSpacing.xxxs)
-                    }
-                }
-                .overlay(alignment: .trailing) {
-                    if self.showsSubmenuIndicator {
-                        Image(systemName: "chevron.right")
-                            .font(RunicFont.caption.weight(.semibold))
-                            .foregroundStyle(self.runicTheme.secondaryText)
-                            .padding(.trailing, RunicSpacing.xs)
-                    }
                 }
         }
     }
@@ -411,13 +348,29 @@ extension StatusItemController {
 
     // MARK: - Persistent refresh item
 
-    func makePersistentRefreshItem(title: String, width: CGFloat = StatusItemController.menuCardBaseWidth) -> NSMenuItem {
-        self.makeMenuActionRowItem(
-            id: "actionRow.refresh",
-            title: title,
-            icon: MenuDescriptor.MenuActionSystemImage.refresh.rawValue,
-            width: width,
-            action: #selector(self.refreshNow))
+    func makePersistentRefreshItem(title: String) -> NSMenuItem {
+        let image = NSImage(
+            systemSymbolName: MenuDescriptor.MenuActionSystemImage.refresh.rawValue,
+            accessibilityDescription: nil) ?? NSImage(
+            systemSymbolName: "arrow.triangle.2.circlepath",
+            accessibilityDescription: nil)
+        image?.isTemplate = true
+        image?.size = NSSize(width: 16, height: 16)
+        let view = MenuActionButtonView(title: title, image: image, theme: self.settings.theme.palette) { [weak self] in
+            self?.refreshNow()
+        }
+        let size = view.fittingSize
+        if size.height <= 1 {
+            let fallback = NSMenuItem(title: title, action: #selector(self.refreshNow), keyEquivalent: "")
+            fallback.target = self
+            fallback.image = image
+            return fallback
+        }
+        view.frame = NSRect(origin: .zero, size: size)
+        let item = NSMenuItem()
+        item.view = view
+        item.isEnabled = true
+        return item
     }
 
     // MARK: - Subtitle helpers
@@ -487,7 +440,10 @@ extension StatusItemController {
             if !item.isSeparatorItem, item.view == nil, !item.title.isEmpty {
                 item.attributedTitle = NSAttributedString(
                     string: item.title,
-                    attributes: [.font: RunicFont.nsFont(size: NSFont.systemFontSize)])
+                    attributes: [
+                        .font: RunicFont.nsFont(size: NSFont.systemFontSize),
+                        .kern: RunicFont.activeRules.letterSpacing,
+                    ])
             }
             if let submenu = item.submenu {
                 self.applyRunicFont(to: submenu)

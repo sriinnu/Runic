@@ -188,7 +188,7 @@ struct ProjectBreakdownMenuView: View {
         }
 
         let items: [ProjectItem] = sorted.enumerated().map { index, summary in
-            let name = summary.displayProjectName
+            let name = RunicProjectDisplay.name(for: summary)
             let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
             return ProjectItem(
                 id: "\(name)-\(index)",

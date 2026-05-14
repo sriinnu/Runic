@@ -338,7 +338,7 @@ private enum ProviderInsightsComposer {
     }
 
     private static func topProjectValue(_ summary: UsageLedgerProjectSummary) -> String {
-        let project = self.shortProjectName(summary.displayProjectName)
+        let project = self.shortProjectName(RunicProjectDisplay.name(for: summary))
         let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
         var parts = [project, "\(tokens) tok", "\(summary.entryCount) req"]
         if let cost = summary.totals.costUSD {
@@ -385,12 +385,12 @@ private enum ProviderInsightsComposer {
         guard summaries.count > 1 else { return nil }
         let ranked = summaries.sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
-                return lhs.displayProjectName < rhs.displayProjectName
+                return RunicProjectDisplay.name(for: lhs) < RunicProjectDisplay.name(for: rhs)
             }
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         let rendered = ranked.prefix(2).map { summary in
-            let project = self.shortProjectName(summary.displayProjectName)
+            let project = self.shortProjectName(RunicProjectDisplay.name(for: summary))
             let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
             return "\(project) \(tokens)"
         }
@@ -420,25 +420,25 @@ private enum ProviderInsightsComposer {
         guard summaries.count > 1 else { return nil }
         let ranked = summaries.sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
-                return lhs.displayProjectName < rhs.displayProjectName
+                return RunicProjectDisplay.name(for: lhs) < RunicProjectDisplay.name(for: rhs)
             }
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         let details = ranked.prefix(3).map { summary in
             let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
-            let project = summary.displayProjectName
+            let project = RunicProjectDisplay.name(for: summary)
             return "\(project): \(tokens) tok"
         }
         return details.isEmpty ? nil : details.joined(separator: "\n")
     }
 
     private static func projectIdentityHelpText(_ summary: UsageLedgerProjectSummary) -> String? {
-        let displayName = summary.displayProjectName
+        let displayName = RunicProjectDisplay.name(for: summary)
         let source = summary.projectNameSource ?? .unknown
         let confidence = summary.projectNameConfidence ?? .none
         let shouldAnnotateSource = source != .projectName && source != .budgetOverride
         let shouldAnnotateConfidence = confidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
 
         var details: [String] = []
         if shouldAnnotateSource {
@@ -2925,12 +2925,12 @@ private struct ProviderSidebarDetailView: View {
     }
 
     private func projectDisplay(_ summary: UsageLedgerProjectSummary) -> ProjectDisplay {
-        let displayName = summary.displayProjectName
+        let displayName = RunicProjectDisplay.name(for: summary)
         let source = summary.projectNameSource ?? .unknown
         let confidence = summary.projectNameConfidence ?? .none
         let shouldAnnotateSource = source != .projectName && source != .budgetOverride
         let shouldAnnotateConfidence = confidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
 
         var details: [String] = []
         if shouldAnnotateSource {
@@ -3169,12 +3169,12 @@ private struct ProviderSidebarDetailView: View {
         }
         let ranked = self.store.ledgerProjectBreakdown(for: self.provider).sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
-                return lhs.displayProjectName < rhs.displayProjectName
+                return RunicProjectDisplay.name(for: lhs) < RunicProjectDisplay.name(for: rhs)
             }
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         return ranked.prefix(3).map { summary in
-            let project = summary.displayProjectName
+            let project = RunicProjectDisplay.name(for: summary)
             return self.usageLine(title: project, totals: summary.totals, requests: summary.entryCount)
         }
     }

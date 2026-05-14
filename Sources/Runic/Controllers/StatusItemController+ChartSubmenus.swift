@@ -8,36 +8,30 @@ extension StatusItemController {
     @discardableResult
     func addCreditsHistorySubmenu(to menu: NSMenu) -> Bool {
         guard let submenu = self.makeCreditsHistorySubmenu() else { return false }
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.creditsHistory",
-            title: "Credits history",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Credits history", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
     @discardableResult
     func addUsageBreakdownSubmenu(to menu: NSMenu) -> Bool {
         guard let submenu = self.makeUsageBreakdownSubmenu() else { return false }
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.usageBreakdown",
-            title: "Usage breakdown",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Usage breakdown", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
     @discardableResult
     func addCostHistorySubmenu(to menu: NSMenu, provider: UsageProvider) -> Bool {
         guard let submenu = self.makeCostHistorySubmenu(provider: provider) else { return false }
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.costHistory",
-            title: "Usage history (30 days)",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Usage history (30 days)", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
@@ -249,10 +243,10 @@ extension StatusItemController {
             } else if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: projectID) {
                 fallback
             } else {
-                "Unknown project"
+                RunicProjectDisplay.unattributedName
             }
         } else {
-            "Unknown project"
+            RunicProjectDisplay.unattributedName
         }
         guard includeAttribution else { return displayName }
         guard let annotation = self.projectNameAnnotation(
@@ -279,7 +273,7 @@ extension StatusItemController {
 
         let shouldAnnotateSource = normalizedSource != .projectName && normalizedSource != .budgetOverride
         let shouldAnnotateConfidence = normalizedConfidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
         guard shouldAnnotateSource || shouldAnnotateConfidence || isUnknown else { return nil }
 
         var parts: [String] = []
@@ -429,12 +423,10 @@ extension StatusItemController {
         chartItem.representedObject = "usageTimelineChart"
         submenu.addItem(chartItem)
 
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.usageTimeline",
-            title: "Usage timeline",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Usage timeline", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
@@ -458,12 +450,10 @@ extension StatusItemController {
         chartItem.representedObject = "hourlyActivityChart"
         submenu.addItem(chartItem)
 
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.hourlyActivity",
-            title: "Today by hour",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Today by hour", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
@@ -487,12 +477,10 @@ extension StatusItemController {
         chartItem.representedObject = "weeklyActivityChart"
         submenu.addItem(chartItem)
 
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.weeklyActivity",
-            title: "Last 7 days",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Last 7 days", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
@@ -526,12 +514,10 @@ extension StatusItemController {
         chartItem.representedObject = "subscriptionUtilizationChart"
         submenu.addItem(chartItem)
 
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.subscriptionUtilization",
-            title: "Subscription utilization",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Subscription utilization", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
@@ -570,12 +556,10 @@ extension StatusItemController {
         chartItem.representedObject = "usageWindowComparisonChart"
         submenu.addItem(chartItem)
 
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.usageWindows",
-            title: "Usage windows",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Usage windows", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
@@ -600,12 +584,10 @@ extension StatusItemController {
         chartItem.representedObject = "projectBreakdownChart"
         submenu.addItem(chartItem)
 
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.projects",
-            title: "Projects",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Projects", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 
@@ -655,12 +637,10 @@ extension StatusItemController {
             }
         }
 
-        let rowWidth = self.menuCardWidth(for: self.store.enabledProviders(), menu: menu)
-        menu.addItem(self.makeMenuActionRowItem(
-            id: "submenuRow.models",
-            title: "Models",
-            width: rowWidth,
-            submenu: submenu))
+        let item = NSMenuItem(title: "Models", action: nil, keyEquivalent: "")
+        item.isEnabled = true
+        item.submenu = submenu
+        menu.addItem(item)
         return true
     }
 

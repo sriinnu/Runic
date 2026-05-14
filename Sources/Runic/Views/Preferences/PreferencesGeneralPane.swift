@@ -202,6 +202,12 @@ struct GeneralPane: View {
                         Text("Drop .ttf/.otf files in Resources/Fonts to add more.")
                             .font(RunicFont.footnote)
                             .foregroundStyle(.tertiary)
+
+                        TypographyRulesPreview(
+                            fontFamily: self.settings.selectedFontFamily,
+                            theme: self.settings.theme)
+                            .id(self.settings.visualSettingsRevision)
+                            .padding(.top, RunicSpacing.xs)
                     }
                 }
             }
@@ -464,11 +470,7 @@ private struct AppearancePreviewCard: View {
     }
 
     private var fontLabel: String {
-        switch self.fontFamily {
-        case RunicFontChoice.sfPro.id: RunicFontChoice.sfPro.displayName
-        case RunicFontChoice.sfMono.id: RunicFontChoice.sfMono.displayName
-        default: self.fontFamily
-        }
+        RunicFontChoice.displayName(for: self.fontFamily)
     }
 
     private func metricPreview(title: String, value: String, color: Color, fill: CGFloat) -> some View {
@@ -566,6 +568,96 @@ private struct AppearancePreviewCard: View {
 
     private func providerLabel(_ provider: UsageProvider) -> String {
         ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName
+    }
+}
+
+private struct TypographyRulesPreview: View {
+    let fontFamily: String
+    let theme: Theme
+
+    private var rules: RunicFontRules {
+        RunicFontRules.rules(for: self.fontFamily)
+    }
+
+    private var tone: RunicBackgroundTone {
+        self.theme.palette.prefersDarkAppearance == false ? .light : .dark
+    }
+
+    var body: some View {
+        let palette = self.theme.palette
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(RunicFontChoice.displayName(for: self.fontFamily))
+                        .font(RunicFont.previewFont(for: self.fontFamily, size: 16).weight(.semibold))
+                        .tracking(self.rules.letterSpacing)
+                        .foregroundStyle(self.rules.contrast.color(role: .primary, on: self.tone))
+                    Text("Aa 123 · tokens · context window · project spend")
+                        .font(RunicFont.previewFont(for: self.fontFamily, size: 12))
+                        .tracking(self.rules.compactLetterSpacing)
+                        .lineSpacing(self.rules.lineSpacing)
+                        .foregroundStyle(self.rules.contrast.color(role: .secondary, on: self.tone))
+                        .lineLimit(2)
+                }
+                Spacer()
+                Text(self.rules.prefersMonospacedDigits ? "tabular" : "proportional")
+                    .font(RunicFont.caption2.weight(.semibold))
+                    .foregroundStyle(palette.primaryText)
+                    .padding(.horizontal, RunicSpacing.xs)
+                    .padding(.vertical, 3)
+                    .background(Capsule(style: .continuous).fill(palette.accent.opacity(0.18)))
+            }
+
+            HStack(spacing: RunicSpacing.xs) {
+                self.rulePill(title: "Letter", value: self.format(self.rules.letterSpacing))
+                self.rulePill(title: "Word", value: self.format(self.rules.wordSpacing))
+                self.rulePill(title: "Line", value: self.format(self.rules.lineSpacing))
+                self.rulePill(
+                    title: self.tone == .light ? "Light bg" : "Dark bg",
+                    value: self.contrastSummary)
+            }
+        }
+        .padding(RunicSpacing.xs)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                .fill(palette.menuSurfaceGradient))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                .stroke(palette.menuSeparatorColor.opacity(0.70), lineWidth: 0.8))
+        .runicColorScheme(palette)
+    }
+
+    private var contrastSummary: String {
+        switch self.tone {
+        case .light:
+            "\(Int((self.rules.contrast.lightPrimaryOpacity * 100).rounded()))/\(Int((self.rules.contrast.lightSecondaryOpacity * 100).rounded()))"
+        case .dark:
+            "\(Int((self.rules.contrast.darkPrimaryOpacity * 100).rounded()))/\(Int((self.rules.contrast.darkSecondaryOpacity * 100).rounded()))"
+        }
+    }
+
+    private func rulePill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .font(RunicFont.caption2)
+                .foregroundStyle(self.theme.palette.secondaryText)
+            Text(value)
+                .font(RunicFont.caption.weight(.semibold))
+                .foregroundStyle(self.theme.palette.primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, RunicSpacing.compact)
+        .padding(.vertical, RunicSpacing.xxxs)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.theme.palette.menuSubtleFill))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.theme.palette.menuSeparatorColor.opacity(0.52), lineWidth: 0.6))
+    }
+
+    private func format(_ value: CGFloat) -> String {
+        String(format: "%.2f", Double(value))
     }
 }
 

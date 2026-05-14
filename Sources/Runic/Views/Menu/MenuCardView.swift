@@ -1732,7 +1732,7 @@ extension UsageMenuCardView.Model {
     }
 
     private static func insightsProjectDisplayName(_ summary: UsageLedgerProjectSummary) -> String {
-        let displayName = summary.displayProjectName
+        let displayName = RunicProjectDisplay.name(for: summary)
         guard let annotation = self.projectIdentityAnnotation(
             displayName: displayName,
             projectID: summary.projectID,
@@ -1755,7 +1755,7 @@ extension UsageMenuCardView.Model {
 
         let shouldAnnotateSource = normalizedSource != .projectName && normalizedSource != .budgetOverride
         let shouldAnnotateConfidence = normalizedConfidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
         guard shouldAnnotateSource || shouldAnnotateConfidence || isUnknown else { return nil }
 
         var parts: [String] = []

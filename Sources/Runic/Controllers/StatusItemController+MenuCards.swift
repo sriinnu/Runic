@@ -38,83 +38,6 @@ extension StatusItemController {
         return item
     }
 
-    func makeMenuRowItem(
-        _ view: some View,
-        id: String,
-        width: CGFloat,
-        submenu: NSMenu? = nil) -> NSMenuItem
-    {
-        let highlightState = MenuCardHighlightState()
-        let root = MenuRowSectionContainerView(
-            highlightState: highlightState,
-            showsSubmenuIndicator: submenu != nil)
-        {
-            view
-        }
-        .environment(\.runicTheme, self.settings.theme.palette)
-        .runicColorScheme(self.settings.theme.palette)
-        let hosting = MenuCardItemHostingView(rootView: root, highlightState: highlightState)
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: 1))
-        hosting.needsLayout = true
-        hosting.layoutSubtreeIfNeeded()
-        let height = self.menuCardHeight(for: hosting, width: width)
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: height))
-        let item = NSMenuItem()
-        item.view = hosting
-        item.isEnabled = true
-        item.representedObject = id
-        item.submenu = submenu
-        if submenu != nil {
-            item.target = self
-            item.action = #selector(self.menuCardNoOp(_:))
-        }
-        return item
-    }
-
-    func makeMenuActionRowItem(
-        id: String,
-        title: String,
-        icon: String? = nil,
-        subtitle: String? = nil,
-        width: CGFloat,
-        submenu: NSMenu? = nil,
-        action: Selector? = nil,
-        representedObject: Any? = nil,
-        isEnabled: Bool = true) -> NSMenuItem
-    {
-        let rowView = MenuActionRowView(
-            icon: icon,
-            title: title,
-            subtitle: subtitle,
-            isEnabled: isEnabled)
-        let item = self.makeMenuRowItem(rowView, id: id, width: width, submenu: submenu)
-        if submenu == nil, let action {
-            item.target = self
-            item.action = action
-            if let selectable = item.view as? MenuCardSelectable {
-                selectable.onSelect = { [weak item] in
-                    guard let item, item.isEnabled, let action = item.action else { return }
-                    NSApp.sendAction(action, to: item.target, from: item)
-                }
-            }
-        }
-        if let representedObject {
-            item.representedObject = representedObject
-        }
-        item.isEnabled = isEnabled
-        return item
-    }
-
-    func makeMenuSeparatorItem(id: String, width: CGFloat) -> NSMenuItem {
-        let item = self.makeMenuRowItem(MenuSeparatorRowView(), id: id, width: width)
-        item.isEnabled = false
-        return item
-    }
-
-    func addMenuSeparator(to menu: NSMenu, width: CGFloat, id: String) {
-        menu.addItem(self.makeMenuSeparatorItem(id: id, width: width))
-    }
-
     func menuCardHeight(for view: NSView, width: CGFloat) -> CGFloat {
         let basePadding: CGFloat = MenuCardMetrics.menuItemBasePadding
         let descenderSafety: CGFloat = MenuCardMetrics.menuItemDescenderPadding
@@ -196,7 +119,7 @@ extension StatusItemController {
         }
 
         if hasCredits || hasExtraUsage || hasCost || hasInsights {
-            self.addMenuSeparator(to: menu, width: width, id: "menuCard.separator.summary")
+            menu.addItem(.separator())
         }
 
         if hasCredits {
@@ -219,10 +142,10 @@ extension StatusItemController {
                 width: width,
                 submenu: creditsSubmenu))
             if includeActions, provider == .codex {
-                menu.addItem(self.makeBuyCreditsItem(width: width))
+                menu.addItem(self.makeBuyCreditsItem())
             }
             if hasExtraUsage || hasCost || hasInsights {
-                self.addMenuSeparator(to: menu, width: width, id: "menuCard.separator.credits")
+                menu.addItem(.separator())
             }
         }
         if hasExtraUsage {
@@ -238,7 +161,7 @@ extension StatusItemController {
                 id: "menuCardExtraUsage",
                 width: width))
             if hasCost || hasInsights {
-                self.addMenuSeparator(to: menu, width: width, id: "menuCard.separator.extraUsage")
+                menu.addItem(.separator())
             }
         }
         if hasCost {
@@ -260,7 +183,7 @@ extension StatusItemController {
                 width: width,
                 submenu: costSubmenu))
             if hasInsights {
-                self.addMenuSeparator(to: menu, width: width, id: "menuCard.separator.cost")
+                menu.addItem(.separator())
             }
         }
         if hasInsights {
@@ -405,12 +328,14 @@ extension StatusItemController {
         return "\(hour - 12)PM"
     }
 
-    func makeBuyCreditsItem(width: CGFloat = StatusItemController.menuCardBaseWidth) -> NSMenuItem {
-        self.makeMenuActionRowItem(
-            id: "actionRow.buyCredits",
-            title: "Buy Credits...",
-            icon: "plus.circle",
-            width: width,
-            action: #selector(self.openCreditsPurchase))
+    func makeBuyCreditsItem() -> NSMenuItem {
+        let item = NSMenuItem(title: "Buy Credits...", action: #selector(self.openCreditsPurchase), keyEquivalent: "")
+        item.target = self
+        if let image = NSImage(systemSymbolName: "plus.circle", accessibilityDescription: nil) {
+            image.isTemplate = true
+            image.size = NSSize(width: 16, height: 16)
+            item.image = image
+        }
+        return item
     }
 }

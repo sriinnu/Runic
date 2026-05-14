@@ -622,8 +622,11 @@ private struct AnalyticsAddBudgetSheet: View {
                 .fontWeight(.semibold)
 
             Form {
-                TextField("Project ID", text: self.$projectID)
+                TextField("Project ID or workspace path", text: self.$projectID)
                     .textFieldStyle(.roundedBorder)
+                Text("Use the project identifier from a provider's Projects breakdown. This is not the provider name.")
+                    .font(RunicFont.caption)
+                    .foregroundStyle(.secondary)
                 TextField("Project Name (optional)", text: self.$projectName)
                     .textFieldStyle(.roundedBorder)
                 TextField("Monthly Limit (USD)", text: self.$monthlyLimit)

@@ -87,15 +87,15 @@ extension StatusItemController {
         self.exportUsage(format: .json)
     }
 
-    private func exportUsage(format: UsageExporter.Format) {
+    func exportUsage(format: UsageExporter.Format, scope: UsageExporter.Scope = .all) {
         let provider = self.lastMenuProvider
             ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
             ?? .codex
-        let content = UsageExporter.export(store: self.store, provider: provider, format: format)
+        let content = UsageExporter.export(store: self.store, provider: provider, format: format, scope: scope)
 
         let panel = NSSavePanel()
-        panel.title = "Export Usage Data"
-        panel.nameFieldStringValue = "runic-\(provider.rawValue)-usage.\(format.rawValue)"
+        panel.title = "Export \(scope.displayName)"
+        panel.nameFieldStringValue = "runic-\(provider.rawValue)-\(scope.fileSuffix).\(format.rawValue)"
         panel.allowedContentTypes = format == .csv
             ? [.commaSeparatedText]
             : [.json]
@@ -128,14 +128,18 @@ extension StatusItemController {
     }
 
     @objc func runSwitchAccount(_ sender: NSMenuItem) {
+        let rawProvider = sender.representedObject as? String
+        let provider = rawProvider.flatMap(UsageProvider.init(rawValue:)) ?? self.lastMenuProvider ?? .codex
+        self.runSwitchAccount(provider: provider)
+    }
+
+    func runSwitchAccount(provider: UsageProvider) {
         if self.loginTask != nil {
             self.loginLogger.info("Switch Account tap ignored: login already in-flight")
             print("[Runic] Switch Account ignored (busy)")
             return
         }
 
-        let rawProvider = sender.representedObject as? String
-        let provider = rawProvider.flatMap(UsageProvider.init(rawValue:)) ?? self.lastMenuProvider ?? .codex
         self.loginLogger.info("Switch Account tapped", metadata: ["provider": provider.rawValue])
         print("[Runic] Switch Account tapped for provider=\(provider.rawValue)")
 
@@ -167,6 +171,20 @@ extension StatusItemController {
     }
 
     func openMenuFromShortcut() {
+        if self.usesSwiftUIPopoverMenu {
+            if self.shouldMergeIcons, let button = self.statusItem.button {
+                self.showPopover(relativeTo: button, provider: self.selectedMenuProvider)
+                return
+            }
+
+            let provider = self.resolvedShortcutProvider()
+            let item = self.statusItems[provider] ?? self.statusItem
+            if let button = item.button {
+                self.showPopover(relativeTo: button, provider: provider)
+            }
+            return
+        }
+
         if self.shouldMergeIcons {
             self.statusItem.button?.performClick(nil)
             return

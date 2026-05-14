@@ -223,6 +223,26 @@ extension Theme {
                 cardStroke: Color.white.opacity(0.13),
                 primaryText: Color.white.opacity(0.92),
                 secondaryText: Color.white.opacity(0.58))
+        case .daybreak:
+            return RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Storybook daylight",
+                symbolName: "sunrise.fill",
+                isCustom: true,
+                prefersDarkAppearance: false,
+                primary: Color(red: 0.125, green: 0.180, blue: 0.315),
+                secondary: Color(red: 0.000, green: 0.515, blue: 0.690),
+                accent: Color(red: 0.965, green: 0.295, blue: 0.420),
+                highlight: Color(red: 1.000, green: 0.670, blue: 0.055),
+                warm: Color(red: 0.490, green: 0.360, blue: 0.940),
+                tertiary: Color(red: 0.000, green: 0.640, blue: 0.455),
+                surface: Color(red: 0.965, green: 0.982, blue: 0.995),
+                surfaceAlt: Color(red: 0.850, green: 0.940, blue: 1.000).opacity(0.78),
+                cardFill: Color.white.opacity(0.82),
+                cardStroke: Color(red: 0.125, green: 0.180, blue: 0.315).opacity(0.14),
+                primaryText: Color(red: 0.070, green: 0.095, blue: 0.155).opacity(0.92),
+                secondaryText: Color(red: 0.070, green: 0.095, blue: 0.155).opacity(0.60))
         case .pine:
             return RunicThemePalette(
                 id: self.rawValue,

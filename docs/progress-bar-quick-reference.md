@@ -266,7 +266,7 @@ struct UsageProgressBar: View {
 - **Styles**: `/Sources/Runic/Views/Menu/MenuHighlightStyle.swift`
 - **Documentation**: `/docs/progress-bar-improvements.md`
 - **Technical**: `/docs/progress-bar-technical-details.md`
-- **Visual Tests**: `/docs/progress-bar-visual-test.swift`
+- **Visual Tests**: use focused SwiftUI previews or add regression coverage under `Tests/RunicTests/`.
 
 ## Support
 

@@ -62,26 +62,22 @@ Usage fetch strategies answer "what did this account use?" Capability metadata a
 - Local Antigravity language server (internal protocol, HTTPS on localhost).
 - `GetUserStatus` primary; `GetCommandModelConfigs` fallback.
 - Status: Google Workspace incidents (Gemini product).
-- Details: `docs/antigravity.md`.
 
 ## Cursor
 - Web API via browser cookies (`cursor.com` + `cursor.sh`).
 - Fallback: stored WebKit session.
 - Status: Statuspage.io (Cursor).
-- Details: `docs/cursor.md`.
 
 ## Droid (Factory)
 - Web API via Factory cookies, bearer tokens, and WorkOS refresh tokens.
 - Multiple fallback strategies (cookies → stored tokens → local storage → WorkOS cookies).
 - Status: `https://status.factory.ai`.
-- Details: `docs/factory.md`.
 
 ## MiniMax
 - Web-only. Uses browser cookies plus a Chromium local storage access token.
 - Primary endpoint: `https://platform.minimax.io/user-center/payment/coding-plan` (HTML parse).
 - Fallback endpoint: `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains`.
 - Status: none yet.
-- Details: `docs/minimax.md`.
 
 ## Copilot
 - GitHub device flow OAuth token + `api.github.com/copilot_internal/user`.

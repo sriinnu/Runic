@@ -84,6 +84,10 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     var fallbackMenu: NSMenu?
     var openMenus: [ObjectIdentifier: NSMenu] = [:]
     var menuPingTasks: [ObjectIdentifier: Task<Void, Never>] = [:]
+    var popover: NSPopover?
+    var popoverPingTask: Task<Void, Never>?
+    var popoverLocalEventMonitor: Any?
+    var popoverGlobalEventMonitor: Any?
     var blinkTask: Task<Void, Never>?
     var loginTask: Task<Void, Never>? {
         didSet { self.refreshMenusForLoginStateChange() }
@@ -307,26 +311,38 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     }
 
     private func attachMenus() {
+        if self.usesSwiftUIPopoverMenu {
+            self.attachPopover(to: self.statusItem)
+            return
+        }
         if self.mergedMenu == nil {
             self.mergedMenu = self.makeMenu()
         }
+        self.detachPopover(from: self.statusItem)
         self.statusItem.menu = self.mergedMenu
     }
 
     private func attachMenus(fallback: UsageProvider? = nil) {
         for provider in UsageProvider.allCases {
             guard let item = self.statusItems[provider] else { continue }
+            if self.usesSwiftUIPopoverMenu, self.isEnabled(provider) || fallback == provider {
+                self.attachPopover(to: item)
+                continue
+            }
             if self.isEnabled(provider) {
                 if self.providerMenus[provider] == nil {
                     self.providerMenus[provider] = self.makeMenu(for: provider)
                 }
+                self.detachPopover(from: item)
                 item.menu = self.providerMenus[provider]
             } else if fallback == provider {
                 if self.fallbackMenu == nil {
                     self.fallbackMenu = self.makeMenu(for: nil)
                 }
+                self.detachPopover(from: item)
                 item.menu = self.fallbackMenu
             } else {
+                self.detachPopover(from: item)
                 item.menu = nil
             }
         }
@@ -355,6 +371,7 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     deinit {
         self.blinkTask?.cancel()
         self.loginTask?.cancel()
+        self.popoverPingTask?.cancel()
         NotificationCenter.default.removeObserver(self)
     }
 }

@@ -56,20 +56,17 @@ public struct MiniMaxUsageSnapshot: Sendable {
 
 extension MiniMaxUsageSnapshot {
     public func toUsageSnapshot() -> UsageSnapshot {
-        // "current_interval_usage_count" in the "remains" API is ambiguous.
-        // It likely represents "remaining_count" OR "used_count".
-        // Given total=4500, used=4500 (in the sample), consistent with "remains" response.
-        // But let's assume standard "usage" field naming means USED.
-        // If the user reports it shows 100% when new, we invert it.
-        // For now, let's map it as Used/Total.
-
-        let percent = self.total > 0 ? (Double(self.used) / Double(self.total)) * 100.0 : 0.0
+        // MiniMax's `coding_plan/remains` endpoint reports remaining allowance here.
+        // Example: 4500/4500 means the quota is untouched, so used is 0%.
+        let remaining = max(0, min(self.used, self.total))
+        let usedCount = max(0, self.total - remaining)
+        let percent = self.total > 0 ? (Double(usedCount) / Double(self.total)) * 100.0 : 0.0
 
         let primary = RateWindow(
             usedPercent: percent,
             windowMinutes: 24 * 60,
             resetsAt: nil,
-            resetDescription: "\(self.used) / \(self.total) (Please verify meaning)",
+            resetDescription: "\(remaining) / \(self.total) remaining",
             label: self.modelName?.trimmingCharacters(in: .whitespacesAndNewlines))
 
         let identity = ProviderIdentitySnapshot(

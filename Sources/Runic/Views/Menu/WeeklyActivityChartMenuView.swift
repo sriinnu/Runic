@@ -19,6 +19,7 @@ struct WeeklyActivityChartMenuView: View {
 
     private let dailySummaries: [UsageLedgerDailySummary]
     private let width: CGFloat
+    @State private var selectedDayID: String?
     @Environment(\.runicTheme) private var runicTheme
 
     init(dailySummaries: [UsageLedgerDailySummary], width: CGFloat) {
@@ -82,6 +83,31 @@ struct WeeklyActivityChartMenuView: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: RunicSpacing.chartHeight - 40)
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        ZStack(alignment: .topLeading) {
+                            if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
+                                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
+                                    .frame(width: rect.width, height: rect.height)
+                                    .position(x: rect.midX, y: rect.midY)
+                                    .allowsHitTesting(false)
+                            }
+                            MouseLocationReader { location in
+                                self.updateSelection(location: location, model: model, proxy: proxy, geo: geo)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                        }
+                    }
+                }
+
+                Text(self.detailText(model: model))
+                    .font(RunicFont.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(height: 16, alignment: .leading)
             }
         }
         .chartPanelStyle(width: self.width)
@@ -129,5 +155,60 @@ struct WeeklyActivityChartMenuView: View {
 
         let total = bars.reduce(0) { $0 + $1.totalTokens }
         return WeeklyModel(bars: bars, totalTokens: total)
+    }
+
+    private func selectionBandRect(model: WeeklyModel, proxy: ChartProxy, geo: GeometryProxy) -> CGRect? {
+        guard let selectedDayID = self.selectedDayID else { return nil }
+        guard let plotAnchor = proxy.plotFrame else { return nil }
+        let plotFrame = geo[plotAnchor]
+        guard let index = model.bars.firstIndex(where: { $0.id == selectedDayID }) else { return nil }
+        guard let x = proxy.position(forX: model.bars[index].weekdayShort) else { return nil }
+
+        let step = plotFrame.width / CGFloat(max(1, model.bars.count))
+        let width = min(36, max(18, step * 0.72))
+        return CGRect(
+            x: plotFrame.origin.x + x - (width / 2),
+            y: plotFrame.origin.y,
+            width: width,
+            height: plotFrame.height)
+    }
+
+    private func updateSelection(
+        location: CGPoint?,
+        model: WeeklyModel,
+        proxy: ChartProxy,
+        geo: GeometryProxy)
+    {
+        guard let location else {
+            if self.selectedDayID != nil { self.selectedDayID = nil }
+            return
+        }
+        guard let plotAnchor = proxy.plotFrame else { return }
+        let plotFrame = geo[plotAnchor]
+        guard plotFrame.contains(location) else { return }
+
+        let xInPlot = location.x - plotFrame.origin.x
+        var bestID: String?
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for bar in model.bars {
+            guard let x = proxy.position(forX: bar.weekdayShort) else { continue }
+            let distance = abs(x - xInPlot)
+            if distance < bestDistance {
+                bestDistance = distance
+                bestID = bar.id
+            }
+        }
+        if let bestID, self.selectedDayID != bestID {
+            self.selectedDayID = bestID
+        }
+    }
+
+    private func detailText(model: WeeklyModel) -> String {
+        guard let selectedDayID = self.selectedDayID,
+              let bar = model.bars.first(where: { $0.id == selectedDayID })
+        else {
+            return "Hover a day for tokens"
+        }
+        return "\(bar.dayLabel): \(UsageFormatter.tokenCountString(bar.totalTokens)) tokens"
     }
 }

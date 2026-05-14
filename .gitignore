@@ -122,6 +122,25 @@ RuniciOS/*.xcworkspace
 /test_insights.sh
 /verify-keychain-fix.sh
 
+# Local/internal documentation and generated research notes
+/docs/antigravity.md
+/docs/codex-oauth.md
+/docs/cursor.md
+/docs/factory.md
+/docs/minimax.md
+/docs/cli-commands/
+/docs/codebase_review.md
+/docs/progress-bar-visual-test.swift
+/docs/sync_files_summary.md
+/docs/research/
+/docs/design/mockups/
+/docs/design/designcomparisonchart.md
+/docs/design/implementationguide.md
+/docs/design/menubaricondesignconcepts.md
+/docs/design/quick_summary.md
+/docs/workflows/phase1-cli-testing-report.md
+/docs/workflows/sync_enablement_summary.md
+
 # Local backup/disabled source files
 *.swift.disabled
 

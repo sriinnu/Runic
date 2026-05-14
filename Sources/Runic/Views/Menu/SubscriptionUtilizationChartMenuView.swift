@@ -25,6 +25,7 @@ struct SubscriptionUtilizationChartMenuView: View {
     private let todayTokens: Int
     private let width: CGFloat
     @State private var selectedPeriod: Period = .daily
+    @State private var selectedBarID: String?
     @Environment(\.runicTheme) private var runicTheme
 
     init(
@@ -89,7 +90,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 5)) { _ in
+                    AxisMarks(values: model.axisLabels) { _ in
                         AxisValueLabel()
                             .font(RunicFont.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
@@ -97,18 +98,38 @@ struct SubscriptionUtilizationChartMenuView: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: RunicSpacing.chartHeight - 10)
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        ZStack(alignment: .topLeading) {
+                            if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
+                                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
+                                    .frame(width: rect.width, height: rect.height)
+                                    .position(x: rect.midX, y: rect.midY)
+                                    .allowsHitTesting(false)
+                            }
+                            MouseLocationReader { location in
+                                self.updateSelection(location: location, model: model, proxy: proxy, geo: geo)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                        }
+                    }
+                }
 
                 // Latest detail
-                if let latest = model.bars.last {
-                    let used = Int(latest.usedPercent.rounded())
-                    let unused = max(0, 100 - used)
-                    Text("\(latest.label): \(used)% used, \(unused)% unused")
-                        .font(RunicFont.caption)
-                        .foregroundStyle(self.runicTheme.secondaryText)
-                }
+                Text(self.detailText(model: model))
+                    .font(RunicFont.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(height: 16, alignment: .leading)
             }
         }
         .chartPanelStyle(width: self.width)
+        .onChange(of: self.selectedPeriod) { _, _ in
+            self.selectedBarID = nil
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Subscription utilization chart")
     }
@@ -117,6 +138,7 @@ struct SubscriptionUtilizationChartMenuView: View {
 
     private struct UtilizationModel {
         let bars: [UtilizationBar]
+        let axisLabels: [String]
     }
 
     private static func makeModel(
@@ -148,11 +170,11 @@ struct SubscriptionUtilizationChartMenuView: View {
                 let key = formatter.string(from: date)
                 let tokens = tokensByDay[key] ?? 0
                 let pct = min(100, Double(tokens) * scaleFactor)
-                let label = date.formatted(.dateTime.day().month(.abbreviated))
+                let label = date.formatted(.dateTime.month(.defaultDigits).day())
                 let isToday = offset == 13
                 return UtilizationBar(id: key, label: label, date: date, usedPercent: pct, isToday: isToday)
             }
-            return UtilizationModel(bars: bars)
+            return UtilizationModel(bars: bars, axisLabels: Self.axisLabels(from: bars, desiredCount: 5))
 
         case .weekly:
             // Aggregate by ISO week
@@ -178,7 +200,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                     usedPercent: pct,
                     isToday: bucket.isThisWeek)
             }
-            return UtilizationModel(bars: bars)
+            return UtilizationModel(bars: bars, axisLabels: bars.map(\.label))
 
         case .monthly:
             var monthBuckets: [(label: String, tokens: Int, date: Date, isThisMonth: Bool)] = []
@@ -207,7 +229,73 @@ struct SubscriptionUtilizationChartMenuView: View {
                     usedPercent: pct,
                     isToday: bucket.isThisMonth)
             }
-            return UtilizationModel(bars: bars)
+            return UtilizationModel(bars: bars, axisLabels: bars.map(\.label))
         }
+    }
+
+    private static func axisLabels(from bars: [UtilizationBar], desiredCount: Int) -> [String] {
+        guard bars.count > desiredCount else { return bars.map(\.label) }
+        let lastIndex = bars.count - 1
+        return bars.enumerated().compactMap { index, bar in
+            if index == 0 || index == lastIndex { return bar.label }
+            let step = max(1, lastIndex / max(1, desiredCount - 1))
+            return index % step == 0 ? bar.label : nil
+        }
+    }
+
+    private func selectionBandRect(model: UtilizationModel, proxy: ChartProxy, geo: GeometryProxy) -> CGRect? {
+        guard let selectedBarID = self.selectedBarID else { return nil }
+        guard let plotAnchor = proxy.plotFrame else { return nil }
+        let plotFrame = geo[plotAnchor]
+        guard let index = model.bars.firstIndex(where: { $0.id == selectedBarID }) else { return nil }
+        guard let x = proxy.position(forX: model.bars[index].label) else { return nil }
+
+        let step = plotFrame.width / CGFloat(max(1, model.bars.count))
+        let width = min(34, max(16, step * 0.72))
+        return CGRect(
+            x: plotFrame.origin.x + x - (width / 2),
+            y: plotFrame.origin.y,
+            width: width,
+            height: plotFrame.height)
+    }
+
+    private func updateSelection(
+        location: CGPoint?,
+        model: UtilizationModel,
+        proxy: ChartProxy,
+        geo: GeometryProxy)
+    {
+        guard let location else {
+            if self.selectedBarID != nil { self.selectedBarID = nil }
+            return
+        }
+        guard let plotAnchor = proxy.plotFrame else { return }
+        let plotFrame = geo[plotAnchor]
+        guard plotFrame.contains(location) else { return }
+
+        let xInPlot = location.x - plotFrame.origin.x
+        var bestID: String?
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for bar in model.bars {
+            guard let x = proxy.position(forX: bar.label) else { continue }
+            let distance = abs(x - xInPlot)
+            if distance < bestDistance {
+                bestDistance = distance
+                bestID = bar.id
+            }
+        }
+        if let bestID, self.selectedBarID != bestID {
+            self.selectedBarID = bestID
+        }
+    }
+
+    private func detailText(model: UtilizationModel) -> String {
+        let bar = self.selectedBarID
+            .flatMap { selected in model.bars.first(where: { $0.id == selected }) }
+            ?? model.bars.last
+        guard let bar else { return "Hover a bar for utilization" }
+        let used = Int(bar.usedPercent.rounded())
+        let unused = max(0, 100 - used)
+        return "\(bar.label): \(used)% used, \(unused)% unused"
     }
 }
