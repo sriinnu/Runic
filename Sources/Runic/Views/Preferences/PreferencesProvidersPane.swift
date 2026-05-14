@@ -301,7 +301,7 @@ private enum ProviderInsightsComposer {
     }
 
     private static func actorValue(identity: ProviderIdentitySnapshot?) -> String? {
-        let email = self.trimmed(identity?.accountEmail)
+        let email = RunicScreenshotMode.sanitize(email: self.trimmed(identity?.accountEmail))
         let organization = self.trimmed(identity?.accountOrganization)
         if let email, let organization {
             if email.caseInsensitiveCompare(organization) == .orderedSame {
@@ -338,7 +338,7 @@ private enum ProviderInsightsComposer {
     }
 
     private static func topProjectValue(_ summary: UsageLedgerProjectSummary) -> String {
-        let project = self.shortProjectName(summary.displayProjectName)
+        let project = self.shortProjectName(RunicProjectDisplay.name(for: summary))
         let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
         var parts = [project, "\(tokens) tok", "\(summary.entryCount) req"]
         if let cost = summary.totals.costUSD {
@@ -385,12 +385,12 @@ private enum ProviderInsightsComposer {
         guard summaries.count > 1 else { return nil }
         let ranked = summaries.sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
-                return lhs.displayProjectName < rhs.displayProjectName
+                return RunicProjectDisplay.name(for: lhs) < RunicProjectDisplay.name(for: rhs)
             }
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         let rendered = ranked.prefix(2).map { summary in
-            let project = self.shortProjectName(summary.displayProjectName)
+            let project = self.shortProjectName(RunicProjectDisplay.name(for: summary))
             let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
             return "\(project) \(tokens)"
         }
@@ -420,25 +420,25 @@ private enum ProviderInsightsComposer {
         guard summaries.count > 1 else { return nil }
         let ranked = summaries.sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
-                return lhs.displayProjectName < rhs.displayProjectName
+                return RunicProjectDisplay.name(for: lhs) < RunicProjectDisplay.name(for: rhs)
             }
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         let details = ranked.prefix(3).map { summary in
             let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
-            let project = summary.displayProjectName
+            let project = RunicProjectDisplay.name(for: summary)
             return "\(project): \(tokens) tok"
         }
         return details.isEmpty ? nil : details.joined(separator: "\n")
     }
 
     private static func projectIdentityHelpText(_ summary: UsageLedgerProjectSummary) -> String? {
-        let displayName = summary.displayProjectName
+        let displayName = RunicProjectDisplay.name(for: summary)
         let source = summary.projectNameSource ?? .unknown
         let confidence = summary.projectNameConfidence ?? .none
         let shouldAnnotateSource = source != .projectName && source != .budgetOverride
         let shouldAnnotateConfidence = confidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
 
         var details: [String] = []
         if shouldAnnotateSource {
@@ -765,6 +765,7 @@ struct ProvidersPane: View {
     @State private var settingsLastAppActiveRunAtByID: [String: Date] = [:]
     @State private var activeConfirmation: ProviderSettingsConfirmationState?
     @State private var sidebarSelection: UsageProvider?
+    @Environment(\.runicTheme) private var runicTheme
 
     private var providers: [UsageProvider] {
         self.settings.orderedProviders()
@@ -852,11 +853,11 @@ struct ProvidersPane: View {
         .padding(ProviderListMetrics.listHeaderPadding)
         .background(
             RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.listHeaderBackgroundOpacity)))
+                .fill(self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.listHeaderBackgroundOpacity + 0.18)))
         .overlay(
             RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
                 .strokeBorder(
-                    Color(nsColor: .separatorColor).opacity(ProviderListMetrics.listHeaderBorderOpacity),
+                    self.runicTheme.menuSeparatorColor.opacity(ProviderListMetrics.listHeaderBorderOpacity + 0.12),
                     lineWidth: 1))
         .padding(.horizontal, ProviderListMetrics.contentInset)
     }
@@ -881,7 +882,15 @@ struct ProvidersPane: View {
             .listStyle(.sidebar)
             .frame(minWidth: 160, idealWidth: 180)
             .scrollContentBackground(.hidden)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.15))
+            .background {
+                ZStack {
+                    self.runicTheme.menuSurfaceGradient
+                    if self.runicTheme.isTerminalHUD {
+                        RunicTerminalScanlineOverlay(opacity: 0.45)
+                    }
+                }
+                .opacity(0.55)
+            }
             .onAppear {
                 self.normalizeSidebarSelection()
             }
@@ -1279,6 +1288,7 @@ private struct ProviderListBrandIcon: View {
 @MainActor
 private struct ProviderInsightsView: View {
     let lines: [ProviderInsightLine]
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         LazyVGrid(
@@ -1300,24 +1310,24 @@ private struct ProviderInsightsView: View {
             RoundedRectangle(
                 cornerRadius: ProviderListMetrics.providerInsightsCardCornerRadius,
                 style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.42)))
+                .fill(self.runicTheme.menuSubtleFill))
         .overlay {
             RoundedRectangle(
                 cornerRadius: ProviderListMetrics.providerInsightsCardCornerRadius,
                 style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.22), lineWidth: 1)
+                .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.44), lineWidth: 1)
         }
     }
 }
 
 private struct ProviderInsightChip: View {
     let line: ProviderInsightLine
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
             Text(self.line.label.uppercased())
                 .font(RunicFont.caption2.weight(.semibold))
-                .tracking(0.2)
                 .foregroundStyle(.tertiary)
             Text(self.line.value)
                 .font(RunicFont.caption)
@@ -1331,10 +1341,10 @@ private struct ProviderInsightChip: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: ProviderListMetrics.providerInsightsChipCornerRadius, style: .continuous)
-                .fill(Color(nsColor: .textBackgroundColor).opacity(0.45)))
+                .fill(self.runicTheme.surface.opacity(self.runicTheme.isTerminalHUD ? 0.62 : 0.38)))
         .overlay(
             RoundedRectangle(cornerRadius: ProviderListMetrics.providerInsightsChipCornerRadius, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1))
+                .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.34), lineWidth: 1))
         .help(self.line.help ?? "")
         .accessibilityLabel("\(self.line.label): \(self.line.value)")
         .accessibilityHint(self.line.help ?? "")
@@ -1355,6 +1365,7 @@ private struct ProviderListProviderRowView: View {
     let onCopyError: (String) -> Void
     @State private var isHovering = false
     @FocusState private var isToggleFocused: Bool
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         let isRefreshing = self.store.refreshingProviders.contains(self.provider)
@@ -1460,7 +1471,10 @@ private struct ProviderListProviderRowView: View {
             .padding(.vertical, RunicSpacing.xxxs)
             .background(
                 Capsule(style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.7)))
+                    .fill(self.runicTheme.menuSubtleFill))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
     private var usageStatusColors: (Color, Color) {
@@ -1470,17 +1484,17 @@ private struct ProviderListProviderRowView: View {
         case .error:
             (.red, Color.red.opacity(0.15))
         case .neutral:
-            (.secondary, Color(nsColor: .controlBackgroundColor))
+            (.secondary, self.runicTheme.menuSubtleFill)
         }
     }
 
     private var rowBackgroundColor: Color {
         if self.isHovering {
-            return Color(nsColor: .controlBackgroundColor).opacity(0.72)
+            return self.runicTheme.menuSubtleFill.opacity(0.92)
         } else if self.isEnabled {
-            return Color(nsColor: .controlBackgroundColor).opacity(ProviderListMetrics.providerCardBackgroundOpacity)
+            return self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.providerCardBackgroundOpacity + 0.22)
         }
-        return Color(nsColor: .controlBackgroundColor).opacity(0.35)
+        return self.runicTheme.menuSubtleFill.opacity(0.46)
     }
 
     private var cardBorderColor: Color {
@@ -1488,9 +1502,9 @@ private struct ProviderListProviderRowView: View {
             return Color.accentColor.opacity(0.35)
         }
         if self.isEnabled {
-            return Color(nsColor: .separatorColor).opacity(ProviderListMetrics.providerCardBorderOpacity)
+            return self.runicTheme.menuSeparatorColor.opacity(ProviderListMetrics.providerCardBorderOpacity + 0.14)
         }
-        return Color(nsColor: .separatorColor).opacity(0.18)
+        return self.runicTheme.menuSeparatorColor.opacity(0.18)
     }
 
     private var cardBackground: some View {
@@ -1553,6 +1567,7 @@ extension View {
 private struct ProviderListToggleRowView: View {
     let provider: UsageProvider
     let toggle: ProviderSettingsToggleDescriptor
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(alignment: .top, spacing: ProviderListMetrics.rowSpacing) {
@@ -1582,10 +1597,10 @@ private struct ProviderListToggleRowView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.55)))
+                                    .fill(self.runicTheme.menuSubtleFill))
                             .overlay {
                                 RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                                    .strokeBorder(Color(nsColor: .separatorColor).opacity(0.2), lineWidth: 1)
+                                    .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.38), lineWidth: 1)
                             }
                     }
 
@@ -1629,12 +1644,11 @@ private struct ProviderListToggleRowView: View {
 
     private var supplementalCardBackground: some View {
         RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor)
-                .opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
+            .fill(self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.supplementalCardBackgroundOpacity + 0.20))
     }
 
     private var supplementalCardBorderColor: Color {
-        Color(nsColor: .separatorColor).opacity(ProviderListMetrics.supplementalCardBorderOpacity)
+        self.runicTheme.menuSeparatorColor.opacity(ProviderListMetrics.supplementalCardBorderOpacity + 0.10)
     }
 }
 
@@ -1642,7 +1656,7 @@ private struct ProviderListToggleRowView: View {
 private struct ProviderListFieldRowView: View {
     let provider: UsageProvider
     let field: ProviderSettingsFieldDescriptor
-
+    @Environment(\.runicTheme) private var runicTheme
     var body: some View {
         HStack(alignment: .top, spacing: ProviderListMetrics.rowSpacing) {
             Color.clear
@@ -1700,12 +1714,11 @@ private struct ProviderListFieldRowView: View {
 
     private var supplementalCardBackground: some View {
         RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
-            .fill(Color(nsColor: .controlBackgroundColor)
-                .opacity(ProviderListMetrics.supplementalCardBackgroundOpacity))
+            .fill(self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.supplementalCardBackgroundOpacity + 0.20))
     }
 
     private var supplementalCardBorderColor: Color {
-        Color(nsColor: .separatorColor).opacity(0.18)
+        self.runicTheme.menuSeparatorColor.opacity(0.26)
     }
 }
 
@@ -1912,6 +1925,7 @@ private struct ProviderSidebarRow: View {
 
 private struct ProviderSidebarSectionCard<Content: View>: View {
     private let content: Content
+    @Environment(\.runicTheme) private var runicTheme
 
     init(@ViewBuilder content: () -> Content) {
         self.content = content()
@@ -1925,14 +1939,13 @@ private struct ProviderSidebarSectionCard<Content: View>: View {
                 RoundedRectangle(
                     cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
                     style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor)
-                        .opacity(ProviderListMetrics.sidebarCardBackgroundOpacity)))
+                    .fill(self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.sidebarCardBackgroundOpacity + 0.16)))
             .overlay(
                 RoundedRectangle(
                     cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
                     style: .continuous)
                     .strokeBorder(
-                        Color(nsColor: .separatorColor).opacity(ProviderListMetrics.sidebarCardBorderOpacity),
+                        self.runicTheme.menuSeparatorColor.opacity(ProviderListMetrics.sidebarCardBorderOpacity + 0.12),
                         lineWidth: 1))
     }
 }
@@ -1942,6 +1955,7 @@ private struct ProviderHistoryNavigationButton: View {
     let enabled: Bool
     let help: String
     let action: () -> Void
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Button(action: self.action) {
@@ -1954,12 +1968,11 @@ private struct ProviderHistoryNavigationButton: View {
         .disabled(!self.enabled)
         .background(
             Circle()
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(self.enabled ? 0.48 : 0.2))
+                .fill(self.runicTheme.menuSubtleFill.opacity(self.enabled ? 0.82 : 0.32))
                 .overlay(
                     Circle()
                         .strokeBorder(
-                            Color(
-                                nsColor: .separatorColor).opacity(self.enabled ? 0.28 : 0.1),
+                            self.runicTheme.menuSeparatorColor.opacity(self.enabled ? 0.40 : 0.16),
                             lineWidth: 1)))
         .help(self.help)
         .accessibilityLabel(self.help)
@@ -2155,6 +2168,7 @@ private struct ProviderSidebarDetailView: View {
     @State private var historyDayDetailMode: ProviderHistoryDayDetailMode = .summary
     @State private var historyIsLoading = false
     @State private var historyError: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         let insightLines = ProviderInsightsComposer.lines(for: self.provider, store: self.store)
@@ -2403,7 +2417,7 @@ private struct ProviderSidebarDetailView: View {
         switch self.usageStatus.style {
         case .success: (.green, Color.green.opacity(0.15))
         case .error: (.red, Color.red.opacity(0.15))
-        case .neutral: (.secondary, Color(nsColor: .controlBackgroundColor))
+        case .neutral: (.secondary, self.runicTheme.menuSubtleFill)
         }
     }
 
@@ -2468,8 +2482,7 @@ private struct ProviderSidebarDetailView: View {
                                 RoundedRectangle(
                                     cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
                                     style: .continuous)
-                                    .fill(Color(nsColor: .controlBackgroundColor)
-                                        .opacity(ProviderListMetrics.sidebarCardBackgroundOpacity)))
+                                    .fill(self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.sidebarCardBackgroundOpacity + 0.10)))
                     } else {
                         if let note = snapshot.note, !note.isEmpty {
                             Text(note)
@@ -2912,12 +2925,12 @@ private struct ProviderSidebarDetailView: View {
     }
 
     private func projectDisplay(_ summary: UsageLedgerProjectSummary) -> ProjectDisplay {
-        let displayName = summary.displayProjectName
+        let displayName = RunicProjectDisplay.name(for: summary)
         let source = summary.projectNameSource ?? .unknown
         let confidence = summary.projectNameConfidence ?? .none
         let shouldAnnotateSource = source != .projectName && source != .budgetOverride
         let shouldAnnotateConfidence = confidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
 
         var details: [String] = []
         if shouldAnnotateSource {
@@ -3156,12 +3169,12 @@ private struct ProviderSidebarDetailView: View {
         }
         let ranked = self.store.ledgerProjectBreakdown(for: self.provider).sorted { lhs, rhs in
             if lhs.totals.totalTokens == rhs.totals.totalTokens {
-                return lhs.displayProjectName < rhs.displayProjectName
+                return RunicProjectDisplay.name(for: lhs) < RunicProjectDisplay.name(for: rhs)
             }
             return lhs.totals.totalTokens > rhs.totals.totalTokens
         }
         return ranked.prefix(3).map { summary in
-            let project = summary.displayProjectName
+            let project = RunicProjectDisplay.name(for: summary)
             return self.usageLine(title: project, totals: summary.totals, requests: summary.entryCount)
         }
     }

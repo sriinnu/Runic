@@ -31,6 +31,32 @@ struct ProviderIconResourcesTests {
         }
     }
 
+    @Test
+    func `gemini icon renders visibly through appkit data path`() throws {
+        let root = try Self.repoRoot()
+        let url = root.appending(path: "Sources/Runic/Resources/ProviderIcon-gemini.svg")
+        let data = try Data(contentsOf: url)
+        let image = try #require(NSImage(data: data), "Gemini SVG must render through NSImage(data:)")
+        let rendered = NSImage(size: NSSize(width: 64, height: 64))
+
+        rendered.lockFocus()
+        image.draw(in: NSRect(x: 8, y: 8, width: 48, height: 48))
+        rendered.unlockFocus()
+
+        let tiff = try #require(rendered.tiffRepresentation)
+        let rep = try #require(NSBitmapImageRep(data: tiff))
+        var visiblePixels = 0
+        for y in 0..<rep.pixelsHigh {
+            for x in 0..<rep.pixelsWide {
+                if (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.15 {
+                    visiblePixels += 1
+                }
+            }
+        }
+
+        #expect(visiblePixels > 500, "Gemini icon rendered too small or invisible through AppKit SVG rasterization")
+    }
+
     private static func repoRoot() throws -> URL {
         var dir = URL(filePath: #filePath).deletingLastPathComponent()
         for _ in 0..<12 {

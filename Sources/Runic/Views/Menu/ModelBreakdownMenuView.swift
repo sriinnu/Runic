@@ -6,6 +6,7 @@ import SwiftUI
 struct ModelBreakdownMenuView: View {
     private let breakdown: [UsageLedgerModelSummary]
     private let width: CGFloat
+    @State private var selectedModelID: String?
     @Environment(\.runicTheme) private var runicTheme
 
     /// Maximum number of models to show before truncating.
@@ -40,12 +41,29 @@ struct ModelBreakdownMenuView: View {
                             innerRadius: .ratio(0.55),
                             angularInset: 1.0)
                             .foregroundStyle(item.color)
+                            .opacity(self.selectedModelID == nil || self.selectedModelID == item.id ? 1.0 : 0.42)
                     }
                 }
                 .chartLegend(.hidden)
                 .frame(height: 100)
+                .chartOverlay { _ in
+                    GeometryReader { geo in
+                        MouseLocationReader { location in
+                            self.updateSelection(location: location, model: model, geo: geo)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                    }
+                }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Self.chartAccessibilityLabel(model: model))
+
+                Text(self.detailText(model: model))
+                    .font(RunicFont.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(height: 16, alignment: .leading)
 
                 // MARK: - Model list
 
@@ -196,6 +214,59 @@ struct ModelBreakdownMenuView: View {
             label += ", cache hit rate \(cacheRate)"
         }
         return label
+    }
+
+    private func updateSelection(location: CGPoint?, model: ModelModel, geo: GeometryProxy) {
+        guard let location, model.grandTotalTokens > 0 else {
+            if self.selectedModelID != nil { self.selectedModelID = nil }
+            return
+        }
+
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        let dx = location.x - center.x
+        let dy = location.y - center.y
+        let radius = min(geo.size.width, geo.size.height) / 2
+        let distance = sqrt(dx * dx + dy * dy)
+        guard distance >= radius * 0.44, distance <= radius * 1.08 else {
+            if self.selectedModelID != nil { self.selectedModelID = nil }
+            return
+        }
+
+        var angle = atan2(dy, dx) + (.pi / 2)
+        if angle < 0 { angle += .pi * 2 }
+        let total = Double(model.grandTotalTokens)
+        var cursor = 0.0
+        for item in model.chartItems {
+            cursor += Double(item.totalTokens) / total * (.pi * 2)
+            if angle <= cursor {
+                if self.selectedModelID != item.id {
+                    self.selectedModelID = item.id
+                }
+                return
+            }
+        }
+        self.selectedModelID = model.chartItems.last?.id
+    }
+
+    private func detailText(model: ModelModel) -> String {
+        guard let selectedModelID = self.selectedModelID,
+              let item = model.chartItems.first(where: { $0.id == selectedModelID })
+        else {
+            return "Hover the donut for distribution"
+        }
+        let share = model.grandTotalTokens > 0
+            ? Double(item.totalTokens) / Double(model.grandTotalTokens) * 100
+            : 0
+        var parts = [
+            "\(item.displayName)",
+            "\(UsageFormatter.tokenCountString(item.totalTokens)) tokens",
+            "\(String(format: "%.0f", share))%",
+            "\(item.requestCount) req",
+        ]
+        if let cost = item.costText {
+            parts.append(cost)
+        }
+        return parts.joined(separator: " · ")
     }
 
     static func makeModel(from breakdown: [UsageLedgerModelSummary]) -> ModelModel {

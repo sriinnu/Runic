@@ -15,7 +15,14 @@ struct ChartPanelStyle: ViewModifier {
             .padding(.top, RunicSpacing.sm)
             .padding(.bottom, RunicSpacing.xs)
             .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
-            .background(self.runicTheme.menuSurfaceGradient)
+            .background {
+                ZStack {
+                    self.runicTheme.menuSurfaceGradient
+                    if self.runicTheme.isTerminalHUD {
+                        RunicTerminalScanlineOverlay(opacity: 0.90)
+                    }
+                }
+            }
     }
 }
 

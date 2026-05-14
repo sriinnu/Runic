@@ -13,6 +13,7 @@ struct AlertsPane: View {
     @State private var showingTestResult: String?
     @State private var defaultWebhookURL: String = ""
     @State private var webhookFormat: WebhookFormat = .slack
+    @Environment(\.runicTheme) private var runicTheme
 
     enum WebhookFormat: String, CaseIterable, Identifiable {
         case slack
@@ -240,8 +241,12 @@ struct AlertsPane: View {
             }
         }
         .padding(RunicSpacing.xs)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(RunicCornerRadius.sm)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.runicTheme.menuSubtleFill))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
     private func historyRow(_ entry: AlertRuleStore.AlertHistoryEntry) -> some View {
@@ -271,8 +276,12 @@ struct AlertsPane: View {
             }
         }
         .padding(RunicSpacing.xs)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(entry.acknowledged ? 0.5 : 1.0))
-        .cornerRadius(RunicCornerRadius.sm)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.runicTheme.menuSubtleFill.opacity(entry.acknowledged ? 0.5 : 1.0)))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.36), lineWidth: 0.7))
     }
 
     private func severityBadge(_ severity: AlertRuleStore.AlertSeverity) -> some View {

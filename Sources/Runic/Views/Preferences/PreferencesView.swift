@@ -75,7 +75,9 @@ struct PreferencesView: View {
             // MARK: - Providers (Built-in + Custom)
 
             ZStack {
-                LiquidMeshBackground().ignoresSafeArea().opacity(0.3)
+                LiquidMeshBackground()
+                    .ignoresSafeArea()
+                    .opacity(self.settings.theme.palette.isTerminalHUD ? 1.0 : 0.3)
                 VStack(spacing: 0) {
                     HStack(spacing: RunicSpacing.xs) {
                         Picker("", selection: self.$providersSection) {
@@ -197,7 +199,7 @@ struct PreferencesView: View {
             ZStack {
                 self.settings.theme.palette.surface
                 LiquidMeshBackground()
-                    .opacity(self.settings.theme.palette.isCustom ? 0.38 : 0.12)
+                    .opacity(self.settings.theme.palette.isTerminalHUD ? 1.0 : (self.settings.theme.palette.isCustom ? 0.38 : 0.12))
             }
             .ignoresSafeArea()
         }

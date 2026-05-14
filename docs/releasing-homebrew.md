@@ -14,7 +14,7 @@ Homebrew is for the UI app via Cask. When installed via Homebrew, Runic disables
 - Access to the tap repo: `../homebrew-tap`.
 
 ## 1) Release Runic normally
-Follow `docs/RELEASING.md` to publish `Runic-<version>.zip` to GitHub Releases.
+Follow `docs/releasing.md` to publish `Runic-<version>.zip` to GitHub Releases.
 
 ## 2) Update the Homebrew tap cask
 In `../homebrew-tap`, add/update the cask at `Casks/runic.rb`:
@@ -25,9 +25,9 @@ In `../homebrew-tap`, add/update the cask at `Casks/runic.rb`:
 ## 3) Verify install
 ```sh
 brew uninstall --cask runic || true
-brew untap steipete/tap || true
-brew tap steipete/tap
-brew install --cask steipete/tap/runic
+brew untap sriinnu/tap || true
+brew tap sriinnu/tap
+brew install --cask sriinnu/tap/runic
 open -a Runic
 ```
 

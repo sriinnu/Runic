@@ -64,4 +64,19 @@ struct MiniMaxParsingTests {
         #expect(parsed.resetsAt == now.addingTimeInterval(600))
         #expect(parsed.planName == "MiniMax Pro")
     }
+
+    @Test
+    func `api remains snapshot treats full remaining allowance as zero used`() {
+        let snapshot = MiniMaxUsageSnapshot(
+            total: 4500,
+            used: 4500,
+            modelName: "MiniMax M1",
+            updatedAt: Date(timeIntervalSince1970: 0))
+
+        let usage = snapshot.toUsageSnapshot()
+
+        #expect(usage.primary.usedPercent == 0)
+        #expect(usage.primary.remainingPercent == 100)
+        #expect(usage.primary.resetDescription == "4500 / 4500 remaining")
+    }
 }

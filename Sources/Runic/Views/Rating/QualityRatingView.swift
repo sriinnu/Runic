@@ -16,6 +16,7 @@ struct QualityRatingView: View {
     // MARK: - State
 
     private let model: Model
+    @Environment(\.runicTheme) private var runicTheme
     @State private var selectedRating: Int?
     @State private var comment: String = ""
     @State private var isSubmitting = false
@@ -48,8 +49,12 @@ struct QualityRatingView: View {
         }
         .runicTypography()
         .padding(RunicSpacing.sm)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(self.runicTheme.menuCardGradient))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
     // MARK: - Rating Selector

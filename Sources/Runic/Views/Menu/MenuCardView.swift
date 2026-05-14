@@ -383,27 +383,32 @@ private struct UsageMenuCardHeaderView: View {
     private var headerBackground: some View {
         let base = self.brandNSColor
         let top = base.blended(withFraction: 0.35, of: .white) ?? base
+        let accentTop = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : Color(nsColor: top)
+        let accentBase = self.runicTheme.isTerminalHUD ? self.runicTheme.tertiary : Color(nsColor: base)
         return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
             .fill(self.runicTheme.menuCardGradient)
             .overlay(
                 ZStack {
                     LinearGradient(
                         colors: [
-                            Color(nsColor: top).opacity(0.14),
-                            Color(nsColor: base).opacity(0.04),
+                            accentTop.opacity(self.runicTheme.isTerminalHUD ? 0.10 : 0.14),
+                            accentBase.opacity(self.runicTheme.isTerminalHUD ? 0.04 : 0.04),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing)
+                    if self.runicTheme.isTerminalHUD {
+                        RunicTerminalScanlineOverlay(opacity: 0.55)
+                    }
                 }
                     .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)))
     }
 
     private var headerBorder: some View {
-        let base = Color(nsColor: self.brandNSColor)
+        let base = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : Color(nsColor: self.brandNSColor)
         return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
             .stroke(
-                base.opacity(self.isHighlighted ? 0.45 : 0.28),
-                lineWidth: 0.7)
+                base.opacity(self.isHighlighted ? 0.76 : 0.45),
+                lineWidth: self.runicTheme.isTerminalHUD ? 0.9 : 0.7)
     }
 
     private var brandNSColor: NSColor {
@@ -1263,13 +1268,16 @@ extension UsageMenuCardView.Model {
         account: AccountInfo,
         metadata: ProviderMetadata) -> String
     {
-        if let email = snapshot?.accountEmail(for: provider), !email.isEmpty { return email }
-        if metadata.usesAccountFallback,
-           let email = account.email, !email.isEmpty
-        {
-            return email
-        }
-        return ""
+        let resolved: String = {
+            if let email = snapshot?.accountEmail(for: provider), !email.isEmpty { return email }
+            if metadata.usesAccountFallback,
+               let email = account.email, !email.isEmpty
+            {
+                return email
+            }
+            return ""
+        }()
+        return RunicScreenshotMode.sanitize(email: resolved) ?? resolved
     }
 
     private static func plan(
@@ -1727,7 +1735,7 @@ extension UsageMenuCardView.Model {
     }
 
     private static func insightsProjectDisplayName(_ summary: UsageLedgerProjectSummary) -> String {
-        let displayName = summary.displayProjectName
+        let displayName = RunicProjectDisplay.name(for: summary)
         guard let annotation = self.projectIdentityAnnotation(
             displayName: displayName,
             projectID: summary.projectID,
@@ -1750,7 +1758,7 @@ extension UsageMenuCardView.Model {
 
         let shouldAnnotateSource = normalizedSource != .projectName && normalizedSource != .budgetOverride
         let shouldAnnotateConfidence = normalizedConfidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
         guard shouldAnnotateSource || shouldAnnotateConfidence || isUnknown else { return nil }
 
         var parts: [String] = []

@@ -125,13 +125,33 @@ private struct GlassStatCard: View {
         }
         .padding(RunicSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(self.runicTheme.menuCardGradient))
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                    .fill(self.runicTheme.menuCardGradient)
+                if !self.runicTheme.isTerminalHUD {
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.18)
+                }
+                if self.runicTheme.isTerminalHUD {
+                    RunicTerminalScanlineOverlay(opacity: 0.55)
+                        .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous))
+                }
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                .stroke(self.runicTheme.cardStroke.opacity(RunicColors.Opacity.medium), lineWidth: 0.5))
+                .stroke(
+                    self.runicTheme.isTerminalHUD
+                        ? self.runicTheme.accent.opacity(0.52)
+                        : self.runicTheme.cardStroke.opacity(RunicColors.Opacity.medium),
+                    lineWidth: self.runicTheme.isTerminalHUD ? 0.9 : 0.5))
+        .overlay {
+            if self.runicTheme.isTerminalHUD {
+                RunicTerminalCornerOverlay(inset: 2, length: 11, lineWidth: 1, opacity: 0.70)
+            }
+        }
         .shadow(color: self.runicTheme.accent.opacity(0.10), radius: 4, y: 2)
         .glassShimmer()
     }

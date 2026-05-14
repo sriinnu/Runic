@@ -32,6 +32,7 @@ struct AnalyticsPane: View {
     @State private var budgetErrorMessage: String?
 
     @State private var appeared = false
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         LiquidPreferencesPane {
@@ -350,8 +351,12 @@ struct AnalyticsPane: View {
             }
         }
         .padding(RunicSpacing.xs)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(RunicCornerRadius.sm)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.runicTheme.menuSubtleFill))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
     // MARK: - Budget row
@@ -390,8 +395,12 @@ struct AnalyticsPane: View {
             .buttonStyle(.plain)
         }
         .padding(RunicSpacing.xs)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(RunicCornerRadius.sm)
+        .background(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .fill(self.runicTheme.menuSubtleFill))
+        .overlay(
+            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
     // MARK: - Helpers
@@ -613,8 +622,11 @@ private struct AnalyticsAddBudgetSheet: View {
                 .fontWeight(.semibold)
 
             Form {
-                TextField("Project ID", text: self.$projectID)
+                TextField("Project ID or workspace path", text: self.$projectID)
                     .textFieldStyle(.roundedBorder)
+                Text("Use the project identifier from a provider's Projects breakdown. This is not the provider name.")
+                    .font(RunicFont.caption)
+                    .foregroundStyle(.secondary)
                 TextField("Project Name (optional)", text: self.$projectName)
                     .textFieldStyle(.roundedBorder)
                 TextField("Monthly Limit (USD)", text: self.$monthlyLimit)

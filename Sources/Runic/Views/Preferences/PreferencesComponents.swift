@@ -35,7 +35,14 @@ struct PreferencesPane<Content: View>: View {
             .padding(.vertical, PreferencesLayoutMetrics.paneVertical)
         }
         .foregroundStyle(self.runicTheme.primaryText)
-        .background(self.runicTheme.surface.opacity(0.42))
+        .background {
+            ZStack {
+                self.runicTheme.menuSurfaceGradient
+                if self.runicTheme.isTerminalHUD {
+                    RunicTerminalScanlineOverlay(opacity: 0.80)
+                }
+            }
+        }
     }
 }
 
@@ -62,7 +69,14 @@ struct PreferencesListPane<Content: View>: View {
             .padding(.horizontal, self.horizontalPadding)
             .padding(.vertical, self.verticalPadding)
             .foregroundStyle(self.runicTheme.primaryText)
-            .background(self.runicTheme.surface.opacity(0.42))
+            .background {
+                ZStack {
+                    self.runicTheme.menuSurfaceGradient
+                    if self.runicTheme.isTerminalHUD {
+                        RunicTerminalScanlineOverlay(opacity: 0.80)
+                    }
+                }
+            }
     }
 }
 
@@ -141,6 +155,7 @@ private struct PreferenceStepperControl: View {
     let canIncrement: Bool
     let onDecrement: () -> Void
     let onIncrement: () -> Void
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
@@ -158,7 +173,10 @@ private struct PreferenceStepperControl: View {
                 .padding(.vertical, RunicSpacing.xxs)
                 .background(
                     RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor)))
+                        .fill(self.runicTheme.menuSubtleFill))
+                .overlay(
+                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        .stroke(self.runicTheme.menuSeparatorColor.opacity(0.62), lineWidth: 0.7))
 
             Button(action: self.onIncrement) {
                 Image(systemName: "plus")

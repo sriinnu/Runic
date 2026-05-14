@@ -25,24 +25,28 @@ struct MenuCardEntranceModifier: ViewModifier {
 /// Subtle continuous shimmer sweep on glass surfaces.
 struct GlassShimmerModifier: ViewModifier {
     @State private var shimmerPhase: CGFloat = -1
+    @Environment(\.runicTheme) private var runicTheme
 
     func body(content: Content) -> some View {
         content
             .overlay(
                 GeometryReader { geo in
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: max(0, self.shimmerPhase - 0.15)),
-                            .init(color: .white.opacity(0.06), location: self.shimmerPhase),
-                            .init(color: .clear, location: min(1, self.shimmerPhase + 0.15)),
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .allowsHitTesting(false)
+                    if !self.runicTheme.isTerminalHUD {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: max(0, self.shimmerPhase - 0.15)),
+                                .init(color: .white.opacity(0.06), location: self.shimmerPhase),
+                                .init(color: .clear, location: min(1, self.shimmerPhase + 0.15)),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .allowsHitTesting(false)
+                    }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)))
             .onAppear {
+                guard !self.runicTheme.isTerminalHUD else { return }
                 withAnimation(.easeInOut(duration: 2.0).delay(0.5)) {
                     self.shimmerPhase = 1.2
                 }

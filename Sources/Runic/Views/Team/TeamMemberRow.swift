@@ -9,6 +9,7 @@ struct TeamMemberRow: View {
     let onChangeRole: () -> Void
     let onRemove: () -> Void
     @State private var isHovering = false
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(spacing: RunicSpacing.sm) {
@@ -84,7 +85,7 @@ struct TeamMemberRow: View {
         .padding(.vertical, RunicSpacing.xs)
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(self.isHovering ? Color(nsColor: .controlBackgroundColor) : Color.clear))
+                .fill(self.isHovering ? self.runicTheme.menuSubtleFill : Color.clear))
         .onHover { hovering in self.isHovering = hovering }
     }
 

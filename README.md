@@ -18,7 +18,23 @@ Monitor usage, quotas, context labels, and best-effort cost signals across 27 AI
 
 ## What it does
 
-Runic sits in your menubar and shows how much of your AI subscription you've used, what it's costing, and when your limits reset. One click gives you charts, breakdowns, and forecasts across all your providers.
+Runic sits in your menubar and shows how much of your AI subscription you've used, what it's costing, and when your limits reset. One click gives you charts, breakdowns, forecasts, scoped exports, and provider health across your enabled providers.
+
+## Screenshots
+
+Screenshots below use sanitized demo data.
+
+| Codex Menu | Timeline Details |
+|---|---|
+| <img src="assets/screenshots/menubar-codex.png" alt="Runic Codex provider menu with terminal theme, quota bars, and timeline controls" width="360" /> | <img src="assets/screenshots/menubar-codex-details.png" alt="Runic Codex timeline detail panel with scoped CSV and JSON export actions" width="360" /> |
+
+| Claude Menu | General Settings |
+|---|---|
+| <img src="assets/screenshots/menubar-claude.png" alt="Runic Claude provider menu with terminal theme and usage timeline" width="360" /> | <img src="assets/screenshots/settings-general.png" alt="Runic General settings showing chart, number, date, theme, and preview controls" width="360" /> |
+
+| Performance Settings |
+|---|
+| <img src="assets/screenshots/settings-performance.png" alt="Runic Performance settings showing monitoring, retention, quality prompts, and database controls" width="360" /> |
 
 ## Supported Providers
 
@@ -68,16 +84,16 @@ Context labels prefer Kosha-discovery 1.2.0's local TTL-backed capability regist
 - Anomaly detection
 
 **Export & Notifications**
-- Export as CSV or JSON
+- Export the active panel as CSV or JSON (timeline, hourly, weekly, utilization, windows, projects, or models)
 - Budget breach alerts via macOS notifications
 - macOS widgets (usage, history, compact, switcher)
 - CLI tool (`RunicCLI`)
 
 **Design**
-- System, Light, Dark, Pine, Nocturne, Prism, and Terminal themes
+- System, Light, Dark, Daybreak, Pine, Nocturne, Prism, Glass, and Terminal themes
 - Liquid UI with glass materials and animated progress bars
 - Staggered entrance animations and glass shimmer effects
-- Custom font system — 7 bundled families (Fira Code, JetBrains Mono, IBM Plex Mono, Space Mono, Inconsolata, Caveat, SF Pro/Mono) with live switching
+- Custom font system with live preview and theme-aware contrast rules
 - Drop-in font extensibility — add TTF/OTF to `Resources/Fonts`, rebuild, auto-discovered
 - Design tokens for typography, colors, spacing, corner radius, animation
 - VoiceOver accessible
@@ -99,6 +115,12 @@ Usage windows and reset countdowns are provider-reported when available. A five-
 
 **Download** the latest release from [GitHub Releases](https://github.com/sriinnu/Runic/releases/latest), unzip, and drag `Runic.app` to Applications. Signed and notarized — no Gatekeeper warnings.
 
+**Homebrew Cask:**
+
+```bash
+brew install --cask sriinnu/tap/runic
+```
+
 **Or build from source:**
 
 ```bash
@@ -117,14 +139,26 @@ Open **Preferences** from the menubar. Each provider has its own settings:
 
 API keys and locally entered secrets are stored in macOS Keychain. CLI or browser-backed providers still depend on the provider's own local session and may require re-login if that external session expires or mismatches.
 
+## CLI
+
+Runic bundles `RunicCLI` for terminal/script usage:
+
+```bash
+runic --provider all --format json --pretty
+runic cost --provider claude --format json --pretty
+```
+
+Install it from **Preferences → Advanced → Install CLI**. See [docs/cli.md](docs/cli.md) for command details and JSON fields.
+
 ## Privacy
 
 Zero telemetry. No analytics. No crash reporting. Runic stores usage data locally and makes network requests only for enabled provider fetches, status/update checks, and optional web-dashboard features.
 
-## Roadmap
+API keys are stored in macOS Keychain. Browser-backed providers reuse local browser/WebKit sessions where available; Runic does not store provider passwords. Local usage logs and CLI/JSON output can include account identity fields such as email addresses, so redact diagnostics before sharing them publicly.
 
-- Windows desktop app
-- Web app
+## For Contributors And Agents
+
+Start with [SKILL.md](SKILL.md), [docs/architecture.md](docs/architecture.md), [docs/provider.md](docs/provider.md), and [docs/providers.md](docs/providers.md). Keep README user-facing and keep auth internals, local paths, research notes, and generated reports out of git.
 
 ## License
 

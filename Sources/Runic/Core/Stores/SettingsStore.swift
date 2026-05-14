@@ -146,6 +146,7 @@ enum Theme: String, CaseIterable, Identifiable {
     case system
     case light
     case dark
+    case daybreak
     case pine
     case nocturne
     case prism
@@ -161,6 +162,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .system: "System"
         case .light: "Light"
         case .dark: "Dark"
+        case .daybreak: "Daybreak"
         case .pine: "Pine"
         case .nocturne: "Nocturne"
         case .prism: "Prism"

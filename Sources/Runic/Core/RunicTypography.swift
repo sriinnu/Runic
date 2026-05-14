@@ -92,6 +92,177 @@ enum RunicTypography {
 
 // MARK: - Available font choices
 
+enum RunicBackgroundTone {
+    case light
+    case dark
+}
+
+enum RunicTextRole {
+    case primary
+    case secondary
+    case muted
+}
+
+struct RunicFontContrast: Hashable {
+    let lightPrimaryOpacity: Double
+    let lightSecondaryOpacity: Double
+    let lightMutedOpacity: Double
+    let darkPrimaryOpacity: Double
+    let darkSecondaryOpacity: Double
+    let darkMutedOpacity: Double
+
+    func color(role: RunicTextRole, on tone: RunicBackgroundTone) -> Color {
+        switch (tone, role) {
+        case (.light, .primary): Color.black.opacity(self.lightPrimaryOpacity)
+        case (.light, .secondary): Color.black.opacity(self.lightSecondaryOpacity)
+        case (.light, .muted): Color.black.opacity(self.lightMutedOpacity)
+        case (.dark, .primary): Color.white.opacity(self.darkPrimaryOpacity)
+        case (.dark, .secondary): Color.white.opacity(self.darkSecondaryOpacity)
+        case (.dark, .muted): Color.white.opacity(self.darkMutedOpacity)
+        }
+    }
+}
+
+struct RunicFontRules: Hashable {
+    let letterSpacing: CGFloat
+    let compactLetterSpacing: CGFloat
+    let wordSpacing: CGFloat
+    let lineSpacing: CGFloat
+    let prefersMonospacedDigits: Bool
+    let contrast: RunicFontContrast
+
+    var summary: String {
+        "letter \(Self.format(self.letterSpacing)) · word \(Self.format(self.wordSpacing)) · line \(Self.format(self.lineSpacing))"
+    }
+
+    static func rules(for family: String) -> RunicFontRules {
+        let normalized = family.lowercased()
+        if family == RunicFontChoice.sfMono.id ||
+            normalized.contains("fira") ||
+            normalized.contains("jetbrains") ||
+            normalized.contains("ibm plex mono") ||
+            normalized.contains("menlo") ||
+            normalized.contains("monaco") ||
+            normalized.contains("space mono")
+        {
+            return RunicFontRules(
+                letterSpacing: 0.10,
+                compactLetterSpacing: 0,
+                wordSpacing: 0,
+                lineSpacing: 1.0,
+                prefersMonospacedDigits: true,
+                contrast: RunicFontContrast(
+                    lightPrimaryOpacity: 0.90,
+                    lightSecondaryOpacity: 0.62,
+                    lightMutedOpacity: 0.42,
+                    darkPrimaryOpacity: 0.94,
+                    darkSecondaryOpacity: 0.66,
+                    darkMutedOpacity: 0.46))
+        }
+
+        if normalized.contains("inconsolata") {
+            return RunicFontRules(
+                letterSpacing: 0.15,
+                compactLetterSpacing: 0.05,
+                wordSpacing: 0.10,
+                lineSpacing: 1.2,
+                prefersMonospacedDigits: true,
+                contrast: RunicFontContrast(
+                    lightPrimaryOpacity: 0.91,
+                    lightSecondaryOpacity: 0.63,
+                    lightMutedOpacity: 0.43,
+                    darkPrimaryOpacity: 0.95,
+                    darkSecondaryOpacity: 0.67,
+                    darkMutedOpacity: 0.48))
+        }
+
+        if normalized.contains("caveat") {
+            return RunicFontRules(
+                letterSpacing: 0.20,
+                compactLetterSpacing: 0.10,
+                wordSpacing: 0.30,
+                lineSpacing: 2.4,
+                prefersMonospacedDigits: false,
+                contrast: RunicFontContrast(
+                    lightPrimaryOpacity: 0.94,
+                    lightSecondaryOpacity: 0.68,
+                    lightMutedOpacity: 0.48,
+                    darkPrimaryOpacity: 0.97,
+                    darkSecondaryOpacity: 0.72,
+                    darkMutedOpacity: 0.52))
+        }
+
+        if family == RunicFontChoice.newYork.id ||
+            normalized.contains("palatino") ||
+            normalized.contains("optima")
+        {
+            return RunicFontRules(
+                letterSpacing: 0,
+                compactLetterSpacing: 0,
+                wordSpacing: 0.20,
+                lineSpacing: 2.0,
+                prefersMonospacedDigits: false,
+                contrast: RunicFontContrast(
+                    lightPrimaryOpacity: 0.88,
+                    lightSecondaryOpacity: 0.58,
+                    lightMutedOpacity: 0.40,
+                    darkPrimaryOpacity: 0.93,
+                    darkSecondaryOpacity: 0.64,
+                    darkMutedOpacity: 0.46))
+        }
+
+        if normalized.contains("din") {
+            return RunicFontRules(
+                letterSpacing: 0.45,
+                compactLetterSpacing: 0.25,
+                wordSpacing: 0.15,
+                lineSpacing: 0.8,
+                prefersMonospacedDigits: false,
+                contrast: RunicFontContrast(
+                    lightPrimaryOpacity: 0.91,
+                    lightSecondaryOpacity: 0.62,
+                    lightMutedOpacity: 0.42,
+                    darkPrimaryOpacity: 0.95,
+                    darkSecondaryOpacity: 0.66,
+                    darkMutedOpacity: 0.47))
+        }
+
+        if family == RunicFontChoice.sfRounded.id || normalized.contains("avenir") || normalized.contains("gill sans") {
+            return RunicFontRules(
+                letterSpacing: 0,
+                compactLetterSpacing: 0,
+                wordSpacing: 0.10,
+                lineSpacing: 1.5,
+                prefersMonospacedDigits: false,
+                contrast: RunicFontContrast(
+                    lightPrimaryOpacity: 0.89,
+                    lightSecondaryOpacity: 0.60,
+                    lightMutedOpacity: 0.41,
+                    darkPrimaryOpacity: 0.94,
+                    darkSecondaryOpacity: 0.65,
+                    darkMutedOpacity: 0.46))
+        }
+
+        return RunicFontRules(
+            letterSpacing: 0,
+            compactLetterSpacing: 0,
+            wordSpacing: 0,
+            lineSpacing: 1.4,
+            prefersMonospacedDigits: false,
+            contrast: RunicFontContrast(
+                lightPrimaryOpacity: 0.88,
+                lightSecondaryOpacity: 0.60,
+                lightMutedOpacity: 0.40,
+                darkPrimaryOpacity: 0.93,
+                darkSecondaryOpacity: 0.64,
+                darkMutedOpacity: 0.45))
+    }
+
+    private static func format(_ value: CGFloat) -> String {
+        String(format: "%.2f", Double(value))
+    }
+}
+
 /// A selectable font option shown in preferences.
 struct RunicFontChoice: Identifiable, Hashable {
     let id: String
@@ -100,23 +271,50 @@ struct RunicFontChoice: Identifiable, Hashable {
     /// System fonts — always available, no bundling.
     static let sfPro = RunicFontChoice(id: "__sf_pro__", displayName: "SF Pro")
     static let sfMono = RunicFontChoice(id: "__sf_mono__", displayName: "SF Mono")
+    static let sfRounded = RunicFontChoice(id: "__sf_rounded__", displayName: "SF Rounded")
+    static let newYork = RunicFontChoice(id: "__new_york__", displayName: "New York")
+
+    /// Curated macOS families. They are shown only when available on the machine.
+    static let avenirNext = RunicFontChoice(id: "Avenir Next", displayName: "Avenir Next")
+    static let menlo = RunicFontChoice(id: "Menlo", displayName: "Menlo")
+    static let dinAlternate = RunicFontChoice(id: "DIN Alternate", displayName: "DIN Alternate")
+    static let optima = RunicFontChoice(id: "Optima", displayName: "Optima")
+
+    var rules: RunicFontRules {
+        RunicFontRules.rules(for: self.id)
+    }
 
     /// Font used to render this choice's name in the picker (preview in its own typeface).
+    @MainActor
     var previewFont: Font {
-        switch self.id {
-        case Self.sfPro.id: .system(.body)
-        case Self.sfMono.id: .system(.body, design: .monospaced)
-        default: Font.custom(RunicTypography.fontName(for: self.id), fixedSize: 13)
-        }
+        RunicFont.previewFont(for: self.id, size: 13)
     }
 
     /// Build the full list: system fonts first, then bundled custom fonts.
     static func availableChoices() -> [RunicFontChoice] {
-        var choices: [RunicFontChoice] = [.sfPro, .sfMono]
+        var choices: [RunicFontChoice] = [.sfPro, .sfMono, .sfRounded, .newYork]
+        let curatedFamilies: [RunicFontChoice] = [.avenirNext, .menlo, .dinAlternate, .optima]
+        for choice in curatedFamilies where self.isFontFamilyAvailable(choice.id) {
+            choices.append(choice)
+        }
+
+        var seen = Set(choices.map(\.id))
         for family in RunicTypography.discoverBundledFontFamilies() {
+            guard seen.insert(family).inserted else { continue }
             choices.append(RunicFontChoice(id: family, displayName: family))
         }
         return choices
+    }
+
+    static func displayName(for id: String) -> String {
+        if let choice = self.availableChoices().first(where: { $0.id == id }) {
+            return choice.displayName
+        }
+        return id
+    }
+
+    private static func isFontFamilyAvailable(_ family: String) -> Bool {
+        NSFontManager.shared.availableMembers(ofFontFamily: family)?.isEmpty == false
     }
 }
 
@@ -127,13 +325,17 @@ enum RunicFont {
     /// The active font family identifier. Updated from SettingsStore.
     static var family: String = "Fira Code"
 
+    static var activeRules: RunicFontRules {
+        RunicFontRules.rules(for: self.family)
+    }
+
     private static var isSystemFont: Bool {
         family.hasPrefix("__")
     }
 
     /// Font design used by `.runicTypography()` for system-font fallback.
     static var systemFallbackDesign: Font.Design {
-        family == RunicFontChoice.sfPro.id ? .default : .monospaced
+        self.systemDesign(for: self.family)
     }
 
     // MARK: Semantic sizes
@@ -187,6 +389,8 @@ enum RunicFont {
         switch self.family {
         case RunicFontChoice.sfPro.id: .system(size: size)
         case RunicFontChoice.sfMono.id: .system(size: size, design: .monospaced)
+        case RunicFontChoice.sfRounded.id: .system(size: size, design: .rounded)
+        case RunicFontChoice.newYork.id: .system(size: size, design: .serif)
         default: Font.custom(RunicTypography.fontName(for: self.family), fixedSize: size)
         }
     }
@@ -196,7 +400,19 @@ enum RunicFont {
         switch self.family {
         case RunicFontChoice.sfPro.id: .system(size: size, weight: weight)
         case RunicFontChoice.sfMono.id: .system(size: size, weight: weight, design: .monospaced)
+        case RunicFontChoice.sfRounded.id: .system(size: size, weight: weight, design: .rounded)
+        case RunicFontChoice.newYork.id: .system(size: size, weight: weight, design: .serif)
         default: Font.custom(RunicTypography.fontName(for: self.family), fixedSize: size).weight(weight)
+        }
+    }
+
+    static func previewFont(for family: String, size: CGFloat) -> Font {
+        switch family {
+        case RunicFontChoice.sfPro.id: .system(size: size)
+        case RunicFontChoice.sfMono.id: .system(size: size, design: .monospaced)
+        case RunicFontChoice.sfRounded.id: .system(size: size, design: .rounded)
+        case RunicFontChoice.newYork.id: .system(size: size, design: .serif)
+        default: Font.custom(RunicTypography.fontName(for: family), fixedSize: size)
         }
     }
 
@@ -206,7 +422,22 @@ enum RunicFont {
         switch self.family {
         case RunicFontChoice.sfPro.id: .system(style)
         case RunicFontChoice.sfMono.id: .system(style, design: .monospaced)
+        case RunicFontChoice.sfRounded.id: .system(style, design: .rounded)
+        case RunicFontChoice.newYork.id: .system(style, design: .serif)
         default: Font.custom(RunicTypography.fontName(for: self.family), size: size, relativeTo: style)
+        }
+    }
+
+    private static func systemDesign(for family: String) -> Font.Design {
+        switch family {
+        case RunicFontChoice.sfMono.id:
+            .monospaced
+        case RunicFontChoice.sfRounded.id:
+            .rounded
+        case RunicFontChoice.newYork.id:
+            .serif
+        default:
+            RunicFontRules.rules(for: family).prefersMonospacedDigits ? .monospaced : .default
         }
     }
 }
@@ -220,6 +451,10 @@ extension RunicFont {
             return .systemFont(ofSize: size, weight: weight)
         case RunicFontChoice.sfMono.id:
             return .monospacedSystemFont(ofSize: size, weight: weight)
+        case RunicFontChoice.sfRounded.id:
+            return self.nsSystemFont(size: size, weight: weight, design: .rounded)
+        case RunicFontChoice.newYork.id:
+            return self.nsSystemFont(size: size, weight: weight, design: .serif)
         default:
             let fontName = RunicTypography.fontName(for: self.family, nsWeight: weight)
             if let font = NSFont(name: fontName, size: size) {
@@ -234,6 +469,16 @@ extension RunicFont {
                 ?? .monospacedSystemFont(ofSize: size, weight: weight)
         }
     }
+
+    private static func nsSystemFont(
+        size: CGFloat,
+        weight: NSFont.Weight,
+        design: NSFontDescriptor.SystemDesign) -> NSFont
+    {
+        let base = NSFont.systemFont(ofSize: size, weight: weight)
+        guard let descriptor = base.fontDescriptor.withDesign(design) else { return base }
+        return NSFont(descriptor: descriptor, size: size) ?? base
+    }
 }
 
 // MARK: - View modifier
@@ -244,6 +489,8 @@ extension View {
         self
             .font(RunicFont.body)
             .fontDesign(RunicFont.systemFallbackDesign)
+            .tracking(RunicFont.activeRules.letterSpacing)
+            .lineSpacing(RunicFont.activeRules.lineSpacing)
             .dynamicTypeSize(RunicTypography.typeSize)
     }
 }

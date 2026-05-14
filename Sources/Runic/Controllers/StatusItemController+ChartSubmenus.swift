@@ -243,10 +243,10 @@ extension StatusItemController {
             } else if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: projectID) {
                 fallback
             } else {
-                "Unknown project"
+                RunicProjectDisplay.unattributedName
             }
         } else {
-            "Unknown project"
+            RunicProjectDisplay.unattributedName
         }
         guard includeAttribution else { return displayName }
         guard let annotation = self.projectNameAnnotation(
@@ -273,7 +273,7 @@ extension StatusItemController {
 
         let shouldAnnotateSource = normalizedSource != .projectName && normalizedSource != .budgetOverride
         let shouldAnnotateConfidence = normalizedConfidence != .high
-        let isUnknown = displayName == "Unknown project"
+        let isUnknown = RunicProjectDisplay.isUnattributed(displayName)
         guard shouldAnnotateSource || shouldAnnotateConfidence || isUnknown else { return nil }
 
         var parts: [String] = []

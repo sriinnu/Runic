@@ -440,7 +440,10 @@ extension StatusItemController {
             if !item.isSeparatorItem, item.view == nil, !item.title.isEmpty {
                 item.attributedTitle = NSAttributedString(
                     string: item.title,
-                    attributes: [.font: RunicFont.nsFont(size: NSFont.systemFontSize)])
+                    attributes: [
+                        .font: RunicFont.nsFont(size: NSFont.systemFontSize),
+                        .kern: RunicFont.activeRules.letterSpacing,
+                    ])
             }
             if let submenu = item.submenu {
                 self.applyRunicFont(to: submenu)

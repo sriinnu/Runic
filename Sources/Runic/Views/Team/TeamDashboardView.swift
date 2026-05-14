@@ -6,6 +6,7 @@ struct TeamDashboardView: View {
     let team: Team
     @State private var selectedPeriod: TimePeriod = .week
     @State private var selectedMemberID: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         ScrollView {
@@ -233,7 +234,7 @@ struct TeamDashboardView: View {
                     .padding(.vertical, RunicSpacing.xs)
                     .background(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.5)))
+                            .fill(self.runicTheme.menuSubtleFill.opacity(0.60)))
                 }
             }
         }
@@ -270,7 +271,10 @@ struct TeamDashboardView: View {
         .padding(RunicSpacing.sm)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor)))
+                .fill(self.runicTheme.menuCardGradient))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
     private var memberUsageData: [MemberUsageItem] {

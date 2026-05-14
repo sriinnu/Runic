@@ -24,6 +24,7 @@ struct ProviderTabBarView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: RunicSpacing.compact) {
                 ForEach(self.tabs) { tab in
+                    let selectedColor = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : tab.brandColor
                     Button {
                         self.onSelect(tab.provider)
                     } label: {
@@ -47,19 +48,19 @@ struct ProviderTabBarView: View {
                         .background(
                             Capsule(style: .continuous)
                                 .fill(tab.isSelected
-                                    ? tab.brandColor.opacity(RunicColors.Opacity.medium)
+                                    ? selectedColor.opacity(self.runicTheme.isTerminalHUD ? 0.20 : RunicColors.Opacity.medium)
                                     : self.runicTheme.menuSubtleFill))
                         .overlay(
                             Capsule(style: .continuous)
                                 .stroke(
                                     tab.isSelected
-                                        ? tab.brandColor.opacity(RunicColors.Opacity.strong)
+                                        ? selectedColor.opacity(self.runicTheme.isTerminalHUD ? 0.72 : RunicColors.Opacity.strong)
                                         : self.runicTheme.cardStroke.opacity(RunicColors.Opacity.medium),
-                                    lineWidth: 0.5))
-                        .foregroundStyle(tab.isSelected ? tab.brandColor : self.runicTheme.secondaryText)
+                                    lineWidth: self.runicTheme.isTerminalHUD ? 0.9 : 0.5))
+                        .foregroundStyle(tab.isSelected ? selectedColor : self.runicTheme.secondaryText)
                         .shadow(
-                            color: tab.isSelected ? tab.brandColor.opacity(0.15) : .clear,
-                            radius: 4, y: 1)
+                            color: tab.isSelected ? selectedColor.opacity(self.runicTheme.isTerminalHUD ? 0.28 : 0.15) : .clear,
+                            radius: self.runicTheme.isTerminalHUD ? 6 : 4, y: 1)
                     }
                     .buttonStyle(TabButtonStyle())
                 }
@@ -68,7 +69,14 @@ struct ProviderTabBarView: View {
             .padding(.vertical, RunicSpacing.xs)
         }
         .frame(minWidth: self.width, maxWidth: .infinity)
-        .background(self.runicTheme.menuSurfaceGradient)
+        .background {
+            ZStack {
+                self.runicTheme.menuSurfaceGradient
+                if self.runicTheme.isTerminalHUD {
+                    RunicTerminalScanlineOverlay(opacity: 0.80)
+                }
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Provider tabs")
     }
