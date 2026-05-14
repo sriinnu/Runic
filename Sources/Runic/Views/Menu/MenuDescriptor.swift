@@ -186,8 +186,9 @@ struct MenuDescriptor {
         fallback: AccountInfo) -> [Entry]
     {
         var entries: [Entry] = []
-        let emailText = snapshot?.accountEmail(for: provider)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let emailText = RunicScreenshotMode.sanitize(
+            email: snapshot?.accountEmail(for: provider)?
+                .trimmingCharacters(in: .whitespacesAndNewlines))
         let planText = snapshot?.loginMethod(for: provider)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -199,7 +200,10 @@ struct MenuDescriptor {
         }
 
         if metadata.usesAccountFallback {
-            if emailText?.isEmpty ?? true, let fallbackEmail = fallback.email, !fallbackEmail.isEmpty {
+            if emailText?.isEmpty ?? true,
+               let fallbackEmail = RunicScreenshotMode.sanitize(email: fallback.email),
+               !fallbackEmail.isEmpty
+            {
                 entries.append(.text("Account: \(fallbackEmail)", .secondary))
             }
             if planText?.isEmpty ?? true, let fallbackPlan = fallback.plan, !fallbackPlan.isEmpty {

@@ -301,7 +301,7 @@ private enum ProviderInsightsComposer {
     }
 
     private static func actorValue(identity: ProviderIdentitySnapshot?) -> String? {
-        let email = self.trimmed(identity?.accountEmail)
+        let email = RunicScreenshotMode.sanitize(email: self.trimmed(identity?.accountEmail))
         let organization = self.trimmed(identity?.accountOrganization)
         if let email, let organization {
             if email.caseInsensitiveCompare(organization) == .orderedSame {

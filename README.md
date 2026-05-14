@@ -22,15 +22,9 @@ Runic sits in your menubar and shows how much of your AI subscription you've use
 
 ## Screenshots
 
-Screenshots below use sanitized demo data.
+Screenshots must use demo data or be redacted before commit. Do not commit captures that expose account emails, org IDs, local paths, API keys, token hints, or real usage details.
 
-| Menubar | Terminal Theme |
-|---|---|
-| <img src="assets/screenshots/menubar-daybreak.png" alt="Runic menubar provider view with usage cards and timeline" width="360" /> | <img src="assets/screenshots/menubar-terminal.png" alt="Runic terminal theme menubar provider view" width="360" /> |
-
-| Provider Settings | Themes & Fonts |
-|---|---|
-| <img src="assets/screenshots/settings-providers.png" alt="Runic provider settings with credential status" width="460" /> | <img src="assets/screenshots/settings-themes.png" alt="Runic appearance settings with themes and fonts" width="460" /> |
+Fresh public screenshots will be added from sanitized captures.
 
 ## Supported Providers
 

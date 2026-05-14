@@ -6,7 +6,7 @@
     <title>Runic</title>
     <meta
       name="description"
-      content="Tiny macOS menu bar app that keeps your Codex, Claude Code, Cursor, Gemini, Antigravity, Droid (Factory), Copilot, and z.ai limits visible."
+      content="Runic is a macOS menu bar app for AI usage, quota, context, cost, and provider health across local and API-backed providers."
     />
     <meta name="theme-color" content="#0b1016" />
     <link rel="canonical" href="https://runic.app/" />
@@ -14,11 +14,11 @@
     <meta property="og:title" content="Runic" />
     <meta
       property="og:description"
-      content="Tiny macOS menu bar app that keeps your Codex, Claude Code, Cursor, Gemini, Antigravity, Droid (Factory), Copilot, and z.ai limits visible."
+      content="A macOS menu bar app for AI usage, quota, context, cost, and provider health across local and API-backed providers."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://runic.app/" />
-    <meta property="og:image" content="https://runic.app/runic.png" />
+    <meta property="og:image" content="https://runic.app/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="icon" href="./icon.png" type="image/png" />
@@ -31,7 +31,7 @@
         <a class="brand" href="https://github.com/sriinnu/Runic" aria-label="Runic on GitHub">
           <span class="name">
             <h1 class="title">Runic</h1>
-            <p class="tagline">Codex, Claude Code, Cursor, Gemini, Antigravity, Droid, Copilot, z.ai limits.</p>
+            <p class="tagline">AI usage, quota, context, cost, and provider health in your menu bar.</p>
           </span>
         </a>
         <nav class="links" aria-label="Links">
@@ -53,7 +53,7 @@
             <div>
               <h2>Stay ahead of resets.</h2>
               <p>
-                Runic keeps session + weekly limits (and credits) in the menu bar, so you know when you're safe to ship.
+                Runic keeps subscription windows, API credits, token usage, and best-effort costs in the menu bar.
               </p>
             </div>
           </div>
@@ -87,16 +87,16 @@
             }
           </script>
           <ul class="bullets" aria-label="What it does">
-            <li>One status item per provider (Codex, Claude, Cursor, Gemini, Antigravity, Droid, Copilot, z.ai).</li>
-            <li>Session + weekly bars with reset times and optional credits.</li>
-            <li>Web-backed limits via browser cookies (Codex, Claude, Cursor, Droid).</li>
-            <li>Two-bar icon: session on top, weekly on bottom, dimmed on errors.</li>
-            <li>Minimal UI, no Dock icon.</li>
+            <li>Provider-level usage across Claude, Codex, Gemini, Cursor, Copilot, z.ai, Vercel AI, and API-backed model providers.</li>
+            <li>Session, weekly, credit, model, project, and cost views where providers expose enough data.</li>
+            <li>Local-first credentials through Keychain, provider CLIs, browser sessions, and local capability metadata.</li>
+            <li>Theme-aware menu UI, scoped CSV/JSON exports, widgets, alerts, and a bundled CLI.</li>
+            <li>Minimal macOS app with no Dock icon.</li>
           </ul>
         </div>
         <figure class="shot hero-shot" data-animate="3">
-          <img src="./runic.png" alt="Runic menu bar popover showing session and weekly usage." />
-          <figcaption>Menu card shows session + weekly usage, resets, and credits when available.</figcaption>
+          <img src="./icon.png" alt="Runic app icon." />
+          <figcaption>Runic keeps AI usage visible without leaving the menu bar.</figcaption>
         </figure>
       </section>
 
@@ -110,7 +110,7 @@
         <div class="card">
           <h3>Providers</h3>
           <p>
-            Codex · Claude Code · Cursor · Gemini · Antigravity · Droid · Copilot · z.ai<br />
+            Claude · Codex · Gemini · Cursor · Copilot · z.ai · Vercel AI · OpenRouter · Groq · DeepSeek · more<br />
             Open to new providers — see the <a href="https://github.com/sriinnu/Runic/blob/main/docs/provider.md">provider guide</a>.
           </p>
         </div>
@@ -118,8 +118,7 @@
           <h3>Privacy</h3>
           <p>
             Reuses existing browser cookies (Safari/Chrome/Firefox) for dashboard access — no passwords stored. When cookies
-            are missing, Runic falls back to local CLI output. Audit notes in
-            <a href="https://github.com/sriinnu/Runic/issues/12">issue #12</a>.
+            are missing, Runic falls back to local CLI output or provider APIs where configured.
           </p>
         </div>
       </section>
@@ -128,7 +127,7 @@
         <div class="card">
           <h3>Usage tracking</h3>
           <p>
-            Session + weekly meters with reset countdowns, plus optional credits and code review limits.
+            Session + weekly meters, API credits, scoped timelines, model/project breakdowns, and best-effort costs.
           </p>
         </div>
         <div class="card">

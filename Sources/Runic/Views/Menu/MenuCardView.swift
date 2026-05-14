@@ -1268,13 +1268,16 @@ extension UsageMenuCardView.Model {
         account: AccountInfo,
         metadata: ProviderMetadata) -> String
     {
-        if let email = snapshot?.accountEmail(for: provider), !email.isEmpty { return email }
-        if metadata.usesAccountFallback,
-           let email = account.email, !email.isEmpty
-        {
-            return email
-        }
-        return ""
+        let resolved: String = {
+            if let email = snapshot?.accountEmail(for: provider), !email.isEmpty { return email }
+            if metadata.usesAccountFallback,
+               let email = account.email, !email.isEmpty
+            {
+                return email
+            }
+            return ""
+        }()
+        return RunicScreenshotMode.sanitize(email: resolved) ?? resolved
     }
 
     private static func plan(
