@@ -22,9 +22,19 @@ Runic sits in your menubar and shows how much of your AI subscription you've use
 
 ## Screenshots
 
-Screenshots must use demo data or be redacted before commit. Do not commit captures that expose account emails, org IDs, local paths, API keys, token hints, or real usage details.
+Screenshots below use sanitized demo data.
 
-Fresh public screenshots will be added from sanitized captures.
+| Codex Menu | Timeline Details |
+|---|---|
+| <img src="assets/screenshots/menubar-codex.png" alt="Runic Codex provider menu with terminal theme, quota bars, and timeline controls" width="360" /> | <img src="assets/screenshots/menubar-codex-details.png" alt="Runic Codex timeline detail panel with scoped CSV and JSON export actions" width="360" /> |
+
+| Claude Menu | General Settings |
+|---|---|
+| <img src="assets/screenshots/menubar-claude.png" alt="Runic Claude provider menu with terminal theme and usage timeline" width="360" /> | <img src="assets/screenshots/settings-general.png" alt="Runic General settings showing chart, number, date, theme, and preview controls" width="360" /> |
+
+| Performance Settings |
+|---|
+| <img src="assets/screenshots/settings-performance.png" alt="Runic Performance settings showing monitoring, retention, quality prompts, and database controls" width="360" /> |
 
 ## Supported Providers
 
