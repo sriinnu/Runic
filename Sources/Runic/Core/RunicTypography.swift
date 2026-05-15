@@ -194,7 +194,8 @@ struct RunicFontRules: Hashable {
 
         if family == RunicFontChoice.newYork.id ||
             normalized.contains("palatino") ||
-            normalized.contains("optima")
+            normalized.contains("optima") ||
+            normalized.contains("hoefler")
         {
             return RunicFontRules(
                 letterSpacing: 0,
@@ -208,6 +209,22 @@ struct RunicFontRules: Hashable {
                     lightMutedOpacity: 0.40,
                     darkPrimaryOpacity: 0.93,
                     darkSecondaryOpacity: 0.64,
+                    darkMutedOpacity: 0.46))
+        }
+
+        if normalized.contains("helvetica") {
+            return RunicFontRules(
+                letterSpacing: 0,
+                compactLetterSpacing: 0,
+                wordSpacing: 0.05,
+                lineSpacing: 1.1,
+                prefersMonospacedDigits: false,
+                contrast: RunicFontContrast(
+                    lightPrimaryOpacity: 0.90,
+                    lightSecondaryOpacity: 0.61,
+                    lightMutedOpacity: 0.42,
+                    darkPrimaryOpacity: 0.94,
+                    darkSecondaryOpacity: 0.65,
                     darkMutedOpacity: 0.46))
         }
 
@@ -276,9 +293,12 @@ struct RunicFontChoice: Identifiable, Hashable {
 
     /// Curated macOS families. They are shown only when available on the machine.
     static let avenirNext = RunicFontChoice(id: "Avenir Next", displayName: "Avenir Next")
+    static let helveticaNeue = RunicFontChoice(id: "Helvetica Neue", displayName: "Helvetica Neue")
+    static let gillSans = RunicFontChoice(id: "Gill Sans", displayName: "Gill Sans")
     static let menlo = RunicFontChoice(id: "Menlo", displayName: "Menlo")
     static let dinAlternate = RunicFontChoice(id: "DIN Alternate", displayName: "DIN Alternate")
     static let optima = RunicFontChoice(id: "Optima", displayName: "Optima")
+    static let hoeflerText = RunicFontChoice(id: "Hoefler Text", displayName: "Hoefler Text")
 
     var rules: RunicFontRules {
         RunicFontRules.rules(for: self.id)
@@ -293,7 +313,15 @@ struct RunicFontChoice: Identifiable, Hashable {
     /// Build the full list: system fonts first, then bundled custom fonts.
     static func availableChoices() -> [RunicFontChoice] {
         var choices: [RunicFontChoice] = [.sfPro, .sfMono, .sfRounded, .newYork]
-        let curatedFamilies: [RunicFontChoice] = [.avenirNext, .menlo, .dinAlternate, .optima]
+        let curatedFamilies: [RunicFontChoice] = [
+            .avenirNext,
+            .helveticaNeue,
+            .gillSans,
+            .menlo,
+            .dinAlternate,
+            .optima,
+            .hoeflerText,
+        ]
         for choice in curatedFamilies where self.isFontFamilyAvailable(choice.id) {
             choices.append(choice)
         }

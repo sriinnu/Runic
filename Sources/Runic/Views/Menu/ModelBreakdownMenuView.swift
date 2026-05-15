@@ -25,6 +25,7 @@ struct ModelBreakdownMenuView: View {
                     .font(RunicFont.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
+                let detail = self.detailText(model: model)
                 // MARK: - Title
 
                 Text("Models")
@@ -46,6 +47,7 @@ struct ModelBreakdownMenuView: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: 100)
+                .help(detail)
                 .chartOverlay { _ in
                     GeometryReader { geo in
                         MouseLocationReader { location in
@@ -58,7 +60,7 @@ struct ModelBreakdownMenuView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Self.chartAccessibilityLabel(model: model))
 
-                Text(self.detailText(model: model))
+                Text(detail)
                     .font(RunicFont.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
@@ -70,6 +72,7 @@ struct ModelBreakdownMenuView: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     ForEach(model.chartItems) { item in
                         Self.modelRow(item: item, theme: self.runicTheme)
+                            .help(item.helpText(grandTotalTokens: model.grandTotalTokens))
                     }
                 }
 
@@ -181,6 +184,22 @@ struct ModelBreakdownMenuView: View {
         let requestCount: Int
         let costText: String?
         let color: Color
+
+        func helpText(grandTotalTokens: Int) -> String {
+            let share = grandTotalTokens > 0
+                ? Double(self.totalTokens) / Double(grandTotalTokens) * 100
+                : 0
+            var parts = [
+                self.displayName,
+                "\(UsageFormatter.tokenCountString(self.totalTokens)) tokens",
+                "\(String(format: "%.0f", share))%",
+                "\(self.requestCount) req",
+            ]
+            if let costText {
+                parts.append(costText)
+            }
+            return parts.joined(separator: " · ")
+        }
     }
 
     struct ModelModel {

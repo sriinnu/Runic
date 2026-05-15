@@ -75,16 +75,17 @@ Context labels prefer Kosha-discovery 1.2.0's local TTL-backed capability regist
 - Usage window comparison (dual-line session vs weekly)
 - Model breakdown (donut chart)
 - Project breakdown (horizontal bar chart)
+- Hover details for tokens, percent share, spend, attribution, and selected time range
 
 **Analytics**
 - Token usage tracking (input, output, cache)
 - Cost estimation with per-model pricing
 - Spend forecasting with budget breach detection
-- Project and model attribution
+- Project and model attribution, including an explicit "Unattributed usage" state when provider logs do not expose a readable project name
 - Anomaly detection
 
 **Export & Notifications**
-- Export the active panel as CSV or JSON (timeline, hourly, weekly, utilization, windows, projects, or models)
+- Export the active panel/range as CSV or JSON (timeline, hourly, weekly, utilization, windows, projects, or models)
 - Budget breach alerts via macOS notifications
 - macOS widgets (usage, history, compact, switcher)
 - CLI tool (`RunicCLI`)
@@ -103,7 +104,7 @@ Context labels prefer Kosha-discovery 1.2.0's local TTL-backed capability regist
 
 Runic reports what each provider or local client exposes. Claude and Codex currently provide the richest local usage signals; API providers vary by endpoint, account tier, and whether token usage, cache usage, quota, or model inventory is returned by their APIs.
 
-Context labels are model capacity labels, not proof that every token is still semantically retained in the active conversation. When Kosha-discovery 1.2.0 is available, Runic uses its schema-v1 model/provider registry as the freshest capability source; otherwise it uses built-in static fallbacks. Provider-side summarization or compaction may reduce effective retained context even when the model's maximum window is larger.
+Context labels are model capacity labels, not proof that every token is still semantically retained in the active conversation. When Kosha-discovery 1.2.0 is available, Runic uses its schema-v1 model/provider registry as the freshest capability source; otherwise it uses built-in static fallbacks. Provider-side summarization or compaction may reduce effective retained context even when the model's maximum window is larger. The menu distinguishes max context metadata from observed usage and labels whether the context capability came from Kosha, a model heuristic, or a built-in fallback.
 
 Compaction itself can consume tokens when the provider performs it through a model call. Runic counts those tokens when they appear in provider/API/local usage records, but it does not yet label them separately as "compaction tax" or estimate semantic context loss.
 

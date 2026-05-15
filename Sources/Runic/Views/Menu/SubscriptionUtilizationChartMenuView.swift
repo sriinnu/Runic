@@ -16,6 +16,7 @@ struct SubscriptionUtilizationChartMenuView: View {
         let id: String
         let label: String
         let date: Date
+        let tokens: Int
         let usedPercent: Double
         let isToday: Bool
     }
@@ -66,6 +67,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
+                let detail = self.detailText(model: model)
                 Chart {
                     ForEach(model.bars) { bar in
                         BarMark(
@@ -90,14 +92,19 @@ struct SubscriptionUtilizationChartMenuView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: model.axisLabels) { _ in
-                        AxisValueLabel()
-                            .font(RunicFont.caption2)
-                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
+                    AxisMarks(values: model.axisLabels) { value in
+                        AxisValueLabel {
+                            if let label = value.as(String.self) {
+                                Text(label)
+                                    .font(RunicFont.caption2)
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
+                            }
+                        }
                     }
                 }
                 .chartLegend(.hidden)
                 .frame(height: RunicSpacing.chartHeight - 10)
+                .help(detail)
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
@@ -118,7 +125,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                 }
 
                 // Latest detail
-                Text(self.detailText(model: model))
+                Text(detail)
                     .font(RunicFont.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
@@ -170,9 +177,9 @@ struct SubscriptionUtilizationChartMenuView: View {
                 let key = formatter.string(from: date)
                 let tokens = tokensByDay[key] ?? 0
                 let pct = min(100, Double(tokens) * scaleFactor)
-                let label = date.formatted(.dateTime.month(.defaultDigits).day())
+                let label = Self.compactDateLabel(date)
                 let isToday = offset == 13
-                return UtilizationBar(id: key, label: label, date: date, usedPercent: pct, isToday: isToday)
+                return UtilizationBar(id: key, label: label, date: date, tokens: tokens, usedPercent: pct, isToday: isToday)
             }
             return UtilizationModel(bars: bars, axisLabels: Self.axisLabels(from: bars, desiredCount: 5))
 
@@ -197,6 +204,7 @@ struct SubscriptionUtilizationChartMenuView: View {
                     id: bucket.label,
                     label: bucket.label,
                     date: bucket.date,
+                    tokens: bucket.tokens,
                     usedPercent: pct,
                     isToday: bucket.isThisWeek)
             }
@@ -226,11 +234,20 @@ struct SubscriptionUtilizationChartMenuView: View {
                     id: bucket.label,
                     label: bucket.label,
                     date: bucket.date,
+                    tokens: bucket.tokens,
                     usedPercent: pct,
                     isToday: bucket.isThisMonth)
             }
             return UtilizationModel(bars: bars, axisLabels: bars.map(\.label))
         }
+    }
+
+    private static func compactDateLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "M/d"
+        return formatter.string(from: date)
     }
 
     private static func axisLabels(from bars: [UtilizationBar], desiredCount: Int) -> [String] {
@@ -296,6 +313,7 @@ struct SubscriptionUtilizationChartMenuView: View {
         guard let bar else { return "Hover a bar for utilization" }
         let used = Int(bar.usedPercent.rounded())
         let unused = max(0, 100 - used)
-        return "\(bar.label): \(used)% used, \(unused)% unused"
+        let tokens = UsageFormatter.tokenCountString(bar.tokens)
+        return "\(bar.label): \(used)% used, \(unused)% unused · \(tokens) tokens"
     }
 }

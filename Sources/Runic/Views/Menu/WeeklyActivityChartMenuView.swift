@@ -52,6 +52,7 @@ struct WeeklyActivityChartMenuView: View {
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
+                let detail = self.detailText(model: model)
                 Chart {
                     ForEach(model.bars) { bar in
                         BarMark(
@@ -83,6 +84,7 @@ struct WeeklyActivityChartMenuView: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: RunicSpacing.chartHeight - 40)
+                .help(detail)
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
@@ -102,7 +104,7 @@ struct WeeklyActivityChartMenuView: View {
                     }
                 }
 
-                Text(self.detailText(model: model))
+                Text(detail)
                     .font(RunicFont.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)

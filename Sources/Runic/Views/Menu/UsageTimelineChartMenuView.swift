@@ -47,18 +47,20 @@ struct UsageTimelineChartMenuView: View {
     private let dailySummaries: [UsageLedgerDailySummary]
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
-    @State private var selectedTimeRange: TimeRange = .sevenDays
+    @Binding private var selectedTimeRange: TimeRange
     @State private var selectedKey: String?
     @Environment(\.runicTheme) private var runicTheme
 
     init(
         dailySummaries: [UsageLedgerDailySummary],
         hourlySummaries: [UsageLedgerHourlySummary] = [],
-        width: CGFloat)
+        width: CGFloat,
+        selectedTimeRange: Binding<TimeRange> = .constant(.sevenDays))
     {
         self.dailySummaries = dailySummaries
         self.hourlySummaries = hourlySummaries
         self.width = width
+        self._selectedTimeRange = selectedTimeRange
     }
 
     var body: some View {
@@ -85,6 +87,7 @@ struct UsageTimelineChartMenuView: View {
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 100)
             } else {
+                let detail = self.detailText(model: model)
                 // Line chart
                 Chart {
                     ForEach(model.points) { point in
@@ -144,6 +147,7 @@ struct UsageTimelineChartMenuView: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: RunicSpacing.chartHeight + 30)
+                .help(detail)
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
@@ -164,7 +168,6 @@ struct UsageTimelineChartMenuView: View {
                 }
 
                 // Detail line
-                let detail = self.detailText(model: model)
                 Text(detail)
                     .font(RunicFont.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
@@ -278,7 +281,7 @@ struct UsageTimelineChartMenuView: View {
             peakTokens: peak?.totalTokens ?? 0,
             totalCostUSD: hasCost ? totalCost : nil,
             desiredAxisCount: desiredAxisCount,
-            xAxisFormat: .dateTime.month(.abbreviated).day(),
+            xAxisFormat: .dateTime.month(.defaultDigits).day(),
             isHourly: false)
     }
 

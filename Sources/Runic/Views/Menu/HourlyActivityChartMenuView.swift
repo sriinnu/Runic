@@ -53,6 +53,7 @@ struct HourlyActivityChartMenuView: View {
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
+                let detail = self.detailText(model: model)
                 Chart {
                     ForEach(model.bars) { bar in
                         BarMark(
@@ -105,6 +106,7 @@ struct HourlyActivityChartMenuView: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: RunicSpacing.chartHeight - 30)
+                .help(detail)
                 .chartOverlay { proxy in
                     GeometryReader { geo in
                         MouseLocationReader { location in
@@ -114,6 +116,13 @@ struct HourlyActivityChartMenuView: View {
                         .contentShape(Rectangle())
                     }
                 }
+
+                Text(detail)
+                    .font(RunicFont.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(height: 16, alignment: .leading)
 
                 // Summary stats
                 HStack(spacing: RunicSpacing.md) {
@@ -226,5 +235,14 @@ struct HourlyActivityChartMenuView: View {
         if hour < 12 { return "\(hour)AM" }
         if hour == 12 { return "12PM" }
         return "\(hour - 12)PM"
+    }
+
+    private func detailText(model: HourlyModel) -> String {
+        guard let selectedHour,
+              let bar = model.bars.first(where: { $0.hour == selectedHour })
+        else {
+            return "Hover an hour for tokens"
+        }
+        return "\(Self.hourAxisLabel(bar.hour)): \(UsageFormatter.tokenCountString(bar.totalTokens)) tokens"
     }
 }

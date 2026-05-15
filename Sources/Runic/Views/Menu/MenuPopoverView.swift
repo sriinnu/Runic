@@ -28,6 +28,7 @@ struct MenuPopoverView: View {
 
     @State private var selectedProvider: UsageProvider?
     @State private var selectedPanel: PopoverInsightPanel?
+    @State private var selectedTimelineRange: UsageTimelineChartMenuView.TimeRange = .sevenDays
     @State private var hasAppeared = false
 
     init(
@@ -267,10 +268,11 @@ struct MenuPopoverView: View {
     }
 
     private func exportSection(provider: UsageProvider) -> some View {
-        let scope = UsageExporter.Scope(panel: self.effectivePanel(from: self.availablePanels(for: provider)) ?? .timeline)
+        let panel = self.effectivePanel(from: self.availablePanels(for: provider)) ?? .timeline
+        let scope = UsageExporter.Scope(panel: panel, timelineRange: self.selectedTimelineRange)
         return MenuPopoverSurfaceCard {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                Text("Export \(scope.displayName)")
+                Text("Export visible \(scope.displayName)")
                     .font(RunicFont.caption.weight(.semibold))
                     .foregroundStyle(self.settings.theme.palette.secondaryText)
                 HStack(spacing: RunicSpacing.xs) {
@@ -285,6 +287,9 @@ struct MenuPopoverView: View {
                         style: .compact,
                         action: { self.actions.exportJSON(scope) })
                 }
+                Text("Exports the selected Explore panel and range.")
+                    .font(RunicFont.caption2)
+                    .foregroundStyle(self.settings.theme.palette.secondaryText)
             }
             .padding(RunicSpacing.xs)
         }
@@ -439,7 +444,8 @@ struct MenuPopoverView: View {
             UsageTimelineChartMenuView(
                 dailySummaries: self.store.ledgerAllDailySummary(for: provider),
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
-                width: self.paddedSurfaceContentWidth)
+                width: self.paddedSurfaceContentWidth,
+                selectedTimeRange: self.$selectedTimelineRange)
         case .hourly:
             HourlyActivityChartMenuView(
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
@@ -481,9 +487,10 @@ struct MenuPopoverView: View {
         let metadata = self.store.metadata(for: provider)
         let snapshot = self.store.snapshot(for: provider)
         let ledgerTopModel = self.store.ledgerTopModel(for: provider)
-        let ledgerTopModelContextLabel = ledgerTopModel.flatMap {
-            ProviderContextWindowRegistry.shared.contextLabel(for: provider, model: $0.model)?.text
-        }
+        let providerContextStatus = ledgerTopModel.flatMap {
+            ProviderContextWindowRegistry.shared.contextLabel(for: provider, model: $0.model)
+        } ?? ProviderContextWindowRegistry.shared.contextLabel(for: provider)
+        let ledgerTopModelContextLabel = providerContextStatus?.text
         let credits: CreditsSnapshot? = provider == .codex ? self.store.credits : nil
         let creditsError: String? = provider == .codex ? self.store.lastCreditsError : nil
         let dashboard: OpenAIDashboardSnapshot? = provider == .codex && !self.store.openAIDashboardRequiresLogin
@@ -513,6 +520,7 @@ struct MenuPopoverView: View {
             ledgerRouting: self.store.ledgerRoutingRecommendation(for: provider),
             ledgerError: self.store.ledgerError(for: provider),
             ledgerUpdatedAt: self.store.ledgerUpdatedAt(for: provider),
+            providerContextStatus: providerContextStatus,
             account: self.account,
             isRefreshing: self.store.isRefreshing,
             lastError: self.store.error(for: provider),
@@ -641,10 +649,10 @@ private enum PopoverInsightPanel: String, CaseIterable, Identifiable {
 }
 
 private extension UsageExporter.Scope {
-    init(panel: PopoverInsightPanel) {
+    init(panel: PopoverInsightPanel, timelineRange: UsageTimelineChartMenuView.TimeRange) {
         switch panel {
         case .timeline:
-            self = .timeline
+            self = timelineRange.exportScope
         case .hourly:
             self = .hourly
         case .weekly:
@@ -657,6 +665,18 @@ private extension UsageExporter.Scope {
             self = .projects
         case .models:
             self = .models
+        }
+    }
+}
+
+private extension UsageTimelineChartMenuView.TimeRange {
+    var exportScope: UsageExporter.Scope {
+        switch self {
+        case .threeDays: .timeline3d
+        case .sevenDays: .timeline7d
+        case .thirtyDays: .timeline30d
+        case .quarter: .timeline90d
+        case .year: .timeline1y
         }
     }
 }

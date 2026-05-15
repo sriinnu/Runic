@@ -6,6 +6,7 @@ import SwiftUI
 struct ProjectBreakdownMenuView: View {
     private let breakdown: [UsageLedgerProjectSummary]
     private let width: CGFloat
+    @State private var selectedProjectID: String?
     @Environment(\.runicTheme) private var runicTheme
 
     /// Maximum number of projects to show before truncating with "and N more".
@@ -24,6 +25,7 @@ struct ProjectBreakdownMenuView: View {
                     .font(RunicFont.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
+                let detail = self.detailText(model: model)
                 // MARK: - Title
 
                 Text("Projects")
@@ -52,14 +54,40 @@ struct ProjectBreakdownMenuView: View {
                 }
                 .chartLegend(.hidden)
                 .frame(height: Self.chartHeight(itemCount: model.chartItems.count))
+                .help(detail)
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        ZStack(alignment: .topLeading) {
+                            if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
+                                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                    .fill(self.runicTheme.chartSelectionBandColor)
+                                    .frame(width: rect.width, height: rect.height)
+                                    .position(x: rect.midX, y: rect.midY)
+                                    .allowsHitTesting(false)
+                            }
+                            MouseLocationReader { location in
+                                self.updateSelection(location: location, model: model, proxy: proxy, geo: geo)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                        }
+                    }
+                }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Self.chartAccessibilityLabel(model: model))
+
+                Text(detail)
+                    .font(RunicFont.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 // MARK: - Project list
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     ForEach(model.chartItems) { item in
                         Self.projectRow(item: item, theme: self.runicTheme)
+                            .help(item.helpText(grandTotalTokens: model.grandTotalTokens))
                     }
                 }
 
@@ -151,7 +179,26 @@ struct ProjectBreakdownMenuView: View {
         let totalTokens: Int
         let costText: String?
         let modelCount: Int
+        let attributionText: String?
         let color: Color
+
+        func helpText(grandTotalTokens: Int) -> String {
+            let share = grandTotalTokens > 0
+                ? Double(self.totalTokens) / Double(grandTotalTokens) * 100
+                : 0
+            var parts = [
+                self.name,
+                "\(UsageFormatter.tokenCountString(self.totalTokens)) tokens",
+                "\(String(format: "%.0f", share))%",
+            ]
+            if let costText {
+                parts.append(costText)
+            }
+            if let attributionText {
+                parts.append(attributionText)
+            }
+            return parts.joined(separator: " · ")
+        }
     }
 
     struct ProjectModel {
@@ -196,6 +243,7 @@ struct ProjectBreakdownMenuView: View {
                 totalTokens: summary.totals.totalTokens,
                 costText: costText,
                 modelCount: summary.modelsUsed.count,
+                attributionText: RunicProjectDisplay.attributionText(for: summary),
                 color: theme.chartColor(at: index))
         }
 
@@ -212,5 +260,63 @@ struct ProjectBreakdownMenuView: View {
             overflowCount: overflow,
             grandTotalTokens: grandTokens,
             grandTotalCostText: grandCostText)
+    }
+
+    private func selectionBandRect(model: ProjectModel, proxy: ChartProxy, geo: GeometryProxy) -> CGRect? {
+        guard let selectedProjectID = self.selectedProjectID else { return nil }
+        guard let plotAnchor = proxy.plotFrame else { return nil }
+        let plotFrame = geo[plotAnchor]
+        guard let index = model.chartItems.firstIndex(where: { $0.id == selectedProjectID }) else { return nil }
+        let item = model.chartItems[index]
+        guard let y = proxy.position(forY: item.name) else { return nil }
+
+        let step = plotFrame.height / CGFloat(max(1, model.chartItems.count))
+        let height = min(30, max(18, step * 0.72))
+        return CGRect(
+            x: plotFrame.origin.x,
+            y: plotFrame.origin.y + y - (height / 2),
+            width: plotFrame.width,
+            height: height)
+    }
+
+    private func updateSelection(
+        location: CGPoint?,
+        model: ProjectModel,
+        proxy: ChartProxy,
+        geo: GeometryProxy)
+    {
+        guard let location else {
+            if self.selectedProjectID != nil { self.selectedProjectID = nil }
+            return
+        }
+        guard let plotAnchor = proxy.plotFrame else { return }
+        let plotFrame = geo[plotAnchor]
+        guard plotFrame.contains(location) else {
+            if self.selectedProjectID != nil { self.selectedProjectID = nil }
+            return
+        }
+
+        let yInPlot = location.y - plotFrame.origin.y
+        var bestID: String?
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for item in model.chartItems {
+            guard let y = proxy.position(forY: item.name) else { continue }
+            let distance = abs(y - yInPlot)
+            if distance < bestDistance {
+                bestDistance = distance
+                bestID = item.id
+            }
+        }
+        if let bestID, self.selectedProjectID != bestID {
+            self.selectedProjectID = bestID
+        }
+    }
+
+    private func detailText(model: ProjectModel) -> String {
+        let item = self.selectedProjectID
+            .flatMap { selected in model.chartItems.first(where: { $0.id == selected }) }
+            ?? model.chartItems.first
+        guard let item else { return "Hover a project for attribution" }
+        return item.helpText(grandTotalTokens: model.grandTotalTokens)
     }
 }

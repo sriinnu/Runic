@@ -12,6 +12,11 @@ enum UsageExporter {
     enum Scope: String {
         case all
         case timeline
+        case timeline3d
+        case timeline7d
+        case timeline30d
+        case timeline90d
+        case timeline1y
         case hourly
         case weekly
         case utilization
@@ -23,6 +28,11 @@ enum UsageExporter {
             switch self {
             case .all: "all usage"
             case .timeline: "timeline"
+            case .timeline3d: "timeline, 3 days"
+            case .timeline7d: "timeline, 7 days"
+            case .timeline30d: "timeline, 30 days"
+            case .timeline90d: "timeline, 90 days"
+            case .timeline1y: "timeline, 1 year"
             case .hourly: "today by hour"
             case .weekly: "last 7 days"
             case .utilization: "utilization"
@@ -36,6 +46,11 @@ enum UsageExporter {
             switch self {
             case .all: "usage"
             case .timeline: "timeline"
+            case .timeline3d: "timeline-3-days"
+            case .timeline7d: "timeline-7-days"
+            case .timeline30d: "timeline-30-days"
+            case .timeline90d: "timeline-90-days"
+            case .timeline1y: "timeline-1-year"
             case .hourly: "hourly"
             case .weekly: "7-days"
             case .utilization: "utilization"
@@ -69,6 +84,16 @@ enum UsageExporter {
             return self.exportDailyCSV(store: store, provider: provider)
         case .timeline:
             return self.exportLedgerDailyCSV(store: store, provider: provider, days: nil)
+        case .timeline3d:
+            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 3)
+        case .timeline7d:
+            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 7)
+        case .timeline30d:
+            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 30)
+        case .timeline90d:
+            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 90)
+        case .timeline1y:
+            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 365)
         case .hourly:
             return self.exportHourlyCSV(store: store, provider: provider)
         case .weekly:
@@ -223,50 +248,13 @@ enum UsageExporter {
             "scope": scope.rawValue,
             "scopeDisplayName": scope.displayName,
         ]
-
-        // Daily summaries from token snapshot
-        var dailyArray: [[String: Any]] = []
-        let daily = store.tokenSnapshot(for: provider)?.daily ?? []
-
-        for day in daily {
-            let input = day.inputTokens ?? 0
-            let output = day.outputTokens ?? 0
-            let cacheCreate = day.cacheCreationTokens ?? 0
-            let cacheRead = day.cacheReadTokens ?? 0
-            let total = day.totalTokens ?? (input + output + cacheCreate + cacheRead)
-            var entry: [String: Any] = [
-                "date": day.date,
-                "inputTokens": input,
-                "outputTokens": output,
-                "cacheCreationTokens": cacheCreate,
-                "cacheReadTokens": cacheRead,
-                "totalTokens": total,
-                "models": day.modelsUsed ?? [],
-            ]
-            if let cost = day.costUSD {
-                entry["costUSD"] = cost
-            }
-            dailyArray.append(entry)
+        if let days = scope.timelineDays {
+            root["timeRangeDays"] = days
         }
 
-        // Fallback to ledger summary if no token snapshot data
-        if dailyArray.isEmpty, let summary = store.ledgerDailySummary(for: provider) {
-            var entry: [String: Any] = [
-                "date": summary.dayKey,
-                "inputTokens": summary.totals.inputTokens,
-                "outputTokens": summary.totals.outputTokens,
-                "cacheCreationTokens": summary.totals.cacheCreationTokens,
-                "cacheReadTokens": summary.totals.cacheReadTokens,
-                "totalTokens": summary.totals.totalTokens,
-                "models": summary.modelsUsed,
-            ]
-            if let cost = summary.totals.costUSD {
-                entry["costUSD"] = cost
-            }
-            dailyArray.append(entry)
-        }
+        let dailyArray = self.dailySummariesJSON(store: store, provider: provider, scope: scope)
 
-        if scope == .all || scope == .timeline || scope == .weekly || scope == .utilization {
+        if scope.includesDailySummaries {
             root["dailySummaries"] = dailyArray
         }
 
@@ -375,6 +363,92 @@ enum UsageExporter {
 
     // MARK: - Helpers
 
+    private static func dailySummariesJSON(
+        store: UsageStore,
+        provider: UsageProvider,
+        scope: Scope) -> [[String: Any]]
+    {
+        let ledgerSummaries = self.filteredLedgerDailySummaries(
+            store: store,
+            provider: provider,
+            days: scope.timelineDays)
+        if !ledgerSummaries.isEmpty {
+            return ledgerSummaries.map { summary -> [String: Any] in
+                var entry: [String: Any] = [
+                    "date": summary.dayKey,
+                    "inputTokens": summary.totals.inputTokens,
+                    "outputTokens": summary.totals.outputTokens,
+                    "cacheCreationTokens": summary.totals.cacheCreationTokens,
+                    "cacheReadTokens": summary.totals.cacheReadTokens,
+                    "totalTokens": summary.totals.totalTokens,
+                    "models": summary.modelsUsed,
+                ]
+                if let cost = summary.totals.costUSD {
+                    entry["costUSD"] = cost
+                }
+                return entry
+            }
+        }
+
+        guard scope.timelineDays == nil else { return [] }
+
+        let daily = store.tokenSnapshot(for: provider)?.daily ?? []
+        var dailyArray: [[String: Any]] = []
+        for day in daily {
+            let input = day.inputTokens ?? 0
+            let output = day.outputTokens ?? 0
+            let cacheCreate = day.cacheCreationTokens ?? 0
+            let cacheRead = day.cacheReadTokens ?? 0
+            let total = day.totalTokens ?? (input + output + cacheCreate + cacheRead)
+            var entry: [String: Any] = [
+                "date": day.date,
+                "inputTokens": input,
+                "outputTokens": output,
+                "cacheCreationTokens": cacheCreate,
+                "cacheReadTokens": cacheRead,
+                "totalTokens": total,
+                "models": day.modelsUsed ?? [],
+            ]
+            if let cost = day.costUSD {
+                entry["costUSD"] = cost
+            }
+            dailyArray.append(entry)
+        }
+
+        if dailyArray.isEmpty, let summary = store.ledgerDailySummary(for: provider) {
+            var entry: [String: Any] = [
+                "date": summary.dayKey,
+                "inputTokens": summary.totals.inputTokens,
+                "outputTokens": summary.totals.outputTokens,
+                "cacheCreationTokens": summary.totals.cacheCreationTokens,
+                "cacheReadTokens": summary.totals.cacheReadTokens,
+                "totalTokens": summary.totals.totalTokens,
+                "models": summary.modelsUsed,
+            ]
+            if let cost = summary.totals.costUSD {
+                entry["costUSD"] = cost
+            }
+            dailyArray.append(entry)
+        }
+
+        return dailyArray
+    }
+
+    private static func filteredLedgerDailySummaries(
+        store: UsageStore,
+        provider: UsageProvider,
+        days: Int?) -> [UsageLedgerDailySummary]
+    {
+        let calendar = Calendar.current
+        let cutoff = days.flatMap { calendar.date(byAdding: .day, value: -($0 - 1), to: calendar.startOfDay(for: Date())) }
+        return store.ledgerAllDailySummary(for: provider)
+            .filter { summary in
+                guard let cutoff else { return true }
+                return summary.dayStart >= cutoff
+            }
+            .sorted { $0.dayStart < $1.dayStart }
+    }
+
     /// Escape a value for CSV, quoting if it contains commas, quotes, or newlines.
     private static func csvEscape(_ value: String) -> String {
         let needsQuoting = value.contains(",") || value.contains("\"") || value.contains("\n")
@@ -383,5 +457,28 @@ enum UsageExporter {
             return "\"\(escaped)\""
         }
         return value
+    }
+}
+
+private extension UsageExporter.Scope {
+    var timelineDays: Int? {
+        switch self {
+        case .timeline3d: 3
+        case .timeline7d, .weekly: 7
+        case .timeline30d: 30
+        case .timeline90d: 90
+        case .timeline1y: 365
+        default: nil
+        }
+    }
+
+    var includesDailySummaries: Bool {
+        switch self {
+        case .all, .timeline, .timeline3d, .timeline7d, .timeline30d, .timeline90d, .timeline1y, .weekly,
+             .utilization:
+            true
+        case .hourly, .windows, .projects, .models:
+            false
+        }
     }
 }

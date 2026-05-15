@@ -102,6 +102,10 @@ struct UsageMenuCardView: View {
 
         struct InsightsSection {
             let title: String
+            let connectionLine: String?
+            let connectionDetail: String?
+            let contextLine: String?
+            let contextDetail: String?
             let todayLine: String?
             let todayDetail: String?
             let forecastLine: String?
@@ -704,6 +708,24 @@ private struct InsightsContent: View {
             Text(self.section.title)
                 .font(RunicFont.body)
                 .fontWeight(.medium)
+            if let connection = self.section.connectionLine {
+                Text(connection)
+                    .font(RunicFont.footnote)
+            }
+            if let detail = self.section.connectionDetail {
+                Text(detail)
+                    .font(RunicFont.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+            }
+            if let context = self.section.contextLine {
+                Text(context)
+                    .font(RunicFont.footnote)
+            }
+            if let detail = self.section.contextDetail {
+                Text(detail)
+                    .font(RunicFont.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+            }
             if let today = self.section.todayLine {
                 Text(today)
                     .font(RunicFont.footnote)
@@ -1138,6 +1160,7 @@ extension UsageMenuCardView.Model {
         let ledgerRouting: UsageLedgerRoutingRecommendation?
         let ledgerError: String?
         let ledgerUpdatedAt: Date?
+        let providerContextStatus: ProviderContextWindowLabel?
         let account: AccountInfo
         let isRefreshing: Bool
         let lastError: String?
@@ -1244,6 +1267,10 @@ extension UsageMenuCardView.Model {
         guard remove, let section else { return section }
         return InsightsSection(
             title: section.title,
+            connectionLine: section.connectionLine,
+            connectionDetail: section.connectionDetail,
+            contextLine: section.contextLine,
+            contextDetail: section.contextDetail,
             todayLine: section.todayLine,
             todayDetail: section.todayDetail,
             forecastLine: section.forecastLine,
@@ -1515,8 +1542,10 @@ extension UsageMenuCardView.Model {
             ? input.ledgerTopProjectSpendForecast
             : nil
         let anomaly = input.ledgerAnomaly?.provider == input.provider ? input.ledgerAnomaly : nil
-        let hasData = daily != nil || block != nil || topModel != nil || topProject != nil || spendForecast != nil ||
-            anomaly != nil
+        let connection = Self.connectionLines(input: input)
+        let context = Self.contextHealthLines(input: input, daily: daily, block: block, topModel: topModel)
+        let hasData = connection.line != nil || context.line != nil || daily != nil || block != nil || topModel != nil ||
+            topProject != nil || spendForecast != nil || anomaly != nil
         if !hasData, error?.isEmpty ?? true {
             return nil
         }
@@ -1698,6 +1727,10 @@ extension UsageMenuCardView.Model {
 
         return InsightsSection(
             title: "Insights",
+            connectionLine: connection.line,
+            connectionDetail: connection.detail,
+            contextLine: context.line,
+            contextDetail: context.detail,
             todayLine: todayLine,
             todayDetail: todayDetail,
             forecastLine: forecastLine,
@@ -1731,6 +1764,79 @@ extension UsageMenuCardView.Model {
             let todaySpend = UsageFormatter.usdString(anomaly.todayValue)
             let baselineSpend = UsageFormatter.usdString(anomaly.baselineAverage)
             return "Spend \(todaySpend) today · +\(percentText) vs \(baselineLabel) \(baselineSpend)"
+        }
+    }
+
+    private static func connectionLines(input: Input) -> (line: String?, detail: String?) {
+        let status: String = if input.isRefreshing {
+            "refreshing"
+        } else if let lastError = input.lastError?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !lastError.isEmpty
+        {
+            "issue"
+        } else if input.snapshot != nil {
+            "connected"
+        } else {
+            "waiting for first fetch"
+        }
+
+        var detailParts: [String] = []
+        let email = Self.email(
+            for: input.provider,
+            snapshot: input.snapshot,
+            account: input.account,
+            metadata: input.metadata)
+        if !email.isEmpty {
+            detailParts.append("Account \(email)")
+        }
+        if let updatedAt = input.snapshot?.updatedAt {
+            detailParts.append("Last fetch \(UsageFormatter.updatedString(from: updatedAt, now: input.now))")
+        } else if let ledgerUpdatedAt = input.ledgerUpdatedAt {
+            detailParts.append("Ledger \(UsageFormatter.updatedString(from: ledgerUpdatedAt, now: input.now))")
+        }
+        if let coverage = input.metadata.usageCoverage.summaryLabel {
+            detailParts.append(coverage)
+        }
+        let detail = detailParts.isEmpty ? nil : detailParts.joined(separator: " · ")
+        return ("Connection: \(status)", detail)
+    }
+
+    private static func contextHealthLines(
+        input: Input,
+        daily: UsageLedgerDailySummary?,
+        block: UsageLedgerBlockSummary?,
+        topModel: UsageLedgerModelSummary?) -> (line: String?, detail: String?)
+    {
+        guard input.providerContextStatus != nil || topModel != nil || daily != nil || block != nil else {
+            return (nil, nil)
+        }
+
+        let maxContext = input.providerContextStatus?.text ?? "unknown"
+        let observedTokens = block?.totals.totalTokens
+            ?? daily?.totals.totalTokens
+            ?? topModel?.totals.totalTokens
+            ?? 0
+        let observed = observedTokens > 0 ? UsageFormatter.tokenCountString(observedTokens) : "no observed tokens"
+        let line = "Context health: max \(maxContext) · observed \(observed)"
+
+        var details: [String] = []
+        if let status = input.providerContextStatus {
+            details.append("Capability source: \(Self.contextSourceText(status.source))\(status.isStale ? " (stale)" : "")")
+        } else {
+            details.append("Capability source: unavailable")
+        }
+        if let model = topModel?.model {
+            details.append("Model \(UsageFormatter.modelDisplayName(model))")
+        }
+        details.append("Compaction boundaries are not exposed; tokens are counted when provider records include them.")
+        return (line, details.joined(separator: " · "))
+    }
+
+    private static func contextSourceText(_ source: ProviderContextWindowLabel.Source) -> String {
+        switch source {
+        case .kosha: "Kosha TTL registry"
+        case .modelHeuristic: "model heuristic"
+        case .staticFallback: "built-in fallback"
         }
     }
 

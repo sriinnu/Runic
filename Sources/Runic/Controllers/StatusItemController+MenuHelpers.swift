@@ -284,9 +284,10 @@ extension StatusItemController {
         let ledgerDaily = self.store.ledgerDailySummary(for: target)
         let ledgerActiveBlock = self.store.ledgerActiveBlock(for: target)
         let ledgerTopModel = self.store.ledgerTopModel(for: target)
-        let ledgerTopModelContextLabel = ledgerTopModel.flatMap {
-            ProviderContextWindowRegistry.shared.contextLabel(for: target, model: $0.model)?.text
-        }
+        let providerContextStatus = ledgerTopModel.flatMap {
+            ProviderContextWindowRegistry.shared.contextLabel(for: target, model: $0.model)
+        } ?? ProviderContextWindowRegistry.shared.contextLabel(for: target)
+        let ledgerTopModelContextLabel = providerContextStatus?.text
         let ledgerTopProject = self.store.ledgerTopProject(for: target)
         let ledgerSpendForecast = self.store.ledgerSpendForecast(for: target)
         let ledgerTopProjectSpendForecast = self.store.ledgerTopProjectSpendForecast(for: target)
@@ -334,6 +335,7 @@ extension StatusItemController {
             ledgerRouting: ledgerRouting,
             ledgerError: ledgerError,
             ledgerUpdatedAt: ledgerUpdatedAt,
+            providerContextStatus: providerContextStatus,
             account: self.account,
             isRefreshing: self.store.isRefreshing,
             lastError: self.store.error(for: target),

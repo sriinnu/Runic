@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- Menu: export actions now follow the selected Explore panel and timeline range, including scoped 3d/7d/30d/90d/1y timeline exports.
+- Charts: add hover details/tooltips for timeline, hourly, weekly, utilization, windows, model, and project breakdown panels.
+- Projects: replace opaque "Unknown project" UX with "Unattributed usage" detail text that explains when provider logs lack readable project identity.
+- Context: surface connection and context-health lines in provider insights, separating max context metadata from observed usage and compaction transparency.
+- Typography: add more curated macOS font choices with explicit spacing/contrast rules in the live font preview.
+
 ## 2.1.7 — 2026-05-13
 - Menu: render lower action, text, custom-provider, export, chart-link, and divider rows through the same themed hosted surface as the top provider cards.
 - Menu: keep row clicks routed through the original menu actions so Settings, Ping, Quit, and provider account actions remain functional after the themed row conversion.
