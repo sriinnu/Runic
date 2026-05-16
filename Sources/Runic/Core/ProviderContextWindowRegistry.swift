@@ -9,6 +9,7 @@ struct ProviderContextWindowLabel: Equatable, Sendable {
     }
 
     let text: String
+    let maxTokens: Int?
     let source: Source
     let isStale: Bool
 }
@@ -54,9 +55,13 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
         }
 
         if let model,
-           let text = UsageFormatter.modelContextLabel(for: model)
+           let contextWindow = UsageFormatter.modelContextWindow(for: model)
         {
-            return ProviderContextWindowLabel(text: text, source: .modelHeuristic, isStale: false)
+            return ProviderContextWindowLabel(
+                text: "ctx \(UsageFormatter.tokenCountString(contextWindow))",
+                maxTokens: contextWindow,
+                source: .modelHeuristic,
+                isStale: false)
         }
 
         if let snapshot,
@@ -85,6 +90,7 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
         let providerRecord = Self.providerRecord(for: provider, snapshot: snapshot, includingModelBridges: true)
         return ProviderContextWindowLabel(
             text: Self.contextText(tokens: match.contextWindow, exactModel: true, stale: self.isStale(model: match, provider: providerRecord)),
+            maxTokens: match.contextWindow,
             source: .kosha,
             isStale: self.isStale(model: match, provider: providerRecord))
     }
@@ -118,13 +124,15 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
                 tokens: selected.contextWindow,
                 exactModel: distinctContexts.count == 1,
                 stale: stale),
+            maxTokens: selected.contextWindow,
             source: .kosha,
             isStale: stale)
     }
 
     private func staticFallbackLabel(for provider: UsageProvider) -> ProviderContextWindowLabel? {
         guard let text = self.fallbackLabels()[provider.rawValue] else { return nil }
-        return ProviderContextWindowLabel(text: text, source: .staticFallback, isStale: false)
+        let maxTokens = self.fallbackContextWindows()[provider.rawValue]
+        return ProviderContextWindowLabel(text: text, maxTokens: maxTokens, source: .staticFallback, isStale: false)
     }
 
     private func isStale(model: ContextModel, provider: ContextProvider?) -> Bool {
@@ -184,6 +192,11 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
         self.cachedFallbackLabels = labels
         self.lock.unlock()
         return labels
+    }
+
+    private func fallbackContextWindows() -> [String: Int] {
+        self.fallbackURLProvider()
+            .flatMap(Self.loadStaticFallbackContextWindows(from:)) ?? [:]
     }
 
     private static func loadKoshaSnapshot(from url: URL) -> ProviderContextSnapshot? {
@@ -262,6 +275,24 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
         }
     }
 
+    private static func loadStaticFallbackContextWindows(from url: URL) -> [String: Int]? {
+        struct Entry: Decodable {
+            let contextK: Int?
+        }
+
+        guard let data = try? Data(contentsOf: url),
+              let dict = try? JSONDecoder().decode([String: Entry].self, from: data)
+        else {
+            return nil
+        }
+
+        return dict.reduce(into: [:]) { values, pair in
+            if let k = pair.value.contextK, k > 0 {
+                values[pair.key] = k * 1000
+            }
+        }
+    }
+
     private static func models(
         for provider: UsageProvider,
         snapshot: ProviderContextSnapshot,
@@ -335,6 +366,8 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
             ids = ["xai", "x-ai", "grok"]
         case .qwen:
             ids = ["qwen", "dashscope", "alibaba"]
+        case .localLLM:
+            ids = ["local-llm", "local", "ollama", "lmstudio", "lm-studio", "llamacpp", "llama-cpp", "vllm", "openwebui"]
         case .sambanova:
             ids = ["sambanova", "samba"]
         case .bedrock:

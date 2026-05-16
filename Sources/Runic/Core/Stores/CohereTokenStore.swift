@@ -83,7 +83,7 @@ struct KeychainCohereTokenStore: CohereTokenStoring {
         var query = self.baseQuery(dataProtection: dataProtection)
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         query[kSecReturnData as String] = true
-        query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
+        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound || status == errSecInteractionNotAllowed {

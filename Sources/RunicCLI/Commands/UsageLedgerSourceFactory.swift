@@ -5,7 +5,7 @@ enum UsageLedgerSourceFactory {
     static func source(
         for provider: UsageProvider,
         now: Date,
-        maxAgeDays: Int) -> (any UsageLedgerSource)?
+        maxAgeDays: Int?) -> (any UsageLedgerSource)?
     {
         switch provider {
         case .claude:
@@ -36,7 +36,8 @@ enum UsageLedgerSourceFactory {
              .azure,
              .bedrock,
              .vertexai,
-             .qwen:
+             .qwen,
+             .localLLM:
             return self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:
             return nil
@@ -46,17 +47,17 @@ enum UsageLedgerSourceFactory {
     private static func otelHistorySource(
         provider: UsageProvider,
         now: Date,
-        maxAgeDays: Int) -> (any UsageLedgerSource)?
+        maxAgeDays: Int?) -> (any UsageLedgerSource)?
     {
         let files = self.otelLedgerFiles(for: provider)
         guard !files.isEmpty else { return nil }
 
-        let cutoff = Calendar.current.date(byAdding: .day, value: -max(1, maxAgeDays), to: now)
+        let cutoff = maxAgeDays.flatMap { Calendar.current.date(byAdding: .day, value: -max(1, $0), to: now) }
         let options = OTelGenAIIngestionOptions(
             enabled: true,
             allowExperimentalSemanticConventions: true,
             defaultProvider: provider,
-            source: .api)
+            source: .openTelemetry)
         return UsageLedgerProviderFilterSource(
             source: OTelGenAIFileLedgerSource(files: files, options: options),
             provider: provider,
@@ -70,6 +71,7 @@ enum UsageLedgerSourceFactory {
             .uppercased()
 
         let candidatePaths = [
+            [OTelGenAICollectorConfiguration.defaultOutputFile().path],
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATH"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATHS"]),

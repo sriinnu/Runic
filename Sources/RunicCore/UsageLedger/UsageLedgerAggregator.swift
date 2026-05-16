@@ -41,6 +41,10 @@ public enum UsageLedgerAggregator {
         let projectKey: String?
     }
 
+    private struct CompactionKey: Hashable {
+        let provider: UsageProvider
+    }
+
     public static func dailySummaries(
         entries: [UsageLedgerEntry],
         timeZone: TimeZone,
@@ -393,6 +397,36 @@ public enum UsageLedgerAggregator {
             return (lhs.projectID ?? "") < (rhs.projectID ?? "")
         }
     }
+
+    public static func compactionSummaries(entries: [UsageLedgerEntry]) -> [UsageLedgerCompactionSummary] {
+        var buckets: [CompactionKey: AggregateAccumulator] = [:]
+        var lastEventByProvider: [UsageProvider: Date] = [:]
+
+        for entry in entries where entry.isCompaction {
+            let key = CompactionKey(provider: entry.provider)
+            buckets[key, default: AggregateAccumulator()].consume(entry)
+            if let current = lastEventByProvider[entry.provider] {
+                if entry.timestamp > current { lastEventByProvider[entry.provider] = entry.timestamp }
+            } else {
+                lastEventByProvider[entry.provider] = entry.timestamp
+            }
+        }
+
+        return buckets.compactMap { key, acc in
+            guard let lastEventAt = lastEventByProvider[key.provider] else { return nil }
+            return UsageLedgerCompactionSummary(
+                provider: key.provider,
+                eventCount: acc.entryCount,
+                totals: acc.totals,
+                lastEventAt: lastEventAt)
+        }
+        .sorted { lhs, rhs in
+            if lhs.lastEventAt != rhs.lastEventAt {
+                return lhs.lastEventAt > rhs.lastEventAt
+            }
+            return lhs.provider.rawValue < rhs.provider.rawValue
+        }
+    }
 }
 
 private struct AggregateAccumulator {
@@ -410,6 +444,8 @@ private struct AggregateAccumulator {
     private(set) var projectNameSource: UsageLedgerProjectNameSource = .unknown
     private(set) var projectNameProvenance: String?
     private var modelSet: Set<String> = []
+    private var tokenProvenances: [MetricProvenance?] = []
+    private var costProvenances: [MetricProvenance?] = []
 
     init() {}
 
@@ -425,9 +461,11 @@ private struct AggregateAccumulator {
         self.outputTokens += entry.outputTokens
         self.cacheCreationTokens += entry.cacheCreationTokens
         self.cacheReadTokens += entry.cacheReadTokens
+        self.tokenProvenances.append(entry.tokenProvenance)
         if let cost = entry.costUSD {
             self.costSum += cost
             self.hasCost = true
+            self.costProvenances.append(entry.costProvenance)
         }
         self.mergeProjectIdentity(from: identity, fallbackEntry: entry)
         if let model = entry.model, !model.isEmpty {
@@ -441,7 +479,9 @@ private struct AggregateAccumulator {
             outputTokens: self.outputTokens,
             cacheCreationTokens: self.cacheCreationTokens,
             cacheReadTokens: self.cacheReadTokens,
-            costUSD: self.hasCost ? self.costSum : nil)
+            costUSD: self.hasCost ? self.costSum : nil,
+            tokenProvenance: MetricProvenance.combined(self.tokenProvenances),
+            costProvenance: self.hasCost ? MetricProvenance.combined(self.costProvenances) : nil)
     }
 
     var models: [String] {

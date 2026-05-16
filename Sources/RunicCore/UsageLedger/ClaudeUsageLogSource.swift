@@ -281,13 +281,27 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             guard total > 0 else { return nil }
 
             let sessionID = payload.sessionId ?? file.sessionID
-            let computedCost = payload.costUSD ?? payload.message.model.flatMap { model in
+            let pricingCost = payload.message.model.flatMap { model in
                 CostUsagePricing.claudeCostUSD(
                     model: model,
                     inputTokens: input,
                     cacheReadInputTokens: cacheRead,
                     cacheCreationInputTokens: cacheCreation,
                     outputTokens: output)
+            }
+            let computedCost = payload.costUSD ?? pricingCost
+            let costProvenance: MetricProvenance? = if payload.costUSD != nil {
+                MetricProvenance(
+                    confidence: .providerReported,
+                    source: .localLog,
+                    detail: "Claude JSONL cost field")
+            } else if pricingCost != nil {
+                MetricProvenance(
+                    confidence: .estimated,
+                    source: .pricingTable,
+                    detail: "Claude token pricing fallback")
+            } else {
+                nil
             }
             let key = self.dedupeKey(
                 requestID: payload.requestId,
@@ -316,7 +330,12 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 requestID: payload.requestId,
                 messageID: payload.message.id,
                 version: payload.version,
-                source: .claudeLog)
+                source: .claudeLog,
+                tokenProvenance: MetricProvenance(
+                    confidence: .exact,
+                    source: .localLog,
+                    detail: "Claude JSONL message.usage"),
+                costProvenance: costProvenance)
         } catch {
             return nil
         }

@@ -113,6 +113,10 @@ struct MenuPopoverView: View {
             withAnimation(RunicAnimation.cardEntrance) {
                 self.hasAppeared = true
             }
+            self.store.ensureLedgerHistoryCovers(days: self.selectedTimelineRange.days)
+        }
+        .onChange(of: self.selectedTimelineRange) { _, range in
+            self.store.ensureLedgerHistoryCovers(days: range.days)
         }
         .animation(RunicAnimation.providerSwitch, value: self.selectedProvider)
         .animation(RunicAnimation.providerSwitch, value: self.selectedPanel)
@@ -445,7 +449,10 @@ struct MenuPopoverView: View {
                 dailySummaries: self.store.ledgerAllDailySummary(for: provider),
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
                 width: self.paddedSurfaceContentWidth,
-                selectedTimeRange: self.$selectedTimelineRange)
+                selectedTimeRange: self.$selectedTimelineRange,
+                onRangeChange: { range in
+                    self.store.ensureLedgerHistoryCovers(days: range.days)
+                })
         case .hourly:
             HourlyActivityChartMenuView(
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
@@ -516,6 +523,7 @@ struct MenuPopoverView: View {
             ledgerSpendForecast: self.store.ledgerSpendForecast(for: provider),
             ledgerTopProjectSpendForecast: self.store.ledgerTopProjectSpendForecast(for: provider),
             ledgerAnomaly: self.store.ledgerAnomalySummary(for: provider),
+            ledgerCompaction: self.store.ledgerCompactionSummary(for: provider),
             ledgerReliability: self.store.ledgerReliabilityScore(for: provider),
             ledgerRouting: self.store.ledgerRoutingRecommendation(for: provider),
             ledgerError: self.store.ledgerError(for: provider),
@@ -782,7 +790,7 @@ private struct MenuPopoverChip: View {
     }
 
     private var foreground: Color {
-        self.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText
+        return self.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText
     }
 
     private var background: Color {
@@ -792,7 +800,7 @@ private struct MenuPopoverChip: View {
     }
 
     private var border: Color {
-        self.isSelected
+        return self.isSelected
             ? self.runicTheme.accent.opacity(0.64)
             : self.runicTheme.cardStroke.opacity(self.isHovered ? 0.72 : 0.42)
     }

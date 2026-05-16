@@ -11,14 +11,18 @@ struct UsageTimelineChartMenuView: View {
         case quarter = "90d"
         case year = "1y"
 
-        var cutoffInterval: TimeInterval {
+        var days: Int {
             switch self {
-            case .threeDays: -259_200
-            case .sevenDays: -604_800
-            case .thirtyDays: -2_592_000
-            case .quarter: -7_776_000
-            case .year: -31_536_000
+            case .threeDays: 3
+            case .sevenDays: 7
+            case .thirtyDays: 30
+            case .quarter: 90
+            case .year: 365
             }
+        }
+
+        var cutoffInterval: TimeInterval {
+            -TimeInterval(self.days * 86_400)
         }
 
         var usesHourlyData: Bool {
@@ -47,7 +51,9 @@ struct UsageTimelineChartMenuView: View {
     private let dailySummaries: [UsageLedgerDailySummary]
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
-    @Binding private var selectedTimeRange: TimeRange
+    private let selectedTimeRangeBinding: Binding<TimeRange>?
+    private let onRangeChange: (TimeRange) -> Void
+    @State private var localTimeRange: TimeRange
     @State private var selectedKey: String?
     @Environment(\.runicTheme) private var runicTheme
 
@@ -55,16 +61,20 @@ struct UsageTimelineChartMenuView: View {
         dailySummaries: [UsageLedgerDailySummary],
         hourlySummaries: [UsageLedgerHourlySummary] = [],
         width: CGFloat,
-        selectedTimeRange: Binding<TimeRange> = .constant(.sevenDays))
+        selectedTimeRange: Binding<TimeRange>? = nil,
+        onRangeChange: @escaping (TimeRange) -> Void = { _ in })
     {
         self.dailySummaries = dailySummaries
         self.hourlySummaries = hourlySummaries
         self.width = width
-        self._selectedTimeRange = selectedTimeRange
+        self.selectedTimeRangeBinding = selectedTimeRange
+        self.onRangeChange = onRangeChange
+        self._localTimeRange = State(initialValue: selectedTimeRange?.wrappedValue ?? .sevenDays)
     }
 
     var body: some View {
-        let model = Self.makeDailyModel(from: self.dailySummaries, timeRange: self.selectedTimeRange)
+        let selectedRange = self.selectedTimeRange
+        let model = Self.makeDailyModel(from: self.dailySummaries, timeRange: selectedRange)
         let lineColor = self.runicTheme.chartColor(at: 0)
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -74,7 +84,7 @@ struct UsageTimelineChartMenuView: View {
                 .fontWeight(.semibold)
 
             // Range picker on its own line
-            Picker("", selection: self.$selectedTimeRange) {
+            Picker("", selection: self.selectedTimeRangeBindingForPicker) {
                 ForEach(TimeRange.allCases, id: \.self) { range in
                     Text(range.label).tag(range)
                 }
@@ -179,7 +189,7 @@ struct UsageTimelineChartMenuView: View {
                 HStack(spacing: RunicSpacing.md) {
                     StatCell(label: "Total", value: UsageFormatter.tokenCountString(model.totalTokens))
                     StatCell(
-                        label: self.selectedTimeRange.usesHourlyData ? "Avg/hr" : "Avg/day",
+                        label: selectedRange.usesHourlyData ? "Avg/hr" : "Avg/day",
                         value: UsageFormatter.tokenCountString(model.averagePerPeriod))
                     StatCell(label: "Peak", value: UsageFormatter.tokenCountString(model.peakTokens))
                     if let cost = model.totalCostUSD, cost > 0 {
@@ -189,9 +199,26 @@ struct UsageTimelineChartMenuView: View {
             }
         }
         .chartPanelStyle(width: self.width)
+        .onAppear {
+            self.onRangeChange(self.selectedTimeRange)
+        }
+        .onChange(of: self.selectedTimeRange) { _, range in
+            self.selectedKey = nil
+            self.onRangeChange(range)
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Usage timeline chart showing \(model.points.count) data points over \(self.selectedTimeRange.label)")
+            "Usage timeline chart showing \(model.points.count) data points over \(selectedRange.label)")
+    }
+
+    private var selectedTimeRange: TimeRange {
+        self.selectedTimeRangeBinding?.wrappedValue ?? self.localTimeRange
+    }
+
+    private var selectedTimeRangeBindingForPicker: Binding<TimeRange> {
+        self.selectedTimeRangeBinding ?? Binding(
+            get: { self.localTimeRange },
+            set: { self.localTimeRange = $0 })
     }
 
     // MARK: - Stat cell

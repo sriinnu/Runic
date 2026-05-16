@@ -115,7 +115,7 @@ enum UsageExporter {
         // Header
         lines
             .append(
-                "date,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,models_used")
+            "date,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,models_used,token_provenance,cost_provenance")
 
         // Daily summaries from token snapshot
         let daily = store.tokenSnapshot(for: provider)?.daily ?? []
@@ -128,7 +128,7 @@ enum UsageExporter {
             let cacheCreate = day.cacheCreationTokens ?? 0
             let cacheRead = day.cacheReadTokens ?? 0
             let total = day.totalTokens ?? (input + output + cacheCreate + cacheRead)
-            lines.append("\(day.date),\(input),\(output),\(cacheCreate),\(cacheRead),\(total),\(costStr),\(modelsStr)")
+            lines.append("\(day.date),\(input),\(output),\(cacheCreate),\(cacheRead),\(total),\(costStr),\(modelsStr),,")
         }
 
         // If no token snapshot daily data, fall back to ledger daily summary
@@ -137,7 +137,7 @@ enum UsageExporter {
             let modelsStr = Self.csvEscape(summary.modelsUsed.joined(separator: "; "))
             lines
                 .append(
-                    "\(summary.dayKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(modelsStr)")
+                    "\(summary.dayKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(modelsStr),\(Self.provenanceText(summary.totals.tokenProvenance)),\(Self.provenanceText(summary.totals.costProvenance))")
         }
 
         return lines.joined(separator: "\n")
@@ -145,7 +145,7 @@ enum UsageExporter {
 
     private static func exportLedgerDailyCSV(store: UsageStore, provider: UsageProvider, days: Int?) -> String {
         var lines = [
-            "date,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,models_used",
+            "date,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,models_used,token_provenance,cost_provenance",
         ]
         let calendar = Calendar.current
         let cutoff = days.flatMap { calendar.date(byAdding: .day, value: -($0 - 1), to: calendar.startOfDay(for: Date())) }
@@ -159,27 +159,27 @@ enum UsageExporter {
             let costStr = summary.totals.costUSD.map { String(format: "%.4f", $0) } ?? ""
             let modelsStr = Self.csvEscape(summary.modelsUsed.joined(separator: "; "))
             lines.append(
-                "\(summary.dayKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(modelsStr)")
+                "\(summary.dayKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(modelsStr),\(Self.provenanceText(summary.totals.tokenProvenance)),\(Self.provenanceText(summary.totals.costProvenance))")
         }
         return lines.joined(separator: "\n")
     }
 
     private static func exportHourlyCSV(store: UsageStore, provider: UsageProvider) -> String {
         var lines = [
-            "hour,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,requests",
+            "hour,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,requests,token_provenance,cost_provenance",
         ]
         let summaries = store.ledgerHourlySummary(for: provider).sorted { $0.hourStart < $1.hourStart }
         for summary in summaries {
             let costStr = summary.totals.costUSD.map { String(format: "%.4f", $0) } ?? ""
             lines.append(
-                "\(summary.hourKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(summary.requestCount)")
+                "\(summary.hourKey),\(summary.totals.inputTokens),\(summary.totals.outputTokens),\(summary.totals.cacheCreationTokens),\(summary.totals.cacheReadTokens),\(summary.totals.totalTokens),\(costStr),\(summary.requestCount),\(Self.provenanceText(summary.totals.tokenProvenance)),\(Self.provenanceText(summary.totals.costProvenance))")
         }
         return lines.joined(separator: "\n")
     }
 
     private static func exportProjectsCSV(store: UsageStore, provider: UsageProvider) -> String {
         var lines = [
-            "project_name,project_id,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,requests,models_used",
+            "project_name,project_id,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,requests,models_used,token_provenance,cost_provenance",
         ]
         for project in store.ledgerProjectBreakdown(for: provider) {
             let costStr = project.totals.costUSD.map { String(format: "%.4f", $0) } ?? ""
@@ -187,21 +187,21 @@ enum UsageExporter {
             let id = Self.csvEscape(project.projectID ?? "")
             let models = Self.csvEscape(project.modelsUsed.joined(separator: "; "))
             lines.append(
-                "\(name),\(id),\(project.totals.inputTokens),\(project.totals.outputTokens),\(project.totals.cacheCreationTokens),\(project.totals.cacheReadTokens),\(project.totals.totalTokens),\(costStr),\(project.entryCount),\(models)")
+                "\(name),\(id),\(project.totals.inputTokens),\(project.totals.outputTokens),\(project.totals.cacheCreationTokens),\(project.totals.cacheReadTokens),\(project.totals.totalTokens),\(costStr),\(project.entryCount),\(models),\(Self.provenanceText(project.totals.tokenProvenance)),\(Self.provenanceText(project.totals.costProvenance))")
         }
         return lines.joined(separator: "\n")
     }
 
     private static func exportModelsCSV(store: UsageStore, provider: UsageProvider) -> String {
         var lines = [
-            "model,project_name,project_id,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,requests",
+            "model,project_name,project_id,input_tokens,output_tokens,cache_creation_tokens,cache_read_tokens,total_tokens,cost_usd,requests,token_provenance,cost_provenance",
         ]
         for model in store.ledgerModelBreakdown(for: provider) {
             let costStr = model.totals.costUSD.map { String(format: "%.4f", $0) } ?? ""
             let projectName = Self.csvEscape(RunicProjectDisplay.name(for: model))
             let projectID = Self.csvEscape(model.projectID ?? "")
             lines.append(
-                "\(Self.csvEscape(model.model)),\(projectName),\(projectID),\(model.totals.inputTokens),\(model.totals.outputTokens),\(model.totals.cacheCreationTokens),\(model.totals.cacheReadTokens),\(model.totals.totalTokens),\(costStr),\(model.entryCount)")
+                "\(Self.csvEscape(model.model)),\(projectName),\(projectID),\(model.totals.inputTokens),\(model.totals.outputTokens),\(model.totals.cacheCreationTokens),\(model.totals.cacheReadTokens),\(model.totals.totalTokens),\(costStr),\(model.entryCount),\(Self.provenanceText(model.totals.tokenProvenance)),\(Self.provenanceText(model.totals.costProvenance))")
         }
         return lines.joined(separator: "\n")
     }
@@ -273,6 +273,7 @@ enum UsageExporter {
                 if let cost = summary.totals.costUSD {
                     entry["costUSD"] = cost
                 }
+                Self.addProvenance(to: &entry, totals: summary.totals)
                 return entry
             }
         }
@@ -291,6 +292,7 @@ enum UsageExporter {
                 if let cost = model.totals.costUSD {
                     entry["costUSD"] = cost
                 }
+                Self.addProvenance(to: &entry, totals: model.totals)
                 entry["projectName"] = RunicProjectDisplay.name(for: model)
                 if let projectID = model.projectID {
                     entry["projectID"] = projectID
@@ -314,6 +316,7 @@ enum UsageExporter {
                 if let cost = project.totals.costUSD {
                     entry["costUSD"] = cost
                 }
+                Self.addProvenance(to: &entry, totals: project.totals)
                 if let projectID = project.projectID {
                     entry["projectID"] = projectID
                 }
@@ -338,6 +341,23 @@ enum UsageExporter {
                         return entry
                     }
             }
+        }
+
+        if let compaction = store.ledgerCompactionSummary(for: provider), scope == .all {
+            var entry: [String: Any] = [
+                "eventCount": compaction.eventCount,
+                "inputTokens": compaction.totals.inputTokens,
+                "outputTokens": compaction.totals.outputTokens,
+                "cacheCreationTokens": compaction.totals.cacheCreationTokens,
+                "cacheReadTokens": compaction.totals.cacheReadTokens,
+                "totalTokens": compaction.totals.totalTokens,
+                "lastEventAt": dateFormatter.string(from: compaction.lastEventAt),
+            ]
+            if let cost = compaction.totals.costUSD {
+                entry["costUSD"] = cost
+            }
+            Self.addProvenance(to: &entry, totals: compaction.totals)
+            root["compactionTax"] = entry
         }
 
         // Spend forecast
@@ -386,6 +406,7 @@ enum UsageExporter {
                 if let cost = summary.totals.costUSD {
                     entry["costUSD"] = cost
                 }
+                Self.addProvenance(to: &entry, totals: summary.totals)
                 return entry
             }
         }
@@ -428,6 +449,7 @@ enum UsageExporter {
             if let cost = summary.totals.costUSD {
                 entry["costUSD"] = cost
             }
+            Self.addProvenance(to: &entry, totals: summary.totals)
             dailyArray.append(entry)
         }
 
@@ -457,6 +479,31 @@ enum UsageExporter {
             return "\"\(escaped)\""
         }
         return value
+    }
+
+    private static func provenanceText(_ provenance: MetricProvenance?) -> String {
+        Self.csvEscape(provenance?.displayText ?? "")
+    }
+
+    private static func addProvenance(to entry: inout [String: Any], totals: UsageLedgerTotals) {
+        if let tokenProvenance = totals.tokenProvenance {
+            entry["tokenProvenance"] = Self.provenanceJSON(tokenProvenance)
+        }
+        if let costProvenance = totals.costProvenance {
+            entry["costProvenance"] = Self.provenanceJSON(costProvenance)
+        }
+    }
+
+    private static func provenanceJSON(_ provenance: MetricProvenance) -> [String: String] {
+        var object: [String: String] = [
+            "confidence": provenance.confidence.rawValue,
+            "source": provenance.source.rawValue,
+            "display": provenance.displayText,
+        ]
+        if let detail = provenance.detail {
+            object["detail"] = detail
+        }
+        return object
     }
 }
 

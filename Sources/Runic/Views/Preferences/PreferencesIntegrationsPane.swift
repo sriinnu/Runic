@@ -535,14 +535,15 @@ private enum VaayuKeychainHelper {
 
     static func load() -> String? {
         var result: CFTypeRef?
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
         ]
+        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
+
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess,
               let data = result as? Data,

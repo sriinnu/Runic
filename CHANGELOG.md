@@ -5,7 +5,16 @@
 - Charts: add hover details/tooltips for timeline, hourly, weekly, utilization, windows, model, and project breakdown panels.
 - Projects: replace opaque "Unknown project" UX with "Unattributed usage" detail text that explains when provider logs lack readable project identity.
 - Context: surface connection and context-health lines in provider insights, separating max context metadata from observed usage and compaction transparency.
+- Providers: add Local LLM as a first-class provider with localhost discovery for Ollama, LM Studio, vLLM, llama.cpp, and Open WebUI.
+- Usage: add metric provenance to ledger totals and scoped CSV/JSON exports so token/cost values identify exact, provider-reported, estimated, inferred, or unknown sources.
+- Usage: detect explicitly marked compaction work from OpenTelemetry/provider logs and surface it as compaction tax in menus, exports, and CLI insights.
+- Usage: add a local OTLP/HTTP JSON collector that sanitizes GenAI telemetry into metric-only JSONL and is read automatically by app and CLI insights.
+- Usage: expand telemetry parsing for Vercel AI SDK-style fields, Ollama token counters, total-token-only payloads, cache hit/miss counters, and explicit cost fields.
+- Custom providers: record performance metrics under a `custom:<provider>` label instead of misattributing them to Codex.
+- CLI: let `runic insights` analyze any provider with a local ledger or OpenTelemetry GenAI logs, including `local-llm`.
+- CLI: add `runic otel-collect` for local OTLP JSON collection and one-shot sanitized ingestion.
 - Typography: add more curated macOS font choices with explicit spacing/contrast rules in the live font preview.
+- Governance: switch current development licensing to AGPL-3.0-or-later and add sponsorship metadata for GitHub Sponsors and Buy Me a Coffee.
 
 ## 2.1.7 — 2026-05-13
 - Menu: render lower action, text, custom-provider, export, chart-link, and divider rows through the same themed hosted surface as the top provider cards.

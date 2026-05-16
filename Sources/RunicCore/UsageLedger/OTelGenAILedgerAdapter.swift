@@ -10,7 +10,7 @@ public struct OTelGenAIIngestionOptions: Sendable, Codable, Hashable {
         enabled: Bool = false,
         allowExperimentalSemanticConventions: Bool = true,
         defaultProvider: UsageProvider? = nil,
-        source: UsageLedgerEntry.Source = .api)
+        source: UsageLedgerEntry.Source = .openTelemetry)
     {
         self.enabled = enabled
         self.allowExperimentalSemanticConventions = allowExperimentalSemanticConventions
@@ -199,24 +199,62 @@ public enum OTelGenAILedgerAdapter {
             for: [
                 "gen_ai.usage.input_tokens",
                 "gen_ai.usage.prompt_tokens",
+                "gen_ai.usage.promptTokens",
+                "ai.usage.promptTokens",
+                "ai.usage.prompt_tokens",
+                "llm.usage.prompt_tokens",
                 "usage.prompt_tokens",
+                "usage.input_tokens",
+                "usage.promptTokens",
+                "prompt_eval_count",
                 "input_tokens",
+                "prompt_tokens",
             ],
             in: attributes) ?? 0)
 
-        let outputTokens = max(0, self.intValue(
+        let parsedOutputTokens = self.intValue(
             for: [
                 "gen_ai.usage.output_tokens",
                 "gen_ai.usage.completion_tokens",
+                "gen_ai.usage.completionTokens",
+                "ai.usage.completionTokens",
+                "ai.usage.completion_tokens",
+                "llm.usage.completion_tokens",
                 "usage.completion_tokens",
+                "usage.output_tokens",
+                "usage.completionTokens",
+                "eval_count",
                 "output_tokens",
+                "completion_tokens",
             ],
-            in: attributes) ?? 0)
+            in: attributes)
+        let parsedTotalTokens = self.intValue(
+            for: [
+                "gen_ai.usage.total_tokens",
+                "gen_ai.usage.totalTokens",
+                "ai.usage.totalTokens",
+                "ai.usage.total_tokens",
+                "llm.usage.total_tokens",
+                "usage.total_tokens",
+                "usage.totalTokens",
+                "total_tokens",
+            ],
+            in: attributes)
+        let outputTokens = max(
+            0,
+            parsedOutputTokens
+                ?? parsedTotalTokens.map { max(0, $0 - inputTokens) }
+                ?? 0)
 
         let cacheCreationTokens = max(0, self.intValue(
             for: [
                 "gen_ai.usage.cache_creation_input_tokens",
                 "gen_ai.usage.cache_write_tokens",
+                "gen_ai.usage.cacheWriteTokens",
+                "ai.usage.cacheWriteTokens",
+                "usage.cache_write_tokens",
+                "usage.cache_creation_input_tokens",
+                "prompt_cache_miss_tokens",
                 "cache_creation_tokens",
             ],
             in: attributes) ?? 0)
@@ -225,6 +263,11 @@ public enum OTelGenAILedgerAdapter {
             for: [
                 "gen_ai.usage.cache_read_input_tokens",
                 "gen_ai.usage.cache_read_tokens",
+                "gen_ai.usage.cacheReadTokens",
+                "ai.usage.cacheReadTokens",
+                "usage.cache_read_tokens",
+                "usage.cache_read_input_tokens",
+                "prompt_cache_hit_tokens",
                 "cache_read_tokens",
             ],
             in: attributes) ?? 0)
@@ -293,11 +336,19 @@ public enum OTelGenAILedgerAdapter {
         let costUSD = self.doubleValue(
             for: [
                 "gen_ai.usage.cost",
+                "gen_ai.usage.cost_usd",
+                "gen_ai.usage.costUSD",
+                "ai.usage.costUSD",
+                "ai.usage.cost_usd",
                 "usage.cost",
+                "usage.cost_usd",
+                "usage.costUSD",
                 "cost.usd",
                 "cost_usd",
+                "total_cost",
             ],
             in: attributes)
+        let operationKind = self.operationKind(from: attributes)
 
         return UsageLedgerEntry(
             provider: provider,
@@ -314,7 +365,48 @@ public enum OTelGenAILedgerAdapter {
             requestID: requestID,
             messageID: messageID,
             version: version,
-            source: options.source)
+            source: options.source,
+            operationKind: operationKind,
+            tokenProvenance: MetricProvenance(
+                confidence: .providerReported,
+                source: .openTelemetry,
+                detail: "GenAI token usage attributes"),
+            costProvenance: costUSD == nil ? nil : MetricProvenance(
+                confidence: .providerReported,
+                source: .openTelemetry,
+                detail: "GenAI cost attribute"))
+    }
+
+    private static func operationKind(from attributes: [String: Any]) -> UsageLedgerOperationKind {
+        let signals = [
+            self.stringValue(
+                for: [
+                    "gen_ai.query.source",
+                    "gen_ai.request.query_source",
+                    "claude_code.query_source",
+                    "claude.code.query_source",
+                    "query_source",
+                    "query.source",
+                ],
+                in: attributes),
+            self.stringValue(
+                for: [
+                    "gen_ai.operation.name",
+                    "operation.name",
+                    "span.name",
+                    "name",
+                ],
+                in: attributes),
+        ]
+        .compactMap { $0?.lowercased() }
+
+        if signals.contains(where: { $0.contains("compact") || $0.contains("compaction") }) {
+            return .compaction
+        }
+        if signals.contains(where: { $0.contains("tool") || $0.contains("function") }) {
+            return .tool
+        }
+        return .inference
     }
 
     private static func parseAttributesPayload(_ payload: Any?) -> [String: Any] {
@@ -435,6 +527,8 @@ public enum OTelGenAILedgerAdapter {
             return .sambanova
         case "qwen", "dashscope", "alibabacloud":
             return .qwen
+        case "local", "localllm", "locallanguage", "locallanguagemodel", "ollama", "lmstudio", "llamacpp", "vllm", "openwebui":
+            return .localLLM
         default:
             return UsageProvider(rawValue: normalized)
         }

@@ -106,6 +106,8 @@ struct UsageMenuCardView: View {
             let connectionDetail: String?
             let contextLine: String?
             let contextDetail: String?
+            let compactionLine: String?
+            let compactionDetail: String?
             let todayLine: String?
             let todayDetail: String?
             let forecastLine: String?
@@ -399,7 +401,7 @@ private struct UsageMenuCardHeaderView: View {
                             accentBase.opacity(self.runicTheme.isTerminalHUD ? 0.04 : 0.04),
                         ],
                         startPoint: .topLeading,
-                        endPoint: .bottomTrailing)
+                    endPoint: .bottomTrailing)
                     if self.runicTheme.isTerminalHUD {
                         RunicTerminalScanlineOverlay(opacity: 0.55)
                     }
@@ -722,6 +724,15 @@ private struct InsightsContent: View {
                     .font(RunicFont.footnote)
             }
             if let detail = self.section.contextDetail {
+                Text(detail)
+                    .font(RunicFont.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+            }
+            if let compaction = self.section.compactionLine {
+                Text(compaction)
+                    .font(RunicFont.footnote)
+            }
+            if let detail = self.section.compactionDetail {
                 Text(detail)
                     .font(RunicFont.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
@@ -1156,6 +1167,7 @@ extension UsageMenuCardView.Model {
         let ledgerSpendForecast: UsageLedgerSpendForecast?
         let ledgerTopProjectSpendForecast: UsageLedgerSpendForecast?
         let ledgerAnomaly: UsageLedgerAnomalySummary?
+        let ledgerCompaction: UsageLedgerCompactionSummary?
         let ledgerReliability: UsageLedgerReliabilityScore?
         let ledgerRouting: UsageLedgerRoutingRecommendation?
         let ledgerError: String?
@@ -1271,6 +1283,8 @@ extension UsageMenuCardView.Model {
             connectionDetail: section.connectionDetail,
             contextLine: section.contextLine,
             contextDetail: section.contextDetail,
+            compactionLine: section.compactionLine,
+            compactionDetail: section.compactionDetail,
             todayLine: section.todayLine,
             todayDetail: section.todayDetail,
             forecastLine: section.forecastLine,
@@ -1542,10 +1556,12 @@ extension UsageMenuCardView.Model {
             ? input.ledgerTopProjectSpendForecast
             : nil
         let anomaly = input.ledgerAnomaly?.provider == input.provider ? input.ledgerAnomaly : nil
+        let compaction = input.ledgerCompaction?.provider == input.provider ? input.ledgerCompaction : nil
         let connection = Self.connectionLines(input: input)
         let context = Self.contextHealthLines(input: input, daily: daily, block: block, topModel: topModel)
-        let hasData = connection.line != nil || context.line != nil || daily != nil || block != nil || topModel != nil ||
-            topProject != nil || spendForecast != nil || anomaly != nil
+        let compactionLines = Self.compactionLines(compaction)
+        let hasData = connection.line != nil || context.line != nil || compactionLines.line != nil || daily != nil ||
+            block != nil || topModel != nil || topProject != nil || spendForecast != nil || anomaly != nil
         if !hasData, error?.isEmpty ?? true {
             return nil
         }
@@ -1731,6 +1747,8 @@ extension UsageMenuCardView.Model {
             connectionDetail: connection.detail,
             contextLine: context.line,
             contextDetail: context.detail,
+            compactionLine: compactionLines.line,
+            compactionDetail: compactionLines.detail,
             todayLine: todayLine,
             todayDetail: todayDetail,
             forecastLine: forecastLine,
@@ -1811,16 +1829,23 @@ extension UsageMenuCardView.Model {
             return (nil, nil)
         }
 
-        let maxContext = input.providerContextStatus?.text ?? "unknown"
-        let observedTokens = block?.totals.totalTokens
-            ?? daily?.totals.totalTokens
-            ?? topModel?.totals.totalTokens
-            ?? 0
+        let status = input.providerContextStatus
+        let maxContext = status?.text ?? "unknown"
+        let observedTokens = block?.totals.totalTokens ?? daily?.totals.totalTokens ?? topModel?.totals.totalTokens ?? 0
         let observed = observedTokens > 0 ? UsageFormatter.tokenCountString(observedTokens) : "no observed tokens"
-        let line = "Context health: max \(maxContext) · observed \(observed)"
+        var parts: [String] = []
+        if let block, block.isActive,
+           let maxTokens = status?.maxTokens,
+           maxTokens > 0
+        {
+            parts.append(Self.contextPressureText(observed: block.totals.totalTokens, maxTokens: maxTokens))
+        }
+        parts.append("max \(maxContext)")
+        parts.append("observed \(observed)")
+        let line = "Context health: \(parts.joined(separator: " · "))"
 
         var details: [String] = []
-        if let status = input.providerContextStatus {
+        if let status {
             details.append("Capability source: \(Self.contextSourceText(status.source))\(status.isStale ? " (stale)" : "")")
         } else {
             details.append("Capability source: unavailable")
@@ -1828,7 +1853,52 @@ extension UsageMenuCardView.Model {
         if let model = topModel?.model {
             details.append("Model \(UsageFormatter.modelDisplayName(model))")
         }
-        details.append("Compaction boundaries are not exposed; tokens are counted when provider records include them.")
+        if block?.isActive == true {
+            details.append("Pressure uses active block token volume, not semantic retention.")
+        } else {
+            details.append("Observed tokens are usage volume, not active retained context.")
+        }
+        details.append("Effective retained context after compaction is not inferred.")
+        return (line, details.joined(separator: " · "))
+    }
+
+    private static func contextPressureText(observed: Int, maxTokens: Int) -> String {
+        guard observed > 0, maxTokens > 0 else { return "unknown pressure" }
+        let ratio = Double(observed) / Double(maxTokens)
+        let percent = Int((ratio * 100).rounded())
+        switch ratio {
+        case ..<0.35:
+            return "low pressure \(percent)%"
+        case ..<0.70:
+            return "medium pressure \(percent)%"
+        case ..<1.0:
+            return "high pressure \(percent)%"
+        default:
+            return "over-window volume \(percent)%"
+        }
+    }
+
+    private static func compactionLines(
+        _ summary: UsageLedgerCompactionSummary?) -> (line: String?, detail: String?)
+    {
+        guard let summary else {
+            return (nil, nil)
+        }
+
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let eventLabel = summary.eventCount == 1 ? "event" : "events"
+        let line = "Compaction tax: \(tokens) tokens · \(summary.eventCount) \(eventLabel)"
+
+        var details: [String] = []
+        if let cost = summary.totals.costUSD {
+            details.append("Spend \(UsageFormatter.usdString(cost))")
+        }
+        if let provenance = summary.totals.tokenProvenance {
+            details.append(provenance.displayText)
+        } else {
+            details.append("Source: observed compaction entries")
+        }
+        details.append("Last \(UsageFormatter.updatedString(from: summary.lastEventAt))")
         return (line, details.joined(separator: " · "))
     }
 

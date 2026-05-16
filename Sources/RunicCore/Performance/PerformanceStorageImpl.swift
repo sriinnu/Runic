@@ -166,7 +166,7 @@ public final class PerformanceStorageImpl {
         sqlite3_bind_text(
             statement,
             3,
-            latency.provider.rawValue,
+            latency.providerLabel ?? latency.provider.rawValue,
             -1,
             unsafeBitCast(-1, to: sqlite3_destructor_type.self))
 
@@ -253,7 +253,7 @@ public final class PerformanceStorageImpl {
         sqlite3_bind_text(
             statement,
             2,
-            error.provider.rawValue,
+            error.providerLabel ?? error.provider.rawValue,
             -1,
             unsafeBitCast(-1, to: sqlite3_destructor_type.self))
         sqlite3_bind_text(

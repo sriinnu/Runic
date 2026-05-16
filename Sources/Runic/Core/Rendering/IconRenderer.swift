@@ -192,6 +192,7 @@ enum IconRenderer {
         case vertexai
         case zai
         case qwen
+        case localLLM
         case combined
     }
 
@@ -299,6 +300,7 @@ enum IconRenderer {
         case .bedrock: .bedrock
         case .vertexai: .vertexai
         case .qwen: .qwen
+        case .localLLM: .localLLM
         case .combined: .combined
         }
     }
@@ -782,6 +784,17 @@ enum IconRenderer {
             NSGraphicsContext.current?.cgContext.setFillColor(NSColor.clear.cgColor)
             ctx.setBlendMode(.clear)
             NSBezierPath(ovalIn: innerRect).fill()
+        case .localLLM:
+            let prompt = NSBezierPath()
+            prompt.move(to: point(x: centerXPx - 5, y: centerYPx + 4))
+            prompt.line(to: point(x: centerXPx - 1, y: centerYPx))
+            prompt.line(to: point(x: centerXPx - 5, y: centerYPx - 4))
+            prompt.line(to: point(x: centerXPx - 3, y: centerYPx - 4))
+            prompt.line(to: point(x: centerXPx + 1, y: centerYPx))
+            prompt.line(to: point(x: centerXPx - 3, y: centerYPx + 4))
+            prompt.close()
+            prompt.fill()
+            NSBezierPath(rect: Self.grid.rect(x: centerXPx + 2, y: centerYPx - 4, w: 5, h: 2)).fill()
         case .vercelai:
             let path = NSBezierPath()
             path.move(to: point(x: centerXPx, y: centerYPx + 6))
@@ -965,6 +978,7 @@ enum IconRenderer {
         case .bedrock: 23
         case .vertexai: 24
         case .qwen: 25
+        case .localLLM: 27
         case .combined: 99
         }
     }

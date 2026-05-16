@@ -284,6 +284,7 @@ private struct ProviderSwitchChip: View {
         case .bedrock: "Bedrock"
         case .vertexai: "Vertex"
         case .qwen: "Qwen"
+        case .localLLM: "Local"
         }
     }
 }
@@ -632,6 +633,8 @@ enum WidgetColors {
             Color(red: 66 / 255, green: 133 / 255, blue: 244 / 255)
         case .qwen:
             Color(red: 98 / 255, green: 52 / 255, blue: 227 / 255)
+        case .localLLM:
+            Color(red: 46 / 255, green: 204 / 255, blue: 113 / 255)
         }
     }
 }

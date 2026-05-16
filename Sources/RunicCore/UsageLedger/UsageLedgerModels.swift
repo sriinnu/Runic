@@ -1,11 +1,115 @@
 import Foundation
 
+public enum MetricConfidence: String, Sendable, Codable, Hashable, CaseIterable {
+    case exact
+    case providerReported = "provider-reported"
+    case estimated
+    case inferred
+    case unknown
+
+    public var displayName: String {
+        switch self {
+        case .exact: "Exact"
+        case .providerReported: "Provider-reported"
+        case .estimated: "Estimated"
+        case .inferred: "Inferred"
+        case .unknown: "Unknown"
+        }
+    }
+
+    fileprivate var rank: Int {
+        switch self {
+        case .exact: 5
+        case .providerReported: 4
+        case .estimated: 3
+        case .inferred: 2
+        case .unknown: 1
+        }
+    }
+}
+
+public enum MetricSourceKind: String, Sendable, Codable, Hashable, CaseIterable {
+    case providerAPI = "provider-api"
+    case providerDashboard = "provider-dashboard"
+    case browserSession = "browser-session"
+    case localLog = "local-log"
+    case localProbe = "local-probe"
+    case openTelemetry = "open-telemetry"
+    case pricingTable = "pricing-table"
+    case koshaRegistry = "kosha-registry"
+    case staticFallback = "static-fallback"
+    case heuristic
+    case mixed
+    case unknown
+
+    public var displayName: String {
+        switch self {
+        case .providerAPI: "Provider API"
+        case .providerDashboard: "Provider dashboard"
+        case .browserSession: "Browser session"
+        case .localLog: "Local log"
+        case .localProbe: "Local probe"
+        case .openTelemetry: "OpenTelemetry"
+        case .pricingTable: "Pricing table"
+        case .koshaRegistry: "Kosha"
+        case .staticFallback: "Static fallback"
+        case .heuristic: "Heuristic"
+        case .mixed: "Mixed sources"
+        case .unknown: "Unknown source"
+        }
+    }
+}
+
+public struct MetricProvenance: Sendable, Codable, Hashable {
+    public let confidence: MetricConfidence
+    public let source: MetricSourceKind
+    public let detail: String?
+
+    public init(confidence: MetricConfidence, source: MetricSourceKind, detail: String? = nil) {
+        self.confidence = confidence
+        self.source = source
+        self.detail = detail
+    }
+
+    public var displayText: String {
+        let base = "\(self.confidence.displayName) from \(self.source.displayName)"
+        guard let detail = self.detail?.trimmingCharacters(in: .whitespacesAndNewlines), !detail.isEmpty else {
+            return base
+        }
+        return "\(base): \(detail)"
+    }
+
+    public static func combined(_ values: [MetricProvenance?]) -> MetricProvenance? {
+        let provenances = values.compactMap(\.self)
+        guard !provenances.isEmpty else { return nil }
+        let first = provenances[0]
+        if provenances.allSatisfy({ $0 == first }) {
+            return first
+        }
+        let lowestConfidence = provenances.min { lhs, rhs in
+            lhs.confidence.rank < rhs.confidence.rank
+        }?.confidence ?? .unknown
+        let sourceNames = Set(provenances.map(\.source.displayName)).sorted()
+        let detail = sourceNames.isEmpty ? nil : sourceNames.joined(separator: ", ")
+        return MetricProvenance(confidence: lowestConfidence, source: .mixed, detail: detail)
+    }
+}
+
+public enum UsageLedgerOperationKind: String, Sendable, Codable, Hashable, CaseIterable {
+    case inference
+    case compaction
+    case tool
+    case unknown
+}
+
 public struct UsageLedgerEntry: Sendable, Codable, Hashable {
     public enum Source: String, Sendable, Codable {
         case claudeLog
         case codexLog
         case api
         case cli
+        case openTelemetry
+        case localProbe
         case unknown
     }
 
@@ -24,6 +128,9 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
     public let messageID: String?
     public let version: String?
     public let source: Source
+    public let operationKind: UsageLedgerOperationKind?
+    public let tokenProvenance: MetricProvenance?
+    public let costProvenance: MetricProvenance?
 
     public init(
         provider: UsageProvider,
@@ -40,7 +147,10 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
         requestID: String?,
         messageID: String?,
         version: String?,
-        source: Source)
+        source: Source,
+        operationKind: UsageLedgerOperationKind? = nil,
+        tokenProvenance: MetricProvenance? = nil,
+        costProvenance: MetricProvenance? = nil)
     {
         self.provider = provider
         self.timestamp = timestamp
@@ -57,6 +167,53 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
         self.messageID = messageID
         self.version = version
         self.source = source
+        self.operationKind = operationKind
+        self.tokenProvenance = tokenProvenance
+        self.costProvenance = costProvenance
+    }
+
+    public var totalTokens: Int {
+        self.inputTokens + self.outputTokens + self.cacheCreationTokens + self.cacheReadTokens
+    }
+
+    public var nonCacheTokens: Int {
+        self.inputTokens + self.outputTokens
+    }
+
+    public var resolvedOperationKind: UsageLedgerOperationKind {
+        self.operationKind ?? .inference
+    }
+
+    public var isCompaction: Bool {
+        self.resolvedOperationKind == .compaction
+    }
+}
+
+public struct UsageLedgerTotals: Sendable, Codable, Hashable {
+    public let inputTokens: Int
+    public let outputTokens: Int
+    public let cacheCreationTokens: Int
+    public let cacheReadTokens: Int
+    public let costUSD: Double?
+    public let tokenProvenance: MetricProvenance?
+    public let costProvenance: MetricProvenance?
+
+    public init(
+        inputTokens: Int,
+        outputTokens: Int,
+        cacheCreationTokens: Int,
+        cacheReadTokens: Int,
+        costUSD: Double?,
+        tokenProvenance: MetricProvenance? = nil,
+        costProvenance: MetricProvenance? = nil)
+    {
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.cacheCreationTokens = cacheCreationTokens
+        self.cacheReadTokens = cacheReadTokens
+        self.costUSD = costUSD
+        self.tokenProvenance = tokenProvenance
+        self.costProvenance = costProvenance
     }
 
     public var totalTokens: Int {
@@ -68,33 +225,17 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
     }
 }
 
-public struct UsageLedgerTotals: Sendable, Codable, Hashable {
-    public let inputTokens: Int
-    public let outputTokens: Int
-    public let cacheCreationTokens: Int
-    public let cacheReadTokens: Int
-    public let costUSD: Double?
+public struct UsageLedgerCompactionSummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let eventCount: Int
+    public let totals: UsageLedgerTotals
+    public let lastEventAt: Date
 
-    public init(
-        inputTokens: Int,
-        outputTokens: Int,
-        cacheCreationTokens: Int,
-        cacheReadTokens: Int,
-        costUSD: Double?)
-    {
-        self.inputTokens = inputTokens
-        self.outputTokens = outputTokens
-        self.cacheCreationTokens = cacheCreationTokens
-        self.cacheReadTokens = cacheReadTokens
-        self.costUSD = costUSD
-    }
-
-    public var totalTokens: Int {
-        self.inputTokens + self.outputTokens + self.cacheCreationTokens + self.cacheReadTokens
-    }
-
-    public var nonCacheTokens: Int {
-        self.inputTokens + self.outputTokens
+    public init(provider: UsageProvider, eventCount: Int, totals: UsageLedgerTotals, lastEventAt: Date) {
+        self.provider = provider
+        self.eventCount = eventCount
+        self.totals = totals
+        self.lastEventAt = lastEventAt
     }
 }
 

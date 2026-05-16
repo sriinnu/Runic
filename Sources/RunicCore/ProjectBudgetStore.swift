@@ -1,5 +1,4 @@
 import Foundation
-import RunicCore
 
 /// Storage for project budget limits and alert thresholds
 public enum ProjectBudgetStore {

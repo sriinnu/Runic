@@ -1013,7 +1013,7 @@ struct ProvidersPane: View {
         if self.store.isStale(provider: provider) {
             return "failed"
         }
-        return "not yet"
+        return "waiting"
     }
 
     private func providerErrorDisplay(_ provider: UsageProvider) -> ProviderErrorDisplay? {
@@ -1045,7 +1045,7 @@ struct ProvidersPane: View {
         ProviderSettingsFieldDescriptor(
             id: "\(provider.rawValue)-otel-genai-log-paths",
             title: "Usage log paths",
-            subtitle: "JSON/JSONL OpenTelemetry GenAI files or folders. Comma or newline separated.",
+            subtitle: "JSON/JSONL OpenTelemetry GenAI files or folders. The local collector ledger is read automatically.",
             kind: .plain,
             placeholder: "~/Library/Logs/ai-usage.jsonl, /path/to/otel-logs",
             binding: context.stringBinding(\.otelGenAILogPaths),

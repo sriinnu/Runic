@@ -383,7 +383,7 @@ final class SettingsStore {
     }
 
     /// How many days of usage history to scan for ledger data (charts, breakdowns).
-    /// Options: 3, 7, 30, 365. Default: 30.
+    /// Options: 3, 7, 30, 90, 365. Default: 30.
     var ledgerMaxAgeDays: Int {
         didSet { self.userDefaults.set(self.ledgerMaxAgeDays, forKey: "ledgerMaxAgeDays") }
     }

@@ -224,20 +224,15 @@ struct QualityRatingView: View {
 
         self.isSubmitting = true
         self.errorMessage = nil
+        defer { self.isSubmitting = false }
 
-        do {
-            let trimmedComment = self.comment.trimmingCharacters(in: .whitespacesAndNewlines)
-            let finalComment = trimmedComment.isEmpty ? nil : trimmedComment
+        let trimmedComment = self.comment.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalComment = trimmedComment.isEmpty ? nil : trimmedComment
 
-            await self.model.onSubmit(rating, finalComment)
+        await self.model.onSubmit(rating, finalComment)
 
-            withAnimation(.easeInOut(duration: 0.3)) {
-                self.didSubmit = true
-            }
-        } catch {
-            self.errorMessage = "Failed to submit rating. Please try again."
+        withAnimation(.easeInOut(duration: 0.3)) {
+            self.didSubmit = true
         }
-
-        self.isSubmitting = false
     }
 }

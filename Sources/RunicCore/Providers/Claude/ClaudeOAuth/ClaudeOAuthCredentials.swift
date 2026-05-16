@@ -147,7 +147,6 @@ public enum ClaudeOAuthCredentialsStore {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.keychainService,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
