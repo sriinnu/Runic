@@ -13,6 +13,7 @@ enum PreferencesLayoutMetrics {
 
 @MainActor
 struct PreferencesPane<Content: View>: View {
+    @Environment(\.runicFonts) private var fonts
     let showsIndicators: Bool
     private let content: () -> Content
     @Environment(\.runicTheme) private var runicTheme
@@ -48,6 +49,7 @@ struct PreferencesPane<Content: View>: View {
 
 @MainActor
 struct PreferencesListPane<Content: View>: View {
+    @Environment(\.runicFonts) private var fonts
     let horizontalPadding: CGFloat
     let verticalPadding: CGFloat
     private let content: () -> Content
@@ -82,6 +84,8 @@ struct PreferencesListPane<Content: View>: View {
 
 @MainActor
 struct PreferenceToggleRow: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let title: String
     let subtitle: String?
     @Binding var binding: Bool
@@ -89,18 +93,28 @@ struct PreferenceToggleRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                Toggle(isOn: self.$binding) {
-                    Text(self.title)
-                        .font(RunicFont.body)
+                if self.runicTheme.id == "retro" {
+                    // Retro: System-7 beveled checkbox via RetroToggleStyle.
+                    Toggle(isOn: self.$binding) {
+                        Text(self.title)
+                            .font(self.fonts.body)
+                    }
+                    .toggleStyle(.retro)
+                    .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
+                } else {
+                    Toggle(isOn: self.$binding) {
+                        Text(self.title)
+                            .font(self.fonts.body)
+                    }
+                    .toggleStyle(.checkbox)
+                    .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                 }
-                .toggleStyle(.checkbox)
-                .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
             }
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -109,6 +123,8 @@ struct PreferenceToggleRow: View {
 
 @MainActor
 struct PreferenceStepperRow: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let title: String
     let subtitle: String?
     let step: Int
@@ -120,7 +136,7 @@ struct PreferenceStepperRow: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(spacing: RunicSpacing.sm) {
                 Text(self.title)
-                    .font(RunicFont.body)
+                    .font(self.fonts.body)
                 Spacer()
                 PreferenceStepperControl(
                     valueLabel: self.valueLabel(self.value),
@@ -132,8 +148,8 @@ struct PreferenceStepperRow: View {
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -142,6 +158,7 @@ struct PreferenceStepperRow: View {
 
 @MainActor
 struct PreferencesDivider: View {
+    @Environment(\.runicFonts) private var fonts
     var body: some View {
         Divider()
             .padding(.vertical, RunicSpacing.xxs)
@@ -150,6 +167,7 @@ struct PreferencesDivider: View {
 
 @MainActor
 private struct PreferenceStepperControl: View {
+    @Environment(\.runicFonts) private var fonts
     let valueLabel: String
     let canDecrement: Bool
     let canIncrement: Bool
@@ -167,15 +185,15 @@ private struct PreferenceStepperControl: View {
             .disabled(!self.canDecrement)
 
             Text(self.valueLabel)
-                .font(RunicFont.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(self.fonts.footnote.weight(.semibold))
+                .foregroundStyle(self.runicTheme.secondaryText)
                 .padding(.horizontal, RunicSpacing.sm)
                 .padding(.vertical, RunicSpacing.xxs)
                 .background(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                         .fill(self.runicTheme.menuSubtleFill))
                 .overlay(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                         .stroke(self.runicTheme.menuSeparatorColor.opacity(0.62), lineWidth: 0.7))
 
             Button(action: self.onIncrement) {
@@ -190,6 +208,8 @@ private struct PreferenceStepperControl: View {
 
 @MainActor
 struct SettingsSection<Content: View>: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let title: String?
     let caption: String?
     let contentSpacing: CGFloat
@@ -211,12 +231,12 @@ struct SettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionHeaderSpacing) {
             if let title, !title.isEmpty {
                 Text(title)
-                    .font(RunicFont.subheadline.weight(.semibold))
+                    .font(self.fonts.subheadline.weight(.semibold))
             }
             if let caption {
                 Text(caption)
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
             }
             VStack(alignment: .leading, spacing: self.contentSpacing) {

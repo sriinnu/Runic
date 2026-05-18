@@ -115,7 +115,9 @@ extension StatusItemController {
                 .runicMenuPanelChrome()
                 .background(alignment: .topLeading) {
                     if self.highlightState.isHighlighted {
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        RoundedRectangle(
+                            cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                            style: .continuous)
                             .fill(self.runicTheme.accent.opacity(0.18))
                             .padding(.horizontal, RunicSpacing.compact)
                             .padding(.vertical, RunicSpacing.xxxs)
@@ -138,6 +140,7 @@ extension StatusItemController {
         return view
             .runicTypography()
             .environment(\.runicTheme, palette)
+            .environment(\.runicFonts, RunicFontStore.shared)
             .runicColorScheme(palette)
             .runicMenuPanelChrome()
     }
@@ -164,7 +167,7 @@ extension StatusItemController {
             self.appearance = theme.nsAppearance
             self.wantsLayer = true
             self.layer?.insertSublayer(self.highlightLayer, at: 0)
-            self.highlightLayer.cornerRadius = CGFloat(RunicCornerRadius.sm)
+            self.highlightLayer.cornerRadius = theme.shape.cornerRadius(RunicCornerRadius.sm)
 
             self.iconView.image = image
             self.iconView.contentTintColor = theme.nsSecondaryTextColor

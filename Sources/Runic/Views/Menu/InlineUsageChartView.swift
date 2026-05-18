@@ -6,6 +6,7 @@ import SwiftUI
 /// Shows recent usage with a time-range segmented picker — inspired by Tokex.
 @MainActor
 struct InlineUsageChartView: View {
+    @Environment(\.runicFonts) private var fonts
     enum TimeRange: String, CaseIterable {
         case threeDays = "3d"
         case sevenDays = "7d"
@@ -60,35 +61,47 @@ struct InlineUsageChartView: View {
                 HStack {
                     Spacer()
                     Text("No data")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     Spacer()
                 }
                 .frame(height: 70)
             } else {
+                // Capture `now` once so a clock jump between calls can't put
+                // domain.upperBound below lowerBound. Theme-branch the chart
+                // marks the same way UsageTimelineChartMenuView does.
+                let now = Date()
+                let isTerminal = self.runicTheme.isTerminalHUD
+                let isGlow = self.runicTheme.shape.separator == .glow
+                let areaTopAlpha: Double = isTerminal ? 0 : (isGlow ? 0.32 : (self.runicTheme.id == "daybreak" ? 0.30 : 0.20))
+                let areaBottomAlpha: Double = isTerminal ? 0 : 0.02
+                let lineWidth: CGFloat = isGlow ? 2.0 : (isTerminal ? 1.2 : 1.5)
                 ZStack(alignment: .topTrailing) {
                     Chart {
                         ForEach(points) { point in
-                            AreaMark(
-                                x: .value("Time", point.date),
-                                y: .value("Tokens", point.tokens))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [
-                                            lineColor.opacity(0.2),
-                                            lineColor.opacity(0.02),
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom))
-                                .interpolationMethod(.catmullRom)
+                            if !isTerminal {
+                                AreaMark(
+                                    x: .value("Time", point.date),
+                                    y: .value("Tokens", point.tokens))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [
+                                                lineColor.opacity(areaTopAlpha),
+                                                lineColor.opacity(areaBottomAlpha),
+                                            ],
+                                            startPoint: .top,
+                                            endPoint: .bottom))
+                                    .interpolationMethod(.catmullRom)
+                            }
                             LineMark(
                                 x: .value("Time", point.date),
                                 y: .value("Tokens", point.tokens))
                                 .foregroundStyle(lineColor)
-                                .lineStyle(StrokeStyle(lineWidth: 1.5))
-                                .interpolationMethod(.catmullRom)
+                                .lineStyle(StrokeStyle(lineWidth: lineWidth))
+                                .interpolationMethod(isTerminal ? .linear : .catmullRom)
                         }
                     }
+                    .chartXScale(domain: now.addingTimeInterval(self.selectedRange.cutoffInterval)...now)
                     .chartYAxis {
                         AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
                             AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
@@ -96,7 +109,7 @@ struct InlineUsageChartView: View {
                             AxisValueLabel {
                                 if let tokens = value.as(Int.self) {
                                     Text(UsageFormatter.tokenCountString(tokens))
-                                        .font(RunicFont.system(size: 8))
+                                        .font(self.fonts.system(size: 8))
                                         .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                                 }
                             }
@@ -105,7 +118,7 @@ struct InlineUsageChartView: View {
                     .chartXAxis {
                         AxisMarks(values: .automatic(desiredCount: 4)) { _ in
                             AxisValueLabel(format: self.xAxisFormat)
-                                .font(RunicFont.system(size: 8))
+                                .font(self.fonts.system(size: 8))
                                 .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                         }
                     }
@@ -115,7 +128,7 @@ struct InlineUsageChartView: View {
                     // Peak badge
                     if let peak = points.max(by: { $0.tokens < $1.tokens }), peak.tokens > 0 {
                         Text("Peak \(UsageFormatter.tokenCountString(peak.tokens))")
-                            .font(RunicFont.system(size: 8, weight: .medium))
+                            .font(self.fonts.system(size: 8, weight: .medium))
                             .foregroundStyle(self.runicTheme.secondaryText)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)

@@ -1,0 +1,26 @@
+{
+  "id": "system",
+  "displayName": "System",
+  "tagline": "Follow macOS",
+  "symbolName": "circle.lefthalf.filled",
+  "isCustom": false,
+  "prefersDarkAppearance": null,
+  "colors": {
+    "primary":       "$controlAccentColor",
+    "secondary":     "#4288F5",
+    "accent":        "$controlAccentColor",
+    "highlight":     "#F0872E",
+    "warm":          "#CC73EB",
+    "tertiary":      "#42C7DB",
+    "surface":       "$windowBackgroundColor",
+    "surfaceAlt":    "$controlBackgroundColor",
+    "cardFill":      "$controlBackgroundColor@0.34",
+    "cardStroke":    "$separatorColor@0.35",
+    "primaryText":   "$controlTextColor",
+    "secondaryText": "$secondaryLabelColor"
+  },
+  "fonts":   { "body": "system", "numeric": "system" },
+  "shape":   { "preset": "standard" },
+  "motion":  { "preset": "standard" },
+  "density": { "preset": "normal" }
+}

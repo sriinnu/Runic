@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct CostComparativeChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private struct ModelCostData: Identifiable {
         let id: String
         let modelName: String
@@ -37,7 +38,7 @@ struct CostComparativeChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.isEmpty {
                 Text("No cost comparison data.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
@@ -56,7 +57,7 @@ struct CostComparativeChartMenuView: View {
                         AxisValueLabel {
                             if let cost = value.as(Double.self) {
                                 Text(UsageFormatter.usdString(cost))
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
@@ -67,7 +68,7 @@ struct CostComparativeChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel()
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.primaryText)
                     }
                 }
@@ -95,14 +96,14 @@ struct CostComparativeChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(2)
                         .truncationMode(.tail)
                         .frame(height: 32, alignment: .leading)
                     if let secondary = detail.secondary {
                         Text(secondary)
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .foregroundStyle(self.runicTheme.secondaryText)
                             .lineLimit(1)
                             .truncationMode(.tail)
@@ -117,7 +118,7 @@ struct CostComparativeChartMenuView: View {
                             .fill(self.runicTheme.tertiary)
                             .frame(width: 8, height: 8)
                         Text("Low cost")
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     HStack(spacing: RunicSpacing.xxs) {
@@ -125,7 +126,7 @@ struct CostComparativeChartMenuView: View {
                             .fill(self.runicTheme.highlight)
                             .frame(width: 8, height: 8)
                         Text("Medium cost")
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     HStack(spacing: RunicSpacing.xxs) {
@@ -133,7 +134,7 @@ struct CostComparativeChartMenuView: View {
                             .fill(self.runicTheme.warm)
                             .frame(width: 8, height: 8)
                         Text("High cost")
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.secondaryText)
                     }
                 }

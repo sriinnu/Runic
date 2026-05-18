@@ -5,6 +5,7 @@ import SwiftUI
 /// Bar chart showing the last 7 days of usage — inspired by Tokex "Last 7 Days".
 @MainActor
 struct WeeklyActivityChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private struct DayBar: Identifiable {
         let id: String
         let date: Date
@@ -35,20 +36,20 @@ struct WeeklyActivityChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Last 7 Days")
-                    .font(RunicFont.subheadline)
+                    .font(self.fonts.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
                 if model.bars.count > 1 {
                     let avg = model.totalTokens / max(1, model.bars.count(where: { $0.totalTokens > 0 }))
                     Text("\(UsageFormatter.tokenCountString(avg)) avg")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
                 Text("No usage in the last 7 days.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
@@ -59,13 +60,13 @@ struct WeeklyActivityChartMenuView: View {
                             x: .value("Day", bar.weekdayShort),
                             y: .value("Tokens", bar.totalTokens))
                             .foregroundStyle(bar.isToday ? todayColor : barColor)
-                            .cornerRadius(RunicCornerRadius.sm)
+                            .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
                     }
                 }
                 .chartXAxis {
                     AxisMarks { _ in
                         AxisValueLabel()
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
@@ -76,7 +77,7 @@ struct WeeklyActivityChartMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
@@ -89,7 +90,7 @@ struct WeeklyActivityChartMenuView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
-                                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                                     .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
@@ -105,7 +106,7 @@ struct WeeklyActivityChartMenuView: View {
                 }
 
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)

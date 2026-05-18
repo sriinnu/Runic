@@ -1,0 +1,26 @@
+{
+  "id": "dark",
+  "displayName": "Dark",
+  "tagline": "Cinematic dark",
+  "symbolName": "moon.stars.fill",
+  "isCustom": false,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#739EFF",
+    "secondary":     "#8CCCFF",
+    "accent":        "#8CCCFF",
+    "highlight":     "#FF9E2E",
+    "warm":          "#FF6180",
+    "tertiary":      "#61EBA8",
+    "surface":       "#06080B",
+    "surfaceAlt":    "#0F141DF2",
+    "cardFill":      "#FFFFFF0B",
+    "cardStroke":    "#8CCCFF38",
+    "primaryText":   "#FFFFFFF2",
+    "secondaryText": "#FFFFFF9E"
+  },
+  "fonts":   { "body": "system", "numeric": "system" },
+  "shape":   { "cornerMultiplier": 1.0, "separator": "glow" },
+  "motion":  { "preset": "standard" },
+  "density": { "preset": "normal" }
+}

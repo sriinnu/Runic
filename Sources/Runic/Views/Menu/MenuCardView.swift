@@ -44,6 +44,7 @@ enum MenuCardMetrics {
 
 /// SwiftUI card used inside the NSMenu to mirror Apple's rich menu panels.
 struct UsageMenuCardView: View {
+    @Environment(\.runicFonts) private var fonts
     struct Model {
         enum PercentStyle: String {
             case left
@@ -169,7 +170,7 @@ struct UsageMenuCardView: View {
             UsageMenuCardHeaderView(model: self.model)
 
             if self.hasDetails {
-                Divider()
+                RunicDivider()
                     .padding(.vertical, RunicSpacing.xxs)
             }
 
@@ -204,7 +205,7 @@ struct UsageMenuCardView: View {
                         }
                     }
                     if hasUsage, hasCredits || hasCost || hasInsights {
-                        Divider()
+                        RunicDivider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
                     if hasCredits, let credits = self.model.creditsText {
@@ -216,7 +217,7 @@ struct UsageMenuCardView: View {
                             progressColor: self.model.progressColor)
                     }
                     if hasCredits, hasCost || hasInsights {
-                        Divider()
+                        RunicDivider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
                     if hasExtraUsage, let providerCost = self.model.providerCost {
@@ -225,34 +226,34 @@ struct UsageMenuCardView: View {
                             progressColor: self.model.progressColor)
                     }
                     if hasExtraUsage, hasTokenCost || hasInsights {
-                        Divider()
+                        RunicDivider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
                     if hasTokenCost, let tokenUsage = self.model.tokenUsage {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                             Text("Cost")
-                                .font(RunicFont.body)
+                                .font(self.fonts.body)
                                 .fontWeight(.medium)
                             Text(tokenUsage.sessionLine)
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                             if let sessionDetail = tokenUsage.sessionDetailLine {
                                 Text(sessionDetail)
-                                    .font(RunicFont.footnote)
+                                    .font(self.fonts.footnote)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Text(tokenUsage.monthLine)
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                             if let monthDetail = tokenUsage.monthDetailLine {
                                 Text(monthDetail)
-                                    .font(RunicFont.footnote)
+                                    .font(self.fonts.footnote)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Text(tokenUsage.updatedLine)
-                                .font(RunicFont.caption)
+                                .font(self.fonts.caption)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                             if let hint = tokenUsage.hintLine, !hint.isEmpty {
                                 Text(hint)
-                                    .font(RunicFont.footnote)
+                                    .font(self.fonts.footnote)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                                     .lineLimit(4)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -260,17 +261,17 @@ struct UsageMenuCardView: View {
                             if let error = tokenUsage.errorLine, !error.isEmpty {
                                 HStack(alignment: .top, spacing: RunicSpacing.xs) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(RunicFont.footnote)
+                                        .font(self.fonts.footnote)
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
-                                        .font(RunicFont.footnote)
+                                        .font(self.fonts.footnote)
                                         .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .padding(RunicSpacing.xs)
                                 .background(
-                                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                                         .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
                                 .overlay {
                                     ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)
@@ -279,7 +280,7 @@ struct UsageMenuCardView: View {
                         }
                     }
                     if hasCost, hasInsights {
-                        Divider()
+                        RunicDivider()
                             .padding(.vertical, RunicSpacing.xxs)
                     }
                     if hasInsights, let insights = self.model.insights {
@@ -305,6 +306,7 @@ struct UsageMenuCardView: View {
 }
 
 private struct UsageMenuCardHeaderView: View {
+    @Environment(\.runicFonts) private var fonts
     let model: UsageMenuCardView.Model
     @Environment(\.menuItemHighlighted) private var isHighlighted
     @Environment(\.runicTheme) private var runicTheme
@@ -316,14 +318,21 @@ private struct UsageMenuCardHeaderView: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                     Text(self.model.providerName)
-                        .font(RunicFont.headline)
+                        .font(self.fonts.headline)
                         .fontWeight(.semibold)
                     if !self.model.email.isEmpty {
-                        ProfilePill(
-                            text: self.model.email,
-                            systemImage: "person.crop.circle",
-                            tint: self.brandAccent)
-                            .lineLimit(1)
+                        if self.runicTheme.id == "retro" {
+                            Text(self.model.email)
+                                .font(self.fonts.caption)
+                                .foregroundStyle(self.runicTheme.secondaryText)
+                                .lineLimit(1)
+                        } else {
+                            ProfilePill(
+                                text: self.model.email,
+                                systemImage: "person.crop.circle",
+                                tint: self.brandAccent)
+                                .lineLimit(1)
+                        }
                     }
                 }
 
@@ -334,12 +343,16 @@ private struct UsageMenuCardHeaderView: View {
                         MenuHeaderBadgeView(badge: badge, isHighlighted: self.isHighlighted)
                     }
                     if let plan = self.model.planText {
-                        ProfilePill(
-                            text: plan,
-                            systemImage: "sparkles",
-                            tint: self.brandAccent,
-                            style: .plan)
-                            .lineLimit(1)
+                        if self.runicTheme.id == "retro" {
+                            RetroPlanTag(text: plan)
+                        } else {
+                            ProfilePill(
+                                text: plan,
+                                systemImage: "sparkles",
+                                tint: self.brandAccent,
+                                style: .plan)
+                                .lineLimit(1)
+                        }
                     }
                 }
             }
@@ -347,7 +360,7 @@ private struct UsageMenuCardHeaderView: View {
             let subtitleAlignment: VerticalAlignment = self.model.subtitleStyle == .error ? .top : .firstTextBaseline
             HStack(alignment: subtitleAlignment) {
                 Text(self.model.subtitleText)
-                    .font(RunicFont.footnote.weight(.medium))
+                    .font(self.fonts.footnote.weight(.medium))
                     .foregroundStyle(self.subtitleColor)
                     .lineLimit(self.model.subtitleStyle == .error ? 4 : 1)
                     .multilineTextAlignment(.leading)
@@ -362,7 +375,7 @@ private struct UsageMenuCardHeaderView: View {
 
             if let topModelLine = self.model.topModelLine {
                 Text(topModelLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
             }
@@ -391,30 +404,49 @@ private struct UsageMenuCardHeaderView: View {
         let top = base.blended(withFraction: 0.35, of: .white) ?? base
         let accentTop = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : Color(nsColor: top)
         let accentBase = self.runicTheme.isTerminalHUD ? self.runicTheme.tertiary : Color(nsColor: base)
-        return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-            .fill(self.runicTheme.menuCardGradient)
+        let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
+        let isRetro = self.runicTheme.id == "retro"
+        return RoundedRectangle(cornerRadius: radius, style: .continuous)
+            .fill(self.runicTheme.cardBackgroundStyle)
             .overlay(
                 ZStack {
-                    LinearGradient(
-                        colors: [
-                            accentTop.opacity(self.runicTheme.isTerminalHUD ? 0.10 : 0.14),
-                            accentBase.opacity(self.runicTheme.isTerminalHUD ? 0.04 : 0.04),
-                        ],
-                        startPoint: .topLeading,
-                    endPoint: .bottomTrailing)
+                    // Brand-tinted gradient overlay washes the card with the
+                    // provider's hue. On Retro this clashes with the
+                    // parchment palette — skip it entirely there.
+                    if !isRetro {
+                        LinearGradient(
+                            colors: [
+                                accentTop.opacity(self.runicTheme.isTerminalHUD ? 0.10 : 0.14),
+                                accentBase.opacity(self.runicTheme.isTerminalHUD ? 0.04 : 0.04),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing)
+                    }
                     if self.runicTheme.isTerminalHUD {
                         RunicTerminalScanlineOverlay(opacity: 0.55)
                     }
                 }
-                    .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)))
+                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous)))
     }
 
+    @ViewBuilder
     private var headerBorder: some View {
-        let base = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : Color(nsColor: self.brandNSColor)
-        return RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-            .stroke(
-                base.opacity(self.isHighlighted ? 0.76 : 0.45),
-                lineWidth: self.runicTheme.isTerminalHUD ? 0.9 : 0.7)
+        let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
+        if self.runicTheme.id == "retro" {
+            // Retro: the outer MenuPopoverSurfaceCard bevel already frames
+            // the whole provider hero. Drawing another inner frame around
+            // just the email row produced nested-rectangle ugliness — skip.
+            EmptyView()
+        } else {
+            // Other themes: brand-colored stroke gives each card its own hue.
+            let base = self.runicTheme.isTerminalHUD
+                ? self.runicTheme.accent
+                : Color(nsColor: self.brandNSColor)
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .stroke(
+                    base.opacity(self.isHighlighted ? 0.76 : 0.45),
+                    lineWidth: self.runicTheme.isTerminalHUD ? 0.9 : 0.7)
+        }
     }
 
     private var brandNSColor: NSColor {
@@ -428,6 +460,7 @@ private struct UsageMenuCardHeaderView: View {
 }
 
 private struct ProviderAvatarView: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
 
     var body: some View {
@@ -441,7 +474,7 @@ private struct ProviderAvatarView: View {
                     .shadow(color: Color(nsColor: self.brandNSColor).opacity(0.28), radius: 4, x: 0, y: 2)
             } else {
                 Text(self.fallbackInitials)
-                    .font(RunicFont.caption.weight(.semibold))
+                    .font(self.fonts.caption.weight(.semibold))
                     .foregroundStyle(Color(nsColor: self.brandNSColor))
             }
         }
@@ -467,7 +500,30 @@ private struct ProviderAvatarView: View {
     }
 }
 
+private struct RetroPlanTag: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
+    let text: String
+
+    var body: some View {
+        Text(self.text.uppercased())
+            .font(self.fonts.caption2.weight(.bold))
+            .tracking(0.6)
+            .foregroundStyle(self.runicTheme.cardStroke)
+            .lineLimit(1)
+            .padding(.horizontal, RunicSpacing.compact)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(self.runicTheme.surfaceAlt))
+            .overlay(
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .stroke(self.runicTheme.cardStroke, lineWidth: 0.8))
+    }
+}
+
 private struct ProfilePill: View {
+    @Environment(\.runicFonts) private var fonts
     enum Style { case email, plan }
 
     let text: String
@@ -479,18 +535,18 @@ private struct ProfilePill: View {
     var body: some View {
         HStack(spacing: RunicSpacing.xxxs) {
             Image(systemName: self.systemImage)
-                .font(RunicFont.caption2.weight(.semibold))
+                .font(self.fonts.caption2.weight(.semibold))
             Text(self.text)
-                .font(RunicFont.caption.weight(.medium))
+                .font(self.fonts.caption.weight(.medium))
         }
         .padding(.horizontal, RunicSpacing.compact)
         .padding(.vertical, RunicSpacing.xxxs)
         .foregroundStyle(self.foregroundColor)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.backgroundColor))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.borderColor, lineWidth: 0.5))
     }
 
@@ -523,6 +579,7 @@ private struct ProfilePill: View {
 }
 
 private struct MenuHeaderBadgeView: View {
+    @Environment(\.runicFonts) private var fonts
     let badge: UsageMenuCardView.Model.HeaderBadge
     let isHighlighted: Bool
     @Environment(\.runicTheme) private var runicTheme
@@ -536,19 +593,19 @@ private struct MenuHeaderBadgeView: View {
                     .frame(width: 10, height: 10)
             } else {
                 Image(systemName: self.badgeIcon)
-                    .font(RunicFont.caption2.weight(.semibold))
+                    .font(self.fonts.caption2.weight(.semibold))
             }
             Text(self.badge.text)
-                .font(RunicFont.caption2.weight(.semibold))
+                .font(self.fonts.caption2.weight(.semibold))
         }
         .padding(.horizontal, RunicSpacing.compact)
         .padding(.vertical, RunicSpacing.xxxs)
         .foregroundStyle(self.foregroundColor)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.backgroundColor))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.borderColor, lineWidth: 0.5))
     }
 
@@ -595,6 +652,7 @@ private struct MenuHeaderBadgeView: View {
 }
 
 private struct MenuEmptyStateView: View {
+    @Environment(\.runicFonts) private var fonts
     let providerName: String
     let placeholder: String
     let isHighlighted: Bool
@@ -604,15 +662,15 @@ private struct MenuEmptyStateView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack(spacing: RunicSpacing.xxs) {
                 Image(systemName: "sparkles")
-                    .font(RunicFont.caption.weight(.semibold))
+                    .font(self.fonts.caption.weight(.semibold))
                 Text("Connect \(self.providerName)")
-                    .font(RunicFont.subheadline.weight(.semibold))
+                    .font(self.fonts.subheadline.weight(.semibold))
             }
             Text(self.placeholder)
-                .font(RunicFont.footnote)
+                .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.secondaryText)
             Text("Open Settings → Providers, add credentials, then refresh.")
-                .font(RunicFont.footnote)
+                .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -627,15 +685,16 @@ private struct CopyIconButtonStyle: ButtonStyle {
         configuration.label
             .padding(RunicSpacing.xxs)
             .background {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                     .fill(self.runicTheme.secondaryText.opacity(configuration.isPressed ? 0.18 : 0))
             }
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(RunicAnimation.highlight, value: configuration.isPressed)
+            .animation(self.runicTheme.motion.curve, value: configuration.isPressed)
     }
 }
 
 private struct CopyIconButton: View {
+    @Environment(\.runicFonts) private var fonts
     let copyText: String
     let isHighlighted: Bool
 
@@ -646,7 +705,7 @@ private struct CopyIconButton: View {
     var body: some View {
         Button {
             self.copyToPasteboard()
-            withAnimation(RunicAnimation.highlight) {
+            withAnimation(self.runicTheme.motion.curve) {
                 self.didCopy = true
             }
             self.resetTask?.cancel()
@@ -658,7 +717,7 @@ private struct CopyIconButton: View {
             }
         } label: {
             Image(systemName: self.didCopy ? "checkmark" : "doc.on.doc")
-                .font(RunicFont.caption2.weight(.semibold))
+                .font(self.fonts.caption2.weight(.semibold))
                 .foregroundStyle(self.runicTheme.secondaryText)
                 .frame(width: 18, height: 18)
         }
@@ -674,6 +733,7 @@ private struct CopyIconButton: View {
 }
 
 private struct ProviderCostContent: View {
+    @Environment(\.runicFonts) private var fonts
     let section: UsageMenuCardView.Model.ProviderCostSection
     let progressColor: Color
     @Environment(\.menuItemHighlighted) private var isHighlighted
@@ -682,7 +742,7 @@ private struct ProviderCostContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text(self.section.title)
-                .font(RunicFont.body)
+                .font(self.fonts.body)
                 .fontWeight(.medium)
             UsageProgressBar(
                 percent: self.section.percentUsed,
@@ -690,10 +750,10 @@ private struct ProviderCostContent: View {
                 accessibilityLabel: "Extra usage spent")
             HStack(alignment: .firstTextBaseline) {
                 Text(self.section.spendLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                 Spacer()
                 Text(String(format: "%.0f%% used", min(100, max(0, self.section.percentUsed))))
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
         }
@@ -701,6 +761,7 @@ private struct ProviderCostContent: View {
 }
 
 private struct InsightsContent: View {
+    @Environment(\.runicFonts) private var fonts
     let section: UsageMenuCardView.Model.InsightsSection
     @Environment(\.menuItemHighlighted) private var isHighlighted
     @Environment(\.runicTheme) private var runicTheme
@@ -708,122 +769,122 @@ private struct InsightsContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text(self.section.title)
-                .font(RunicFont.body)
+                .font(self.fonts.body)
                 .fontWeight(.medium)
             if let connection = self.section.connectionLine {
                 Text(connection)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
             }
             if let detail = self.section.connectionDetail {
                 Text(detail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let context = self.section.contextLine {
                 Text(context)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
             }
             if let detail = self.section.contextDetail {
                 Text(detail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let compaction = self.section.compactionLine {
                 Text(compaction)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
             }
             if let detail = self.section.compactionDetail {
                 Text(detail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let today = self.section.todayLine {
                 Text(today)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
             }
             if let detail = self.section.todayDetail {
                 Text(detail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let forecastLine = self.section.forecastLine {
                 Text(forecastLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let block = self.section.blockLine {
                 Text(block)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
             }
             if let blockDetail = self.section.blockDetail {
                 Text(blockDetail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let modelLine = self.section.modelLine {
                 Text(modelLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let projectLine = self.section.projectLine {
                 Text(projectLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let projectDetail = self.section.projectDetail {
                 Text(projectDetail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let anomalyLine = self.section.anomalyLine {
                 Text(anomalyLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let anomalyDetail = self.section.anomalyDetail {
                 Text(anomalyDetail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let reliabilityLine = self.section.reliabilityLine {
                 Text(reliabilityLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let reliabilityDetail = self.section.reliabilityDetail {
                 Text(reliabilityDetail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let routingLine = self.section.routingLine {
                 Text(routingLine)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let routingDetail = self.section.routingDetail {
                 Text(routingDetail)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let updated = self.section.updatedLine {
                 Text(updated)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
             if let error = self.section.errorLine {
                 HStack(alignment: .top, spacing: RunicSpacing.xs) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(RunicFont.footnote)
+                        .font(self.fonts.footnote)
                         .foregroundStyle(RunicColors.error)
                     Text(error)
-                        .font(RunicFont.footnote)
+                        .font(self.fonts.footnote)
                         .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
                         .lineLimit(4)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(RunicSpacing.xs)
                 .background(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                         .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
             }
         }
@@ -831,6 +892,7 @@ private struct InsightsContent: View {
 }
 
 struct UsageMenuCardHeaderSectionView: View {
+    @Environment(\.runicFonts) private var fonts
     let model: UsageMenuCardView.Model
     let showDivider: Bool
     let width: CGFloat
@@ -840,7 +902,7 @@ struct UsageMenuCardHeaderSectionView: View {
             UsageMenuCardHeaderView(model: self.model)
 
             if self.showDivider {
-                Divider()
+                RunicDivider()
                     .padding(.vertical, RunicSpacing.xxs)
             }
         }
@@ -852,6 +914,7 @@ struct UsageMenuCardHeaderSectionView: View {
 }
 
 private struct UsageMenuMetricCard: View {
+    @Environment(\.runicFonts) private var fonts
     let metric: UsageMenuCardView.Model.Metric
     let displayMode: UsageMetricDisplayMode
     let tint: Color
@@ -862,12 +925,12 @@ private struct UsageMenuMetricCard: View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                 Text(self.metric.title)
-                    .font(RunicFont.caption.weight(.semibold))
+                    .font(self.fonts.caption.weight(.semibold))
                     .foregroundStyle(self.runicTheme.secondaryText)
                 Spacer(minLength: RunicSpacing.xs)
                 if let reset = self.metric.resetText {
                     Text(reset)
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
@@ -882,7 +945,7 @@ private struct UsageMenuMetricCard: View {
             if self.displayMode.showsPercent {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                     Text(self.metric.percentLabel)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .fontWeight(.medium)
                     Spacer()
                 }
@@ -890,7 +953,7 @@ private struct UsageMenuMetricCard: View {
 
             if let detail = self.metric.detailText {
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .textCase(.none)
@@ -911,6 +974,7 @@ private struct UsageMenuMetricCard: View {
 }
 
 struct UsageMenuCardUsageSectionView: View {
+    @Environment(\.runicFonts) private var fonts
     let model: UsageMenuCardView.Model
     let showBottomDivider: Bool
     let bottomPadding: CGFloat
@@ -937,7 +1001,7 @@ struct UsageMenuCardUsageSectionView: View {
                 }
             }
             if self.showBottomDivider {
-                Divider()
+                RunicDivider()
                     .padding(.vertical, RunicSpacing.xxs)
             }
         }
@@ -949,6 +1013,7 @@ struct UsageMenuCardUsageSectionView: View {
 }
 
 struct UsageMenuCardCreditsSectionView: View {
+    @Environment(\.runicFonts) private var fonts
     let model: UsageMenuCardView.Model
     let showBottomDivider: Bool
     let topPadding: CGFloat
@@ -965,7 +1030,7 @@ struct UsageMenuCardCreditsSectionView: View {
                     hintCopyText: self.model.creditsHintCopyText,
                     progressColor: self.model.progressColor)
                 if self.showBottomDivider {
-                    Divider()
+                    RunicDivider()
                         .padding(.vertical, RunicSpacing.xxs)
                 }
             }
@@ -978,6 +1043,7 @@ struct UsageMenuCardCreditsSectionView: View {
 }
 
 private struct CreditsBarContent: View {
+    @Environment(\.runicFonts) private var fonts
     private static let fullScaleTokens: Double = 1000
 
     let creditsText: String
@@ -1002,7 +1068,7 @@ private struct CreditsBarContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text("Credits")
-                .font(RunicFont.body)
+                .font(self.fonts.body)
                 .fontWeight(.medium)
             if let percentLeft {
                 UsageProgressBar(
@@ -1011,19 +1077,19 @@ private struct CreditsBarContent: View {
                     accessibilityLabel: "Credits remaining")
                 HStack(alignment: .firstTextBaseline) {
                     Text(self.creditsText)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                     Spacer()
                     Text(self.scaleText)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
             } else {
                 Text(self.creditsText)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
             }
             if let hintText, !hintText.isEmpty {
                 Text(hintText)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1036,6 +1102,7 @@ private struct CreditsBarContent: View {
 }
 
 struct UsageMenuCardInsightsSectionView: View {
+    @Environment(\.runicFonts) private var fonts
     let model: UsageMenuCardView.Model
     let topPadding: CGFloat
     let bottomPadding: CGFloat
@@ -1053,6 +1120,7 @@ struct UsageMenuCardInsightsSectionView: View {
 }
 
 struct UsageMenuCardCostSectionView: View {
+    @Environment(\.runicFonts) private var fonts
     let model: UsageMenuCardView.Model
     let topPadding: CGFloat
     let bottomPadding: CGFloat
@@ -1068,28 +1136,28 @@ struct UsageMenuCardCostSectionView: View {
                     if let tokenUsage = self.model.tokenUsage {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
                             Text("Cost")
-                                .font(RunicFont.body)
+                                .font(self.fonts.body)
                                 .fontWeight(.medium)
                             Text(tokenUsage.sessionLine)
-                                .font(RunicFont.caption)
+                                .font(self.fonts.caption)
                             if let sessionDetail = tokenUsage.sessionDetailLine {
                                 Text(sessionDetail)
-                                    .font(RunicFont.footnote)
+                                    .font(self.fonts.footnote)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Text(tokenUsage.monthLine)
-                                .font(RunicFont.caption)
+                                .font(self.fonts.caption)
                             if let monthDetail = tokenUsage.monthDetailLine {
                                 Text(monthDetail)
-                                    .font(RunicFont.footnote)
+                                    .font(self.fonts.footnote)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Text(tokenUsage.updatedLine)
-                                .font(RunicFont.caption)
+                                .font(self.fonts.caption)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                             if let hint = tokenUsage.hintLine, !hint.isEmpty {
                                 Text(hint)
-                                    .font(RunicFont.footnote)
+                                    .font(self.fonts.footnote)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                                     .lineLimit(4)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -1097,17 +1165,17 @@ struct UsageMenuCardCostSectionView: View {
                             if let error = tokenUsage.errorLine, !error.isEmpty {
                                 HStack(alignment: .top, spacing: RunicSpacing.xs) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(RunicFont.footnote)
+                                        .font(self.fonts.footnote)
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
-                                        .font(RunicFont.footnote)
+                                        .font(self.fonts.footnote)
                                         .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .padding(RunicSpacing.xs)
                                 .background(
-                                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                                         .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
                                 .overlay {
                                     ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)

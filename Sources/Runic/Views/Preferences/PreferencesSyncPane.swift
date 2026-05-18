@@ -6,6 +6,7 @@ import SwiftUI
 struct SyncPane: View {
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
+    @Environment(\.runicTheme) private var runicTheme
 
     @State private var selectedSection: SyncSection = .integrations
 

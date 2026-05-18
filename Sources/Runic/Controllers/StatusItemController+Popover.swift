@@ -125,6 +125,7 @@ extension StatusItemController {
                 self.lastMenuProvider = provider ?? self.store.enabledProviders().first
                 self.applyIcon(phase: nil)
             })
+            .environment(\.runicFonts, RunicFontStore.shared)
 
         let controller = NSHostingController(rootView: rootView)
         let popover = NSPopover()

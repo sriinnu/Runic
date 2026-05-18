@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 struct ProjectBudgetMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     fileprivate struct ProjectUsage: Identifiable {
         let id: String
         let projectName: String
@@ -45,7 +46,7 @@ struct ProjectBudgetMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack {
                 Text("Project Budgets")
-                    .font(RunicFont.headline)
+                    .font(self.fonts.headline)
                     .fontWeight(.semibold)
                 Spacer()
                 Button {
@@ -53,9 +54,9 @@ struct ProjectBudgetMenuView: View {
                 } label: {
                     HStack(spacing: RunicSpacing.xxs) {
                         Image(systemName: "gearshape")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                         Text("Configure")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                     }
                 }
                 .buttonStyle(.plain)
@@ -65,13 +66,13 @@ struct ProjectBudgetMenuView: View {
             if model.isEmpty {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("No budgets configured.")
-                        .font(RunicFont.footnote)
+                        .font(self.fonts.footnote)
                         .foregroundStyle(self.runicTheme.secondaryText)
                     Button {
                         self.onOpenPreferences()
                     } label: {
                         Text("Set up budgets in Preferences")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(self.runicTheme.accent)
@@ -100,20 +101,20 @@ struct ProjectBudgetMenuView: View {
                         if overBudget > 0 {
                             HStack(spacing: RunicSpacing.xxs) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(Color(red: 0.94, green: 0.36, blue: 0.36))
                                 Text("\(overBudget) project\(overBudget == 1 ? "" : "s") over budget")
-                                    .font(RunicFont.caption)
+                                    .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                         }
                         if nearLimit > 0 {
                             HStack(spacing: RunicSpacing.xxs) {
                                 Image(systemName: "exclamationmark.circle.fill")
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(Color(red: 0.94, green: 0.74, blue: 0.26))
                                 Text("\(nearLimit) project\(nearLimit == 1 ? "" : "s") near limit")
-                                    .font(RunicFont.caption)
+                                    .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                         }
@@ -162,6 +163,7 @@ struct ProjectBudgetMenuView: View {
 }
 
 private struct ProjectBudgetRow: View {
+    @Environment(\.runicFonts) private var fonts
     let project: ProjectBudgetMenuView.ProjectUsage
     let isHovered: Bool
     @Environment(\.menuItemHighlighted) private var isHighlighted
@@ -171,13 +173,13 @@ private struct ProjectBudgetRow: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack(alignment: .firstTextBaseline) {
                 Text(self.project.projectName)
-                    .font(RunicFont.body)
+                    .font(self.fonts.body)
                     .fontWeight(.medium)
                     .foregroundStyle(self.rowPrimaryColor)
                     .lineLimit(1)
                 Spacer()
                 Text(self.budgetText)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.rowSecondaryColor)
             }
 
@@ -188,25 +190,27 @@ private struct ProjectBudgetRow: View {
 
             HStack(alignment: .firstTextBaseline) {
                 Text(String(format: "%.0f%%", self.project.percentUsed))
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.statusTextColor)
                 Spacer()
                 if self.project.isOverBudget {
                     Text("Over budget")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.warm)
                         .fontWeight(.medium)
                 } else if self.project.isNearLimit {
                     Text("Near limit")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.highlight)
                         .fontWeight(.medium)
                 }
             }
         }
-        .padding(RunicSpacing.xs)
+        .padding(self.runicTheme.density.padding(RunicSpacing.xs))
         .background {
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(
+                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                style: .continuous)
                 .fill(self.isHovered ? self.runicTheme.menuHoverFill : Color.clear)
         }
     }

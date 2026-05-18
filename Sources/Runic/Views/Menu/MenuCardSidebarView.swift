@@ -23,7 +23,7 @@ enum MenuCardSidebarMetrics {
             buttonSize: 28,
             spacing: RunicSpacing.compact,
             padding: RunicSpacing.xs,
-            cornerRadius: 7,
+            cornerRadius: RunicCornerRadius.sm,
             barHeight: 3,
             barInset: RunicSpacing.xxs)
     }
@@ -193,7 +193,7 @@ private struct ProviderSidebarIconButton: View {
                 }
             }
             .frame(width: self.style.buttonSize, height: self.style.buttonSize)
-            .animation(RunicAnimation.highlight, value: self.isSelected)
+            .animation(self.runicTheme.motion.curve, value: self.isSelected)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(ProviderDescriptorRegistry.descriptor(for: self.provider).metadata.displayName)

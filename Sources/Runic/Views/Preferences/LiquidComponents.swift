@@ -79,6 +79,7 @@ private struct CursorSpotlight: View {
 
 @MainActor
 private struct ShimmerSweep: View {
+    @Environment(\.runicFonts) private var fonts
     @State private var offset: CGFloat = -0.4
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let stableDelay: Double
@@ -120,6 +121,7 @@ private struct ShimmerSweep: View {
 
 @MainActor
 private struct RotatingGradientBorder: View {
+    @Environment(\.runicFonts) private var fonts
     let cornerRadius: CGFloat
     let isActive: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -168,20 +170,20 @@ private struct LiquidGlassCore: ViewModifier {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 ZStack {
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                        .fill(self.runicTheme.menuCardGradient)
+                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                        .fill(self.runicTheme.cardBackgroundStyle)
 
                     if !isTerminalHUD {
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
                             .fill(.ultraThinMaterial)
                             .overlay(
-                                RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
                                     .fill(self.runicTheme.cardFill.opacity(isGlassTheme ? 1.0 : 0.45)))
                     }
 
                     if isTerminalHUD {
                         RunicTerminalScanlineOverlay(opacity: 0.65)
-                            .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
                     }
                 }
                     .shadow(
@@ -192,7 +194,7 @@ private struct LiquidGlassCore: ViewModifier {
                         y: self.hovering ? (isTerminalHUD ? 3 : 6) : 2)
             }
             .overlay(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: isTerminalHUD
@@ -227,11 +229,11 @@ private struct LiquidGlassCore: ViewModifier {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
             .overlay {
                 if !isTerminalHUD {
                     ShimmerSweep(stableDelay: Double(self.shimmerIndex) * 0.8 + 1.0)
-                        .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
                 }
             }
             .scaleEffect(self.hovering && !self.reduceMotion && !isTerminalHUD ? 1.01 : 1.0)
@@ -257,6 +259,7 @@ private struct LiquidGlassCore: ViewModifier {
 
 @MainActor
 struct LiquidSection<Content: View>: View {
+    @Environment(\.runicFonts) private var fonts
     let title: String?
     let content: Content
     @Environment(\.runicTheme) private var runicTheme
@@ -270,7 +273,7 @@ struct LiquidSection<Content: View>: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if let title {
                 Text(title)
-                    .font(RunicFont.caption.weight(.semibold))
+                    .font(self.fonts.caption.weight(.semibold))
                     .foregroundStyle(self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.runicTheme.secondaryText)
                     .textCase(.uppercase)
                     .padding(.leading, RunicSpacing.xxs)

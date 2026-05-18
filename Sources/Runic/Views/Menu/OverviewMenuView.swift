@@ -7,6 +7,7 @@ import SwiftUI
 /// Inspired by Apple Activity app rings, Awwwards dashboard layouts, and Tokex stat cards.
 @MainActor
 struct OverviewMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     struct ProviderSummary: Identifiable {
         let id: String
         let provider: UsageProvider
@@ -57,9 +58,9 @@ struct OverviewMenuView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text(UsageFormatter.tokenCountString(self.totalTodayTokens))
-                        .font(RunicFont.system(size: 22, weight: .bold))
+                        .font(self.fonts.system(size: 22, weight: .bold))
                     Text("\(self.summaries.count) of \(self.totalProviders) active")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
 
@@ -67,10 +68,10 @@ struct OverviewMenuView: View {
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("today")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.secondaryText)
                     Text("\(Int(self.averageUsedPercent))% avg")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(self.runicTheme.primaryText)
                 }
@@ -82,7 +83,7 @@ struct OverviewMenuView: View {
 
             if self.summaries.isEmpty {
                 Text("No active providers.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, RunicSpacing.md)
@@ -101,7 +102,7 @@ struct OverviewMenuView: View {
 
                 HStack {
                     Text("7-day activity")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.secondaryText)
                     Spacer()
                     // Mini legend dots
@@ -113,7 +114,7 @@ struct OverviewMenuView: View {
                         }
                         if self.summaries.count > 4 {
                             Text("+\(self.summaries.count - 4)")
-                                .font(RunicFont.system(size: 8))
+                                .font(self.fonts.system(size: 8))
                                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.75))
                         }
                     }
@@ -125,7 +126,7 @@ struct OverviewMenuView: View {
                             x: .value("Date", point.date, unit: .day),
                             y: .value("Tokens", point.tokens))
                             .foregroundStyle(by: .value("Provider", point.provider))
-                            .cornerRadius(2)
+                            .cornerRadius(self.runicTheme.shape.cornerRadius(2))
                     }
                 }
                 .chartForegroundStyleScale(range: self.chartColors)
@@ -137,7 +138,7 @@ struct OverviewMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(RunicFont.system(size: 8))
+                                    .font(self.fonts.system(size: 8))
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                         }
@@ -146,7 +147,7 @@ struct OverviewMenuView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 7)) { _ in
                         AxisValueLabel(format: .dateTime.weekday(.narrow))
-                            .font(RunicFont.system(size: 8, weight: .medium))
+                            .font(self.fonts.system(size: 8, weight: .medium))
                             .foregroundStyle(self.runicTheme.secondaryText)
                     }
                 }
@@ -173,6 +174,7 @@ struct OverviewMenuView: View {
 // MARK: - Provider row
 
 private struct ProviderRow: View {
+    @Environment(\.runicFonts) private var fonts
     let summary: OverviewMenuView.ProviderSummary
     @Environment(\.runicTheme) private var runicTheme
 
@@ -188,7 +190,7 @@ private struct ProviderRow: View {
 
             // Name
             Text(self.summary.name)
-                .font(RunicFont.caption)
+                .font(self.fonts.caption)
                 .fontWeight(.medium)
                 .frame(width: 58, alignment: .leading)
                 .lineLimit(1)
@@ -230,14 +232,14 @@ private struct ProviderRow: View {
 
             // Percentage
             Text("\(Int(self.summary.usedPercent))%")
-                .font(RunicFont.system(size: 9, weight: .semibold))
+                .font(self.fonts.system(size: 9, weight: .semibold))
                 .foregroundStyle(self.summary.usedPercent > 80 ? self.runicTheme.primaryText : self.runicTheme.secondaryText)
                 .frame(width: 28, alignment: .trailing)
 
             // Today's tokens (if any)
             if self.summary.todayTokens > 0 {
                 Text(UsageFormatter.tokenCountString(self.summary.todayTokens))
-                    .font(RunicFont.system(size: 8))
+                    .font(self.fonts.system(size: 8))
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(width: 32, alignment: .trailing)
             }
@@ -269,12 +271,13 @@ private struct ProviderRow: View {
 }
 
 private struct InfoPill: View {
+    @Environment(\.runicFonts) private var fonts
     let text: String
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Text(self.text)
-            .font(RunicFont.system(size: 8, weight: .medium))
+            .font(self.fonts.system(size: 8, weight: .medium))
             .foregroundStyle(self.runicTheme.secondaryText)
             .padding(.horizontal, 4)
             .padding(.vertical, 1)

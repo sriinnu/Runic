@@ -5,6 +5,7 @@ import SwiftUI
 /// Bar chart showing today's hourly usage — inspired by Tokex "Today by Hour".
 @MainActor
 struct HourlyActivityChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private struct HourBar: Identifiable {
         let id: Int // hour 0-23
         let hour: Int
@@ -37,19 +38,19 @@ struct HourlyActivityChartMenuView: View {
             // Header
             HStack(alignment: .firstTextBaseline) {
                 Text("Today by Hour")
-                    .font(RunicFont.subheadline)
+                    .font(self.fonts.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
                 if let peak = model.peakHour {
                     Text("Peak \(peak.label)")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
                 Text("No usage recorded today.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
@@ -60,7 +61,7 @@ struct HourlyActivityChartMenuView: View {
                             x: .value("Hour", bar.hour),
                             y: .value("Tokens", bar.totalTokens))
                             .foregroundStyle(bar.isPeak ? self.runicTheme.chartPeakColor : barColor)
-                            .cornerRadius(RunicCornerRadius.xs)
+                            .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
                     }
                     if let selected = self.selectedHour,
                        let bar = model.bars.first(where: { $0.hour == selected })
@@ -70,12 +71,12 @@ struct HourlyActivityChartMenuView: View {
                             .foregroundStyle(self.runicTheme.primaryText.opacity(0.30))
                             .annotation(position: .top, spacing: 4) {
                                 Text(UsageFormatter.tokenCountString(bar.totalTokens))
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .fontWeight(.medium)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(
-                                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs)
+                                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
                                             .fill(self.runicTheme.menuSubtleFill))
                             }
                     }
@@ -85,7 +86,7 @@ struct HourlyActivityChartMenuView: View {
                         AxisValueLabel {
                             if let hour = value.as(Int.self) {
                                 Text(Self.hourAxisLabel(hour))
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
@@ -98,7 +99,7 @@ struct HourlyActivityChartMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
@@ -118,7 +119,7 @@ struct HourlyActivityChartMenuView: View {
                 }
 
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -128,29 +129,29 @@ struct HourlyActivityChartMenuView: View {
                 HStack(spacing: RunicSpacing.md) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Today")
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                         Text(UsageFormatter.tokenCountString(model.totalTokens))
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(self.runicTheme.primaryText)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         Text("Active hours")
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                         Text("\(model.activeHours)")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(self.runicTheme.primaryText)
                     }
                     if model.totalRequests > 0 {
                         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                             Text("Requests")
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             Text("\(model.totalRequests)")
-                                .font(RunicFont.caption)
+                                .font(self.fonts.caption)
                                 .fontWeight(.medium)
                                 .foregroundStyle(self.runicTheme.primaryText)
                         }

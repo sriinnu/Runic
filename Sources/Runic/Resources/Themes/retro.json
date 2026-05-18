@@ -1,0 +1,26 @@
+{
+  "id": "retro",
+  "displayName": "Retro",
+  "tagline": "Retro tools. Modern intelligence.",
+  "symbolName": "rectangle.connected.to.line.below",
+  "isCustom": true,
+  "prefersDarkAppearance": false,
+  "colors": {
+    "primary":       "#2D2D38",
+    "secondary":     "#6B6155",
+    "accent":        "#3B5BA5",
+    "highlight":     "#D85959",
+    "warm":          "#C76746",
+    "tertiary":      "#E6B040",
+    "surface":       "#F1E8D2",
+    "surfaceAlt":    "#F8F2E5",
+    "cardFill":      "#E8DDC2",
+    "cardStroke":    "#354570",
+    "primaryText":   "#2E2E38",
+    "secondaryText": "#6B6155"
+  },
+  "fonts":   { "body": "system", "numeric": "mono" },
+  "shape":   { "preset": "retroBevel" },
+  "motion":  { "preset": "mechanical" },
+  "density": { "preset": "normal" }
+}

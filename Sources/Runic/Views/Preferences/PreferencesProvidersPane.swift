@@ -758,6 +758,7 @@ private enum ProviderInsightsComposer {
 
 @MainActor
 struct ProvidersPane: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     @State private var expandedErrors: Set<UsageProvider> = []
@@ -836,15 +837,15 @@ struct ProvidersPane: View {
         HStack(alignment: .top, spacing: RunicSpacing.sm) {
             Image(systemName: "square.grid.2x2")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(self.runicTheme.secondaryText)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 Text("Built-in providers")
-                    .font(RunicFont.subheadline.weight(.semibold))
+                    .font(self.fonts.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Text("Switch to sidebar layout for per-day history cards and model or project drill-down details.")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -914,8 +915,8 @@ struct ProvidersPane: View {
                     onCopyError: { text in self.copyToPasteboard(text) })
             } else {
                 Text("Select a provider")
-                    .font(RunicFont.title3)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.title3)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -1143,6 +1144,7 @@ struct ProvidersPane: View {
 
 @MainActor
 private struct ProviderListView: View {
+    @Environment(\.runicFonts) private var fonts
     let providers: [UsageProvider]
     @Bindable var store: UsageStore
     let isEnabled: (UsageProvider) -> Binding<Bool>
@@ -1254,7 +1256,9 @@ private struct ProviderListView: View {
 
 @MainActor
 private struct ProviderListBrandIcon: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Group {
@@ -1271,10 +1275,10 @@ private struct ProviderListBrandIcon: View {
                     green: Double(descriptor.branding.color.green),
                     blue: Double(descriptor.branding.color.blue))
                 ZStack {
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                         .fill(brandColor.opacity(0.18))
                     Text(initial)
-                        .font(RunicFont.system(size: ProviderListMetrics.iconSize * 0.5, weight: .bold))
+                        .font(self.fonts.system(size: ProviderListMetrics.iconSize * 0.5, weight: .bold))
                         .foregroundStyle(brandColor)
                 }
                 .frame(width: ProviderListMetrics.iconSize, height: ProviderListMetrics.iconSize)
@@ -1287,6 +1291,7 @@ private struct ProviderListBrandIcon: View {
 
 @MainActor
 private struct ProviderInsightsView: View {
+    @Environment(\.runicFonts) private var fonts
     let lines: [ProviderInsightLine]
     @Environment(\.runicTheme) private var runicTheme
 
@@ -1321,17 +1326,18 @@ private struct ProviderInsightsView: View {
 }
 
 private struct ProviderInsightChip: View {
+    @Environment(\.runicFonts) private var fonts
     let line: ProviderInsightLine
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
             Text(self.line.label.uppercased())
-                .font(RunicFont.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.caption2.weight(.semibold))
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             Text(self.line.value)
-                .font(RunicFont.caption)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.caption)
+                .foregroundStyle(self.runicTheme.secondaryText)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
@@ -1353,6 +1359,7 @@ private struct ProviderInsightChip: View {
 
 @MainActor
 private struct ProviderListProviderRowView: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
     @Bindable var store: UsageStore
     @Binding var isEnabled: Bool
@@ -1386,11 +1393,11 @@ private struct ProviderListProviderRowView: View {
                         ProviderListBrandIcon(provider: self.provider)
                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                             Text(metadata.displayName)
-                                .font(RunicFont.headline.weight(.semibold))
+                                .font(self.fonts.headline.weight(.semibold))
                                 .foregroundStyle(.primary)
                             Text(self.subtitle)
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: RunicSpacing.xs)
@@ -1399,8 +1406,8 @@ private struct ProviderListProviderRowView: View {
                     HStack(alignment: .center, spacing: RunicSpacing.xs) {
                         self.sourceBadge
                         Text(self.statusLabel)
-                            .font(RunicFont.caption2)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.caption2)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .lineLimit(1)
 
                         if isRefreshing {
@@ -1408,8 +1415,8 @@ private struct ProviderListProviderRowView: View {
                                 .controlSize(.small)
                                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                             Text("Refreshing…")
-                                .font(RunicFont.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.caption2)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                         } else {
                             self.usageStatusBadge
                                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
@@ -1456,7 +1463,7 @@ private struct ProviderListProviderRowView: View {
         let (color, backgroundColor) = self.usageStatusColors
 
         return Text(self.usageStatus.text)
-            .font(RunicFont.caption2.weight(.medium))
+            .font(self.fonts.caption2.weight(.medium))
             .padding(.horizontal, ProviderListMetrics.statusBadgePaddingH)
             .padding(.vertical, ProviderListMetrics.statusBadgePaddingV)
             .background(Capsule(style: .continuous).fill(backgroundColor))
@@ -1465,8 +1472,8 @@ private struct ProviderListProviderRowView: View {
 
     private var sourceBadge: some View {
         Text(self.sourceLabel)
-            .font(RunicFont.caption2.weight(.medium))
-            .foregroundStyle(.secondary)
+            .font(self.fonts.caption2.weight(.medium))
+            .foregroundStyle(self.runicTheme.secondaryText)
             .padding(.horizontal, RunicSpacing.xs)
             .padding(.vertical, RunicSpacing.xxxs)
             .background(
@@ -1515,7 +1522,9 @@ private struct ProviderListProviderRowView: View {
 
 @MainActor
 private struct ProviderListReorderHandle: View {
+    @Environment(\.runicFonts) private var fonts
     let isVisible: Bool
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(spacing: ProviderListMetrics.reorderDotSpacing) {
@@ -1533,7 +1542,7 @@ private struct ProviderListReorderHandle: View {
             }
         }
         .frame(width: ProviderListMetrics.reorderHandleSize, height: ProviderListMetrics.reorderHandleSize)
-        .foregroundStyle(.tertiary)
+        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         .opacity(self.isVisible ? 1 : 0)
         .animation(.easeInOut(duration: 0.15), value: self.isVisible)
         .help("Drag to reorder")
@@ -1544,6 +1553,7 @@ private struct ProviderListReorderHandle: View {
 
 @MainActor
 private struct ProviderListSectionDividerView: View {
+    @Environment(\.runicFonts) private var fonts
     var body: some View {
         Rectangle()
             .fill(Color(nsColor: .separatorColor).opacity(0.5))
@@ -1565,6 +1575,7 @@ extension View {
 
 @MainActor
 private struct ProviderListToggleRowView: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
     let toggle: ProviderSettingsToggleDescriptor
     @Environment(\.runicTheme) private var runicTheme
@@ -1579,27 +1590,27 @@ private struct ProviderListToggleRowView: View {
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     Text(self.toggle.title)
-                        .font(RunicFont.callout.weight(.semibold))
+                        .font(self.fonts.callout.weight(.semibold))
                     Text(self.toggle.subtitle)
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if self.toggle.binding.wrappedValue {
                     if let status = self.toggle.statusText?(), !status.isEmpty {
                         Text(status)
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .lineLimit(4)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(RunicSpacing.xs)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
-                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                                     .fill(self.runicTheme.menuSubtleFill))
                             .overlay {
-                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                                     .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.38), lineWidth: 1)
                             }
                     }
@@ -1654,6 +1665,7 @@ private struct ProviderListToggleRowView: View {
 
 @MainActor
 private struct ProviderListFieldRowView: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
     let field: ProviderSettingsFieldDescriptor
     @Environment(\.runicTheme) private var runicTheme
@@ -1666,10 +1678,10 @@ private struct ProviderListFieldRowView: View {
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     Text(self.field.title)
-                        .font(RunicFont.callout.weight(.semibold))
+                        .font(self.fonts.callout.weight(.semibold))
                     Text(self.field.subtitle)
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -1677,12 +1689,12 @@ private struct ProviderListFieldRowView: View {
                 case .plain:
                     TextField(self.field.placeholder ?? "", text: self.field.binding)
                         .textFieldStyle(.roundedBorder)
-                        .font(RunicFont.callout)
+                        .font(self.fonts.callout)
                         .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
                 case .secure:
                     SecureField(self.field.placeholder ?? "", text: self.field.binding)
                         .textFieldStyle(.roundedBorder)
-                        .font(RunicFont.callout)
+                        .font(self.fonts.callout)
                         .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
                 }
 
@@ -1788,20 +1800,22 @@ private struct ProviderListScrollInsetFixer: NSViewRepresentable {
 
 @MainActor
 private struct ProviderErrorView: View {
+    @Environment(\.runicFonts) private var fonts
     let title: String
     let display: ProviderErrorDisplay
     @Binding var isExpanded: Bool
     let onCopy: () -> Void
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(.orange)
                     .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                 Text(self.title)
-                    .font(RunicFont.callout.weight(.semibold))
+                    .font(self.fonts.callout.weight(.semibold))
                     .foregroundStyle(.orange)
                 Spacer()
                 Button {
@@ -1809,9 +1823,9 @@ private struct ProviderErrorView: View {
                 } label: {
                     HStack(alignment: .center, spacing: RunicSpacing.xxs) {
                         Image(systemName: "doc.on.doc")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                         Text("Copy")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                     }
                 }
                 .buttonStyle(.bordered)
@@ -1821,8 +1835,8 @@ private struct ProviderErrorView: View {
             }
 
             Text(self.display.preview)
-                .font(RunicFont.callout)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.callout)
+                .foregroundStyle(self.runicTheme.secondaryText)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(RunicSpacing.xs)
@@ -1834,13 +1848,13 @@ private struct ProviderErrorView: View {
             if self.display.preview != self.display.full {
                 Button(self.isExpanded ? "Hide details" : "Show details") { self.isExpanded.toggle() }
                     .buttonStyle(.link)
-                    .font(RunicFont.callout)
+                    .font(self.fonts.callout)
             }
 
             if self.isExpanded {
                 ScrollView(.horizontal, showsIndicators: true) {
                     Text(self.display.full)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(.primary)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1882,10 +1896,12 @@ private struct ProviderSettingsConfirmationState: Identifiable {
 
 @MainActor
 private struct ProviderSidebarRow: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
     @Bindable var store: UsageStore
     let isEnabled: Bool
     let isSelected: Bool
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
@@ -1898,11 +1914,11 @@ private struct ProviderSidebarRow: View {
             } else {
                 Image(systemName: "circle.dotted")
                     .font(.system(size: 16))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .frame(width: 22, height: 22)
             }
             Text(self.store.metadata(for: self.provider).displayName)
-                .font(RunicFont.body)
+                .font(self.fonts.body)
                 .foregroundStyle(self.isEnabled ? .primary : .secondary)
                 .lineLimit(1)
                 .layoutPriority(1)
@@ -1911,10 +1927,10 @@ private struct ProviderSidebarRow: View {
         .padding(.vertical, RunicSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.isSelected ? Color.accentColor.opacity(0.14) : .clear))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(
                     self.isSelected ? Color.accentColor.opacity(0.45) : Color.clear,
                     lineWidth: 1))
@@ -1924,6 +1940,7 @@ private struct ProviderSidebarRow: View {
 }
 
 private struct ProviderSidebarSectionCard<Content: View>: View {
+    @Environment(\.runicFonts) private var fonts
     private let content: Content
     @Environment(\.runicTheme) private var runicTheme
 
@@ -1951,6 +1968,7 @@ private struct ProviderSidebarSectionCard<Content: View>: View {
 }
 
 private struct ProviderHistoryNavigationButton: View {
+    @Environment(\.runicFonts) private var fonts
     let systemName: String
     let enabled: Bool
     let help: String
@@ -1960,7 +1978,7 @@ private struct ProviderHistoryNavigationButton: View {
     var body: some View {
         Button(action: self.action) {
             Image(systemName: self.systemName)
-                .font(RunicFont.caption.weight(.semibold))
+                .font(self.fonts.caption.weight(.semibold))
                 .foregroundStyle(self.enabled ? .secondary : .tertiary)
                 .frame(width: 26, height: 26)
         }
@@ -1980,39 +1998,43 @@ private struct ProviderHistoryNavigationButton: View {
 }
 
 private struct ProviderSidebarSectionHeader: View {
+    @Environment(\.runicFonts) private var fonts
     let title: String
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Text(self.title)
-            .font(RunicFont.subheadline.weight(.semibold))
-            .foregroundStyle(.secondary)
+            .font(self.fonts.subheadline.weight(.semibold))
+            .foregroundStyle(self.runicTheme.secondaryText)
     }
 }
 
 @MainActor
 private struct ProviderSidebarKeyValueRow: View {
+    @Environment(\.runicFonts) private var fonts
     let label: String
     let value: String
     let helpText: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
             Text("\(self.label):")
-                .font(RunicFont.caption)
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.caption)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 .frame(width: ProviderListMetrics.sidebarStatusLabelWidth, alignment: .leading)
             if let helpText = self.helpText {
                 Text(self.value)
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                     .help(helpText)
             } else {
                 Text(self.value)
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
@@ -2023,19 +2045,21 @@ private struct ProviderSidebarKeyValueRow: View {
 
 @MainActor
 private struct ProviderSidebarMetricChip: View {
+    @Environment(\.runicFonts) private var fonts
     let title: String
     let value: String
     let helpText: String?
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
             Text(self.title)
-                .font(RunicFont.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.caption2.weight(.semibold))
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 .textCase(.uppercase)
             Text(self.value)
-                .font(RunicFont.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .font(self.fonts.caption.weight(.medium))
+                .foregroundStyle(self.runicTheme.secondaryText)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
@@ -2090,18 +2114,20 @@ private enum ProviderHistoryDayDetailMode: String, CaseIterable, Identifiable {
 
 @MainActor
 private struct ProviderHistoryCalendarDayCell: View {
+    @Environment(\.runicFonts) private var fonts
     let dayNumber: Int
     let isInMonth: Bool
     let isSelected: Bool
     let hasActivity: Bool
     let intensity: Double
     let action: () -> Void
+    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Button(action: self.action) {
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                 Text("\(self.dayNumber)")
-                    .font(RunicFont.caption.weight(self.isSelected ? .semibold : .regular))
+                    .font(self.fonts.caption.weight(self.isSelected ? .semibold : .regular))
                     .foregroundStyle(self.isInMonth ? .primary : .tertiary)
                 Spacer(minLength: 0)
                 if self.hasActivity {
@@ -2117,10 +2143,10 @@ private struct ProviderHistoryCalendarDayCell: View {
             .padding(RunicSpacing.xs)
             .frame(maxWidth: .infinity, minHeight: 46, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                     .fill(self.backgroundColor))
             .overlay(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                     .strokeBorder(self.borderColor, lineWidth: self.isSelected ? 1.5 : 1))
             .opacity(self.isInMonth ? 1 : 0.52)
         }
@@ -2147,6 +2173,7 @@ private struct ProviderHistoryCalendarDayCell: View {
 
 @MainActor
 private struct ProviderSidebarDetailView: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
     @Bindable var store: UsageStore
     @Binding var isEnabled: Bool
@@ -2183,10 +2210,10 @@ private struct ProviderSidebarDetailView: View {
                             ProviderListBrandIcon(provider: self.provider)
                             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                 Text(self.store.metadata(for: self.provider).displayName)
-                                    .font(RunicFont.title2.weight(.semibold))
+                                    .font(self.fonts.title2.weight(.semibold))
                                 Text(self.subtitle)
-                                    .font(RunicFont.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(self.fonts.caption)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Spacer()
                             Toggle("Enabled", isOn: self.$isEnabled)
@@ -2248,8 +2275,8 @@ private struct ProviderSidebarDetailView: View {
 
                                 if let diagnosticsCopyStatus {
                                     Text(diagnosticsCopyStatus)
-                                        .font(RunicFont.caption2)
-                                        .foregroundStyle(.tertiary)
+                                        .font(self.fonts.caption2)
+                                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                 }
                             }
                         }
@@ -2272,12 +2299,12 @@ private struct ProviderSidebarDetailView: View {
                                     if !topModelLines.isEmpty {
                                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                             Text(self.modelSectionTitle)
-                                                .font(RunicFont.caption2.weight(.semibold))
-                                                .foregroundStyle(.secondary)
+                                                .font(self.fonts.caption2.weight(.semibold))
+                                                .foregroundStyle(self.runicTheme.secondaryText)
                                             ForEach(Array(topModelLines.enumerated()), id: \.offset) { index, line in
                                                 Text("\(index + 1). \(line)")
-                                                    .font(RunicFont.caption)
-                                                    .foregroundStyle(.secondary)
+                                                    .font(self.fonts.caption)
+                                                    .foregroundStyle(self.runicTheme.secondaryText)
                                                     .textSelection(.enabled)
                                             }
                                         }
@@ -2287,12 +2314,12 @@ private struct ProviderSidebarDetailView: View {
                                     if !topProjectLines.isEmpty {
                                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                             Text("Projects")
-                                                .font(RunicFont.caption2.weight(.semibold))
-                                                .foregroundStyle(.secondary)
+                                                .font(self.fonts.caption2.weight(.semibold))
+                                                .foregroundStyle(self.runicTheme.secondaryText)
                                             ForEach(Array(topProjectLines.enumerated()), id: \.offset) { index, line in
                                                 Text("\(index + 1). \(line)")
-                                                    .font(RunicFont.caption)
-                                                    .foregroundStyle(.secondary)
+                                                    .font(self.fonts.caption)
+                                                    .foregroundStyle(self.runicTheme.secondaryText)
                                                     .textSelection(.enabled)
                                             }
                                         }
@@ -2321,19 +2348,19 @@ private struct ProviderSidebarDetailView: View {
                             ForEach(self.settingsFields) { field in
                                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                     Text(field.title)
-                                        .font(RunicFont.body.weight(.medium))
+                                        .font(self.fonts.body.weight(.medium))
                                     Text(field.subtitle)
-                                        .font(RunicFont.caption)
-                                        .foregroundStyle(.secondary)
+                                        .font(self.fonts.caption)
+                                        .foregroundStyle(self.runicTheme.secondaryText)
                                     switch field.kind {
                                     case .plain:
                                         TextField(field.placeholder ?? "", text: field.binding)
                                             .textFieldStyle(.roundedBorder)
-                                            .font(RunicFont.callout)
+                                            .font(self.fonts.callout)
                                     case .secure:
                                         SecureField(field.placeholder ?? "", text: field.binding)
                                             .textFieldStyle(.roundedBorder)
-                                            .font(RunicFont.callout)
+                                            .font(self.fonts.callout)
                                     }
                                     self.fieldActions(field.actions)
                                 }
@@ -2351,10 +2378,10 @@ private struct ProviderSidebarDetailView: View {
                                     Toggle(isOn: toggle.binding) {
                                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                             Text(toggle.title)
-                                                .font(RunicFont.body.weight(.medium))
+                                                .font(self.fonts.body.weight(.medium))
                                             Text(toggle.subtitle)
-                                                .font(RunicFont.caption)
-                                                .foregroundStyle(.secondary)
+                                                .font(self.fonts.caption)
+                                                .foregroundStyle(self.runicTheme.secondaryText)
                                         }
                                     }
                                     .toggleStyle(.checkbox)
@@ -2362,8 +2389,8 @@ private struct ProviderSidebarDetailView: View {
                                     if toggle.binding.wrappedValue {
                                         if let status = toggle.statusText?(), !status.isEmpty {
                                             Text(status)
-                                                .font(RunicFont.caption)
-                                                .foregroundStyle(.secondary)
+                                                .font(self.fonts.caption)
+                                                .foregroundStyle(self.runicTheme.secondaryText)
                                                 .padding(RunicSpacing.xs)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
                                                 .background(
@@ -2405,7 +2432,7 @@ private struct ProviderSidebarDetailView: View {
     private var statusBadge: some View {
         let (color, bg) = self.statusColors
         return Text(self.usageStatus.text)
-            .font(RunicFont.caption2.weight(.medium))
+            .font(self.fonts.caption2.weight(.medium))
             .padding(.horizontal, RunicSpacing.xs)
             .padding(.vertical, RunicSpacing.xxs)
             .background(bg)
@@ -2439,8 +2466,8 @@ private struct ProviderSidebarDetailView: View {
                     }
 
                     Text(self.historyMonthTitle)
-                        .font(RunicFont.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .frame(minWidth: 130, alignment: .leading)
 
                     ProviderHistoryNavigationButton(
@@ -2467,15 +2494,15 @@ private struct ProviderSidebarDetailView: View {
                         ProgressView()
                             .controlSize(.small)
                         Text("Loading history…")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     .padding(.vertical, RunicSpacing.xs)
                 } else if let snapshot = self.historySnapshot {
                     if !snapshot.isSupported {
                         Text(snapshot.note ?? "History is not available for this provider yet.")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .padding(.vertical, RunicSpacing.xs)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
@@ -2486,14 +2513,14 @@ private struct ProviderSidebarDetailView: View {
                     } else {
                         if let note = snapshot.note, !note.isEmpty {
                             Text(note)
-                                .font(RunicFont.caption2)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.caption2)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
                         Text(snapshot.days
                             .count == 1 ? "1 active day in \(self.historyMonthTitle)." :
                             "\(snapshot.days.count) active days in \(self.historyMonthTitle).")
-                            .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption2)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .padding(.bottom, RunicSpacing.xxs)
 
                         self.historyCalendarGrid
@@ -2501,19 +2528,19 @@ private struct ProviderSidebarDetailView: View {
                     }
                 } else {
                     Text("History is empty for this period.")
-                        .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .padding(.vertical, RunicSpacing.xs)
                 }
 
                 if let historyError = self.historyError {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("History load failed")
-                            .font(RunicFont.caption.weight(.semibold))
+                            .font(self.fonts.caption.weight(.semibold))
                             .foregroundStyle(.red)
                         Text(historyError)
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .textSelection(.enabled)
                         Button("Retry") {
                             Task { await self.loadHistoryMonth(forceRefresh: true) }
@@ -2537,8 +2564,8 @@ private struct ProviderSidebarDetailView: View {
 
                 Text(
                     "Local aggregated history only. Prompts, cookies, API keys, and raw payloads are never shown here.")
-                    .font(RunicFont.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.caption2)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             }
         }
     }
@@ -2552,8 +2579,8 @@ private struct ProviderSidebarDetailView: View {
             {
                 ForEach(weekdays, id: \.self) { symbol in
                     Text(symbol)
-                        .font(RunicFont.caption2.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.caption2.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -2590,8 +2617,8 @@ private struct ProviderSidebarDetailView: View {
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                     Text("Day details")
-                        .font(RunicFont.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.caption.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         .textCase(.uppercase)
                         .tracking(0.25)
                     Spacer()
@@ -2609,8 +2636,8 @@ private struct ProviderSidebarDetailView: View {
 
                 if let selected = self.selectedHistoryDaySummary {
                     Text(selected.dayStart.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()))
-                        .font(RunicFont.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.secondaryText)
 
                     if self.historyDayDetailMode == .summary {
                         LazyVGrid(
@@ -2641,16 +2668,16 @@ private struct ProviderSidebarDetailView: View {
                         if self.hasModelBreakdown, let topModel = selected.topModel {
                             Text(
                                 "Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
-                                .font(RunicFont.caption)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.caption)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                                 .textSelection(.enabled)
                         }
 
                         if self.hasProjectAttribution, let topProject = selected.topProject {
                             let project = self.projectDisplay(topProject)
                             Text("Top project: \(project.title)")
-                                .font(RunicFont.caption)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.caption)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                                 .textSelection(.enabled)
                                 .help(project.helpText ?? "")
                         }
@@ -2659,45 +2686,45 @@ private struct ProviderSidebarDetailView: View {
                     if self.historyDayDetailMode == .models {
                         if self.hasModelBreakdown, !selected.modelSummaries.isEmpty {
                             Text("Models used")
-                                .font(RunicFont.caption2.weight(.medium))
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.caption2.weight(.medium))
+                                .foregroundStyle(self.runicTheme.secondaryText)
                             ForEach(
                                 Array(selected.modelSummaries.prefix(12).enumerated()),
                                 id: \.offset)
                             { _, summary in
                                 Text("• \(self.historyModelLine(summary))")
-                                    .font(RunicFont.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .font(self.fonts.caption2)
+                                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                     .textSelection(.enabled)
                                     .help(self.historyModelLine(summary))
                             }
                         } else if self.hasModelBreakdown, !selected.modelsUsed.isEmpty {
                             Text("Models used: \(self.renderedModelsList(selected.modelsUsed).joined(separator: ", "))")
-                                .font(RunicFont.caption2)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.caption2)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                 .textSelection(.enabled)
                         } else {
                             Text(self
                                 .hasModelBreakdown ? "No models recorded for this day." :
                                 "Model attribution is not available for this provider.")
-                                .font(RunicFont.caption)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.caption)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
                     }
 
                     if self.historyDayDetailMode == .projects {
                         if self.hasProjectAttribution, !selected.projectSummaries.isEmpty {
                             Text("Top projects")
-                                .font(RunicFont.caption2.weight(.medium))
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.caption2.weight(.medium))
+                                .foregroundStyle(self.runicTheme.secondaryText)
                             ForEach(
                                 Array(selected.projectSummaries.prefix(12).enumerated()),
                                 id: \.offset)
                             { _, summary in
                                 let project = self.projectDisplay(summary)
                                 Text("• \(self.historyProjectLine(summary))")
-                                    .font(RunicFont.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .font(self.fonts.caption2)
+                                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                     .textSelection(.enabled)
                                     .help(project.helpText ?? "")
                             }
@@ -2705,18 +2732,18 @@ private struct ProviderSidebarDetailView: View {
                             Text(self
                                 .hasProjectAttribution ? "No projects recorded for this day." :
                                 "Project attribution is not available for this provider.")
-                                .font(RunicFont.caption)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.caption)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
                     }
                 } else {
                     Text(self.historySelectedDay?
                         .formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year()) ?? "No day selected")
-                        .font(RunicFont.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.secondaryText)
                     Text("No recorded activity for this day.")
-                        .font(RunicFont.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
         }

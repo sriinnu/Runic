@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Inline quality rating UI for AI model interactions (1-5 stars)
 struct QualityRatingView: View {
+    @Environment(\.runicFonts) private var fonts
     // MARK: - Types
 
     struct Model {
@@ -50,10 +51,10 @@ struct QualityRatingView: View {
         .runicTypography()
         .padding(RunicSpacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(self.runicTheme.menuCardGradient))
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(8), style: .continuous)
+                .fill(self.runicTheme.cardBackgroundStyle))
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(8), style: .continuous)
                 .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
@@ -62,7 +63,7 @@ struct QualityRatingView: View {
     private var ratingSelector: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             Text("How would you rate this response?")
-                .font(RunicFont.subheadline)
+                .font(self.fonts.subheadline)
                 .fontWeight(.medium)
 
             HStack(spacing: RunicSpacing.xs) {
@@ -71,7 +72,7 @@ struct QualityRatingView: View {
                         self.selectRating(rating)
                     } label: {
                         Image(systemName: self.starIcon(for: rating))
-                            .font(RunicFont.title2)
+                            .font(self.fonts.title2)
                             .foregroundStyle(self.starColor(for: rating))
                             .contentShape(Rectangle())
                     }
@@ -119,15 +120,15 @@ struct QualityRatingView: View {
     private var commentField: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             Text("Additional feedback (optional)")
-                .font(RunicFont.caption)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.caption)
+                .foregroundStyle(self.runicTheme.secondaryText)
 
             TextField("Share your thoughts...", text: self.$comment, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(3...6)
                 .padding(RunicSpacing.xs)
                 .background(Color(nsColor: .textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(6)))
                 .focused(self.$isCommentFocused)
         }
     }
@@ -150,7 +151,7 @@ struct QualityRatingView: View {
                             .frame(width: 12, height: 12)
                     }
                     Text(self.isSubmitting ? "Submitting..." : "Submit Rating")
-                        .font(RunicFont.subheadline)
+                        .font(self.fonts.subheadline)
                         .fontWeight(.medium)
                 }
                 .padding(.horizontal, RunicSpacing.sm)
@@ -166,19 +167,19 @@ struct QualityRatingView: View {
     private var thankYouView: some View {
         HStack(spacing: RunicSpacing.xs) {
             Image(systemName: "checkmark.circle.fill")
-                .font(RunicFont.title3)
+                .font(self.fonts.title3)
                 .foregroundStyle(.green)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Thank you for your feedback!")
-                    .font(RunicFont.subheadline)
+                    .font(self.fonts.subheadline)
                     .fontWeight(.medium)
 
                 if let rating = self.selectedRating {
                     HStack(spacing: 4) {
                         ForEach(1...5, id: \.self) { star in
                             Image(systemName: star <= rating ? "star.fill" : "star")
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(star <= rating ? .yellow : Color(nsColor: .tertiaryLabelColor))
                         }
                     }
@@ -195,11 +196,11 @@ struct QualityRatingView: View {
     private func errorView(_ message: String) -> some View {
         HStack(spacing: RunicSpacing.xs) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(RunicFont.caption)
+                .font(self.fonts.caption)
                 .foregroundStyle(.red)
 
             Text(message)
-                .font(RunicFont.caption)
+                .font(self.fonts.caption)
                 .foregroundStyle(.red)
                 .lineLimit(2)
 
@@ -210,11 +211,11 @@ struct QualityRatingView: View {
                     await self.submitRating()
                 }
             }
-            .font(RunicFont.caption)
+            .font(self.fonts.caption)
         }
         .padding(RunicSpacing.xs)
         .background(Color.red.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(6)))
     }
 
     // MARK: - Submit Logic

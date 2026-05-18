@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct CreditsHistoryChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private struct Point: Identifiable {
         let id: String
         let date: Date
@@ -32,7 +33,7 @@ struct CreditsHistoryChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No credits history data.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
@@ -57,7 +58,7 @@ struct CreditsHistoryChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
@@ -85,13 +86,13 @@ struct CreditsHistoryChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -101,7 +102,7 @@ struct CreditsHistoryChartMenuView: View {
 
                 if let total = model.totalCreditsUsed {
                     Text("Total (30d): \(total.formatted(.number.precision(.fractionLength(0...2)))) credits")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }

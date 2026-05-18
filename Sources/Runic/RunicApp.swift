@@ -60,6 +60,7 @@ struct RunicApp: App {
                 store: self.store,
                 updater: self.appDelegate.updaterController,
                 selection: self.preferencesSelection)
+                .environment(\.runicFonts, RunicFontStore.shared)
         }
         .defaultSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
     }

@@ -4,6 +4,8 @@ import SwiftUI
 
 @MainActor
 struct CustomProvidersPane: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     @State private var providers: [CustomProviderConfig] = []
@@ -17,7 +19,7 @@ struct CustomProvidersPane: View {
                 // Header with add button
                 HStack {
                     Text("Custom API Providers")
-                        .font(RunicFont.headline)
+                        .font(self.fonts.headline)
 
                     Spacer()
 
@@ -34,15 +36,15 @@ struct CustomProvidersPane: View {
                     VStack(spacing: RunicSpacing.md) {
                         Image(systemName: "puzzlepiece.extension")
                             .font(.system(size: 48))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(self.runicTheme.secondaryText)
 
                         Text("No custom providers configured")
-                            .font(RunicFont.headline)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.headline)
+                            .foregroundStyle(self.runicTheme.secondaryText)
 
                         Text("Add a custom API provider to track usage from APIs not natively supported by Runic.")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: 300)
                     }
@@ -154,6 +156,8 @@ struct CustomProvidersPane: View {
 
 @MainActor
 private struct CustomProviderRow: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let provider: CustomProviderConfig
     let snapshot: CustomProviderSnapshot?
     let onToggle: (Bool) -> Void
@@ -169,34 +173,34 @@ private struct CustomProviderRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(self.provider.name)
-                    .font(RunicFont.body)
+                    .font(self.fonts.body)
                     .fontWeight(.medium)
 
                 if let snapshot = self.snapshot {
                     if let error = snapshot.error {
                         Text(error)
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .foregroundStyle(.red)
                     } else {
                         HStack(spacing: 4) {
                             if let quota = snapshot.usageData.quota, let used = snapshot.usageData.used {
                                 let percent = quota > 0 ? (used / quota) * 100 : 0
                                 Text("\(Int(percent))% used")
-                                    .font(RunicFont.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(self.fonts.caption)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Text("•")
-                                .font(RunicFont.caption)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.caption)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             Text("Updated \(snapshot.updatedAt.relativeDescription())")
-                                .font(RunicFont.caption)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.caption)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
                     }
                 } else {
                     Text("No data")
-                        .font(RunicFont.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
 
@@ -267,6 +271,7 @@ extension NSColor {
 
 @MainActor
 private struct CustomProviderEditorView: View {
+    @Environment(\.runicFonts) private var fonts
     let provider: CustomProviderConfig?
     let onSave: (CustomProviderConfig) -> Void
     let onCancel: () -> Void
@@ -279,7 +284,7 @@ private struct CustomProviderEditorView: View {
     var body: some View {
         VStack {
             Text(self.provider == nil ? "Add Custom Provider" : "Edit Provider")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
                 .padding()
             Form {
                 TextField("Provider Name", text: self.$name)

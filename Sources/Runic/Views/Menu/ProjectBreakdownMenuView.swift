@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct ProjectBreakdownMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private let breakdown: [UsageLedgerProjectSummary]
     private let width: CGFloat
     @State private var selectedProjectID: String?
@@ -22,14 +23,14 @@ struct ProjectBreakdownMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.items.isEmpty {
                 Text("No project data.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 let detail = self.detailText(model: model)
                 // MARK: - Title
 
                 Text("Projects")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(self.runicTheme.primaryText)
 
@@ -41,14 +42,14 @@ struct ProjectBreakdownMenuView: View {
                             x: .value("Tokens", item.totalTokens),
                             y: .value("Project", item.name))
                             .foregroundStyle(item.color)
-                            .cornerRadius(RunicCornerRadius.xs)
+                            .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
                     }
                 }
                 .chartXAxis(.hidden)
                 .chartYAxis {
                     AxisMarks { _ in
                         AxisValueLabel()
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
@@ -59,7 +60,7 @@ struct ProjectBreakdownMenuView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
-                                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                                     .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
@@ -77,7 +78,7 @@ struct ProjectBreakdownMenuView: View {
                 .accessibilityLabel(Self.chartAccessibilityLabel(model: model))
 
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -95,7 +96,7 @@ struct ProjectBreakdownMenuView: View {
 
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                 }
 

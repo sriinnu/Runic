@@ -6,6 +6,7 @@ import SwiftUI
 /// Y-axis 0-100%, two colored lines for different rate windows.
 @MainActor
 struct UsageWindowComparisonChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private struct PercentPoint: Identifiable {
         let id: String
         let dayKey: String
@@ -52,16 +53,19 @@ struct UsageWindowComparisonChartMenuView: View {
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Windows")
-                .font(RunicFont.subheadline)
+                .font(self.fonts.subheadline)
                 .fontWeight(.semibold)
 
             if model.points.isEmpty {
                 Text("No usage window data available.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
                 let detail = self.detailText(model: model)
+                let isTerminal = self.runicTheme.isTerminalHUD
+                let isGlow = self.runicTheme.shape.separator == .glow
+                let lineWidth: CGFloat = isGlow ? 2.4 : (isTerminal ? 1.4 : 2)
                 Chart {
                     ForEach(model.points) { point in
                         LineMark(
@@ -69,8 +73,8 @@ struct UsageWindowComparisonChartMenuView: View {
                             y: .value("%", point.percent),
                             series: .value("Window", point.series))
                             .foregroundStyle(point.series == self.primaryLabel ? primaryColor : secondaryColor)
-                            .lineStyle(StrokeStyle(lineWidth: 2))
-                            .interpolationMethod(.catmullRom)
+                            .lineStyle(StrokeStyle(lineWidth: lineWidth))
+                            .interpolationMethod(isTerminal ? .linear : .catmullRom)
                     }
                     if let selected = self.selectedPoint(model: model) {
                         RuleMark(x: .value("Date", selected.date))
@@ -86,7 +90,7 @@ struct UsageWindowComparisonChartMenuView: View {
                         AxisValueLabel {
                             if let pct = value.as(Int.self) {
                                 Text("\(pct)%")
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
@@ -97,7 +101,7 @@ struct UsageWindowComparisonChartMenuView: View {
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
                             .foregroundStyle(self.runicTheme.chartGridColor.opacity(0.7))
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
@@ -123,7 +127,7 @@ struct UsageWindowComparisonChartMenuView: View {
                             .fill(primaryColor)
                             .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                         Text(self.primaryLabel)
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     if let secondaryLabel = self.secondaryLabel {
@@ -132,14 +136,14 @@ struct UsageWindowComparisonChartMenuView: View {
                                 .fill(secondaryColor)
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(secondaryLabel)
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                         }
                     }
                 }
 
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)

@@ -1,0 +1,26 @@
+{
+  "id": "terminal",
+  "displayName": "Terminal",
+  "tagline": "Retro terminal",
+  "symbolName": "terminal.fill",
+  "isCustom": true,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#00F473",
+    "secondary":     "#29D5FF",
+    "accent":        "#00FF88",
+    "highlight":     "#FFB400",
+    "warm":          "#FF5C6B",
+    "tertiary":      "#44EDB8",
+    "surface":       "#000403",
+    "surfaceAlt":    "#00140EEB",
+    "cardFill":      "#001F14A3",
+    "cardStroke":    "#00FF8857",
+    "primaryText":   "#E0F6E7",
+    "secondaryText": "#A3C2B0"
+  },
+  "fonts":   { "body": "mono", "numeric": "mono" },
+  "shape":   { "preset": "sharp" },
+  "motion":  { "preset": "instant" },
+  "density": { "preset": "compact" }
+}

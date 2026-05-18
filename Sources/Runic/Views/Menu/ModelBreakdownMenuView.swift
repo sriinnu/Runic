@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct ModelBreakdownMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private let breakdown: [UsageLedgerModelSummary]
     private let width: CGFloat
     @State private var selectedModelID: String?
@@ -22,14 +23,14 @@ struct ModelBreakdownMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.items.isEmpty {
                 Text("No model data.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 let detail = self.detailText(model: model)
                 // MARK: - Title
 
                 Text("Models")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(self.runicTheme.primaryText)
 
@@ -61,7 +62,7 @@ struct ModelBreakdownMenuView: View {
                 .accessibilityLabel(Self.chartAccessibilityLabel(model: model))
 
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -80,7 +81,7 @@ struct ModelBreakdownMenuView: View {
 
                 if model.overflowCount > 0 {
                     Text("and \(model.overflowCount) more")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                 }
 
@@ -91,11 +92,11 @@ struct ModelBreakdownMenuView: View {
                         .overlay(self.runicTheme.menuSeparatorColor)
                     HStack(spacing: RunicSpacing.xxs) {
                         Text("Cache hit rate")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .foregroundStyle(self.runicTheme.secondaryText)
                         Spacer(minLength: RunicSpacing.xxs)
                         Text(cacheRate)
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(self.runicTheme.primaryText)
                     }

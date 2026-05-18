@@ -143,7 +143,8 @@ struct RunicFontRules: Hashable {
             normalized.contains("ibm plex mono") ||
             normalized.contains("menlo") ||
             normalized.contains("monaco") ||
-            normalized.contains("space mono")
+            normalized.contains("space mono") ||
+            normalized.contains("geist mono")
         {
             return RunicFontRules(
                 letterSpacing: 0.10,
@@ -160,36 +161,22 @@ struct RunicFontRules: Hashable {
                     darkMutedOpacity: 0.46))
         }
 
-        if normalized.contains("inconsolata") {
+        // Geist Sans — Vercel's modern UI sans. Tight letter spacing, no
+        // tabular digits (it's not a mono), neutral contrast.
+        if normalized == "geist" || normalized.hasPrefix("geist ") && !normalized.contains("mono") {
             return RunicFontRules(
-                letterSpacing: 0.15,
-                compactLetterSpacing: 0.05,
-                wordSpacing: 0.10,
-                lineSpacing: 1.2,
-                prefersMonospacedDigits: true,
-                contrast: RunicFontContrast(
-                    lightPrimaryOpacity: 0.91,
-                    lightSecondaryOpacity: 0.63,
-                    lightMutedOpacity: 0.43,
-                    darkPrimaryOpacity: 0.95,
-                    darkSecondaryOpacity: 0.67,
-                    darkMutedOpacity: 0.48))
-        }
-
-        if normalized.contains("caveat") {
-            return RunicFontRules(
-                letterSpacing: 0.20,
-                compactLetterSpacing: 0.10,
-                wordSpacing: 0.30,
-                lineSpacing: 2.4,
+                letterSpacing: 0,
+                compactLetterSpacing: -0.05,
+                wordSpacing: 0,
+                lineSpacing: 1.1,
                 prefersMonospacedDigits: false,
                 contrast: RunicFontContrast(
-                    lightPrimaryOpacity: 0.94,
-                    lightSecondaryOpacity: 0.68,
-                    lightMutedOpacity: 0.48,
-                    darkPrimaryOpacity: 0.97,
-                    darkSecondaryOpacity: 0.72,
-                    darkMutedOpacity: 0.52))
+                    lightPrimaryOpacity: 0.90,
+                    lightSecondaryOpacity: 0.60,
+                    lightMutedOpacity: 0.40,
+                    darkPrimaryOpacity: 0.94,
+                    darkSecondaryOpacity: 0.64,
+                    darkMutedOpacity: 0.44))
         }
 
         if family == RunicFontChoice.newYork.id ||
@@ -291,6 +278,11 @@ struct RunicFontChoice: Identifiable, Hashable {
     static let sfRounded = RunicFontChoice(id: "__sf_rounded__", displayName: "SF Rounded")
     static let newYork = RunicFontChoice(id: "__new_york__", displayName: "New York")
 
+    /// Bundled families. Display names match the actual `family` attribute
+    /// inside each TTF so SwiftUI / NSFont can find them after registration.
+    static let geist = RunicFontChoice(id: "Geist", displayName: "Geist")
+    static let geistMono = RunicFontChoice(id: "Geist Mono", displayName: "Geist Mono")
+
     /// Curated macOS families. They are shown only when available on the machine.
     static let avenirNext = RunicFontChoice(id: "Avenir Next", displayName: "Avenir Next")
     static let helveticaNeue = RunicFontChoice(id: "Helvetica Neue", displayName: "Helvetica Neue")
@@ -348,90 +340,45 @@ struct RunicFontChoice: Identifiable, Hashable {
 
 // MARK: - Dynamic SwiftUI Font Scale
 
+/// Static facade that forwards every call to `RunicFontStore.shared`. SwiftUI
+/// views should prefer `@Environment(\.runicFonts)` so font changes propagate
+/// reactively — using `RunicFont.X` from a view body works but won't update
+/// until the body invalidates for some other reason. AppKit paths (NSMenu,
+/// NSStatusItem, IconRenderer) keep using the static accessors since they
+/// rebuild on each interaction.
 @MainActor
 enum RunicFont {
-    /// The active font family identifier. Updated from SettingsStore.
-    static var family: String = "Fira Code"
-
-    static var activeRules: RunicFontRules {
-        RunicFontRules.rules(for: self.family)
+    static var family: String {
+        get { RunicFontStore.shared.family }
+        set { RunicFontStore.shared.family = newValue }
     }
 
-    private static var isSystemFont: Bool {
-        family.hasPrefix("__")
+    static var themeDesignOverride: Font.Design? {
+        get { RunicFontStore.shared.themeDesign }
+        set { RunicFontStore.shared.themeDesign = newValue }
     }
 
-    /// Font design used by `.runicTypography()` for system-font fallback.
-    static var systemFallbackDesign: Font.Design {
-        self.systemDesign(for: self.family)
-    }
+    static var activeRules: RunicFontRules { RunicFontStore.shared.activeRules }
+    static var systemFallbackDesign: Font.Design { RunicFontStore.shared.systemFallbackDesign }
 
-    // MARK: Semantic sizes
+    static var caption2: Font { RunicFontStore.shared.caption2 }
+    static var caption: Font { RunicFontStore.shared.caption }
+    static var footnote: Font { RunicFontStore.shared.footnote }
+    static var callout: Font { RunicFontStore.shared.callout }
+    static var body: Font { RunicFontStore.shared.body }
+    static var subheadline: Font { RunicFontStore.shared.subheadline }
+    static var headline: Font { RunicFontStore.shared.headline }
+    static var title3: Font { RunicFontStore.shared.title3 }
+    static var title2: Font { RunicFontStore.shared.title2 }
+    static var title: Font { RunicFontStore.shared.title }
+    static var largeTitle: Font { RunicFontStore.shared.largeTitle }
 
-    static var caption2: Font {
-        makeFont(size: 10, relativeTo: .caption2)
-    }
-
-    static var caption: Font {
-        makeFont(size: 11, relativeTo: .caption)
-    }
-
-    static var footnote: Font {
-        makeFont(size: 12, relativeTo: .footnote)
-    }
-
-    static var callout: Font {
-        makeFont(size: 13, relativeTo: .callout)
-    }
-
-    static var body: Font {
-        makeFont(size: 13, relativeTo: .body)
-    }
-
-    static var subheadline: Font {
-        makeFont(size: 12, relativeTo: .subheadline)
-    }
-
-    static var headline: Font {
-        makeFont(size: 13, relativeTo: .headline).weight(.bold)
-    }
-
-    static var title3: Font {
-        makeFont(size: 15, relativeTo: .title3)
-    }
-
-    static var title2: Font {
-        makeFont(size: 17, relativeTo: .title2)
-    }
-
-    static var title: Font {
-        makeFont(size: 22, relativeTo: .title)
-    }
-
-    static var largeTitle: Font {
-        makeFont(size: 26, relativeTo: .largeTitle)
-    }
-
-    /// Custom fixed size.
     static func system(size: CGFloat) -> Font {
-        switch self.family {
-        case RunicFontChoice.sfPro.id: .system(size: size)
-        case RunicFontChoice.sfMono.id: .system(size: size, design: .monospaced)
-        case RunicFontChoice.sfRounded.id: .system(size: size, design: .rounded)
-        case RunicFontChoice.newYork.id: .system(size: size, design: .serif)
-        default: Font.custom(RunicTypography.fontName(for: self.family), fixedSize: size)
-        }
+        RunicFontStore.shared.system(size: size)
     }
 
-    /// Custom fixed size with weight.
     static func system(size: CGFloat, weight: Font.Weight) -> Font {
-        switch self.family {
-        case RunicFontChoice.sfPro.id: .system(size: size, weight: weight)
-        case RunicFontChoice.sfMono.id: .system(size: size, weight: weight, design: .monospaced)
-        case RunicFontChoice.sfRounded.id: .system(size: size, weight: weight, design: .rounded)
-        case RunicFontChoice.newYork.id: .system(size: size, weight: weight, design: .serif)
-        default: Font.custom(RunicTypography.fontName(for: self.family), fixedSize: size).weight(weight)
-        }
+        RunicFontStore.shared.system(size: size, weight: weight)
     }
 
     static func previewFont(for family: String, size: CGFloat) -> Font {
@@ -441,31 +388,6 @@ enum RunicFont {
         case RunicFontChoice.sfRounded.id: .system(size: size, design: .rounded)
         case RunicFontChoice.newYork.id: .system(size: size, design: .serif)
         default: Font.custom(RunicTypography.fontName(for: family), fixedSize: size)
-        }
-    }
-
-    // MARK: Private
-
-    private static func makeFont(size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
-        switch self.family {
-        case RunicFontChoice.sfPro.id: .system(style)
-        case RunicFontChoice.sfMono.id: .system(style, design: .monospaced)
-        case RunicFontChoice.sfRounded.id: .system(style, design: .rounded)
-        case RunicFontChoice.newYork.id: .system(style, design: .serif)
-        default: Font.custom(RunicTypography.fontName(for: self.family), size: size, relativeTo: style)
-        }
-    }
-
-    private static func systemDesign(for family: String) -> Font.Design {
-        switch family {
-        case RunicFontChoice.sfMono.id:
-            .monospaced
-        case RunicFontChoice.sfRounded.id:
-            .rounded
-        case RunicFontChoice.newYork.id:
-            .serif
-        default:
-            RunicFontRules.rules(for: family).prefersMonospacedDigits ? .monospaced : .default
         }
     }
 }

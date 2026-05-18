@@ -143,15 +143,21 @@ enum DateFormat: String, CaseIterable, Identifiable {
 }
 
 enum Theme: String, CaseIterable, Identifiable {
+    case retro
     case system
     case light
     case dark
     case daybreak
-    case pine
-    case nocturne
-    case prism
     case glass
     case terminal
+
+    /// The signature look — parchment + navy bevels, System-7 chrome with
+    /// modern info architecture. New installs land here.
+    static let `default`: Theme = .retro
+
+    /// Raw values that used to exist and are now retired. Migration code in
+    /// `SettingsStore.normalizeStoredTheme` rewrites these on load.
+    static let retiredRawValues: Set<String> = ["pine", "nocturne", "prism"]
 
     var id: String {
         self.rawValue
@@ -159,13 +165,11 @@ enum Theme: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
+        case .retro: "Retro"
         case .system: "System"
         case .light: "Light"
         case .dark: "Dark"
         case .daybreak: "Daybreak"
-        case .pine: "Pine"
-        case .nocturne: "Nocturne"
-        case .prism: "Prism"
         case .glass: "Glass"
         case .terminal: "Terminal"
         }
@@ -334,6 +338,8 @@ final class SettingsStore {
         didSet {
             self.userDefaults.set(self.theme.rawValue, forKey: "theme")
             RunicApp.applyTheme(self.theme)
+            RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+            IconRenderer.themePalette = self.theme.palette
             self.bumpVisualSettingsRevision()
         }
     }
@@ -970,8 +976,19 @@ final class SettingsStore {
         self.numberFormat = NumberFormat(rawValue: numberFormatRaw ?? "") ?? .abbreviated
         let dateFormatRaw = userDefaults.string(forKey: "dateFormat")
         self.dateFormat = DateFormat(rawValue: dateFormatRaw ?? "") ?? .relative
-        let themeRaw = userDefaults.string(forKey: "theme")
-        self.theme = Theme(rawValue: themeRaw ?? "") ?? .system
+        let themeRaw = userDefaults.string(forKey: "theme") ?? ""
+        if Theme.retiredRawValues.contains(themeRaw) {
+            // Users on a retired theme (pine/nocturne/prism) land on Daybreak.
+            self.theme = .daybreak
+            userDefaults.set(Theme.daybreak.rawValue, forKey: "theme")
+        } else if let resolved = Theme(rawValue: themeRaw) {
+            self.theme = resolved
+        } else {
+            // First-launch / unrecognised value → ship the signature Retro
+            // look. Users can change to anything else from Preferences.
+            self.theme = Theme.default
+            userDefaults.set(Theme.default.rawValue, forKey: "theme")
+        }
         self.selectedFontFamily = userDefaults.string(forKey: "selectedFontFamily") ?? "Fira Code"
         self.menuBarShowsBrandIconWithPercent = userDefaults.object(
             forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
@@ -1048,6 +1065,8 @@ final class SettingsStore {
             self.claudeWebExtrasEnabled = false
         }
         RunicFont.family = self.selectedFontFamily
+        RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+        IconRenderer.themePalette = self.theme.palette
     }
 
     func orderedProviders() -> [UsageProvider] {

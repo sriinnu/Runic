@@ -1,0 +1,26 @@
+{
+  "id": "light",
+  "displayName": "Light",
+  "tagline": "Clean aqua",
+  "symbolName": "sun.max.fill",
+  "isCustom": false,
+  "prefersDarkAppearance": false,
+  "colors": {
+    "primary":       "#336BE6",
+    "secondary":     "#1A9EB8",
+    "accent":        "#2670EB",
+    "highlight":     "#E6781F",
+    "warm":          "#DB4761",
+    "tertiary":      "#219457",
+    "surface":       "#F5F7FA",
+    "surfaceAlt":    "#FFFFFFB8",
+    "cardFill":      "#FFFFFFA8",
+    "cardStroke":    "#0000001E",
+    "primaryText":   "#000000DB",
+    "secondaryText": "#0000008C"
+  },
+  "fonts":   { "body": "system", "numeric": "system" },
+  "shape":   { "preset": "standard" },
+  "motion":  { "preset": "standard" },
+  "density": { "preset": "normal" }
+}

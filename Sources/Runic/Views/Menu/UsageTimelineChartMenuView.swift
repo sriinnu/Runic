@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct UsageTimelineChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     enum TimeRange: String, CaseIterable {
         case threeDays = "3d"
         case sevenDays = "7d"
@@ -80,7 +81,7 @@ struct UsageTimelineChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Header on its own line
             Text("Timeline")
-                .font(RunicFont.subheadline)
+                .font(self.fonts.subheadline)
                 .fontWeight(.semibold)
 
             // Range picker on its own line
@@ -93,32 +94,42 @@ struct UsageTimelineChartMenuView: View {
 
             if model.points.isEmpty {
                 Text("No data for selected range.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 100)
             } else {
                 let detail = self.detailText(model: model)
-                // Line chart
+                // Line chart. Theme-adapts: Terminal drops the area gradient
+                // entirely (sparkline-only, fits the CRT aesthetic). Daybreak
+                // gets a lush peach gradient with rounded interpolation.
+                // Glass / Dark get a denser area + glow on the line.
+                let isTerminal = self.runicTheme.isTerminalHUD
+                let isGlow = self.runicTheme.shape.separator == .glow
+                let areaTopAlpha: Double = isTerminal ? 0 : (isGlow ? 0.38 : (self.runicTheme.id == "daybreak" ? 0.36 : 0.25))
+                let areaBottomAlpha: Double = isTerminal ? 0 : 0.03
+                let lineWidth: CGFloat = isGlow ? 2.4 : (isTerminal ? 1.4 : 2)
                 Chart {
                     ForEach(model.points) { point in
-                        AreaMark(
-                            x: .value("Time", point.date),
-                            y: .value("Tokens", point.totalTokens))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [
-                                        lineColor.opacity(0.25),
-                                        lineColor.opacity(0.03),
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom))
-                            .interpolationMethod(.catmullRom)
+                        if !isTerminal {
+                            AreaMark(
+                                x: .value("Time", point.date),
+                                y: .value("Tokens", point.totalTokens))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [
+                                            lineColor.opacity(areaTopAlpha),
+                                            lineColor.opacity(areaBottomAlpha),
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .bottom))
+                                .interpolationMethod(.catmullRom)
+                        }
                         LineMark(
                             x: .value("Time", point.date),
                             y: .value("Tokens", point.totalTokens))
                             .foregroundStyle(lineColor)
-                            .lineStyle(StrokeStyle(lineWidth: 2))
-                            .interpolationMethod(.catmullRom)
+                            .lineStyle(StrokeStyle(lineWidth: lineWidth))
+                            .interpolationMethod(isTerminal ? .linear : .catmullRom)
                     }
                     if let peak = model.peakPoint {
                         PointMark(
@@ -128,11 +139,12 @@ struct UsageTimelineChartMenuView: View {
                             .symbolSize(60)
                             .annotation(position: .top, spacing: 4) {
                                 Text("Peak")
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartPeakColor)
                             }
                     }
                 }
+                .chartXScale(domain: Self.xDomain(for: selectedRange))
                 .chartYAxis {
                     AxisMarks(position: .trailing) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
@@ -140,7 +152,7 @@ struct UsageTimelineChartMenuView: View {
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
@@ -151,7 +163,7 @@ struct UsageTimelineChartMenuView: View {
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
                             .foregroundStyle(self.runicTheme.chartGridColor.opacity(0.7))
                         AxisValueLabel(format: model.xAxisFormat)
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
@@ -179,7 +191,7 @@ struct UsageTimelineChartMenuView: View {
 
                 // Detail line
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -224,6 +236,7 @@ struct UsageTimelineChartMenuView: View {
     // MARK: - Stat cell
 
     private struct StatCell: View {
+    @Environment(\.runicFonts) private var fonts
         let label: String
         let value: String
         @Environment(\.runicTheme) private var runicTheme
@@ -231,10 +244,10 @@ struct UsageTimelineChartMenuView: View {
         var body: some View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                 Text(self.label)
-                    .font(RunicFont.caption2)
+                    .font(self.fonts.caption2)
                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                 Text(self.value)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(self.runicTheme.primaryText)
             }
@@ -255,6 +268,17 @@ struct UsageTimelineChartMenuView: View {
         let desiredAxisCount: Int
         let xAxisFormat: Date.FormatStyle
         let isHourly: Bool
+    }
+
+    /// Force the chart's X axis to span the full selected range, even when
+    /// the ledger only has a partial window of data. Without this the chart
+    /// auto-fits its X axis to whatever points exist, so picking "1y" vs
+    /// "30d" looks identical when you only have 30d of data — i.e. the tabs
+    /// feel broken.
+    private static func xDomain(for range: TimeRange) -> ClosedRange<Date> {
+        let now = Date()
+        let start = now.addingTimeInterval(range.cutoffInterval)
+        return start...now
     }
 
     // MARK: - Daily model
