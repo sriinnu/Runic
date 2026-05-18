@@ -436,7 +436,15 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     requestID: requestID,
                     messageID: nil,
                     version: version,
-                    source: .codexLog))
+                    source: .codexLog,
+                    tokenProvenance: MetricProvenance(
+                        confidence: .inferred,
+                        source: .localLog,
+                        detail: "Codex JSONL cumulative counters converted to deltas"),
+                    costProvenance: cost == nil ? nil : MetricProvenance(
+                        confidence: .estimated,
+                        source: .pricingTable,
+                        detail: "Codex model pricing table")))
             })
     }
 

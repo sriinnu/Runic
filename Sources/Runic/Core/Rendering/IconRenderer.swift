@@ -91,6 +91,10 @@ enum IconRenderer {
         let indicator: Int
         let appearance: Int
         let dataMode: Int
+        /// User font family + theme palette id. Without these in the key,
+        /// changing font/theme would serve a stale cached icon.
+        let family: String
+        let themeID: String
     }
 
     private final class IconCacheStore: @unchecked Sendable {
@@ -192,6 +196,7 @@ enum IconRenderer {
         case vertexai
         case zai
         case qwen
+        case localLLM
         case combined
     }
 
@@ -256,7 +261,9 @@ enum IconRenderer {
                 style: self.styleKey(style),
                 indicator: self.indicatorKey(statusIndicator),
                 appearance: self.appearanceKey(appearance),
-                dataMode: self.dataModeKey(dataMode))
+                dataMode: self.dataModeKey(dataMode),
+                family: RunicFontStore.shared.family,
+                themeID: Self.themePalette?.id ?? "")
             if let cached = self.cachedIcon(for: key) {
                 return cached
             }
@@ -299,6 +306,7 @@ enum IconRenderer {
         case .bedrock: .bedrock
         case .vertexai: .vertexai
         case .qwen: .qwen
+        case .localLLM: .localLLM
         case .combined: .combined
         }
     }
@@ -782,6 +790,17 @@ enum IconRenderer {
             NSGraphicsContext.current?.cgContext.setFillColor(NSColor.clear.cgColor)
             ctx.setBlendMode(.clear)
             NSBezierPath(ovalIn: innerRect).fill()
+        case .localLLM:
+            let prompt = NSBezierPath()
+            prompt.move(to: point(x: centerXPx - 5, y: centerYPx + 4))
+            prompt.line(to: point(x: centerXPx - 1, y: centerYPx))
+            prompt.line(to: point(x: centerXPx - 5, y: centerYPx - 4))
+            prompt.line(to: point(x: centerXPx - 3, y: centerYPx - 4))
+            prompt.line(to: point(x: centerXPx + 1, y: centerYPx))
+            prompt.line(to: point(x: centerXPx - 3, y: centerYPx + 4))
+            prompt.close()
+            prompt.fill()
+            NSBezierPath(rect: Self.grid.rect(x: centerXPx + 2, y: centerYPx - 4, w: 5, h: 2)).fill()
         case .vercelai:
             let path = NSBezierPath()
             path.move(to: point(x: centerXPx, y: centerYPx + 6))
@@ -895,11 +914,25 @@ enum IconRenderer {
         }
     }
 
+    /// Active theme palette for the menubar icon. Set by SettingsStore on
+    /// theme change so the vibrant accent ramp adapts to each theme's
+    /// signature colors (phosphor green for Terminal, peach for Daybreak,
+    /// cyan→magenta for Glass).
+    ///
+    /// Writes happen on the main actor (SettingsStore.theme.didSet). Reads
+    /// happen during icon rendering, which may run off the main thread when
+    /// callers wrap `makeIcon` in a background dispatch. Lock-guarded so a
+    /// theme switch can't race a render.
+    private static let palettelLock = NSLock()
+    private nonisolated(unsafe) static var _themePalette: RunicThemePalette?
+    static var themePalette: RunicThemePalette? {
+        get { Self.palettelLock.withLock { Self._themePalette } }
+        set { Self.palettelLock.withLock { Self._themePalette = newValue } }
+    }
+
     private static func vibrantAccentColor(pressure: Double, stale: Bool) -> NSColor {
         let clamped = CGFloat(max(0, min(pressure, 1)))
-        let safe = NSColor(calibratedRed: 0.12, green: 0.86, blue: 0.78, alpha: 1)
-        let warn = NSColor(calibratedRed: 1.00, green: 0.72, blue: 0.30, alpha: 1)
-        let hot = NSColor(calibratedRed: 1.00, green: 0.31, blue: 0.44, alpha: 1)
+        let (safe, warn, hot) = Self.vibrantRamp()
         let color: NSColor = if clamped <= 0.5 {
             self.mixColor(safe, warn, p: clamped / 0.5)
         } else {
@@ -909,6 +942,21 @@ enum IconRenderer {
             return color.withAlphaComponent(0.72)
         }
         return color
+    }
+
+    /// Per-theme safe/warn/hot ramp used by the vibrant menubar icon. Falls
+    /// back to the original teal/amber/coral when no theme is set.
+    private static func vibrantRamp() -> (NSColor, NSColor, NSColor) {
+        let defaultSafe = NSColor(calibratedRed: 0.12, green: 0.86, blue: 0.78, alpha: 1)
+        let defaultWarn = NSColor(calibratedRed: 1.00, green: 0.72, blue: 0.30, alpha: 1)
+        let defaultHot = NSColor(calibratedRed: 1.00, green: 0.31, blue: 0.44, alpha: 1)
+        if let palette = Self.themePalette {
+            return (
+                palette.nsColor(palette.tertiary, fallback: defaultSafe),
+                palette.nsColor(palette.highlight, fallback: defaultWarn),
+                palette.nsColor(palette.warm, fallback: defaultHot))
+        }
+        return (defaultSafe, defaultWarn, defaultHot)
     }
 
     private static func mixColor(_ a: NSColor, _ b: NSColor, p: CGFloat) -> NSColor {
@@ -965,6 +1013,7 @@ enum IconRenderer {
         case .bedrock: 23
         case .vertexai: 24
         case .qwen: 25
+        case .localLLM: 27
         case .combined: 99
         }
     }

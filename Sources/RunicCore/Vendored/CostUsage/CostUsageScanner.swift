@@ -98,6 +98,8 @@ enum CostUsageScanner {
             return CostUsageDailyReport(data: [], summary: nil)
         case .qwen:
             return CostUsageDailyReport(data: [], summary: nil)
+        case .localLLM:
+            return CostUsageDailyReport(data: [], summary: nil)
         }
     }
 

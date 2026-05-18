@@ -26,18 +26,18 @@ struct MenuCardSkeletonView: View {
                 // Header row: avatar + text placeholders
                 HStack(alignment: .center, spacing: RunicSpacing.sm) {
                     // Avatar placeholder
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
                         .fill(self.shimmerGradient(phase: phase))
                         .frame(width: Self.avatarSize, height: Self.avatarSize)
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         // Provider name placeholder
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                             .fill(self.shimmerGradient(phase: phase))
                             .frame(width: Self.nameBarWidth, height: Self.nameBarHeight)
 
                         // Email placeholder
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                             .fill(self.shimmerGradient(phase: phase))
                             .frame(width: Self.emailBarWidth, height: Self.emailBarHeight)
                     }
@@ -46,32 +46,38 @@ struct MenuCardSkeletonView: View {
                 }
 
                 // Subtitle placeholder
-                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(width: Self.subtitleBarWidth, height: Self.subtitleBarHeight)
 
-                Divider()
+                RunicDivider()
                     .padding(.vertical, RunicSpacing.xxs)
 
                 // Usage section title placeholder
-                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(width: 80, height: Self.nameBarHeight)
 
                 // Progress bar placeholder
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(height: Self.progressBarHeight)
 
                 // Percent label placeholder
-                RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(width: 60, height: Self.subtitleBarHeight)
             }
-            .padding(.horizontal, MenuCardMetrics.horizontalPadding)
-            .padding(.top, MenuCardMetrics.headerTopPadding)
-            .padding(.bottom, MenuCardMetrics.headerBottomPadding)
+            .padding(.horizontal, self.runicTheme.density.padding(MenuCardMetrics.horizontalPadding))
+            .padding(.top, self.runicTheme.density.padding(MenuCardMetrics.headerTopPadding))
+            .padding(.bottom, self.runicTheme.density.padding(MenuCardMetrics.headerBottomPadding))
             .frame(width: self.width, alignment: .leading)
+            .overlay {
+                if self.runicTheme.isTerminalHUD {
+                    RunicTerminalScanlineOverlay(opacity: 0.4)
+                        .allowsHitTesting(false)
+                }
+            }
             .animation(RunicAnimation.shimmer, value: phase)
         }
     }
@@ -86,9 +92,12 @@ struct MenuCardSkeletonView: View {
     }
 
     /// A sliding `LinearGradient` that produces the shimmer effect.
+    /// Highlight color uses the theme accent so Terminal shows phosphor green,
+    /// Glass shows neon violet, Daybreak shows warm peach, etc.
     private func shimmerGradient(phase: Double) -> LinearGradient {
         let baseColor = self.runicTheme.menuTrackColor.opacity(0.45)
-        let highlightColor = self.runicTheme.cardStroke.opacity(0.7)
+        let highlightColor = self.runicTheme.accent.opacity(
+            self.runicTheme.isTerminalHUD ? 0.40 : (self.runicTheme.shape.separator == .glow ? 0.55 : 0.32))
 
         let leading = max(0, phase - 0.3)
         let trailing = min(1, phase + 0.3)

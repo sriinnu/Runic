@@ -573,6 +573,7 @@ final class UsageStore {
     private(set) var ledgerProjectSpendForecasts: [UsageProvider: [UsageLedgerSpendForecast]] = [:]
     private(set) var ledgerTopProjectSpendForecasts: [UsageProvider: UsageLedgerSpendForecast] = [:]
     private(set) var ledgerAnomalies: [UsageProvider: UsageLedgerAnomalySummary] = [:]
+    private(set) var ledgerCompactions: [UsageProvider: UsageLedgerCompactionSummary] = [:]
     private(set) var ledgerErrors: [UsageProvider: String] = [:]
     private(set) var ledgerUpdatedAt: [UsageProvider: Date] = [:]
     var credits: CreditsSnapshot?
@@ -633,6 +634,7 @@ final class UsageStore {
     @ObservationIgnored private var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored private var ledgerRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var requestedLedgerMaxAgeDays: Int?
     @ObservationIgnored private var providerHistoryMonthCache: [
         UsageProvider: [String: ProviderHistoryMonthCacheEntry]
     ] =
@@ -643,7 +645,7 @@ final class UsageStore {
     @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
     @ObservationIgnored private let ledgerRefreshTTL: TimeInterval = 90
     @ObservationIgnored private var ledgerMaxAgeDays: Int {
-        self.settings.ledgerMaxAgeDays
+        max(self.settings.ledgerMaxAgeDays, self.requestedLedgerMaxAgeDays ?? 0)
     }
 
     @ObservationIgnored private let providerHistoryCacheTTL: TimeInterval = 90
@@ -668,7 +670,7 @@ final class UsageStore {
         self.lastRefreshFrequency = settings.refreshFrequency
 
         // Initialize performance tracking (optional, gracefully fails if unavailable)
-        self.performanceStorage = try? PerformanceStorageImpl()
+        self.performanceStorage = PerformanceStorageImpl()
         self.lastAutoRefreshWarningEnabled = settings.autoRefreshWarningEnabled
         self.lastAutoRefreshWarningThreshold = settings.autoRefreshWarningThreshold
         self
@@ -744,6 +746,7 @@ final class UsageStore {
         case .bedrock: nil
         case .vertexai: nil
         case .qwen: nil
+        case .localLLM: nil
         }
     }
 
@@ -920,6 +923,13 @@ final class UsageStore {
         self.ledgerHourlySummaries[provider] ?? []
     }
 
+    func ensureLedgerHistoryCovers(days: Int) {
+        let requestedDays = max(1, days)
+        guard requestedDays > self.ledgerMaxAgeDays else { return }
+        self.requestedLedgerMaxAgeDays = requestedDays
+        self.scheduleLedgerRefresh(force: true, inactiveProviders: [])
+    }
+
     func ledgerActiveBlock(for provider: UsageProvider) -> UsageLedgerBlockSummary? {
         self.ledgerActiveBlocks[provider]
     }
@@ -954,6 +964,10 @@ final class UsageStore {
 
     func ledgerAnomalySummary(for provider: UsageProvider) -> UsageLedgerAnomalySummary? {
         self.ledgerAnomalies[provider]
+    }
+
+    func ledgerCompactionSummary(for provider: UsageProvider) -> UsageLedgerCompactionSummary? {
+        self.ledgerCompactions[provider]
     }
 
     func ledgerError(for provider: UsageProvider) -> String? {
@@ -1117,7 +1131,8 @@ final class UsageStore {
              .azure,
              .bedrock,
              .vertexai,
-             .qwen:
+             .qwen,
+             .localLLM:
             return self.providerOTelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:
             return nil
@@ -1137,7 +1152,7 @@ final class UsageStore {
             enabled: true,
             allowExperimentalSemanticConventions: true,
             defaultProvider: provider,
-            source: .api)
+            source: .openTelemetry)
         return UsageLedgerProviderFilterSource(
             source: OTelGenAIFileLedgerSource(files: files, options: options),
             provider: provider,
@@ -1172,6 +1187,7 @@ final class UsageStore {
             .uppercased()
 
         let candidatePaths = [
+            [OTelGenAICollectorConfiguration.defaultOutputFile().path],
             Self.splitPathList(self.settings.otelGenAILogPaths),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATH"]),
@@ -1384,14 +1400,15 @@ final class UsageStore {
         let fetcher = GenericProviderFetcher(config: config)
         let startTime = Date()
         let requestID = UUID().uuidString
+        let providerLabel = Self.customProviderMetricLabel(config)
 
         do {
             let usageData = try await fetcher.fetchUsage()
             let endTime = Date()
 
-            // Track successful latency
             await self.trackLatency(
-                provider: .codex, // TODO: Add custom provider tracking
+                provider: .openrouter,
+                providerLabel: providerLabel,
                 requestID: requestID,
                 startTime: startTime,
                 endTime: endTime,
@@ -1405,14 +1422,14 @@ final class UsageStore {
         } catch {
             let endTime = Date()
 
-            // Track failed latency and error
             await self.trackLatency(
-                provider: .codex, // TODO: Add custom provider tracking
+                provider: .openrouter,
+                providerLabel: providerLabel,
                 requestID: requestID,
                 startTime: startTime,
                 endTime: endTime,
                 success: false)
-            await self.trackError(provider: .codex, error: error) // TODO: Add custom provider tracking
+            await self.trackError(provider: .openrouter, providerLabel: providerLabel, error: error)
 
             await MainActor.run {
                 self.customProviderErrors[id] = error.localizedDescription
@@ -1669,6 +1686,7 @@ final class UsageStore {
         inactiveProviders: Set<UsageProvider>)
     {
         let now = Date()
+        let scanDays = self.ledgerMaxAgeDays
         let sources = self.ledgerSources(now: now, inactiveProviders: inactiveProviders)
         let providers = sources.map(\.0)
         if providers.isEmpty { return }
@@ -1714,7 +1732,7 @@ final class UsageStore {
 
         self.ledgerRefreshTask = Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
-            let result = await self.loadLedgerInsights(sources: sources, now: now)
+            let result = await self.loadLedgerInsights(sources: sources, now: now, scanDays: scanDays)
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.ledgerRefreshTask = nil
@@ -1796,6 +1814,12 @@ final class UsageStore {
                         self.ledgerAnomalies.removeValue(forKey: provider)
                     }
 
+                    if let compaction = result.compactionsByProvider[provider] {
+                        self.ledgerCompactions[provider] = compaction
+                    } else {
+                        self.ledgerCompactions.removeValue(forKey: provider)
+                    }
+
                     if let lastActivity = result.lastActivityByProvider[provider] {
                         self.lastLedgerActivityAt[provider] = lastActivity
                     }
@@ -1808,6 +1832,10 @@ final class UsageStore {
                     BudgetNotificationManager.shared.checkAndNotify(
                         forecasts: self.ledgerProjectSpendForecasts,
                         settings: self.settings)
+                }
+
+                if self.ledgerMaxAgeDays > result.scanDays {
+                    self.scheduleLedgerRefresh(force: true, inactiveProviders: [])
                 }
             }
         }
@@ -1870,9 +1898,11 @@ final class UsageStore {
         let projectSpendForecastsByProvider: [UsageProvider: [UsageLedgerSpendForecast]]
         let topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
         let anomaliesByProvider: [UsageProvider: UsageLedgerAnomalySummary]
+        let compactionsByProvider: [UsageProvider: UsageLedgerCompactionSummary]
         let errorsByProvider: [UsageProvider: String]
         let lastActivityByProvider: [UsageProvider: Date]
         let updatedAt: Date
+        let scanDays: Int
         let providers: [UsageProvider]
     }
 
@@ -1898,7 +1928,8 @@ final class UsageStore {
 
     private func loadLedgerInsights(
         sources: [(UsageProvider, any UsageLedgerSource)],
-        now: Date) async -> LedgerRefreshResult
+        now: Date,
+        scanDays: Int) async -> LedgerRefreshResult
     {
         guard !sources.isEmpty else {
             return LedgerRefreshResult(
@@ -1914,9 +1945,11 @@ final class UsageStore {
                 projectSpendForecastsByProvider: [:],
                 topProjectSpendForecastsByProvider: [:],
                 anomaliesByProvider: [:],
+                compactionsByProvider: [:],
                 errorsByProvider: [:],
                 lastActivityByProvider: [:],
                 updatedAt: now,
+                scanDays: scanDays,
                 providers: [])
         }
 
@@ -2057,6 +2090,10 @@ final class UsageStore {
             dailySummaries: dailySummaries,
             now: now,
             calendar: calendar)
+        var compactionsByProvider: [UsageProvider: UsageLedgerCompactionSummary] = [:]
+        for summary in UsageLedgerAggregator.compactionSummaries(entries: entries) {
+            compactionsByProvider[summary.provider] = summary
+        }
 
         return LedgerRefreshResult(
             dailyByProvider: dailyByProvider,
@@ -2071,9 +2108,11 @@ final class UsageStore {
             projectSpendForecastsByProvider: projectSpendForecastsByProvider,
             topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
             anomaliesByProvider: anomaliesByProvider,
+            compactionsByProvider: compactionsByProvider,
             errorsByProvider: errors,
             lastActivityByProvider: lastActivityByProvider,
             updatedAt: now,
+            scanDays: scanDays,
             providers: providers)
     }
 
@@ -2219,6 +2258,7 @@ final class UsageStore {
                 self.lastTokenFetchAt.removeValue(forKey: provider)
                 self.lastUsageDeltaAt.removeValue(forKey: provider)
                 self.lastLedgerActivityAt.removeValue(forKey: provider)
+                self.ledgerCompactions.removeValue(forKey: provider)
             }
             return
         }
@@ -3166,6 +3206,15 @@ extension UsageStore {
                 }
                 await MainActor.run { self.probeLogs[.qwen] = text }
                 return text
+            case .localLLM:
+                let text = await self.runWithTimeout(seconds: 15) {
+                    await self.debugProviderProbe(
+                        provider: .localLLM,
+                        context: debugContext,
+                        settings: settingsSnapshot)
+                }
+                await MainActor.run { self.probeLogs[.localLLM] = text }
+                return text
             }
         }.value
     }
@@ -3290,6 +3339,11 @@ extension UsageStore {
         case .gemini:
             return [
                 "gemini.authType=\(GeminiStatusProbe.currentAuthType().rawValue)",
+            ]
+        case .localLLM:
+            return [
+                "local_llm.discovery=ollama:11434,lmstudio:1234,vllm:8000,llama.cpp:8080,openwebui:3000",
+                "local_llm.api_cost=not_applicable",
             ]
         case .antigravity, .cursor, .factory:
             return ["credentials=provider_internal"]
@@ -3578,6 +3632,7 @@ extension UsageStore {
     /// Track API call latency for performance monitoring
     private nonisolated func trackLatency(
         provider: UsageProvider,
+        providerLabel: String? = nil,
         requestID: String,
         startTime: Date,
         endTime: Date,
@@ -3589,6 +3644,7 @@ extension UsageStore {
             id: UUID().uuidString,
             requestID: requestID,
             provider: provider,
+            providerLabel: providerLabel,
             model: nil,
             startTime: startTime,
             endTime: endTime,
@@ -3600,19 +3656,32 @@ extension UsageStore {
     }
 
     /// Track API errors for performance monitoring
-    private nonisolated func trackError(provider: UsageProvider, error: Error) async {
+    private nonisolated func trackError(provider: UsageProvider, providerLabel: String? = nil, error: Error) async {
         guard let storage = self.performanceStorage else { return }
 
         let errorType = self.classifyError(error)
         let errorEvent = ErrorEvent(
             id: UUID().uuidString,
             provider: provider,
+            providerLabel: providerLabel,
             errorType: errorType,
             errorMessage: error.localizedDescription,
             retryCount: 0,
             timestamp: Date())
 
         try? await storage.save(error: errorEvent)
+    }
+
+    private nonisolated static func customProviderMetricLabel(_ config: CustomProviderConfig) -> String {
+        let raw = config.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? config.id
+            : config.name
+        let normalized = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: #"[^\p{L}\p{N}._-]+"#, with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-._"))
+        return "custom:\(normalized.isEmpty ? config.id : normalized)"
     }
 
     /// Classify errors for performance tracking

@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct CostHistoryChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     typealias DailyEntry = CostUsageDailyReport.Entry
 
     private struct Point: Identifiable {
@@ -40,7 +41,7 @@ struct CostHistoryChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No cost history data.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
@@ -65,7 +66,7 @@ struct CostHistoryChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
@@ -95,9 +96,9 @@ struct CostHistoryChartMenuView: View {
                 if self.showHoverHint {
                     HStack(spacing: RunicSpacing.xxs) {
                         Image(systemName: "cursorarrow.click.2")
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                         Text("Hover to explore")
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                     }
                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     .transition(.opacity)
@@ -106,13 +107,13 @@ struct CostHistoryChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -123,7 +124,7 @@ struct CostHistoryChartMenuView: View {
 
             if let total = self.totalCostUSD {
                 Text("Total (30d): \(UsageFormatter.usdString(total))")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
         }
@@ -132,7 +133,7 @@ struct CostHistoryChartMenuView: View {
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
         .onChange(of: self.selectedDateKey) { _, newValue in
             if newValue != nil, self.showHoverHint {
-                withAnimation(RunicAnimation.chartHintFade) {
+                withAnimation(self.runicTheme.motion.curve) {
                     self.showHoverHint = false
                 }
             }

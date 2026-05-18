@@ -8,8 +8,30 @@ enum ProviderChoice: String, AppEnum {
     case claude
     case gemini
     case antigravity
+    case cursor
     case zai
+    case factory
     case copilot
+    case minimax
+    case openrouter
+    case vercelai
+    case groq
+    case deepseek
+    case fireworks
+    case mistral
+    case perplexity
+    case kimi
+    case auggie
+    case together
+    case cohere
+    case xai
+    case cerebras
+    case sambanova
+    case azure
+    case bedrock
+    case vertexai
+    case qwen
+    case localLLM
 
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Provider")
 
@@ -18,8 +40,30 @@ enum ProviderChoice: String, AppEnum {
         .claude: DisplayRepresentation(title: "Claude"),
         .gemini: DisplayRepresentation(title: "Gemini"),
         .antigravity: DisplayRepresentation(title: "Antigravity"),
+        .cursor: DisplayRepresentation(title: "Cursor"),
         .zai: DisplayRepresentation(title: "z.ai"),
+        .factory: DisplayRepresentation(title: "Droid"),
         .copilot: DisplayRepresentation(title: "Copilot"),
+        .minimax: DisplayRepresentation(title: "MiniMax"),
+        .openrouter: DisplayRepresentation(title: "OpenRouter"),
+        .vercelai: DisplayRepresentation(title: "Vercel AI"),
+        .groq: DisplayRepresentation(title: "Groq"),
+        .deepseek: DisplayRepresentation(title: "DeepSeek"),
+        .fireworks: DisplayRepresentation(title: "Fireworks"),
+        .mistral: DisplayRepresentation(title: "Mistral"),
+        .perplexity: DisplayRepresentation(title: "Perplexity"),
+        .kimi: DisplayRepresentation(title: "Kimi"),
+        .auggie: DisplayRepresentation(title: "Auggie"),
+        .together: DisplayRepresentation(title: "Together"),
+        .cohere: DisplayRepresentation(title: "Cohere"),
+        .xai: DisplayRepresentation(title: "xAI"),
+        .cerebras: DisplayRepresentation(title: "Cerebras"),
+        .sambanova: DisplayRepresentation(title: "SambaNova"),
+        .azure: DisplayRepresentation(title: "Azure OpenAI"),
+        .bedrock: DisplayRepresentation(title: "Amazon Bedrock"),
+        .vertexai: DisplayRepresentation(title: "Vertex AI"),
+        .qwen: DisplayRepresentation(title: "Qwen"),
+        .localLLM: DisplayRepresentation(title: "Local LLM"),
     ]
 
     var provider: UsageProvider {
@@ -28,8 +72,30 @@ enum ProviderChoice: String, AppEnum {
         case .claude: .claude
         case .gemini: .gemini
         case .antigravity: .antigravity
+        case .cursor: .cursor
         case .zai: .zai
+        case .factory: .factory
         case .copilot: .copilot
+        case .minimax: .minimax
+        case .openrouter: .openrouter
+        case .vercelai: .vercelai
+        case .groq: .groq
+        case .deepseek: .deepseek
+        case .fireworks: .fireworks
+        case .mistral: .mistral
+        case .perplexity: .perplexity
+        case .kimi: .kimi
+        case .auggie: .auggie
+        case .together: .together
+        case .cohere: .cohere
+        case .xai: .xai
+        case .cerebras: .cerebras
+        case .sambanova: .sambanova
+        case .azure: .azure
+        case .bedrock: .bedrock
+        case .vertexai: .vertexai
+        case .qwen: .qwen
+        case .localLLM: .localLLM
         }
     }
 
@@ -39,29 +105,30 @@ enum ProviderChoice: String, AppEnum {
         case .claude: self = .claude
         case .gemini: self = .gemini
         case .antigravity: self = .antigravity
-        case .cursor: return nil // Cursor not yet supported in widgets
+        case .cursor: self = .cursor
         case .zai: self = .zai
-        case .factory: return nil // Factory not yet supported in widgets
+        case .factory: self = .factory
         case .copilot: self = .copilot
-        case .minimax: return nil // MiniMax not yet supported in widgets
-        case .openrouter: return nil // OpenRouter not yet supported in widgets
-        case .vercelai: return nil // Vercel AI not yet supported in widgets
-        case .groq: return nil // Groq not yet supported in widgets
-        case .deepseek: return nil // DeepSeek not yet supported in widgets
-        case .fireworks: return nil // Fireworks not yet supported in widgets
-        case .mistral: return nil // Mistral not yet supported in widgets
-        case .perplexity: return nil // Perplexity not yet supported in widgets
-        case .kimi: return nil // Kimi not yet supported in widgets
-        case .auggie: return nil // Auggie not yet supported in widgets
-        case .together: return nil // Together not yet supported in widgets
-        case .cohere: return nil // Cohere not yet supported in widgets
-        case .xai: return nil // xAI not yet supported in widgets
-        case .cerebras: return nil // Cerebras not yet supported in widgets
-        case .sambanova: return nil // SambaNova not yet supported in widgets
-        case .azure: return nil // Azure OpenAI not yet supported in widgets
-        case .bedrock: return nil // Amazon Bedrock not yet supported in widgets
-        case .vertexai: return nil // Vertex AI not yet supported in widgets
-        case .qwen: return nil // Qwen not yet supported in widgets
+        case .minimax: self = .minimax
+        case .openrouter: self = .openrouter
+        case .vercelai: self = .vercelai
+        case .groq: self = .groq
+        case .deepseek: self = .deepseek
+        case .fireworks: self = .fireworks
+        case .mistral: self = .mistral
+        case .perplexity: self = .perplexity
+        case .kimi: self = .kimi
+        case .auggie: self = .auggie
+        case .together: self = .together
+        case .cohere: self = .cohere
+        case .xai: self = .xai
+        case .cerebras: self = .cerebras
+        case .sambanova: self = .sambanova
+        case .azure: self = .azure
+        case .bedrock: self = .bedrock
+        case .vertexai: self = .vertexai
+        case .qwen: self = .qwen
+        case .localLLM: self = .localLLM
         }
     }
 }

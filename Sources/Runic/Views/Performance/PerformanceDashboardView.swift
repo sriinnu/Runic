@@ -5,6 +5,8 @@ import SwiftUI
 /// Performance monitoring dashboard with quality metrics, latency charts, and error tracking
 @MainActor
 struct PerformanceDashboardView: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     // MARK: - Types
 
     enum TimeRange: String, CaseIterable, Identifiable {
@@ -96,7 +98,7 @@ struct PerformanceDashboardView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Performance Dashboard")
-                .font(RunicFont.title2)
+                .font(self.fonts.title2)
                 .fontWeight(.bold)
 
             HStack(spacing: RunicSpacing.sm) {
@@ -149,7 +151,7 @@ struct PerformanceDashboardView: View {
     private var metricsSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Key Metrics")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
                 .fontWeight(.semibold)
 
             let aggregated = self.aggregateStats()
@@ -185,13 +187,13 @@ struct PerformanceDashboardView: View {
     private var latencyChartSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Latency Over Time")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
                 .fontWeight(.semibold)
 
             if self.stats.isEmpty {
                 Text("No latency data available")
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 150)
             } else {
                 Chart {
@@ -217,7 +219,7 @@ struct PerformanceDashboardView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                         AxisGridLine()
                     }
                 }
@@ -228,14 +230,14 @@ struct PerformanceDashboardView: View {
             if self.hasPercentileData {
                 HStack(spacing: RunicSpacing.sm) {
                     Text("Line: Avg")
-                        .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                     Text("•")
-                        .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                     Text("Area: P95")
-                        .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
         }
@@ -246,13 +248,13 @@ struct PerformanceDashboardView: View {
     private var errorRateChartSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Error Rate Over Time")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
                 .fontWeight(.semibold)
 
             if self.stats.isEmpty {
                 Text("No error data available")
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 150)
             } else {
                 Chart {
@@ -275,7 +277,7 @@ struct PerformanceDashboardView: View {
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                         AxisGridLine()
                     }
                 }
@@ -294,9 +296,9 @@ struct PerformanceDashboardView: View {
         return VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             if hasErrors {
                 Text("Error Breakdown")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
 
                 HStack(spacing: RunicSpacing.sm) {
                     if aggregated.timeoutCount > 0 {
@@ -321,32 +323,32 @@ struct PerformanceDashboardView: View {
     private var qualityRatingSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Quality Ratings")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
                 .fontWeight(.semibold)
 
             let aggregated = self.aggregateStats()
 
             if aggregated.totalRatings == 0 {
                 Text("No quality ratings yet")
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 100)
             } else {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     HStack {
                         Text("Average Rating:")
-                            .font(RunicFont.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.subheadline)
+                            .foregroundStyle(self.runicTheme.secondaryText)
 
                         if let avg = aggregated.avgQualityRating {
                             HStack(spacing: 4) {
                                 ForEach(1...5, id: \.self) { star in
                                     Image(systemName: star <= Int(avg.rounded()) ? "star.fill" : "star")
-                                        .font(RunicFont.caption)
+                                        .font(self.fonts.caption)
                                         .foregroundStyle(.yellow)
                                 }
                                 Text(String(format: "%.1f", avg))
-                                    .font(RunicFont.subheadline)
+                                    .font(self.fonts.subheadline)
                                     .fontWeight(.medium)
                             }
                         }
@@ -354,8 +356,8 @@ struct PerformanceDashboardView: View {
                         Spacer()
 
                         Text("\(aggregated.totalRatings) ratings")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
 
                     self.ratingDistribution(aggregated)
@@ -374,12 +376,12 @@ struct PerformanceDashboardView: View {
 
                 HStack(spacing: RunicSpacing.xs) {
                     Text("\(rating)")
-                        .font(RunicFont.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption2)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .frame(width: 12)
 
                     Image(systemName: "star.fill")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(.yellow)
 
                     GeometryReader { geo in
@@ -395,8 +397,8 @@ struct PerformanceDashboardView: View {
                     .frame(height: 6)
 
                     Text("\(count)")
-                        .font(RunicFont.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption2)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .frame(width: 30, alignment: .trailing)
                 }
             }
@@ -421,8 +423,8 @@ struct PerformanceDashboardView: View {
             ProgressView()
                 .controlSize(.regular)
             Text("Loading performance data...")
-                .font(RunicFont.subheadline)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.subheadline)
+                .foregroundStyle(self.runicTheme.secondaryText)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
     }
@@ -430,13 +432,13 @@ struct PerformanceDashboardView: View {
     private func errorView(_ message: String) -> some View {
         VStack(spacing: RunicSpacing.sm) {
             Image(systemName: "exclamationmark.triangle")
-                .font(RunicFont.largeTitle)
+                .font(self.fonts.largeTitle)
                 .foregroundStyle(.red)
             Text("Error Loading Data")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
             Text(message)
-                .font(RunicFont.subheadline)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.subheadline)
+                .foregroundStyle(self.runicTheme.secondaryText)
                 .multilineTextAlignment(.center)
             Button("Retry") {
                 Task { await self.loadData() }
@@ -448,13 +450,13 @@ struct PerformanceDashboardView: View {
     private var emptyStateView: some View {
         VStack(spacing: RunicSpacing.sm) {
             Image(systemName: "chart.line.uptrend.xyaxis")
-                .font(RunicFont.largeTitle)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.largeTitle)
+                .foregroundStyle(self.runicTheme.secondaryText)
             Text("No Data Available")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
             Text("Performance data will appear here once you start using AI providers")
-                .font(RunicFont.subheadline)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.subheadline)
+                .foregroundStyle(self.runicTheme.secondaryText)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -576,6 +578,7 @@ struct PerformanceDashboardView: View {
 // MARK: - Supporting Views
 
 private struct MetricCard: View {
+    @Environment(\.runicFonts) private var fonts
     let title: String
     let value: String
     let icon: String
@@ -586,14 +589,14 @@ private struct MetricCard: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack {
                 Image(systemName: self.icon)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.color)
                 Text(self.title)
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
             Text(self.value)
-                .font(RunicFont.title3)
+                .font(self.fonts.title3)
                 .fontWeight(.semibold)
                 .foregroundStyle(self.color)
         }
@@ -601,20 +604,22 @@ private struct MetricCard: View {
         .padding(RunicSpacing.xs)
         .background {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(self.runicTheme.menuCardGradient)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(8), style: .continuous)
+                    .fill(self.runicTheme.cardBackgroundStyle)
                 if self.runicTheme.isTerminalHUD {
                     RunicTerminalScanlineOverlay(opacity: 0.45)
                 }
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(8), style: .continuous)
                 .stroke(self.runicTheme.menuSeparatorColor.opacity(0.62), lineWidth: 0.7))
     }
 }
 
 private struct ErrorTypeLabel: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let type: String
     let count: Int
     let color: Color
@@ -625,8 +630,8 @@ private struct ErrorTypeLabel: View {
                 .fill(self.color)
                 .frame(width: 8, height: 8)
             Text("\(self.type): \(self.count)")
-                .font(RunicFont.caption2)
-                .foregroundStyle(.secondary)
+                .font(self.fonts.caption2)
+                .foregroundStyle(self.runicTheme.secondaryText)
         }
     }
 }

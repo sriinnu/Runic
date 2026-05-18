@@ -4,6 +4,8 @@ import SwiftUI
 
 @MainActor
 struct GeneralPane: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     @State private var appeared = false
@@ -25,19 +27,19 @@ struct GeneralPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.costUsageEnabled) {
                             Text("Show cost summary")
-                                .font(RunicFont.body)
+                                .font(self.fonts.body)
                         }
                         .toggleStyle(.checkbox)
 
                         Text("Reads local usage logs. Shows today + last 30 days cost in the menu.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
 
                         if self.settings.costUsageEnabled {
                             Text("Auto-refresh: hourly · Timeout: 10m")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
 
                             self.costStatusLine(provider: .claude)
                             self.costStatusLine(provider: .codex)
@@ -47,13 +49,13 @@ struct GeneralPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.openAIWebAccessEnabled) {
                             Text("Access OpenAI via web")
-                                .font(RunicFont.body)
+                                .font(self.fonts.body)
                         }
                         .toggleStyle(.checkbox)
 
                         Text("Imports browser cookies for dashboard extras (credits history, code review).")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -86,7 +88,7 @@ struct GeneralPane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Menu refresh rate")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$settings.refreshFrequency) {
                             ForEach(RefreshFrequency.allCases) { option in
@@ -96,13 +98,13 @@ struct GeneralPane: View {
                         .pickerStyle(.segmented)
 
                         Text("How often to automatically refresh usage data.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Chart style")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$settings.chartStyle) {
                             Text("Line").tag(ChartStyle.line)
@@ -113,13 +115,13 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("Visual style for usage charts and graphs.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Number format")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$settings.numberFormat) {
                             Text("Abbreviated (45.2K)").tag(NumberFormat.abbreviated)
@@ -129,13 +131,13 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("How to display large numbers in the UI.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Date format")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$settings.dateFormat) {
                             Text("Relative (2h ago)").tag(DateFormat.relative)
@@ -145,8 +147,8 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("How to display timestamps throughout the app.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -158,7 +160,7 @@ struct GeneralPane: View {
                             .padding(.bottom, RunicSpacing.xs)
 
                         Text("Theme")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         LazyVGrid(
                             columns: [
@@ -181,13 +183,13 @@ struct GeneralPane: View {
                         .frame(maxWidth: 560, alignment: .leading)
 
                         Text("Custom skins apply immediately to Runic panels; System/Light/Dark follow macOS chrome.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Font")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$settings.selectedFontFamily) {
                             ForEach(RunicFontChoice.availableChoices()) { choice in
@@ -200,8 +202,8 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("Drop .ttf/.otf files in Resources/Fonts to add more.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
 
                         TypographyRulesPreview(
                             fontFamily: self.settings.selectedFontFamily,
@@ -259,8 +261,8 @@ struct GeneralPane: View {
 
         guard provider == .claude || provider == .codex else {
             return Text("\(name): unsupported")
-                .font(RunicFont.footnote)
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         }
 
         if self.store.isTokenRefreshInFlight(for: provider) {
@@ -273,37 +275,39 @@ struct GeneralPane: View {
                 return formatter.string(from: seconds).map { " (\($0))" } ?? ""
             }()
             return Text("\(name): fetching…\(elapsed)")
-                .font(RunicFont.footnote)
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         }
         if let snapshot = self.store.tokenSnapshot(for: provider) {
             let updated = UsageFormatter.updatedString(from: snapshot.updatedAt)
             let cost = snapshot.last30DaysCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
             return Text("\(name): \(updated) · 30d \(cost)")
-                .font(RunicFont.footnote)
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         }
         if let error = self.store.tokenError(for: provider), !error.isEmpty {
             let truncated = UsageFormatter.truncatedSingleLine(error, max: 120)
             return Text("\(name): \(truncated)")
-                .font(RunicFont.footnote)
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         }
         if let lastAttempt = self.store.tokenLastAttemptAt(for: provider) {
             let rel = RelativeDateTimeFormatter()
             rel.unitsStyle = .abbreviated
             let when = rel.localizedString(for: lastAttempt, relativeTo: Date())
             return Text("\(name): last attempt \(when)")
-                .font(RunicFont.footnote)
-                .foregroundStyle(.tertiary)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         }
         return Text("\(name): no data yet")
-            .font(RunicFont.footnote)
-            .foregroundStyle(.tertiary)
+            .font(self.fonts.footnote)
+            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
     }
 }
 
 private struct ThemeChoiceButton: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let theme: Theme
     let isSelected: Bool
     let action: () -> Void
@@ -317,12 +321,12 @@ private struct ThemeChoiceButton: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(palette.displayName)
-                        .font(RunicFont.footnote.weight(.semibold))
+                        .font(self.fonts.footnote.weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text(palette.tagline)
-                        .font(RunicFont.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption2)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
@@ -331,10 +335,10 @@ private struct ThemeChoiceButton: View {
             .padding(.vertical, RunicSpacing.xs)
             .frame(minHeight: 50, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                     .fill(self.isSelected ? palette.accent.opacity(0.14) : Color.primary.opacity(0.035)))
             .overlay(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                     .stroke(
                         self.isSelected ? palette.accent.opacity(0.72) : Color.primary.opacity(0.08),
                         lineWidth: self.isSelected ? 1.3 : 0.7))
@@ -345,13 +349,14 @@ private struct ThemeChoiceButton: View {
 }
 
 private struct ThemeSwatch: View {
+    @Environment(\.runicFonts) private var fonts
     let palette: RunicThemePalette
     let isSelected: Bool
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                .fill(palette.menuSurfaceGradient)
+            RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                .fill(palette.surfaceBackgroundStyle)
             HStack(spacing: 3) {
                 ForEach(Array(palette.swatchColors.enumerated()), id: \.offset) { _, color in
                     Circle()
@@ -362,17 +367,18 @@ private struct ThemeSwatch: View {
             .frame(maxHeight: .infinity, alignment: .bottom)
             .padding(.bottom, 5)
             Image(systemName: palette.symbolName)
-                .font(RunicFont.caption.weight(.bold))
+                .font(self.fonts.caption.weight(.bold))
                 .foregroundStyle(palette.primaryText)
                 .shadow(color: .black.opacity(0.22), radius: 1, x: 0, y: 1)
         }
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.isSelected ? palette.highlight : palette.menuSeparatorColor, lineWidth: 1))
     }
 }
 
 private struct AppearancePreviewCard: View {
+    @Environment(\.runicFonts) private var fonts
     let theme: Theme
     let fontFamily: String
     let providers: [UsageProvider]
@@ -391,13 +397,13 @@ private struct AppearancePreviewCard: View {
                 Spacer(minLength: 0)
             }
 
-            Rectangle()
-                .fill(palette.menuSeparatorColor)
-                .frame(height: 1)
+            self.themedSeparator(palette: palette)
 
             HStack(spacing: RunicSpacing.sm) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.md),
+                        style: .continuous)
                         .fill(palette.menuSubtleFill)
                     if let icon = ProviderBrandIcon.image(for: selectedProvider, size: 24) {
                         Image(nsImage: icon)
@@ -408,20 +414,22 @@ private struct AppearancePreviewCard: View {
                 }
                 .frame(width: 40, height: 40)
                 .overlay(
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.md),
+                        style: .continuous)
                         .stroke(palette.menuSeparatorColor, lineWidth: 1))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(self.providerLabel(selectedProvider))
-                        .font(RunicFont.body.weight(.bold))
+                        .font(self.fonts.body.weight(.bold))
                         .foregroundStyle(palette.primaryText)
                         .lineLimit(1)
                     Text("\(palette.displayName) · \(self.fontLabel)")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(palette.secondaryText)
                         .lineLimit(1)
                     Text("Top model · 42M tokens · 118 req")
-                        .font(RunicFont.caption2)
+                        .font(self.fonts.caption2)
                         .foregroundStyle(palette.secondaryText)
                         .lineLimit(1)
                 }
@@ -430,18 +438,22 @@ private struct AppearancePreviewCard: View {
                 Spacer()
 
                 Text("Pro")
-                    .font(RunicFont.caption.weight(.semibold))
+                    .font(self.fonts.caption.weight(.semibold))
                     .foregroundStyle(palette.primaryText)
                     .padding(.horizontal, RunicSpacing.xs)
                     .padding(.vertical, 4)
                     .background(Capsule(style: .continuous).fill(palette.accent.opacity(0.22)))
             }
-            .padding(RunicSpacing.xs)
+            .padding(palette.density.padding(RunicSpacing.xs))
             .background(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                    .fill(palette.menuCardGradient))
+                RoundedRectangle(
+                    cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.md),
+                    style: .continuous)
+                    .fill(palette.cardBackgroundStyle))
             .overlay(
-                RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.md),
+                    style: .continuous)
                     .stroke(palette.menuSeparatorColor, lineWidth: 1))
 
             HStack(spacing: RunicSpacing.xs) {
@@ -455,12 +467,16 @@ private struct AppearancePreviewCard: View {
             }
             .padding(.top, 1)
         }
-        .padding(RunicSpacing.sm)
+        .padding(palette.density.padding(RunicSpacing.sm))
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                .fill(palette.menuSurfaceGradient))
+            RoundedRectangle(
+                cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.md),
+                style: .continuous)
+                .fill(palette.surfaceBackgroundStyle))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+            RoundedRectangle(
+                cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.md),
+                style: .continuous)
                 .stroke(palette.menuSeparatorColor, lineWidth: 1))
         .runicColorScheme(palette)
     }
@@ -473,35 +489,98 @@ private struct AppearancePreviewCard: View {
         RunicFontChoice.displayName(for: self.fontFamily)
     }
 
+    /// Theme-faithful divider for the preview tile — same branching as
+    /// `RunicDivider`, but reads the *previewed* palette rather than the
+    /// current-app palette via @Environment.
+    @ViewBuilder
+    private func themedSeparator(palette: RunicThemePalette) -> some View {
+        switch palette.shape.separator {
+        case .ascii:
+            Text(String(repeating: "─", count: 96))
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .foregroundStyle(palette.menuSeparatorColor.opacity(0.55))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()
+        case .glow:
+            Rectangle()
+                .fill(LinearGradient(
+                    colors: [
+                        .clear,
+                        palette.accent.opacity(0.48),
+                        palette.highlight.opacity(0.36),
+                        .clear,
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing))
+                .frame(height: 1)
+                .shadow(color: palette.accent.opacity(0.28), radius: 3.5)
+        case .hairline:
+            Rectangle()
+                .fill(palette.menuSeparatorColor.opacity(0.65))
+                .frame(height: 1)
+        }
+    }
+
+    /// Font for value text in the preview, picking up the theme's font design
+    /// (mono for Terminal, rounded for Daybreak, system elsewhere). Bypasses
+    /// the static RunicFont.themeDesignOverride so each preview row reflects
+    /// its own theme.
+    private func previewValueFont(size: CGFloat, weight: Font.Weight, palette: RunicThemePalette) -> Font {
+        if let design = palette.fonts.swiftUIDesignOverride {
+            return .system(size: size, weight: weight, design: design)
+        }
+        return .system(size: size, weight: weight)
+    }
+
     private func metricPreview(title: String, value: String, color: Color, fill: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+        let palette = self.theme.palette
+        return VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
             HStack {
                 Text(title)
-                    .font(RunicFont.caption)
-                    .foregroundStyle(self.theme.palette.secondaryText)
+                    .font(self.previewValueFont(size: 11, weight: .regular, palette: palette))
+                    .foregroundStyle(palette.secondaryText)
                 Spacer()
                 Text(value)
-                    .font(RunicFont.caption.weight(.semibold))
-                    .foregroundStyle(self.theme.palette.primaryText)
+                    .font(self.previewValueFont(size: 11, weight: .semibold, palette: palette))
+                    .foregroundStyle(palette.primaryText)
             }
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule(style: .continuous)
-                        .fill(self.theme.palette.menuTrackColor)
-                    Capsule(style: .continuous)
-                        .fill(color)
-                        .frame(width: max(8, proxy.size.width * min(max(fill, 0), 1)))
+            if palette.isTerminalHUD {
+                let blocks = max(1, Int(fill * 24))
+                HStack(spacing: 0) {
+                    Text(String(repeating: "█", count: blocks))
+                        .foregroundStyle(color)
+                    Text(String(repeating: "░", count: 24 - blocks))
+                        .foregroundStyle(palette.menuTrackColor.opacity(0.85))
                 }
+                .font(.system(size: 8, weight: .regular, design: .monospaced))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()
+                .frame(height: 6)
+            } else {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous)
+                            .fill(palette.menuTrackColor)
+                        Capsule(style: .continuous)
+                            .fill(color)
+                            .frame(width: max(8, proxy.size.width * min(max(fill, 0), 1)))
+                            .shadow(
+                                color: palette.shape.separator == .glow ? color.opacity(0.55) : .clear,
+                                radius: 4)
+                    }
+                }
+                .frame(height: 6)
             }
-            .frame(height: 6)
         }
-        .padding(RunicSpacing.xs)
+        .padding(palette.density.padding(RunicSpacing.xs))
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.theme.palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.theme.palette.menuSubtleFill))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.theme.palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.theme.palette.menuSeparatorColor.opacity(0.72), lineWidth: 0.7))
     }
 
@@ -521,11 +600,11 @@ private struct AppearancePreviewCard: View {
                     .frame(width: 14, height: 14)
             } else if let systemImage {
                 Image(systemName: systemImage)
-                    .font(RunicFont.caption.weight(.semibold))
+                    .font(self.fonts.caption.weight(.semibold))
                     .foregroundStyle(tint)
             }
             Text(title)
-                .font(RunicFont.caption.weight(.semibold))
+                .font(self.fonts.caption.weight(.semibold))
                 .foregroundStyle(isSelected ? self.theme.palette.primaryText : self.theme.palette.secondaryText)
                 .lineLimit(1)
         }
@@ -542,15 +621,15 @@ private struct AppearancePreviewCard: View {
     private func actionPreviewRow(title: String, systemImage: String) -> some View {
         HStack(spacing: RunicSpacing.xs) {
             Image(systemName: systemImage)
-                .font(RunicFont.caption.weight(.semibold))
+                .font(self.fonts.caption.weight(.semibold))
                 .foregroundStyle(self.theme.palette.secondaryText)
                 .frame(width: 16)
             Text(title)
-                .font(RunicFont.caption.weight(.semibold))
+                .font(self.fonts.caption.weight(.semibold))
                 .foregroundStyle(self.theme.palette.primaryText)
             Spacer()
             Image(systemName: "chevron.right")
-                .font(RunicFont.caption2.weight(.semibold))
+                .font(self.fonts.caption2.weight(.semibold))
                 .foregroundStyle(self.theme.palette.secondaryText)
         }
         .padding(.vertical, 5)
@@ -572,8 +651,10 @@ private struct AppearancePreviewCard: View {
 }
 
 private struct TypographyRulesPreview: View {
+    @Environment(\.runicFonts) private var fonts
     let fontFamily: String
     let theme: Theme
+    @Environment(\.runicTheme) private var runicTheme
 
     private var rules: RunicFontRules {
         RunicFontRules.rules(for: self.fontFamily)
@@ -601,7 +682,7 @@ private struct TypographyRulesPreview: View {
                 }
                 Spacer()
                 Text(self.rules.prefersMonospacedDigits ? "tabular" : "proportional")
-                    .font(RunicFont.caption2.weight(.semibold))
+                    .font(self.fonts.caption2.weight(.semibold))
                     .foregroundStyle(palette.primaryText)
                     .padding(.horizontal, RunicSpacing.xs)
                     .padding(.vertical, 3)
@@ -619,10 +700,10 @@ private struct TypographyRulesPreview: View {
         }
         .padding(RunicSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
-                .fill(palette.menuSurfaceGradient))
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.md), style: .continuous)
+                .fill(palette.surfaceBackgroundStyle))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.md), style: .continuous)
                 .stroke(palette.menuSeparatorColor.opacity(0.70), lineWidth: 0.8))
         .runicColorScheme(palette)
     }
@@ -639,20 +720,20 @@ private struct TypographyRulesPreview: View {
     private func rulePill(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(title)
-                .font(RunicFont.caption2)
+                .font(self.fonts.caption2)
                 .foregroundStyle(self.theme.palette.secondaryText)
             Text(value)
-                .font(RunicFont.caption.weight(.semibold))
+                .font(self.fonts.caption.weight(.semibold))
                 .foregroundStyle(self.theme.palette.primaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, RunicSpacing.compact)
         .padding(.vertical, RunicSpacing.xxxs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.theme.palette.menuSubtleFill))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.theme.palette.menuSeparatorColor.opacity(0.52), lineWidth: 0.6))
     }
 
@@ -662,6 +743,7 @@ private struct TypographyRulesPreview: View {
 }
 
 private struct RunicOperationsCenterView: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     let diagnosticsStatus: String?
@@ -691,34 +773,34 @@ private struct RunicOperationsCenterView: View {
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 Text("Provider health")
-                    .font(RunicFont.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption.weight(.semibold))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                 ForEach(Array(health.prefix(6))) { row in
                     ProviderHealthCompactRow(row: row)
                 }
                 if health.count > 6 {
                     Text("+ \(health.count - 6) more providers")
-                        .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.caption2)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 Text("Recommended next actions")
-                    .font(RunicFont.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption.weight(.semibold))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                 ForEach(recommendations.prefix(4)) { recommendation in
                     HStack(alignment: .top, spacing: RunicSpacing.xs) {
                         Image(systemName: recommendation.systemImage)
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .frame(width: 16)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(recommendation.title)
-                                .font(RunicFont.caption.weight(.semibold))
+                                .font(self.fonts.caption.weight(.semibold))
                             Text(recommendation.detail)
-                                .font(RunicFont.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.caption2)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -742,8 +824,8 @@ private struct RunicOperationsCenterView: View {
 
                 if let status = self.guardrailStatus ?? self.diagnosticsStatus {
                     Text(status)
-                        .font(RunicFont.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.caption2)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
         }
@@ -752,11 +834,11 @@ private struct RunicOperationsCenterView: View {
     private func summaryPill(title: String, value: String, systemImage: String) -> some View {
         HStack(spacing: RunicSpacing.xxs) {
             Image(systemName: systemImage)
-                .font(RunicFont.caption)
+                .font(self.fonts.caption)
             Text(title)
-                .font(RunicFont.caption2)
+                .font(self.fonts.caption2)
             Text(value)
-                .font(RunicFont.caption2.weight(.semibold))
+                .font(self.fonts.caption2.weight(.semibold))
         }
         .padding(.horizontal, RunicSpacing.xs)
         .padding(.vertical, RunicSpacing.xxxs)
@@ -770,6 +852,8 @@ private struct RunicOperationsCenterView: View {
 }
 
 private struct ProviderHealthCompactRow: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let row: RunicProviderHealthRow
 
     var body: some View {
@@ -784,23 +868,23 @@ private struct ProviderHealthCompactRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: RunicSpacing.xxs) {
                     Text(self.row.name)
-                        .font(RunicFont.caption.weight(.semibold))
+                        .font(self.fonts.caption.weight(.semibold))
                         .lineLimit(1)
                     Text(self.row.source)
-                        .font(RunicFont.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption2.weight(.medium))
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                 }
                 Text("\(self.row.credentialDetail) · \(self.row.dataDetail)")
-                    .font(RunicFont.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.caption2)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .lineLimit(1)
             }
 
             Spacer(minLength: RunicSpacing.xs)
 
             Text(self.row.credentialState.label)
-                .font(RunicFont.caption2.weight(.semibold))
+                .font(self.fonts.caption2.weight(.semibold))
                 .foregroundStyle(self.stateColor)
                 .padding(.horizontal, RunicSpacing.xs)
                 .padding(.vertical, 2)

@@ -37,6 +37,7 @@ enum ProviderImplementationRegistry {
         _ = ProviderImplementationRegistry.register(BedrockProviderImplementation())
         _ = ProviderImplementationRegistry.register(VertexAIProviderImplementation())
         _ = ProviderImplementationRegistry.register(QwenProviderImplementation())
+        _ = ProviderImplementationRegistry.register(LocalLLMProviderImplementation())
     }()
 
     private static func ensureBootstrapped() {

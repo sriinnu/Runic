@@ -18,6 +18,15 @@ struct RunicTests {
     }
 
     @Test
+    func `timeline ranges expose matching scan horizons`() {
+        #expect(UsageTimelineChartMenuView.TimeRange.threeDays.days == 3)
+        #expect(UsageTimelineChartMenuView.TimeRange.sevenDays.days == 7)
+        #expect(UsageTimelineChartMenuView.TimeRange.thirtyDays.days == 30)
+        #expect(UsageTimelineChartMenuView.TimeRange.quarter.days == 90)
+        #expect(UsageTimelineChartMenuView.TimeRange.year.days == 365)
+    }
+
+    @Test
     func `icon renderer renders at pixel aligned size`() {
         let image = IconRenderer.makeIcon(
             primaryRemaining: 50,

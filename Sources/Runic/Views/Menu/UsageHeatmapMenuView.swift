@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct UsageHeatmapMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     fileprivate struct HeatmapCell: Identifiable {
         let id: String
         let hourStart: Date
@@ -47,12 +48,12 @@ struct UsageHeatmapMenuView: View {
         let model = Self.makeModel(from: self.hourlySummaries)
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             Text("Usage Heatmap (24×7)")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
                 .fontWeight(.semibold)
 
             if model.isEmpty {
                 Text("No heatmap data.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 ScrollView(.horizontal, showsIndicators: true) {
@@ -63,7 +64,7 @@ struct UsageHeatmapMenuView: View {
                                 .frame(width: 40, alignment: .leading)
                             ForEach(0..<24, id: \.self) { hour in
                                 Text(self.hourLabel(hour))
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                                     .frame(width: 40, alignment: .center)
                                     .lineLimit(1)
@@ -74,7 +75,7 @@ struct UsageHeatmapMenuView: View {
                         ForEach(0..<7, id: \.self) { weekday in
                             HStack(spacing: 2) {
                                 Text(self.weekdayLabel(weekday))
-                                    .font(RunicFont.caption)
+                                    .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                                     .frame(width: 38, alignment: .leading)
 
@@ -100,18 +101,18 @@ struct UsageHeatmapMenuView: View {
                         // Legend
                         HStack(spacing: RunicSpacing.xs) {
                             Text("Low")
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                             HStack(spacing: 2) {
                                 ForEach(0..<5, id: \.self) { level in
                                     Rectangle()
                                         .fill(Self.colorForIntensity(Double(level) / 4.0, theme: self.runicTheme))
                                         .frame(width: 16, height: 16)
-                                        .cornerRadius(RunicCornerRadius.xs)
+                                        .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
                                 }
                             }
                             Text("High")
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                         }
                         .padding(.top, RunicSpacing.xs)
@@ -122,7 +123,7 @@ struct UsageHeatmapMenuView: View {
 
                 let detail = self.detailText(model: model)
                 Text(detail)
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(2)
                     .frame(height: 32, alignment: .leading)
@@ -228,6 +229,6 @@ private struct HeatmapCellView: View {
             }
         }
         .frame(width: 38, height: 30)
-        .cornerRadius(RunicCornerRadius.xs)
+        .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
     }
 }

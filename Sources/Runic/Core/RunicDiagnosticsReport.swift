@@ -237,6 +237,8 @@ enum RunicDiagnosticsReport {
             return (.local, "OAuth, web, or Claude CLI session")
         case .cursor, .factory, .gemini, .antigravity:
             return (.local, "local CLI/browser session")
+        case .localLLM:
+            return (.local, "localhost runtime or OpenTelemetry logs")
         case .zai:
             return self.tokenState(settings.zaiAPIToken, label: "API key")
         case .minimax:

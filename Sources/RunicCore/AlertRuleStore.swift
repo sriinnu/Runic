@@ -1,5 +1,4 @@
 import Foundation
-import RunicCore
 
 /// Storage for alert rules, alert history, and webhook configurations
 public enum AlertRuleStore {

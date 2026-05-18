@@ -20,7 +20,8 @@ This doc describes the **current provider architecture** (post-macro registry) a
 - **Provider**: a source of usage/quota/status data (Codex, Claude, Gemini, Antigravity, Cursor, …).
 - **Descriptor**: the single source of truth for labels, URLs, defaults, and fetch strategies.
 - **Capability source**: refreshable model/provider metadata such as context windows and pricing. Kosha-discovery owns this when its local TTL-backed registry is present; descriptors keep only stable wiring and fallback defaults.
-- **Fetch strategy**: one concrete way to obtain usage (CLI, web cookies, OAuth API, local probe, etc.).
+- **Fetch strategy**: one concrete way to obtain usage (CLI, web cookies, OAuth API, local probe, OpenTelemetry ledger, etc.).
+- **Metric provenance**: the confidence/source attached to token and cost totals. Do not leave new usage paths unlabeled when the source is known.
 - **Host APIs**: shared capabilities we provide to providers (Keychain, browser cookies, PTY, HTTP, WebView scrape, token-cost).
 - **Identity fields**: email/org/plan/loginMethod. Must stay **siloed per provider**.
 
@@ -40,6 +41,8 @@ Common building blocks already exist:
 - cookie import: `BrowserCookieImporter` (Safari/Chrome/Firefox adapters)
 - OpenAI dashboard web scrape: `OpenAIDashboardFetcher` (WKWebView + JS)
 - cost usage: local log scanner (Codex + Claude)
+- OpenTelemetry GenAI usage ingestion: `OTelGenAILedgerAdapter`, `OTelGenAIFileLedgerSource`, and sanitized `runic otel-collect`
+- local LLM discovery: `LocalLLMUsageFetcher`
 
 The old “switch provider” wiring is gone. Everything should be driven by the descriptor and its strategies.
 
@@ -61,10 +64,12 @@ UI and settings should become descriptor-driven:
 ## Fetch strategies
 
 A provider declares a pipeline of strategies, in priority order. Each strategy:
-- advertises a `kind` (cli, web cookies, oauth, api token, local probe, web dashboard)
+- advertises a `kind` (cli, web cookies, oauth, api token, local probe, OpenTelemetry ledger, web dashboard)
 - declares availability (checks settings, cookies, env vars, installed CLI)
 - fetches `UsageSnapshot` (and optional credits/dashboard)
 - can be filtered by CLI `--source` or app settings
+
+For provider history beyond Claude/Codex local logs, prefer OpenTelemetry GenAI attributes or the sanitized local collector ledger. Do not persist prompts/responses by default; collector output should stay metric-only unless a future explicit raw-capture mode is designed.
 
 The pipeline resolves to the best available strategy, and falls back on failure when allowed.
 Each run returns a `ProviderFetchOutcome` with **attempts + errors** for debug UI and CLI `--verbose`.

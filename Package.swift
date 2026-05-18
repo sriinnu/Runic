@@ -41,10 +41,11 @@ let package = Package(
                     .product(name: "Logging", package: "swift-log"),
                     .product(name: "Silo", package: "Silo"),
                 ],
+                exclude: [
+                    "Performance/PerformanceAggregator.swift.disabled",
+                    "Performance/PerformanceInterceptor.swift.disabled",
+                ],
                 // Sync directory now enabled for iCloud CloudKit synchronization
-                // exclude: [
-                //     "Sync",
-                // ],
                 swiftSettings: [
                     .enableUpcomingFeature("StrictConcurrency"),
                 ]),
@@ -67,6 +68,9 @@ let package = Package(
                     .product(name: "Helix", package: "Helix"),
                 ],
                 path: "Sources/RunicCLI",
+                exclude: [
+                    "Commands/AlertsCommand.swift.disabled",
+                ],
                 swiftSettings: [
                     .enableUpcomingFeature("StrictConcurrency"),
                 ]),

@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+## 2.2.0 — 2026-05-19
+- Themes: add Retro as the new default theme — a System-7 inspired parchment + navy palette with asymmetric bevels on every surface, plain-text email + tag-style plan badge in the provider hero, beveled checkboxes, and a VT323 pixel tagline footer.
+- Themes: move every palette to JSON under `Resources/Themes/` with `$systemColorName[@opacity]` tokens so adaptive colors stay reactive; Swift fallback remains as a safety net but `ThemeLoader` is the runtime source of truth.
+- Themes: remove the weakest themes (nocturne, pine, prism) and migrate existing users to daybreak; first-launch defaults to retro.
+- Typography: make font selection dynamic via an `@Observable` font store so swaps propagate through the live SwiftUI tree without restart; bundle Geist + GeistMono + VT323, remove unused Caveat/Inconsolata/SpaceMono-Bold.
+- Polish: migrate hardcoded padding / corner radius / opacity values to `RunicSpacing`, `RunicCornerRadius`, and `RunicColors.Opacity` tokens across menu and preferences views.
+- Menu: export actions now follow the selected Explore panel and timeline range, including scoped 3d/7d/30d/90d/1y timeline exports.
+- Charts: add hover details/tooltips for timeline, hourly, weekly, utilization, windows, model, and project breakdown panels.
+- Projects: replace opaque "Unknown project" UX with "Unattributed usage" detail text that explains when provider logs lack readable project identity.
+- Context: surface connection and context-health lines in provider insights, separating max context metadata from observed usage and compaction transparency.
+- Providers: add Local LLM as a first-class provider with localhost discovery for Ollama, LM Studio, vLLM, llama.cpp, and Open WebUI.
+- Usage: add metric provenance to ledger totals and scoped CSV/JSON exports so token/cost values identify exact, provider-reported, estimated, inferred, or unknown sources.
+- Usage: detect explicitly marked compaction work from OpenTelemetry/provider logs and surface it as compaction tax in menus, exports, and CLI insights.
+- Usage: add a local OTLP/HTTP JSON collector that sanitizes GenAI telemetry into metric-only JSONL and is read automatically by app and CLI insights.
+- Usage: expand telemetry parsing for Vercel AI SDK-style fields, Ollama token counters, total-token-only payloads, cache hit/miss counters, and explicit cost fields.
+- Custom providers: record performance metrics under a `custom:<provider>` label instead of misattributing them to Codex.
+- CLI: let `runic insights` analyze any provider with a local ledger or OpenTelemetry GenAI logs, including `local-llm`.
+- CLI: add `runic otel-collect` for local OTLP JSON collection and one-shot sanitized ingestion.
+- Typography: add more curated macOS font choices with explicit spacing/contrast rules in the live font preview.
+- Governance: switch current development licensing to AGPL-3.0-or-later and add sponsorship metadata for GitHub Sponsors and Buy Me a Coffee.
+
 ## 2.1.7 — 2026-05-13
 - Menu: render lower action, text, custom-provider, export, chart-link, and divider rows through the same themed hosted surface as the top provider cards.
 - Menu: keep row clicks routed through the original menu actions so Settings, Ping, Quit, and provider account actions remain functional after the themed row conversion.

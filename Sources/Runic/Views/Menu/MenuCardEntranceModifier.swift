@@ -6,6 +6,7 @@ import SwiftUI
 struct MenuCardEntranceModifier: ViewModifier {
     let index: Int
     @State private var appeared = false
+    @Environment(\.runicTheme) private var runicTheme
 
     func body(content: Content) -> some View {
         content
@@ -13,9 +14,8 @@ struct MenuCardEntranceModifier: ViewModifier {
             .offset(y: self.appeared ? 0 : 8)
             .scaleEffect(self.appeared ? 1 : 0.97, anchor: .top)
             .onAppear {
-                withAnimation(
-                    RunicAnimation.cardEntrance.delay(Double(self.index) * RunicAnimation.cardEntranceStagger))
-                {
+                let delay = Double(self.index) * RunicAnimation.cardEntranceStagger
+                withAnimation(self.runicTheme.motion.curve.delay(delay)) {
                     self.appeared = true
                 }
             }
@@ -44,7 +44,7 @@ struct GlassShimmerModifier: ViewModifier {
                             .allowsHitTesting(false)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)))
+                .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)))
             .onAppear {
                 guard !self.runicTheme.isTerminalHUD else { return }
                 withAnimation(.easeInOut(duration: 2.0).delay(0.5)) {

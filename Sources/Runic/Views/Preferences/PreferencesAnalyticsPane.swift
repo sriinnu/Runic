@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct AnalyticsPane: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
 
@@ -46,7 +47,7 @@ struct AnalyticsPane: View {
                         binding: self.$settings.usageBarsShowUsed)
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Usage metrics")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         Picker("", selection: self.$settings.usageMetricDisplayMode) {
                             ForEach(UsageMetricDisplayMode.allCases) { mode in
                                 Text(mode.label).tag(mode)
@@ -54,13 +55,13 @@ struct AnalyticsPane: View {
                         }
                         .pickerStyle(.segmented)
                         Text("Pick bars, percent, or both in the menu card.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Menu mode")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         Picker("", selection: self.$settings.menuMode) {
                             ForEach(MenuMode.allCases) { mode in
                                 Text(mode.label).tag(mode)
@@ -68,8 +69,8 @@ struct AnalyticsPane: View {
                         }
                         .pickerStyle(.segmented)
                         Text("Glance: usage only. Analyst: usage + credits/cost. Operator: full insights and actions.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     PreferenceToggleRow(
@@ -82,7 +83,7 @@ struct AnalyticsPane: View {
                         binding: self.$settings.mergeIcons)
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Provider switcher layout")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         Picker("", selection: self.$settings.providerSwitcherLayout) {
                             ForEach(ProviderSwitcherLayout.allCases) { layout in
                                 Text(layout.label).tag(layout)
@@ -92,13 +93,13 @@ struct AnalyticsPane: View {
                         .disabled(!self.settings.mergeIcons)
                         .opacity(self.settings.mergeIcons ? 1 : 0.5)
                         Text("Choose whether providers appear on top or in a left sidebar.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Switcher icon size")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         Picker("", selection: self.$settings.providerSwitcherIconSize) {
                             ForEach(ProviderSwitcherIconSize.allCases) { size in
                                 Text(size.label).tag(size)
@@ -108,8 +109,8 @@ struct AnalyticsPane: View {
                         .disabled(!self.settings.mergeIcons)
                         .opacity(self.settings.mergeIcons ? 1 : 0.5)
                         Text("Small or medium icons for the provider switcher.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     PreferenceToggleRow(
@@ -165,8 +166,8 @@ struct AnalyticsPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
                             Text("\(self.alertsData.rules.count) rules configured")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText)
 
                             Spacer()
 
@@ -181,8 +182,8 @@ struct AnalyticsPane: View {
 
                         if self.alertsData.rules.isEmpty {
                             Text("No alert rules configured. Add a rule to get started.")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                 .padding(.vertical, RunicSpacing.md)
                                 .frame(maxWidth: .infinity)
                         } else {
@@ -208,8 +209,8 @@ struct AnalyticsPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
                             Text("\(self.budgets.count) budgets configured")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText)
 
                             Spacer()
 
@@ -224,8 +225,8 @@ struct AnalyticsPane: View {
 
                         if self.budgets.isEmpty {
                             Text("No budgets configured. Add a budget to track project spending.")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                 .padding(.vertical, RunicSpacing.md)
                                 .frame(maxWidth: .infinity)
                         } else {
@@ -240,15 +241,15 @@ struct AnalyticsPane: View {
                         if let error = self.budgetErrorMessage {
                             HStack(alignment: .center, spacing: RunicSpacing.xs) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(RunicFont.caption)
+                                    .font(self.fonts.caption)
                                     .foregroundStyle(.red)
                                 Text(error)
-                                    .font(RunicFont.caption)
+                                    .font(self.fonts.caption)
                                     .foregroundStyle(.red)
                             }
                             .padding(RunicSpacing.xs)
                             .background(Color.red.opacity(0.1))
-                            .cornerRadius(RunicCornerRadius.sm)
+                            .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
                         }
                     }
                 }
@@ -319,14 +320,14 @@ struct AnalyticsPane: View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 HStack(spacing: RunicSpacing.xs) {
                     Text(self.alertTypeLabel(rule.type))
-                        .font(RunicFont.body)
+                        .font(self.fonts.body)
 
                     self.severityBadge(rule.severity)
                 }
 
                 Text("Threshold: \(Int(rule.threshold))%")
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
 
             Spacer()
@@ -352,10 +353,10 @@ struct AnalyticsPane: View {
         }
         .padding(RunicSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.runicTheme.menuSubtleFill))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
@@ -365,41 +366,41 @@ struct AnalyticsPane: View {
         HStack(spacing: RunicSpacing.sm) {
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 Text(budget.projectName ?? budget.projectID)
-                    .font(RunicFont.body)
+                    .font(self.fonts.body)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
                 HStack(spacing: RunicSpacing.xs) {
                     Text(UsageFormatter.usdString(budget.monthlyLimit))
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                     Text("Alert at \(String(format: "%.0f%%", budget.alertThreshold * 100))")
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
 
             Spacer()
 
             Text(budget.enabled ? "Enabled" : "Disabled")
-                .font(RunicFont.caption)
+                .font(self.fonts.caption)
                 .foregroundStyle(budget.enabled ? .green : .secondary)
 
             Button {
                 self.deleteBudget(budget)
             } label: {
                 Image(systemName: "trash")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(.red)
             }
             .buttonStyle(.plain)
         }
         .padding(RunicSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.runicTheme.menuSubtleFill))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
@@ -413,12 +414,12 @@ struct AnalyticsPane: View {
         }
 
         return Text(severity.rawValue.uppercased())
-            .font(RunicFont.caption2.weight(.semibold))
+            .font(self.fonts.caption2.weight(.semibold))
             .padding(.horizontal, RunicSpacing.xs)
             .padding(.vertical, RunicSpacing.xxs)
             .background(color.opacity(0.2))
             .foregroundStyle(color)
-            .cornerRadius(RunicCornerRadius.xs)
+            .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
     }
 
     private func alertTypeLabel(_ type: AlertRuleStore.AlertType) -> String {
@@ -490,6 +491,8 @@ struct AnalyticsPane: View {
 // MARK: - Disclosure Group Style
 
 private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
+    @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.runicFonts) private var fonts
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
@@ -499,12 +502,12 @@ private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
             } label: {
                 HStack(spacing: RunicSpacing.xs) {
                     Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
-                        .font(RunicFont.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .frame(width: 12)
                     configuration.label
-                        .font(RunicFont.caption)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .textCase(.uppercase)
                     Spacer()
                 }
@@ -523,6 +526,7 @@ private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
 
 @MainActor
 private struct AnalyticsRuleEditorSheet: View {
+    @Environment(\.runicFonts) private var fonts
     @Environment(\.dismiss) private var dismiss
 
     let rule: AlertRuleStore.AlertRule?
@@ -548,7 +552,7 @@ private struct AnalyticsRuleEditorSheet: View {
     var body: some View {
         VStack(spacing: RunicSpacing.lg) {
             Text(self.rule == nil ? "Add Alert Rule" : "Edit Alert Rule")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
 
             Form {
                 Picker("Alert Type", selection: self.$alertType) {
@@ -608,6 +612,8 @@ private struct AnalyticsRuleEditorSheet: View {
 
 @MainActor
 private struct AnalyticsAddBudgetSheet: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @Binding var projectID: String
     @Binding var projectName: String
     @Binding var monthlyLimit: String
@@ -618,15 +624,15 @@ private struct AnalyticsAddBudgetSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             Text("Add Budget")
-                .font(RunicFont.title2)
+                .font(self.fonts.title2)
                 .fontWeight(.semibold)
 
             Form {
                 TextField("Project ID or workspace path", text: self.$projectID)
                     .textFieldStyle(.roundedBorder)
                 Text("Use the project identifier from a provider's Projects breakdown. This is not the provider name.")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                 TextField("Project Name (optional)", text: self.$projectName)
                     .textFieldStyle(.roundedBorder)
                 TextField("Monthly Limit (USD)", text: self.$monthlyLimit)

@@ -170,3 +170,6 @@ RuniciOS/*.xcworkspace
 /Scripts/README-FRAMEWORKS.md
 /Scripts/copy-frameworks.sh
 /Scripts/notarize.sh
+
+# Local design reference (not source)
+mockups/

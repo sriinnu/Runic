@@ -54,11 +54,11 @@ enum RunicCLI {
                 OptionDefinition(
                     label: "provider",
                     names: [.long("provider")],
-                    help: "Provider to analyze (claude, codex, or all)"),
+                    help: "Provider to analyze (claude, codex, local-llm, comma-list, both, or all)"),
                 OptionDefinition(
                     label: "view",
                     names: [.long("view")],
-                    help: "View: daily | session | blocks | models | projects | comparative | efficiency"),
+                    help: "View: daily | session | blocks | models | projects | compaction | comparative | efficiency"),
                 OptionDefinition(label: "project", names: [.long("project")], help: "Filter to a specific project"),
                 OptionDefinition(
                     label: "timezone",
@@ -84,6 +84,36 @@ enum RunicCLI {
                     help: "Link usage entries to git commits"),
             ])
 
+        let otelCollectSignature = CommandSignature(
+            options: [
+                OptionDefinition(
+                    label: "port",
+                    names: [.long("port")],
+                    help: "Local OTLP/HTTP JSON port (default: 4318)"),
+                OptionDefinition(
+                    label: "host",
+                    names: [.long("host")],
+                    help: "Local bind host (default: 127.0.0.1)"),
+                OptionDefinition(
+                    label: "output",
+                    names: [.long("output")],
+                    help: "Sanitized JSONL output path"),
+                OptionDefinition(
+                    label: "input",
+                    names: [.long("input")],
+                    help: "Read one OTLP JSON payload from a file; use - for stdin"),
+                OptionDefinition(
+                    label: "defaultProvider",
+                    names: [.long("default-provider")],
+                    help: "Provider used when telemetry omits gen_ai.system"),
+            ],
+            flags: [
+                FlagDefinition(
+                    label: "once",
+                    names: [.long("once")],
+                    help: "Ingest one payload and exit instead of starting the HTTP collector"),
+            ])
+
         let usageDescriptor = CommandDescriptor(
             name: "usage",
             abstract: "Print usage as text or JSON",
@@ -102,7 +132,13 @@ enum RunicCLI {
             discussion: nil,
             signature: insightsSignature)
 
-        let program = Program(descriptors: [usageDescriptor, costDescriptor, insightsDescriptor])
+        let otelCollectDescriptor = CommandDescriptor(
+            name: "otel-collect",
+            abstract: "Collect OTLP/HTTP JSON GenAI usage into Runic's sanitized local ledger",
+            discussion: nil,
+            signature: otelCollectSignature)
+
+        let program = Program(descriptors: [usageDescriptor, costDescriptor, insightsDescriptor, otelCollectDescriptor])
 
         do {
             let invocation = try program.resolve(argv: argv)
@@ -113,6 +149,8 @@ enum RunicCLI {
                 await self.runCost(invocation)
             case "insights":
                 await self.runInsights(invocation)
+            case "otel-collect":
+                await self.runOTelCollect(invocation)
             default:
                 Self.exit(code: 1, message: "Unknown command")
             }
@@ -133,10 +171,7 @@ enum RunicCLI {
 
         let providers: [UsageProvider]
         if let providerName = providerArg?.lowercased() {
-            guard let p = UsageProvider(rawValue: providerName) else {
-                Self.exit(code: 1, message: "Unknown provider: \(providerName)")
-            }
-            providers = [p]
+            providers = Self.resolveProviderList(providerName, defaultProviders: ProviderDescriptorRegistry.all.map(\.id))
         } else {
             providers = ProviderDescriptorRegistry.all.map(\.id)
         }
@@ -207,13 +242,10 @@ enum RunicCLI {
 
         let providers: [UsageProvider]
         if let providerName = providerArg?.lowercased() {
-            guard let p = UsageProvider(rawValue: providerName) else {
-                Self.exit(code: 1, message: "Unknown provider: \(providerName)")
+            providers = Self.resolveProviderList(providerName, defaultProviders: [.claude, .codex])
+            if let unsupported = providers.first(where: { $0 != .claude && $0 != .codex }) {
+                Self.exit(code: 1, message: "Cost is only supported for claude and codex, not \(unsupported.rawValue)")
             }
-            if p != .claude, p != .codex {
-                Self.exit(code: 1, message: "Cost is only supported for claude and codex")
-            }
-            providers = [p]
         } else {
             providers = [.claude, .codex]
         }
@@ -320,6 +352,9 @@ enum RunicCLI {
             } else {
                 Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
             }
+        case "compaction":
+            let summaries = UsageLedgerAggregator.compactionSummaries(entries: entries)
+            Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
         case "comparative":
             let comparisons = Self.modelCostComparison(entries: entries)
             Self.renderInsightsOutput(comparisons, isJson: isJson, isPretty: isPretty)
@@ -331,30 +366,61 @@ enum RunicCLI {
         }
     }
 
-    private static func resolveInsightsProviders(_ raw: String?) -> [UsageProvider] {
-        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "claude"
-        let lowered = trimmed.lowercased()
-        if lowered == "all" {
-            return [.claude, .codex]
-        }
+    private static func runOTelCollect(_ invocation: CommandInvocation) async {
+        let port = invocation.parsedValues.options["port"]?.first.flatMap(UInt16.init) ?? 4318
+        let host = invocation.parsedValues.options["host"]?.first ?? "127.0.0.1"
+        let output = invocation.parsedValues.options["output"]?.first
+            .flatMap(Self.expandedFileURL)
+            ?? OTelGenAICollectorConfiguration.defaultOutputFile()
+        let defaultProvider = invocation.parsedValues.options["defaultProvider"]?.first
+            .map(Self.resolveProvider)
+        let configuration = OTelGenAICollectorConfiguration(
+            host: host,
+            port: port,
+            outputFile: output,
+            defaultProvider: defaultProvider)
 
-        let parts = lowered.split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        var providers: [UsageProvider] = []
-        for part in parts {
-            switch part {
-            case "claude":
-                providers.append(.claude)
-            case "codex":
-                providers.append(.codex)
-            default:
-                Self.exit(code: 1, message: "Insights unsupported provider: \(part)")
+        if invocation.parsedValues.flags.contains("once") {
+            let input = invocation.parsedValues.options["input"]?.first
+            do {
+                let data: Data
+                if let input, input != "-" {
+                    data = try Data(contentsOf: Self.expandedFileURL(input))
+                } else {
+                    data = FileHandle.standardInput.readDataToEndOfFile()
+                }
+                let sink = OTelGenAIIngestionSink(configuration: configuration)
+                let result = try await sink.ingest(data)
+                print("Accepted \(result.acceptedEntries) GenAI usage entr\(result.acceptedEntries == 1 ? "y" : "ies")")
+                print("Wrote sanitized ledger: \(result.outputFile.path)")
+                return
+            } catch {
+                Self.exit(code: 1, message: error.localizedDescription)
             }
         }
 
-        return providers
+        #if canImport(Network)
+        do {
+            let collector = try OTelGenAIHTTPCollector(configuration: configuration)
+            collector.start()
+            print("Runic OTLP JSON collector listening on http://\(host):\(port)/v1/traces")
+            print("Writing sanitized metric JSONL to \(output.path)")
+            print("Press Ctrl-C to stop.")
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3600))
+            }
+            collector.cancel()
+        } catch {
+            Self.exit(code: 1, message: error.localizedDescription)
+        }
+        #else
+        Self.exit(code: 1, message: "OTLP HTTP collection requires Network.framework on macOS.")
+        #endif
+    }
+
+    private static func resolveInsightsProviders(_ raw: String?) -> [UsageProvider] {
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "claude"
+        return Self.resolveProviderList(trimmed, defaultProviders: ProviderDescriptorRegistry.all.map(\.id))
     }
 
     private static func insightsSources(
@@ -363,16 +429,60 @@ enum RunicCLI {
     {
         var sources: [(UsageProvider, any UsageLedgerSource)] = []
         for provider in providers {
-            switch provider {
-            case .claude:
-                sources.append((provider, ClaudeUsageLogSource(maxAgeDays: nil, now: now)))
-            case .codex:
-                sources.append((provider, CodexUsageLogSource(maxAgeDays: nil, now: now)))
-            default:
-                continue
+            if let source = UsageLedgerSourceFactory.source(for: provider, now: now, maxAgeDays: nil) {
+                sources.append((provider, source))
             }
         }
         return sources
+    }
+
+    private static func resolveProviderList(
+        _ raw: String,
+        defaultProviders: [UsageProvider]) -> [UsageProvider]
+    {
+        let lowered = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if lowered == "all" {
+            return defaultProviders
+        }
+        if lowered == "both" {
+            return [.codex, .claude]
+        }
+
+        let providers = lowered.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .map(Self.resolveProvider)
+
+        guard !providers.isEmpty else {
+            Self.exit(code: 1, message: "No provider specified")
+        }
+        return providers
+    }
+
+    private static func resolveProvider(_ raw: String) -> UsageProvider {
+        switch raw {
+        case "local", "localllm", "local_llm":
+            return .localLLM
+        case "vercel-ai", "vercel_ai":
+            return .vercelai
+        case "vertex-ai", "vertex_ai":
+            return .vertexai
+        case "z-ai", "z_ai":
+            return .zai
+        default:
+            guard let provider = UsageProvider(rawValue: raw) else {
+                Self.exit(code: 1, message: "Unknown provider: \(raw)")
+            }
+            return provider
+        }
+    }
+
+    private static func expandedFileURL(_ rawPath: String) -> URL {
+        if rawPath.hasPrefix("~/") {
+            return FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(String(rawPath.dropFirst(2)))
+        }
+        return URL(fileURLWithPath: rawPath)
     }
 
     private static func printError(_ message: String) {
@@ -812,7 +922,7 @@ enum RunicCLI {
             print(
                 "  Providers: codex, claude, cursor, gemini, factory, copilot, zai, antigravity, minimax, " +
                     "openrouter, vercelai, groq, deepseek, fireworks, mistral, perplexity, kimi, auggie, together, " +
-                    "cohere, xai, cerebras, sambanova, azure, bedrock")
+                    "cohere, xai, cerebras, sambanova, azure, bedrock, vertexai, qwen, local-llm")
         }
         if command == "cost" || command == nil {
             print("cost - Print local cost usage as text or JSON")
@@ -827,9 +937,9 @@ enum RunicCLI {
         if command == "insights" || command == nil {
             print("insights - Analyze local usage logs")
             print("  Options:")
-            print("    --provider PROVIDER      Provider to analyze (claude, codex, all)")
+            print("    --provider PROVIDER      Provider to analyze (provider, comma-list, both, all)")
             print(
-                "    --view VIEW              daily | session | blocks | models | projects | comparative | efficiency")
+                "    --view VIEW              daily | session | blocks | models | projects | compaction | comparative | efficiency")
             print("    --project PROJECT        Filter to a specific project")
             print("    --timezone TZ            Timezone identifier (defaults to local)")
             print("    --granularity GRAN       Time granularity: hourly (for daily view)")
@@ -849,7 +959,26 @@ enum RunicCLI {
             print("    comparative              Model cost-per-token comparison with rankings")
             print("    efficiency               Efficiency metrics (tokens/request, cost/request, cache hit rate)")
         }
-        if command != nil, command != "usage", command != "cost", command != "insights" {
+        if command == "otel-collect" || command == nil {
+            print("otel-collect - Collect OTLP/HTTP JSON GenAI usage")
+            print("  Options:")
+            print("    --port PORT              Local collector port (default: 4318)")
+            print("    --host HOST              Local bind host (default: 127.0.0.1)")
+            print("    --output PATH            Sanitized JSONL output path")
+            print("    --input PATH             One-shot input file; use - for stdin")
+            print("    --default-provider NAME  Provider when telemetry omits gen_ai.system")
+            print("    --once                   Ingest one payload and exit")
+            print("")
+            print("  Notes:")
+            print("    Stores token/model/project metadata only; prompt and response content is not written.")
+            print("    HTTP mode accepts OTLP JSON at /v1/traces and /v1/logs.")
+        }
+        if command != nil,
+           command != "usage",
+           command != "cost",
+           command != "insights",
+           command != "otel-collect"
+        {
             print("Unknown command: \(command ?? "")")
         }
         Foundation.exit(0)

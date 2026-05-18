@@ -3,27 +3,30 @@ import SwiftUI
 
 @MainActor
 struct HelpPane: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
+
     var body: some View {
         PreferencesPane {
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Menu refresh")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 Text("Use Ping now in the menu to update usage without closing the panel.")
-                    .font(RunicFont.body)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.body)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Auto-refresh cadence and safety rules live in Performance > Refresh & Safety.")
-                    .font(RunicFont.body)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.body)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Manual mode avoids background refreshes that may touch tokens.")
-                    .font(RunicFont.body)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.body)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -31,18 +34,18 @@ struct HelpPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Data sources")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 Text("Runic reads local logs or browser cookies depending on provider settings.")
-                    .font(RunicFont.body)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.body)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Open Providers to review each source and add credentials.")
-                    .font(RunicFont.body)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.body)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

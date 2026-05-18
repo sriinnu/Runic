@@ -411,7 +411,10 @@ extension StatusItemController {
         let chartView = self.themedHostedMenuRoot(UsageTimelineChartMenuView(
             dailySummaries: dailySummaries,
             hourlySummaries: hourlySummaries,
-            width: width))
+            width: width,
+            onRangeChange: { [weak self] range in
+                self?.store.ensureLedgerHistoryCovers(days: range.days)
+            }))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))

@@ -9,7 +9,7 @@ Use this skill when an AI agent needs to understand, build, test, document, or s
 
 ## What Runic Is
 
-Runic is a SwiftPM macOS menu bar app with a bundled CLI. It shows AI provider usage, quota windows, context capacity labels, cost estimates, model/project breakdowns, status links, exports, widgets, and alerts.
+Runic is a SwiftPM macOS menu bar app with a bundled CLI. It shows AI provider usage, quota windows, context capacity labels, cost estimates, model/project breakdowns, metric provenance, status links, exports, widgets, and alerts.
 
 ## First Files To Read
 
@@ -52,6 +52,18 @@ Use `./Scripts/compile_and_run.sh --wait` when the user needs a locally installe
 6. Add parser tests with sanitized fixtures.
 7. Update `docs/providers.md` and README provider claims if behavior changes.
 
+## Usage Ledger And Provenance
+
+- Claude and Codex have local JSONL ledger scanners.
+- Other providers, including `local-llm`, use configured OpenTelemetry GenAI JSON/JSONL paths plus Runic's default sanitized collector ledger for historical token/model/project data.
+- `runic otel-collect` accepts OTLP/HTTP JSON at `/v1/traces` and `/v1/logs`, or `--once --input`, and persists sanitized metric JSONL only.
+- Every new token or cost path should set `MetricProvenance` honestly: exact, provider-reported, estimated, inferred, or unknown.
+- Only mark `UsageLedgerOperationKind.compaction` when a source explicitly says compact/compaction; never infer semantic context loss from max context labels.
+
+## Local LLM
+
+`UsageProvider.localLLM` is a first-class provider. It probes localhost runtimes for presence/model inventory only: Ollama, LM Studio, vLLM, llama.cpp, and Open WebUI. Usage and cost must come from local logs, OpenTelemetry GenAI, or an explicit future user-configured pricing source.
+
 ## Context Metadata
 
 Runic prefers Kosha-discovery 1.2.0's local TTL-backed registry at `~/.kosha/registry.json` for model/provider context capacity metadata. If that registry is missing or stale, Runic falls back to `Sources/Runic/Resources/provider-context-windows.json`.
@@ -65,6 +77,7 @@ Context labels mean advertised or configured model capacity. They do not prove t
 - Screenshot assets must use demo data or be redacted before committing.
 - Use macOS Keychain for user-entered secrets.
 - Do not persist browser cookies outside the intended per-provider stores.
+- Do not persist prompt/response bodies from OpenTelemetry collector ingestion unless a future explicit opt-in raw capture mode exists.
 - Prefer GitHub noreply emails in git config.
 
 ## Docs Guardrails

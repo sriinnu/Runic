@@ -25,5 +25,6 @@
   "azure": { "model": "Azure deployment", "label": "ctx varies" },
   "bedrock": { "model": "Bedrock foundation model", "label": "ctx varies" },
   "vertexai": { "model": "Vertex AI model", "label": "ctx varies" },
-  "qwen": { "model": "Qwen 2.5 72B", "contextK": 128 }
+  "qwen": { "model": "Qwen 2.5 72B", "contextK": 128 },
+  "local-llm": { "model": "Local model", "label": "ctx varies" }
 }

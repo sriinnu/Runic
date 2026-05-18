@@ -179,14 +179,9 @@ public enum CopilotVSCodeTokenReader {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
 
-        if allowUserInteraction {
-            query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIAllow
-        } else {
-            query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
-            let authContext = LAContext()
-            authContext.interactionNotAllowed = true
-            query[kSecUseAuthenticationContext as String] = authContext
-        }
+        let authContext = LAContext()
+        authContext.interactionNotAllowed = !allowUserInteraction
+        query[kSecUseAuthenticationContext as String] = authContext
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)

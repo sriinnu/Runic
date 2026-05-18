@@ -57,6 +57,43 @@ struct UsageProgressBar: View {
     }
 
     var body: some View {
+        if self.runicTheme.isTerminalHUD {
+            self.terminalBlockBody
+        } else {
+            self.gradientBody
+        }
+    }
+
+    /// `[██████░░░░░░]` style progress for Terminal theme. Mono blocks reading
+    /// as a true CRT-style bar, no gradients, no glow.
+    @ViewBuilder
+    private var terminalBlockBody: some View {
+        let segmentCount = 24
+        let filled = max(0, min(segmentCount, Int((self.animatedPercent / 100.0) * Double(segmentCount))))
+        let empty = segmentCount - filled
+        HStack(spacing: 0) {
+            Text(String(repeating: "█", count: filled))
+                .foregroundStyle(self.tint)
+            Text(String(repeating: "░", count: empty))
+                .foregroundStyle(self.runicTheme.menuTrackColor.opacity(0.85))
+        }
+        .font(.system(size: self.barHeight * 1.3, weight: .regular, design: .monospaced))
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: self.barHeight, alignment: .center)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(self.accessibilityLabel)
+        .accessibilityValue("\(Int(self.clamped)) percent")
+        .accessibilityAddTraits(.updatesFrequently)
+        .onAppear {
+            self.animatedPercent = self.clamped
+        }
+        .onChange(of: self.clamped) { _, newValue in
+            self.animatedPercent = newValue
+        }
+    }
+
+    private var gradientBody: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
             let fillWidth = (self.animatedPercent / 100) * width
@@ -153,15 +190,13 @@ struct UsageProgressBar: View {
         .accessibilityAddTraits(.updatesFrequently)
         .drawingGroup(opaque: false)
         .onAppear {
-            // Initial animation with slight delay for staggered effect
-            withAnimation(RunicAnimation.barAppear) {
+            withAnimation(self.runicTheme.motion.curve) {
                 self.animatedPercent = self.clamped
             }
             self.playSheen()
         }
         .onChange(of: self.clamped) { _, newValue in
-            // Smooth spring animation on value changes
-            withAnimation(RunicAnimation.barUpdate) {
+            withAnimation(self.runicTheme.motion.curve) {
                 self.animatedPercent = newValue
             }
             self.playSheen()
@@ -184,7 +219,9 @@ struct UsageProgressBar: View {
         let count = max(6, Int(width / 22))
         return HStack(spacing: RunicSpacing.xxxs) {
             ForEach(0..<count, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(2),
+                    style: .continuous)
                     .fill(Color.white
                         .opacity(self.isHighlighted ? RunicColors.Opacity.subtle : RunicColors.Opacity.light))
             }

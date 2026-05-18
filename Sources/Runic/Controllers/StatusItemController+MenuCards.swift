@@ -19,6 +19,7 @@ extension StatusItemController {
             view
         }
         .environment(\.runicTheme, self.settings.theme.palette)
+        .environment(\.runicFonts, RunicFontStore.shared)
         .runicColorScheme(self.settings.theme.palette)
         let hosting = MenuCardItemHostingView(rootView: root, highlightState: highlightState)
         hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: 1))

@@ -143,15 +143,21 @@ enum DateFormat: String, CaseIterable, Identifiable {
 }
 
 enum Theme: String, CaseIterable, Identifiable {
+    case retro
     case system
     case light
     case dark
     case daybreak
-    case pine
-    case nocturne
-    case prism
     case glass
     case terminal
+
+    /// The signature look — parchment + navy bevels, System-7 chrome with
+    /// modern info architecture. New installs land here.
+    static let `default`: Theme = .retro
+
+    /// Raw values that used to exist and are now retired. Migration code in
+    /// `SettingsStore.normalizeStoredTheme` rewrites these on load.
+    static let retiredRawValues: Set<String> = ["pine", "nocturne", "prism"]
 
     var id: String {
         self.rawValue
@@ -159,13 +165,11 @@ enum Theme: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
+        case .retro: "Retro"
         case .system: "System"
         case .light: "Light"
         case .dark: "Dark"
         case .daybreak: "Daybreak"
-        case .pine: "Pine"
-        case .nocturne: "Nocturne"
-        case .prism: "Prism"
         case .glass: "Glass"
         case .terminal: "Terminal"
         }
@@ -334,6 +338,8 @@ final class SettingsStore {
         didSet {
             self.userDefaults.set(self.theme.rawValue, forKey: "theme")
             RunicApp.applyTheme(self.theme)
+            RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+            IconRenderer.themePalette = self.theme.palette
             self.bumpVisualSettingsRevision()
         }
     }
@@ -383,7 +389,7 @@ final class SettingsStore {
     }
 
     /// How many days of usage history to scan for ledger data (charts, breakdowns).
-    /// Options: 3, 7, 30, 365. Default: 30.
+    /// Options: 3, 7, 30, 90, 365. Default: 30.
     var ledgerMaxAgeDays: Int {
         didSet { self.userDefaults.set(self.ledgerMaxAgeDays, forKey: "ledgerMaxAgeDays") }
     }
@@ -970,8 +976,19 @@ final class SettingsStore {
         self.numberFormat = NumberFormat(rawValue: numberFormatRaw ?? "") ?? .abbreviated
         let dateFormatRaw = userDefaults.string(forKey: "dateFormat")
         self.dateFormat = DateFormat(rawValue: dateFormatRaw ?? "") ?? .relative
-        let themeRaw = userDefaults.string(forKey: "theme")
-        self.theme = Theme(rawValue: themeRaw ?? "") ?? .system
+        let themeRaw = userDefaults.string(forKey: "theme") ?? ""
+        if Theme.retiredRawValues.contains(themeRaw) {
+            // Users on a retired theme (pine/nocturne/prism) land on Daybreak.
+            self.theme = .daybreak
+            userDefaults.set(Theme.daybreak.rawValue, forKey: "theme")
+        } else if let resolved = Theme(rawValue: themeRaw) {
+            self.theme = resolved
+        } else {
+            // First-launch / unrecognised value → ship the signature Retro
+            // look. Users can change to anything else from Preferences.
+            self.theme = Theme.default
+            userDefaults.set(Theme.default.rawValue, forKey: "theme")
+        }
         self.selectedFontFamily = userDefaults.string(forKey: "selectedFontFamily") ?? "Fira Code"
         self.menuBarShowsBrandIconWithPercent = userDefaults.object(
             forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
@@ -1048,6 +1065,8 @@ final class SettingsStore {
             self.claudeWebExtrasEnabled = false
         }
         RunicFont.family = self.selectedFontFamily
+        RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+        IconRenderer.themePalette = self.theme.palette
     }
 
     func orderedProviders() -> [UsageProvider] {
@@ -1811,9 +1830,26 @@ enum LaunchAtLoginManager {
         guard #available(macOS 13, *) else { return }
         let service = SMAppService.mainApp
         if enabled {
+            // SMAppService keys login items by *file path*, not bundle id, so
+            // calling register() from a different copy of Runic.app silently
+            // adds a second login item alongside the first. Skip if we're
+            // already enabled — the existing registration is fine, even if it
+            // points to a different bundle path (the user can fix that from
+            // System Settings > Login Items).
+            if service.status == .enabled { return }
             try? service.register()
         } else {
             try? service.unregister()
         }
+    }
+
+    /// Reset the login-item registration to point at the *current* bundle.
+    /// Useful when promoting a dev build to be the canonical install.
+    @MainActor
+    static func reregister() {
+        guard #available(macOS 13, *) else { return }
+        let service = SMAppService.mainApp
+        try? service.unregister()
+        try? service.register()
     }
 }

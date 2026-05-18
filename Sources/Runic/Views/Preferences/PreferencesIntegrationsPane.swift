@@ -5,6 +5,7 @@ import SwiftUI
 
 @MainActor
 struct IntegrationsPane: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
 
@@ -43,8 +44,8 @@ struct IntegrationsPane: View {
         PreferencesPane {
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("vaayu Integration")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
@@ -56,33 +57,33 @@ struct IntegrationsPane: View {
 
                         if self.vaayuAPIServerEnabled {
                             Text("Running on port \(self.vaayuAPIServerPort)")
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                                 .foregroundStyle(.green)
                         } else {
                             Text("Stopped")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText)
                         }
                     }
 
                     if self.vaayuAPIServerEnabled {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Port number")
-                                .font(RunicFont.body)
+                                .font(self.fonts.body)
 
                             TextField("Port", value: self.$vaayuAPIServerPort, format: .number)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(maxWidth: 150)
 
                             Text("Default: 3000. Restart required after changing port.")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text("API Key")
-                                    .font(RunicFont.body)
+                                    .font(self.fonts.body)
 
                                 Spacer()
 
@@ -105,28 +106,28 @@ struct IntegrationsPane: View {
 
                             if !self.vaayuAPIKey.isEmpty {
                                 Text(self.maskedAPIKey)
-                                    .font(RunicFont.footnote.monospaced())
-                                    .foregroundStyle(.secondary)
+                                    .font(self.fonts.footnote.monospaced())
+                                    .foregroundStyle(self.runicTheme.secondaryText)
                                     .padding(RunicSpacing.xs)
                                     .background(
-                                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                                             .fill(self.runicTheme.menuSubtleFill))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+                                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                                             .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
                             }
 
                             if let generatedKey = self.generatedAPIKey {
                                 Text("New key generated: \(generatedKey)")
-                                    .font(RunicFont.footnote)
+                                    .font(self.fonts.footnote)
                                     .foregroundStyle(.green)
                             }
                         }
                     }
 
                     Text("Exposes Runic usage data via REST API for external integrations.")
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
 
@@ -134,14 +135,14 @@ struct IntegrationsPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("MCP Servers")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 VStack(spacing: RunicSpacing.xs) {
                     HStack {
                         Text("Configured servers")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         Spacer()
                         Button {
                             self.showingAddServerSheet = true
@@ -156,13 +157,13 @@ struct IntegrationsPane: View {
                         VStack(spacing: RunicSpacing.xs) {
                             Image(systemName: "terminal")
                                 .font(.system(size: 32))
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             Text("No MCP servers yet")
-                                .font(RunicFont.body.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.body.weight(.semibold))
+                                .foregroundStyle(self.runicTheme.secondaryText)
                             Text("Add a server to manage connection details")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, RunicSpacing.lg)
@@ -171,14 +172,14 @@ struct IntegrationsPane: View {
                             HStack(spacing: RunicSpacing.sm) {
                                 Text(server.statusIndicator)
                                     .foregroundStyle(server.statusColor)
-                                    .font(RunicFont.title3)
+                                    .font(self.fonts.title3)
 
                                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                     Text(server.name)
-                                        .font(RunicFont.body)
+                                        .font(self.fonts.body)
                                     Text("Port \(server.port)")
-                                        .font(RunicFont.footnote)
-                                        .foregroundStyle(.secondary)
+                                        .font(self.fonts.footnote)
+                                        .foregroundStyle(self.runicTheme.secondaryText)
                                 }
 
                                 Spacer()
@@ -210,44 +211,44 @@ struct IntegrationsPane: View {
                             }
                             .padding(RunicSpacing.xs)
                             .background(
-                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                                     .fill(self.runicTheme.menuSubtleFill))
                             .overlay(
-                                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                                     .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
                         }
                     }
                 }
 
                 Text("MCP servers enable Claude Desktop and other tools to access Runic data.")
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             }
 
             PreferencesDivider()
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Webhooks")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Default webhook URL")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         TextField("https://hooks.slack.com/services/...", text: self.$defaultWebhookURL)
                             .textFieldStyle(.roundedBorder)
 
                         Text("Used for all alerts unless overridden in alert rule settings.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Webhook format")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$webhookFormat) {
                             Text("Slack").tag("slack")
@@ -258,8 +259,8 @@ struct IntegrationsPane: View {
                         .frame(maxWidth: 300)
 
                         Text("Formats webhook payloads for different platforms.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     HStack(spacing: RunicSpacing.xs) {
@@ -271,7 +272,7 @@ struct IntegrationsPane: View {
 
                         if let result = self.testWebhookResult {
                             Text(result)
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                                 .foregroundStyle(result.contains("Success") ? .green : .red)
                         }
                     }
@@ -282,8 +283,8 @@ struct IntegrationsPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("GitHub Integration")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
@@ -295,7 +296,7 @@ struct IntegrationsPane: View {
                     if self.githubIntegrationEnabled {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Repository path")
-                                .font(RunicFont.body)
+                                .font(self.fonts.body)
 
                             HStack {
                                 TextField("/path/to/repo", text: self.$githubRepositoryPath)
@@ -314,7 +315,7 @@ struct IntegrationsPane: View {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(.green)
                                         Text("Valid Git repository")
-                                            .font(RunicFont.footnote)
+                                            .font(self.fonts.footnote)
                                             .foregroundStyle(.green)
                                     }
                                 } else {
@@ -322,7 +323,7 @@ struct IntegrationsPane: View {
                                         Image(systemName: "xmark.circle.fill")
                                             .foregroundStyle(.red)
                                         Text("Not a valid Git repository")
-                                            .font(RunicFont.footnote)
+                                            .font(self.fonts.footnote)
                                             .foregroundStyle(.red)
                                     }
                                 }
@@ -484,6 +485,7 @@ struct IntegrationsPane: View {
 
 @MainActor
 private struct AddMCPServerSheet: View {
+    @Environment(\.runicFonts) private var fonts
     @Binding var name: String
     @Binding var port: Int
     let onAdd: () -> Void
@@ -493,11 +495,11 @@ private struct AddMCPServerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             Text("Add MCP Server")
-                .font(RunicFont.title2.weight(.semibold))
+                .font(self.fonts.title2.weight(.semibold))
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Name")
-                    .font(RunicFont.subheadline.weight(.medium))
+                    .font(self.fonts.subheadline.weight(.medium))
                 TextField("Local MCP Server", text: self.$name)
                     .textFieldStyle(.roundedBorder)
                     .focused(self.$isNameFocused)
@@ -505,7 +507,7 @@ private struct AddMCPServerSheet: View {
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Port")
-                    .font(RunicFont.subheadline.weight(.medium))
+                    .font(self.fonts.subheadline.weight(.medium))
                 TextField("", value: self.$port, format: .number)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 140)
@@ -535,14 +537,15 @@ private enum VaayuKeychainHelper {
 
     static func load() -> String? {
         var result: CFTypeRef?
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.service,
             kSecAttrAccount as String: self.account,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
         ]
+        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
+
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess,
               let data = result as? Data,

@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct AlertsPane: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
 
@@ -37,15 +38,15 @@ struct AlertsPane: View {
         PreferencesPane {
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Alert Rules")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     HStack {
                         Text("\(self.alertsData.rules.count) rules configured")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText)
 
                         Spacer()
 
@@ -60,8 +61,8 @@ struct AlertsPane: View {
 
                     if self.alertsData.rules.isEmpty {
                         Text("No alert rules configured. Add a rule to get started.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .padding(.vertical, RunicSpacing.md)
                             .frame(maxWidth: .infinity)
                     } else {
@@ -79,24 +80,24 @@ struct AlertsPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Webhook Configuration")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Default webhook URL")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         TextField("https://hooks.slack.com/services/...", text: self.$defaultWebhookURL)
                             .textFieldStyle(.roundedBorder)
                         Text("Used for all alerts unless overridden in rule settings.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Webhook format")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         Picker("", selection: self.$webhookFormat) {
                             ForEach(WebhookFormat.allCases) { format in
                                 Text(format.label).tag(format)
@@ -115,7 +116,7 @@ struct AlertsPane: View {
 
                         if let result = self.showingTestResult {
                             Text(result)
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                                 .foregroundStyle(result.contains("Success") ? .green : .red)
                         }
                     }
@@ -126,15 +127,15 @@ struct AlertsPane: View {
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
                 Text("Alert History")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     HStack {
                         Text("Last 20 triggered alerts")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText)
 
                         Spacer()
 
@@ -150,8 +151,8 @@ struct AlertsPane: View {
 
                     if recentHistory.isEmpty {
                         Text("No alerts triggered yet.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             .padding(.vertical, RunicSpacing.md)
                             .frame(maxWidth: .infinity)
                     } else {
@@ -209,14 +210,14 @@ struct AlertsPane: View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 HStack(spacing: RunicSpacing.xs) {
                     Text(self.alertTypeLabel(rule.type))
-                        .font(RunicFont.body)
+                        .font(self.fonts.body)
 
                     self.severityBadge(rule.severity)
                 }
 
                 Text("Threshold: \(Int(rule.threshold))%")
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
 
             Spacer()
@@ -242,10 +243,10 @@ struct AlertsPane: View {
         }
         .padding(RunicSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.runicTheme.menuSubtleFill))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
@@ -255,12 +256,12 @@ struct AlertsPane: View {
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 Text(entry.message)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .lineLimit(2)
 
                 Text(self.relativeTime(entry.triggeredAt))
-                    .font(RunicFont.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.caption2)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             }
 
             Spacer()
@@ -277,10 +278,10 @@ struct AlertsPane: View {
         }
         .padding(RunicSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .fill(self.runicTheme.menuSubtleFill.opacity(entry.acknowledged ? 0.5 : 1.0)))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(self.runicTheme.menuSeparatorColor.opacity(0.36), lineWidth: 0.7))
     }
 
@@ -292,12 +293,12 @@ struct AlertsPane: View {
         }
 
         return Text(severity.rawValue.uppercased())
-            .font(RunicFont.caption2.weight(.semibold))
+            .font(self.fonts.caption2.weight(.semibold))
             .padding(.horizontal, RunicSpacing.xs)
             .padding(.vertical, RunicSpacing.xxs)
             .background(color.opacity(0.2))
             .foregroundStyle(color)
-            .cornerRadius(RunicCornerRadius.xs)
+            .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
     }
 
     private func alertTypeLabel(_ type: AlertRuleStore.AlertType) -> String {
@@ -346,6 +347,7 @@ struct AlertsPane: View {
 
 @MainActor
 private struct RuleEditorSheet: View {
+    @Environment(\.runicFonts) private var fonts
     @Environment(\.dismiss) private var dismiss
 
     let rule: AlertRuleStore.AlertRule?
@@ -371,7 +373,7 @@ private struct RuleEditorSheet: View {
     var body: some View {
         VStack(spacing: RunicSpacing.lg) {
             Text(self.rule == nil ? "Add Alert Rule" : "Edit Alert Rule")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
 
             Form {
                 Picker("Alert Type", selection: self.$alertType) {

@@ -30,6 +30,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case bedrock
     case vertexai
     case qwen
+    case localLLM = "local-llm"
 }
 
 // swiftformat:enable sortDeclarations
@@ -62,6 +63,7 @@ public enum IconStyle: Sendable {
     case bedrock
     case vertexai
     case qwen
+    case localLLM
     case combined
 }
 

@@ -60,6 +60,7 @@ struct RunicApp: App {
                 store: self.store,
                 updater: self.appDelegate.updaterController,
                 selection: self.preferencesSelection)
+                .environment(\.runicFonts, RunicFontStore.shared)
         }
         .defaultSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
     }
@@ -258,6 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if Self.terminateIfDuplicateInstance() { return }
         AppNotifications.shared.requestAuthorizationOnStartup()
         self.ensureStatusController()
         self.installAutoRefreshLifecycleObservers()
@@ -266,6 +268,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.statusController?.openMenuFromShortcut()
             }
         }
+    }
+
+    /// Exit early if another Runic with the same bundle id is already running.
+    /// Stale login items pointing at multiple bundle paths can otherwise spin
+    /// up two status items at login.
+    private static func terminateIfDuplicateInstance() -> Bool {
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.sriinnu.athena.runic"
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { $0.processIdentifier != myPID }
+        guard let existing = others.first else { return false }
+        RunicLog.logger("singleton").info(
+            "Another Runic instance already running (pid \(existing.processIdentifier)); terminating self.")
+        existing.activate(options: [])
+        NSApp.terminate(nil)
+        return true
     }
 
     private func ensureStatusController() {

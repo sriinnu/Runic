@@ -222,7 +222,7 @@ create_app_bundle() {
     <key>CFBundleIconFile</key>
     <string>Icon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.sriinnu.athena.Runic</string>
+    <string>com.sriinnu.athena.runic</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

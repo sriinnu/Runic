@@ -792,7 +792,7 @@ private final class ProviderSwitcherView: NSView {
         self.wantsLayer = true
         self.layer?.masksToBounds = false
         self.layer?.backgroundColor = theme.nsMenuSubtleFillColor.withAlphaComponent(0.20).cgColor
-        self.layer?.cornerRadius = CGFloat(RunicCornerRadius.sm)
+        self.layer?.cornerRadius = theme.shape.cornerRadius(RunicCornerRadius.sm)
         self.lightModeOverlayLayer.masksToBounds = false
         self.layer?.insertSublayer(self.lightModeOverlayLayer, at: 0)
         self.updateLightModeStyling()
@@ -850,7 +850,7 @@ private final class ProviderSwitcherView: NSView {
             button.contentTintColor = self.theme.nsSecondaryTextColor
             button.alignment = .center
             button.wantsLayer = true
-            button.layer?.cornerRadius = CGFloat(RunicCornerRadius.md)
+            button.layer?.cornerRadius = self.theme.shape.cornerRadius(RunicCornerRadius.md)
             button.state = (selected == segment.provider) ? .on : .off
             button.toolTip = nil
             button.translatesAutoresizingMaskIntoConstraints = false

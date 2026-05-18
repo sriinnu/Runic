@@ -138,6 +138,8 @@ struct OTelGenAILedgerAdapterTests {
             ("aws-bedrock", .bedrock),
             ("vertex-ai", .vertexai),
             ("dashscope", .qwen),
+            ("ollama", .localLLM),
+            ("lm-studio", .localLLM),
         ]
 
         for (system, provider) in systems {
@@ -149,5 +151,140 @@ struct OTelGenAILedgerAdapterTests {
                 options: OTelGenAIIngestionOptions(enabled: true))
             #expect(entries.first?.provider == provider, "\(system) should map to \(provider.rawValue)")
         }
+    }
+
+    @Test
+    func `marks compaction entries and aggregates compaction tax`() throws {
+        let payload = """
+        {"attributes":{
+          "gen_ai.system":"anthropic",
+          "gen_ai.request.model":"claude-opus-4-7",
+          "gen_ai.usage.input_tokens":400,
+          "gen_ai.usage.output_tokens":80,
+          "gen_ai.query.source":"compact",
+          "timestamp":"2026-05-15T12:00:00Z"
+        }}
+        """
+
+        let entries = try OTelGenAILedgerAdapter.parseData(
+            Data(payload.utf8),
+            options: OTelGenAIIngestionOptions(enabled: true))
+
+        let entry = try #require(entries.first)
+        #expect(entry.provider == .claude)
+        #expect(entry.source == .openTelemetry)
+        #expect(entry.operationKind == .compaction)
+        #expect(entry.isCompaction)
+        #expect(entry.tokenProvenance?.source == .openTelemetry)
+        #expect(entry.tokenProvenance?.confidence == .providerReported)
+
+        let summaries = UsageLedgerAggregator.compactionSummaries(entries: entries)
+        let summary = try #require(summaries.first)
+        #expect(summary.provider == .claude)
+        #expect(summary.eventCount == 1)
+        #expect(summary.totals.totalTokens == 480)
+        #expect(summary.totals.tokenProvenance?.source == .openTelemetry)
+    }
+
+    @Test
+    func `parses vercel ai sdk and ollama style usage fields`() throws {
+        let payload = """
+        [
+          {
+            "timestamp": "2026-05-15T12:00:00Z",
+            "attributes": {
+              "gen_ai.system": "vercel-ai-gateway",
+              "ai.usage.promptTokens": 20,
+              "ai.usage.completionTokens": 30,
+              "ai.usage.costUSD": 0.001
+            }
+          },
+          {
+            "timestamp": "2026-05-15T12:01:00Z",
+            "attributes": {
+              "gen_ai.system": "ollama",
+              "model": "llama3.1",
+              "prompt_eval_count": 11,
+              "eval_count": 7
+            }
+          }
+        ]
+        """
+
+        let entries = try OTelGenAILedgerAdapter.parseData(
+            Data(payload.utf8),
+            options: OTelGenAIIngestionOptions(enabled: true))
+
+        #expect(entries.count == 2)
+        #expect(entries[0].provider == .vercelai)
+        #expect(entries[0].inputTokens == 20)
+        #expect(entries[0].outputTokens == 30)
+        #expect(abs((entries[0].costUSD ?? 0) - 0.001) < 0.000_001)
+        #expect(entries[1].provider == .localLLM)
+        #expect(entries[1].inputTokens == 11)
+        #expect(entries[1].outputTokens == 7)
+    }
+
+    @Test
+    func `collector writes sanitized metric jsonl without prompt content`() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-otel-\(UUID().uuidString)", isDirectory: true)
+        let output = directory.appendingPathComponent("ingest.jsonl")
+        let sink = OTelGenAIIngestionSink(configuration: OTelGenAICollectorConfiguration(outputFile: output))
+        let payload = """
+        {
+          "timestamp": "2026-05-15T12:00:00Z",
+          "attributes": {
+            "gen_ai.system": "anthropic",
+            "gen_ai.request.model": "claude-opus-4-7",
+            "gen_ai.usage.input_tokens": 120,
+            "gen_ai.usage.output_tokens": 40,
+            "gen_ai.prompt": "secret prompt that must not be persisted",
+            "gen_ai.completion": "secret response that must not be persisted"
+          }
+        }
+        """
+
+        let result = try await sink.ingest(Data(payload.utf8))
+        let stored = try String(contentsOf: result.outputFile, encoding: .utf8)
+
+        #expect(result.acceptedEntries == 1)
+        #expect(stored.contains("secret prompt") == false)
+        #expect(stored.contains("secret response") == false)
+        #expect(stored.contains("input_tokens"))
+
+        let source = OTelGenAIFileLedgerSource(
+            files: [output],
+            options: OTelGenAIIngestionOptions(enabled: true))
+        let entries = try await source.loadEntries()
+        #expect(entries.count == 1)
+        #expect(entries.first?.provider == .claude)
+        #expect(entries.first?.totalTokens == 160)
+    }
+
+    @Test
+    func `http ingest handler accepts otlp json requests`() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-http-otel-\(UUID().uuidString)", isDirectory: true)
+        let output = directory.appendingPathComponent("ingest.jsonl")
+        let sink = OTelGenAIIngestionSink(configuration: OTelGenAICollectorConfiguration(outputFile: output))
+        let body = """
+        {"attributes":{"gen_ai.system":"openai","gen_ai.request.model":"gpt-5","gen_ai.usage.input_tokens":1}}
+        """
+        let request = """
+        POST /v1/traces HTTP/1.1\r
+        Host: 127.0.0.1\r
+        Content-Type: application/json\r
+        Content-Length: \(Data(body.utf8).count)\r
+        \r
+        \(body)
+        """
+
+        let response = await OTelGenAIHTTPIngestHandler.handle(Data(request.utf8), sink: sink)
+        let text = String(data: response, encoding: .utf8) ?? ""
+
+        #expect(text.contains("200 OK"))
+        #expect(text.contains(#""accepted":1"#))
+        #expect(FileManager.default.fileExists(atPath: output.path))
     }
 }

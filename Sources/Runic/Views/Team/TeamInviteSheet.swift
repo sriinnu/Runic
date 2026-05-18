@@ -3,6 +3,8 @@ import SwiftUI
 
 @MainActor
 struct TeamInviteSheet: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     let team: Team
     let onInvite: (TeamInvitation) -> Void
     let onCancel: () -> Void
@@ -18,10 +20,10 @@ struct TeamInviteSheet: View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Invite to \(self.team.name)")
-                    .font(RunicFont.title2.weight(.semibold))
+                    .font(self.fonts.title2.weight(.semibold))
                 Text("Send an invitation to join your team")
-                    .font(RunicFont.footnote)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             }
 
             PreferencesDivider()
@@ -29,7 +31,7 @@ struct TeamInviteSheet: View {
             VStack(alignment: .leading, spacing: RunicSpacing.md) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Email Address")
-                        .font(RunicFont.subheadline.weight(.medium))
+                        .font(self.fonts.subheadline.weight(.medium))
 
                     TextField("colleague@example.com", text: self.$email)
                         .textFieldStyle(.roundedBorder)
@@ -40,18 +42,18 @@ struct TeamInviteSheet: View {
 
                     if let error = self.emailError {
                         Text(error)
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .foregroundStyle(.red)
                     } else {
                         Text("They will receive an email invitation")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
                 }
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Role")
-                        .font(RunicFont.subheadline.weight(.medium))
+                        .font(self.fonts.subheadline.weight(.medium))
 
                     Picker("Role", selection: self.$selectedRole) {
                         ForEach(TeamRole.allCases.filter { $0 != .owner }, id: \.self) { role in
@@ -69,13 +71,13 @@ struct TeamInviteSheet: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Toggle("Set quota limit", isOn: self.$hasQuotaLimit)
-                        .font(RunicFont.subheadline.weight(.medium))
+                        .font(self.fonts.subheadline.weight(.medium))
 
                     if self.hasQuotaLimit {
                         HStack(spacing: RunicSpacing.sm) {
                             Text("Credits")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.secondary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText)
 
                             Stepper(
                                 value: self.$quotaLimit,
@@ -92,12 +94,12 @@ struct TeamInviteSheet: View {
                         }
 
                         Text("Monthly credit allocation for this member")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     } else {
                         Text("No quota limit - uses shared team quota")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
                 }
             }
@@ -140,8 +142,8 @@ struct TeamInviteSheet: View {
                 Text("")
             }
         }
-        .font(RunicFont.caption)
-        .foregroundStyle(.tertiary)
+        .font(self.fonts.caption)
+        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         .fixedSize(horizontal: false, vertical: true)
     }
 

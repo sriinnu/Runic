@@ -8,7 +8,7 @@ read_when:
 # Architecture overview
 
 ## Modules
-- `Sources/RunicCore`: fetch + parse (Codex RPC, PTY runner, Claude probes, OpenAI web scraping, status polling).
+- `Sources/RunicCore`: fetch + parse (provider descriptors, Codex RPC, PTY runner, Claude probes, OpenAI web scraping, OpenTelemetry GenAI ledger ingestion, local LLM discovery, status polling).
 - `Sources/Runic`: state + UI (UsageStore, SettingsStore, StatusItemController, menus, icon rendering).
 - `Sources/RunicWidget`: WidgetKit extension wired to the shared snapshot.
 - `Sources/RunicCLI`: bundled CLI for `runic` usage/status output.
@@ -22,7 +22,7 @@ read_when:
 - `AppDelegate`: wires status controller, Sparkle updater, notifications.
 
 ## Data flow
-- Background refresh → `UsageFetcher`/provider probes → `UsageStore` → menu/icon/widgets.
+- Background refresh → `UsageFetcher`/provider probes/local ledger sources → `UsageStore` → menu/icon/widgets.
 - Settings toggles feed `SettingsStore` → `UsageStore` refresh cadence + feature flags.
 
 ## Concurrency & platform

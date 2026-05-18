@@ -8,7 +8,7 @@ read_when:
 
 # Runic CLI
 
-A lightweight Helix-based CLI that mirrors the menubar app’s data paths (Codex web/RPC → PTY fallback; Claude web by default with CLI fallback and OAuth debug).
+A lightweight Helix-based CLI that mirrors the menubar app’s data paths (Codex web/RPC → PTY fallback; Claude web by default with CLI fallback and OAuth debug; provider/local-LLM history through local ledgers and configured OpenTelemetry GenAI files).
 Use it when you need usage numbers in scripts, CI, or dashboards without UI.
 
 ## Install
@@ -37,7 +37,7 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 - `runic cost` prints local token cost usage (Claude + Codex) without web/CLI access.
   - `--format text|json` (default: text).
   - `--refresh` ignores cached scans.
-- `--provider codex|claude|zai|gemini|antigravity|cursor|factory|copilot|vercelai|both|all` (default: your in-app toggles; falls back to Codex).
+- `--provider codex|claude|zai|gemini|antigravity|cursor|factory|copilot|vercelai|local-llm|both|all` (default: all registered providers for `usage`, Claude for `insights`, Claude+Codex for `cost`).
   - `--no-credits` (hide Codex credits in text output).
   - `--pretty` (pretty-print JSON).
   - `--status` (fetch provider status pages and include them in output).
@@ -54,6 +54,25 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
     - Claude web: claude.ai API (session + weekly usage, plus account metadata when available).
     - Linux: `web/auto` are not supported; CLI prints an error and exits non-zero.
 - Global flags: `-h/--help`, `-V/--version`, `-v/--verbose`, `--no-color`, `--log-level <trace|verbose|debug|info|warning|error|critical>`, `--json-output`.
+
+### Insights usage sources
+
+`runic insights` reads Claude/Codex local JSONL ledgers directly. Other providers, including `local-llm`, are included when OpenTelemetry GenAI JSON/JSONL files are configured through `RUNIC_OTEL_GENAI_LOG_PATHS`, `RUNIC_OTEL_GENAI_LOG_PATH`, or provider-specific variables such as `RUNIC_LOCAL_LLM_OTEL_GENAI_LOG_PATHS`. Runic also reads its default local collector ledger at `~/Library/Application Support/Runic/otel-genai/ingest.jsonl` automatically when present.
+
+Supported insight views: `daily`, `session`, `blocks`, `models`, `projects`, `compaction`, `comparative`, and `efficiency`.
+
+### Local OTLP JSON collector
+
+`runic otel-collect` gives local apps a simple OTLP/HTTP JSON endpoint for GenAI usage. It accepts JSON at `/v1/traces` and `/v1/logs`, sanitizes spans down to metric fields, and writes JSONL to Runic's default ledger. Prompt and response content is not persisted.
+
+```bash
+runic otel-collect --port 4318
+runic otel-collect --once --input ./otel-payload.json
+cat ./otel-payload.json | runic otel-collect --once --input -
+runic insights --provider vercelai --view models --json --pretty
+```
+
+Use `--default-provider local-llm` or another provider when the upstream telemetry omits `gen_ai.system`. The collector currently supports OTLP JSON, not protobuf OTLP.
 
 ### Cost JSON payload
 `runic cost --format json` emits an array of payloads (one per provider).
@@ -72,6 +91,9 @@ runic --format json --pretty   # machine output
 runic --format json --provider both
 runic cost                     # local cost usage (last 30 days + today)
 runic cost --provider claude --format json --pretty
+runic insights --provider local-llm --view models --json --pretty
+runic insights --provider all --view compaction --json --pretty
+runic otel-collect --port 4318
 COPILOT_API_TOKEN=... runic --provider copilot --format json --pretty
 runic --status                 # include status page indicator/description
 runic --provider codex --source web --format json --pretty
@@ -153,4 +175,3 @@ Plan: Pro
 - OpenAI web requires a signed-in `chatgpt.com` session in Safari, Chrome, or Firefox. No passwords are stored; Runic reuses cookies.
 - Safari cookie import may require granting Runic Full Disk Access (System Settings → Privacy & Security → Full Disk Access).
 - The `openaiDashboard` JSON field is normally sourced from the app’s cached dashboard snapshot; `--source auto|web` refreshes it live via WebKit using a per-account cookie store.
-- Future: optional `--from-cache` flag to read the menubar app’s persisted snapshot (if/when that file lands).

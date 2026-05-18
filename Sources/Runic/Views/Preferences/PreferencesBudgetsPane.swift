@@ -3,6 +3,8 @@ import SwiftUI
 
 @MainActor
 struct PreferencesBudgetsPane: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @State private var budgets: [ProjectBudgetStore.ProjectBudget] = []
     @State private var editingProjectID: String?
     @State private var showingAddDialog = false
@@ -16,18 +18,18 @@ struct PreferencesBudgetsPane: View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Project Budgets")
-                    .font(RunicFont.title2)
+                    .font(self.fonts.title2)
                     .fontWeight(.semibold)
                 Text("Set monthly spending limits and alerts for project-attributed usage.")
-                    .font(RunicFont.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.subheadline)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
 
             if self.budgets.isEmpty {
                 VStack(spacing: RunicSpacing.md) {
                     Text("No budgets configured")
-                        .font(RunicFont.body)
-                        .foregroundStyle(.secondary)
+                        .font(self.fonts.body)
+                        .foregroundStyle(self.runicTheme.secondaryText)
                         .padding(.vertical, RunicSpacing.lg)
 
                     Button {
@@ -44,20 +46,20 @@ struct PreferencesBudgetsPane: View {
                     // Header
                     HStack(alignment: .center, spacing: RunicSpacing.sm) {
                         Text("Project")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .frame(width: 150, alignment: .leading)
                         Text("Monthly Limit")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .frame(width: 120, alignment: .leading)
                         Text("Alert at")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .frame(width: 80, alignment: .leading)
                         Text("Status")
-                            .font(RunicFont.caption)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption)
+                            .foregroundStyle(self.runicTheme.secondaryText)
                             .frame(width: 80, alignment: .leading)
                         Spacer()
                     }
@@ -107,16 +109,16 @@ struct PreferencesBudgetsPane: View {
             if let error = self.errorMessage {
                 HStack(alignment: .center, spacing: RunicSpacing.xs) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(.red)
                         .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                     Text(error)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(.red)
                 }
                 .padding(RunicSpacing.xs)
                 .background(Color.red.opacity(0.1))
-                .cornerRadius(RunicCornerRadius.sm)
+                .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
             }
 
             Spacer()
@@ -197,6 +199,7 @@ struct PreferencesBudgetsPane: View {
 }
 
 private struct BudgetRow: View {
+    @Environment(\.runicFonts) private var fonts
     let budget: ProjectBudgetStore.ProjectBudget
     let isEditing: Bool
     let onEdit: () -> Void
@@ -264,18 +267,18 @@ private struct BudgetRow: View {
                 }
             } else {
                 Text(self.budget.projectName ?? self.budget.projectID)
-                    .font(RunicFont.body)
+                    .font(self.fonts.body)
                     .frame(width: 150, alignment: .leading)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(UsageFormatter.usdString(self.budget.monthlyLimit))
-                    .font(RunicFont.body)
+                    .font(self.fonts.body)
                     .frame(width: 120, alignment: .leading)
                 Text(String(format: "%.0f%%", self.budget.alertThreshold * 100))
-                    .font(RunicFont.body)
+                    .font(self.fonts.body)
                     .frame(width: 80, alignment: .leading)
                 Text(self.budget.enabled ? "Enabled" : "Disabled")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.budget.enabled ? .green : .secondary)
                     .frame(width: 80, alignment: .leading)
                     .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
@@ -285,14 +288,14 @@ private struct BudgetRow: View {
                         self.onEdit()
                     } label: {
                         Image(systemName: "pencil")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                     }
                     .buttonStyle(.plain)
                     Button {
                         self.onDelete()
                     } label: {
                         Image(systemName: "trash")
-                            .font(RunicFont.caption)
+                            .font(self.fonts.caption)
                             .foregroundStyle(.red)
                     }
                     .buttonStyle(.plain)
@@ -302,15 +305,17 @@ private struct BudgetRow: View {
         .padding(.horizontal, RunicSpacing.xs)
         .padding(.vertical, RunicSpacing.xxs)
         .background(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                 .fill(self.runicTheme.menuSubtleFill))
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.xs, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
                 .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 }
 
 private struct AddBudgetSheet: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @Binding var projectID: String
     @Binding var projectName: String
     @Binding var monthlyLimit: String
@@ -321,15 +326,15 @@ private struct AddBudgetSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
             Text("Add Budget")
-                .font(RunicFont.title2)
+                .font(self.fonts.title2)
                 .fontWeight(.semibold)
 
             Form {
                 TextField("Project ID or workspace path", text: self.$projectID)
                     .textFieldStyle(.roundedBorder)
                 Text("Use the project identifier from a provider's Projects breakdown. This is not the provider name.")
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                 TextField("Project Name (optional)", text: self.$projectName)
                     .textFieldStyle(.roundedBorder)
                 TextField("Monthly Limit (USD)", text: self.$monthlyLimit)

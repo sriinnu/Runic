@@ -4,8 +4,10 @@ import SwiftUI
 
 @MainActor
 struct PerformancePane: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
+    @Environment(\.runicTheme) private var runicTheme
 
     @AppStorage("performanceTrackingEnabled") private var performanceTrackingEnabled = true
     @AppStorage("rawMetricsRetentionDays") private var rawMetricsRetentionDays = 30
@@ -51,7 +53,7 @@ struct PerformancePane: View {
                 if !self.performanceTrackingEnabled {
                     Text(
                         "Performance tracking is disabled. Historical data is preserved but new metrics won't be collected.")
-                        .font(RunicFont.footnote)
+                        .font(self.fonts.footnote)
                         .foregroundStyle(.orange)
                         .padding(.vertical, RunicSpacing.xs)
                 }
@@ -62,7 +64,7 @@ struct PerformancePane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Raw metrics retention")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$rawMetricsRetentionDays) {
                             Text("30 days").tag(30)
@@ -73,13 +75,13 @@ struct PerformancePane: View {
                         .frame(maxWidth: 300)
 
                         Text("How long to keep detailed latency and error records.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Aggregated stats retention")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
 
                         Picker("", selection: self.$aggregatedStatsRetentionYears) {
                             Text("1 year").tag(1)
@@ -90,8 +92,8 @@ struct PerformancePane: View {
                         .frame(maxWidth: 300)
 
                         Text("How long to keep daily performance summaries.")
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
                 }
             }
@@ -107,7 +109,7 @@ struct PerformancePane: View {
                     if self.qualityRatingPromptsEnabled {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Prompt frequency")
-                                .font(RunicFont.body)
+                                .font(self.fonts.body)
 
                             Picker("", selection: self.$qualityRatingFrequency) {
                                 ForEach(QualityRatingFrequency.allCases) { freq in
@@ -118,8 +120,8 @@ struct PerformancePane: View {
                             .frame(maxWidth: 400)
 
                             Text("When to show rating prompts based on response size.")
-                                .font(RunicFont.footnote)
-                                .foregroundStyle(.tertiary)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
 
                         PreferenceStepperRow(
@@ -138,10 +140,10 @@ struct PerformancePane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     HStack {
                         Text("Current database size:")
-                            .font(RunicFont.body)
+                            .font(self.fonts.body)
                         Text(self.databaseSize)
-                            .font(RunicFont.body.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.body.weight(.semibold))
+                            .foregroundStyle(self.runicTheme.secondaryText)
                     }
 
                     HStack(spacing: RunicSpacing.sm) {
@@ -160,14 +162,14 @@ struct PerformancePane: View {
 
                         if let status = self.vacuumStatus {
                             Text(status)
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                                 .foregroundStyle(status.contains("Success") ? .green : .red)
                         }
                     }
 
                     Text("Optimizes database file by reclaiming unused space.")
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
 
                     Divider()
                         .padding(.vertical, RunicSpacing.xs)
@@ -188,14 +190,14 @@ struct PerformancePane: View {
 
                         if let status = self.clearDataStatus {
                             Text(status)
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                                 .foregroundStyle(status.contains("Success") ? .green : .red)
                         }
                     }
 
                     Text("Removes metrics older than configured retention periods.")
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
             .liquidEntrance(appeared: self.appeared, index: 3)
@@ -209,8 +211,8 @@ struct PerformancePane: View {
                 if self.anonymousUsageStatsEnabled {
                     Text(
                         "Only aggregate statistics are shared. Request IDs, prompts, and responses are never included.")
-                        .font(RunicFont.footnote)
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         .padding(.vertical, RunicSpacing.xs)
                 }
             }

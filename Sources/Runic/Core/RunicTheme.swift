@@ -1,6 +1,105 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Theme identity tokens
+//
+// A theme is more than a palette. These structs describe a theme's
+// non-color identity: typography, shape language, motion, density. Together
+// with the color tokens they let a theme adapt its components structurally,
+// not just tint them.
+
+/// Typographic personality of a theme. `nil` lets the user's font preference
+/// (or the SwiftUI default) take over; non-nil values force the theme's pick.
+struct RunicThemeFonts {
+    enum Body { case system, rounded, mono, serif }
+    enum Numeric { case system, rounded, mono, tabular }
+
+    let body: Body
+    let numeric: Numeric
+
+    static let system = RunicThemeFonts(body: .system, numeric: .system)
+
+    /// SwiftUI Font.Design that maps to `body`. `nil` for `.system`, which
+    /// leaves the design unchanged.
+    var swiftUIDesignOverride: Font.Design? {
+        switch self.body {
+        case .system: nil
+        case .rounded: .rounded
+        case .mono: .monospaced
+        case .serif: .serif
+        }
+    }
+
+    func bodyFont(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        switch self.body {
+        case .system: .system(size: size, weight: weight)
+        case .rounded: .system(size: size, weight: weight, design: .rounded)
+        case .mono: .system(size: size, weight: weight, design: .monospaced)
+        case .serif: .system(size: size, weight: weight, design: .serif)
+        }
+    }
+
+    func numericFont(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        switch self.numeric {
+        case .system: .system(size: size, weight: weight)
+        case .rounded: .system(size: size, weight: weight, design: .rounded)
+        case .mono: .system(size: size, weight: weight, design: .monospaced)
+        case .tabular: .system(size: size, weight: weight).monospacedDigit()
+        }
+    }
+}
+
+/// How rounded surfaces feel. A multiplier applied to the RunicCornerRadius tokens.
+struct RunicThemeShape {
+    enum Separator { case hairline, glow, ascii }
+
+    /// Multiplier for the global RunicCornerRadius scale. 1.0 = unchanged.
+    let cornerMultiplier: CGFloat
+    let separator: Separator
+
+    static let standard = RunicThemeShape(cornerMultiplier: 1.0, separator: .hairline)
+    static let soft = RunicThemeShape(cornerMultiplier: 1.35, separator: .hairline)
+    static let sharp = RunicThemeShape(cornerMultiplier: 0.35, separator: .ascii)
+    static let glassy = RunicThemeShape(cornerMultiplier: 1.0, separator: .glow)
+    /// Retro: small radii, hairline rules — bevels do the heavy visual work
+    /// via the `RetroBevelOverlay` modifier rather than corner curvature.
+    static let retroBevel = RunicThemeShape(cornerMultiplier: 0.55, separator: .hairline)
+
+    /// Apply the theme's corner multiplier to a base radius from `RunicCornerRadius`.
+    func cornerRadius(_ base: CGFloat) -> CGFloat {
+        max(2, base * self.cornerMultiplier)
+    }
+}
+
+/// Motion personality. Components read this to pick their default animations.
+struct RunicThemeMotion {
+    /// Primary duration in seconds. Sub-second; tuned for menu interactions.
+    let duration: Double
+    let curve: Animation
+
+    static let standard = RunicThemeMotion(duration: 0.22, curve: .easeOut(duration: 0.22))
+    static let slow = RunicThemeMotion(duration: 0.34, curve: .easeInOut(duration: 0.34))
+    static let snappy = RunicThemeMotion(duration: 0.18, curve: .spring(response: 0.32, dampingFraction: 0.7))
+    static let instant = RunicThemeMotion(duration: 0.10, curve: .easeIn(duration: 0.10))
+    /// Mechanical / click-stop motion — Retro buttons feel like physical
+    /// keys. Short linear ramp.
+    static let mechanical = RunicThemeMotion(duration: 0.12, curve: .linear(duration: 0.12))
+}
+
+/// Padding/spacing multiplier. 1.0 = unchanged.
+struct RunicThemeDensity {
+    let paddingMultiplier: CGFloat
+
+    static let compact = RunicThemeDensity(paddingMultiplier: 0.70)
+    static let normal = RunicThemeDensity(paddingMultiplier: 1.00)
+    static let generous = RunicThemeDensity(paddingMultiplier: 1.20)
+
+    /// Scale a base spacing value from `RunicSpacing`.
+    func padding(_ base: CGFloat) -> CGFloat {
+        base * self.paddingMultiplier
+    }
+}
+
 struct RunicThemePalette {
     let id: String
     let displayName: String
@@ -20,6 +119,13 @@ struct RunicThemePalette {
     let cardStroke: Color
     let primaryText: Color
     let secondaryText: Color
+
+    // Non-color identity. Defaults keep existing themes backward-compatible;
+    // themes that want a distinct personality override at the call site.
+    var fonts: RunicThemeFonts = .system
+    var shape: RunicThemeShape = .standard
+    var motion: RunicThemeMotion = .standard
+    var density: RunicThemeDensity = .normal
 
     var swatchColors: [Color] {
         [self.primary, self.accent, self.highlight, self.tertiary]
@@ -42,6 +148,25 @@ struct RunicThemePalette {
             ? [self.accent, self.highlight, self.secondary, self.warm, self.tertiary, self.primary]
             : [self.accent, self.highlight, self.tertiary, self.warm, self.secondary, self.primary]
         return palette[index % palette.count]
+    }
+
+    /// Card-surface fill that switches to frosted material on Glass theme.
+    /// Lets every existing `fill(menuCardGradient)` callsite become themed by
+    /// swapping `.menuCardGradient` → `.cardBackgroundStyle`. Other themes
+    /// keep their gradient; Glass gets actual translucency.
+    var cardBackgroundStyle: AnyShapeStyle {
+        if self.id == "glass" {
+            return AnyShapeStyle(.regularMaterial)
+        }
+        return AnyShapeStyle(self.menuCardGradient)
+    }
+
+    /// Outer-surface fill that switches to thin material on Glass theme.
+    var surfaceBackgroundStyle: AnyShapeStyle {
+        if self.id == "glass" {
+            return AnyShapeStyle(.thinMaterial)
+        }
+        return AnyShapeStyle(self.menuSurfaceGradient)
     }
 
     var menuSurfaceGradient: LinearGradient {
@@ -155,15 +280,63 @@ struct RunicThemePalette {
         self.nsColor(self.menuSubtleFill, fallback: .controlBackgroundColor)
     }
 
-    private func nsColor(_ color: Color, fallback: NSColor) -> NSColor {
+    /// Convert a SwiftUI `Color` to a deviceRGB `NSColor`, falling back to
+    /// the supplied AppKit color when conversion fails (e.g., dynamic system
+    /// colors that need a context to resolve). Public so AppKit-only code
+    /// like `IconRenderer` can read the theme accent ramp.
+    func nsColor(_ color: Color, fallback: NSColor = .controlAccentColor) -> NSColor {
         NSColor(color).usingColorSpace(.deviceRGB) ?? fallback
     }
 }
 
 extension Theme {
+    /// Runtime palette for the theme. Looks up the JSON-defined palette via
+    /// `ThemeLoader` first so palettes can be edited as data without
+    /// recompiling; falls back to the hardcoded definitions below when no
+    /// matching JSON file exists (or fails to parse). The Swift versions
+    /// also act as the source of truth for any theme that hasn't yet been
+    /// migrated to JSON.
     var palette: RunicThemePalette {
+        if let json = ThemeLoader.shared.palette(for: self.rawValue) {
+            return json
+        }
+        return self.fallbackPalette
+    }
+
+    private var fallbackPalette: RunicThemePalette {
         switch self {
+        case .retro:
+            // Parchment + navy bevel. The signature Runic look — System 7
+            // chrome with modern info architecture. Earth-toned accents
+            // (System-7 blue, coral red, warm yellow). Pixel-display
+            // headers paired with Geist body via the `fonts` token.
+            return RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Retro tools. Modern intelligence.",
+                symbolName: "rectangle.connected.to.line.below",
+                isCustom: true,
+                prefersDarkAppearance: false,
+                primary: Color(red: 0.118, green: 0.133, blue: 0.220),       // deep navy ink
+                secondary: Color(red: 0.353, green: 0.302, blue: 0.243),     // sepia muted
+                accent: Color(red: 0.231, green: 0.357, blue: 0.647),        // System-7 blue
+                highlight: Color(red: 0.847, green: 0.349, blue: 0.349),     // coral red
+                warm: Color(red: 0.780, green: 0.400, blue: 0.275),          // terracotta
+                tertiary: Color(red: 0.902, green: 0.690, blue: 0.251),      // warm yellow
+                surface: Color(red: 0.945, green: 0.910, blue: 0.823),       // parchment
+                surfaceAlt: Color(red: 0.973, green: 0.949, blue: 0.898),    // highlight bevel
+                cardFill: Color(red: 0.910, green: 0.867, blue: 0.760),      // inset card body
+                cardStroke: Color(red: 0.478, green: 0.510, blue: 0.604),    // muted blue-gray bevel — NOT black
+                primaryText: Color(red: 0.180, green: 0.180, blue: 0.220),    // soft dark, not aggressive
+                secondaryText: Color(red: 0.420, green: 0.380, blue: 0.330),  // warm sepia
+                fonts: RunicThemeFonts(body: .system, numeric: .mono),
+                shape: .retroBevel,
+                motion: .mechanical,
+                density: .normal)
         case .system:
+            // Auto-adapts to macOS appearance. Uses native colors and standard
+            // shape/motion — this is the "Runic dressed in the OS's clothes"
+            // theme, intended as the default boot state, not an opinionated look.
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
@@ -182,8 +355,15 @@ extension Theme {
                 cardFill: Color(nsColor: .controlBackgroundColor).opacity(0.34),
                 cardStroke: Color(nsColor: .separatorColor).opacity(0.35),
                 primaryText: Color(nsColor: .controlTextColor),
-                secondaryText: Color(nsColor: .secondaryLabelColor))
+                secondaryText: Color(nsColor: .secondaryLabelColor),
+                fonts: .system,
+                shape: .standard,
+                motion: .standard,
+                density: .normal)
         case .light:
+            // Clean aqua: native macOS light feel with curated accents.
+            // Standard typography + standard motion — this is the "neutral"
+            // light baseline, not a personality theme.
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
@@ -202,28 +382,42 @@ extension Theme {
                 cardFill: Color.white.opacity(0.66),
                 cardStroke: Color.black.opacity(0.12),
                 primaryText: Color.black.opacity(0.86),
-                secondaryText: Color.black.opacity(0.55))
+                secondaryText: Color.black.opacity(0.55),
+                fonts: .system,
+                shape: .standard,
+                motion: .standard,
+                density: .normal)
         case .dark:
+            // Cinematic dark: deep near-black canvas, electric accents,
+            // glow-style separators. High-contrast and confident. Not a
+            // "dimmed light theme" — its own visual language.
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Native dark",
+                tagline: "Cinematic dark",
                 symbolName: "moon.stars.fill",
                 isCustom: false,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.34, green: 0.48, blue: 0.94),
-                secondary: Color(red: 0.38, green: 0.65, blue: 0.98),
-                accent: Color(red: 0.38, green: 0.65, blue: 0.98),
-                highlight: Color(red: 0.96, green: 0.62, blue: 0.20),
-                warm: Color(red: 0.88, green: 0.48, blue: 0.37),
-                tertiary: Color(red: 0.53, green: 0.66, blue: 0.47),
-                surface: Color(red: 0.06, green: 0.07, blue: 0.09),
-                surfaceAlt: Color.white.opacity(0.06),
-                cardFill: Color.white.opacity(0.06),
-                cardStroke: Color.white.opacity(0.13),
-                primaryText: Color.white.opacity(0.92),
-                secondaryText: Color.white.opacity(0.58))
+                primary: Color(red: 0.45, green: 0.62, blue: 1.00),         // electric blue
+                secondary: Color(red: 0.55, green: 0.80, blue: 1.00),       // sky
+                accent: Color(red: 0.55, green: 0.80, blue: 1.00),          // sky accent
+                highlight: Color(red: 1.000, green: 0.620, blue: 0.180),    // punchy amber
+                warm: Color(red: 1.000, green: 0.380, blue: 0.500),         // hot coral
+                tertiary: Color(red: 0.380, green: 0.920, blue: 0.660),     // bright mint
+                surface: Color(red: 0.025, green: 0.030, blue: 0.045),      // near-black w/ blue tint
+                surfaceAlt: Color(red: 0.060, green: 0.080, blue: 0.115).opacity(0.95),
+                cardFill: Color.white.opacity(0.045),
+                cardStroke: Color(red: 0.55, green: 0.80, blue: 1.00).opacity(0.22),
+                primaryText: Color.white.opacity(0.95),
+                secondaryText: Color.white.opacity(0.62),
+                fonts: .system,
+                shape: RunicThemeShape(cornerMultiplier: 1.0, separator: .glow),
+                motion: .standard,
+                density: .normal)
         case .daybreak:
+            // Warm sunrise: peach + lavender + dusty yellow. Soft rounded
+            // body, gentle ease, generous spacing. The "Sunday morning notebook"
+            // theme — designed to feel slow and cozy.
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
@@ -231,79 +425,26 @@ extension Theme {
                 symbolName: "sunrise.fill",
                 isCustom: true,
                 prefersDarkAppearance: false,
-                primary: Color(red: 0.125, green: 0.180, blue: 0.315),
-                secondary: Color(red: 0.000, green: 0.515, blue: 0.690),
-                accent: Color(red: 0.965, green: 0.295, blue: 0.420),
-                highlight: Color(red: 1.000, green: 0.670, blue: 0.055),
-                warm: Color(red: 0.490, green: 0.360, blue: 0.940),
-                tertiary: Color(red: 0.000, green: 0.640, blue: 0.455),
-                surface: Color(red: 0.965, green: 0.982, blue: 0.995),
-                surfaceAlt: Color(red: 0.850, green: 0.940, blue: 1.000).opacity(0.78),
-                cardFill: Color.white.opacity(0.82),
-                cardStroke: Color(red: 0.125, green: 0.180, blue: 0.315).opacity(0.14),
-                primaryText: Color(red: 0.070, green: 0.095, blue: 0.155).opacity(0.92),
-                secondaryText: Color(red: 0.070, green: 0.095, blue: 0.155).opacity(0.60))
-        case .pine:
-            return RunicThemePalette(
-                id: self.rawValue,
-                displayName: self.label,
-                tagline: "TokMeter pine",
-                symbolName: "leaf.fill",
-                isCustom: true,
-                prefersDarkAppearance: true,
-                primary: Color(red: 0.039, green: 0.200, blue: 0.137),
-                secondary: Color(red: 0.514, green: 0.600, blue: 0.345),
-                accent: Color(red: 0.063, green: 0.337, blue: 0.400),
-                highlight: Color(red: 0.953, green: 0.957, blue: 0.835),
-                warm: Color(red: 0.827, green: 0.588, blue: 0.549),
-                tertiary: Color(red: 0.514, green: 0.600, blue: 0.345),
-                surface: Color(red: 0.012, green: 0.075, blue: 0.047),
-                surfaceAlt: Color(red: 0.039, green: 0.200, blue: 0.137).opacity(0.74),
-                cardFill: Color(red: 0.039, green: 0.200, blue: 0.137).opacity(0.58),
-                cardStroke: Color(red: 0.953, green: 0.957, blue: 0.835).opacity(0.16),
-                primaryText: Color(red: 0.953, green: 0.957, blue: 0.835),
-                secondaryText: Color(red: 0.953, green: 0.957, blue: 0.835).opacity(0.64))
-        case .nocturne:
-            return RunicThemePalette(
-                id: self.rawValue,
-                displayName: self.label,
-                tagline: "Calm operator",
-                symbolName: "moon.haze.fill",
-                isCustom: true,
-                prefersDarkAppearance: true,
-                primary: Color(red: 0.102, green: 0.122, blue: 0.212),
-                secondary: Color(red: 0.498, green: 0.525, blue: 0.678),
-                accent: Color(red: 0.376, green: 0.647, blue: 0.980),
-                highlight: Color(red: 0.957, green: 0.894, blue: 0.757),
-                warm: Color(red: 0.878, green: 0.478, blue: 0.371),
-                tertiary: Color(red: 0.529, green: 0.659, blue: 0.471),
-                surface: Color(red: 0.040, green: 0.050, blue: 0.100),
-                surfaceAlt: Color(red: 0.102, green: 0.122, blue: 0.212).opacity(0.78),
-                cardFill: Color(red: 0.102, green: 0.122, blue: 0.212).opacity(0.62),
-                cardStroke: Color(red: 0.376, green: 0.647, blue: 0.980).opacity(0.18),
-                primaryText: Color.white.opacity(0.92),
-                secondaryText: Color.white.opacity(0.58))
-        case .prism:
-            return RunicThemePalette(
-                id: self.rawValue,
-                displayName: self.label,
-                tagline: "Signal colors",
-                symbolName: "sparkles",
-                isCustom: true,
-                prefersDarkAppearance: true,
-                primary: Color(red: 0.361, green: 0.161, blue: 0.835),
-                secondary: Color(red: 0.024, green: 0.714, blue: 0.831),
-                accent: Color(red: 0.176, green: 0.831, blue: 0.749),
-                highlight: Color(red: 0.961, green: 0.620, blue: 0.043),
-                warm: Color(red: 0.984, green: 0.443, blue: 0.522),
-                tertiary: Color(red: 0.063, green: 0.725, blue: 0.506),
-                surface: Color(red: 0.055, green: 0.040, blue: 0.115),
-                surfaceAlt: Color(red: 0.361, green: 0.161, blue: 0.835).opacity(0.25),
-                cardFill: Color(red: 0.361, green: 0.161, blue: 0.835).opacity(0.22),
-                cardStroke: Color(red: 0.176, green: 0.831, blue: 0.749).opacity(0.22),
-                primaryText: Color.white.opacity(0.93),
-                secondaryText: Color.white.opacity(0.60))
+                primary: Color(red: 0.460, green: 0.250, blue: 0.520),     // soft plum
+                secondary: Color(red: 0.940, green: 0.520, blue: 0.450),   // peach
+                accent: Color(red: 0.965, green: 0.310, blue: 0.470),      // sunset pink
+                highlight: Color(red: 1.000, green: 0.740, blue: 0.290),   // warm yellow
+                warm: Color(red: 0.690, green: 0.420, blue: 0.860),        // lavender
+                tertiary: Color(red: 0.270, green: 0.680, blue: 0.620),    // muted teal
+                surface: Color(red: 0.995, green: 0.965, blue: 0.945),     // cream
+                surfaceAlt: Color(red: 1.000, green: 0.930, blue: 0.910).opacity(0.85),
+                cardFill: Color.white.opacity(0.78),
+                cardStroke: Color(red: 0.420, green: 0.190, blue: 0.350).opacity(0.16),
+                primaryText: Color(red: 0.135, green: 0.080, blue: 0.180).opacity(0.92),
+                secondaryText: Color(red: 0.135, green: 0.080, blue: 0.180).opacity(0.58),
+                fonts: RunicThemeFonts(body: .rounded, numeric: .rounded),
+                shape: .soft,
+                motion: .slow,
+                density: .generous)
         case .glass:
+            // Aurora-glass: deep indigo base, neon cyan/magenta/violet accents.
+            // Translucent surfaces with hairline glow strokes, springy motion.
+            // The "showroom" theme — bold and kinetic without being noisy.
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
@@ -311,19 +452,26 @@ extension Theme {
                 symbolName: "sparkle.magnifyingglass",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.050, green: 0.090, blue: 0.160),
-                secondary: Color(red: 0.220, green: 0.760, blue: 1.000),
-                accent: Color(red: 0.320, green: 0.890, blue: 0.980),
-                highlight: Color(red: 1.000, green: 0.780, blue: 0.280),
-                warm: Color(red: 1.000, green: 0.390, blue: 0.560),
-                tertiary: Color(red: 0.620, green: 0.420, blue: 1.000),
-                surface: Color(red: 0.018, green: 0.026, blue: 0.052),
-                surfaceAlt: Color(red: 0.130, green: 0.220, blue: 0.320).opacity(0.42),
-                cardFill: Color.white.opacity(0.115),
-                cardStroke: Color.white.opacity(0.24),
+                primary: Color(red: 0.040, green: 0.060, blue: 0.170),
+                secondary: Color(red: 0.240, green: 0.880, blue: 1.000),    // cyan
+                accent: Color(red: 0.540, green: 0.380, blue: 1.000),       // violet
+                highlight: Color(red: 1.000, green: 0.420, blue: 0.760),    // magenta
+                warm: Color(red: 1.000, green: 0.560, blue: 0.230),         // amber
+                tertiary: Color(red: 0.180, green: 0.980, blue: 0.620),     // mint
+                surface: Color(red: 0.020, green: 0.028, blue: 0.060),
+                surfaceAlt: Color(red: 0.080, green: 0.140, blue: 0.260).opacity(0.46),
+                cardFill: Color.white.opacity(0.10),
+                cardStroke: Color(red: 0.540, green: 0.380, blue: 1.000).opacity(0.40),
                 primaryText: Color.white.opacity(0.94),
-                secondaryText: Color.white.opacity(0.66))
+                secondaryText: Color.white.opacity(0.66),
+                fonts: .system,
+                shape: .glassy,
+                motion: .snappy,
+                density: .normal)
         case .terminal:
+            // Phosphor green on near-black. Monospaced everywhere, sharp
+            // corners, ASCII separators, instant motion. The "mission control"
+            // theme — terse and technical.
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
@@ -342,7 +490,11 @@ extension Theme {
                 cardFill: Color(red: 0.000, green: 0.120, blue: 0.078).opacity(0.64),
                 cardStroke: Color(red: 0.000, green: 1.000, blue: 0.533).opacity(0.34),
                 primaryText: Color(red: 0.880, green: 0.965, blue: 0.905),
-                secondaryText: Color(red: 0.640, green: 0.760, blue: 0.690))
+                secondaryText: Color(red: 0.640, green: 0.760, blue: 0.690),
+                fonts: RunicThemeFonts(body: .mono, numeric: .mono),
+                shape: .sharp,
+                motion: .instant,
+                density: .compact)
         }
     }
 
@@ -357,6 +509,48 @@ extension Theme {
 
 extension EnvironmentValues {
     @Entry var runicTheme: RunicThemePalette = Theme.system.palette
+}
+
+/// Theme-aware separator. Renders ASCII `─` for Terminal, a glowing accent line
+/// for Glass / Dark (anything with `shape.separator == .glow`), and a hairline
+/// for everyone else. Use this instead of SwiftUI's `Divider()` inside menu /
+/// preferences surfaces so inner section breaks carry the theme's personality.
+@MainActor
+struct RunicDivider: View {
+    @Environment(\.runicTheme) private var runicTheme
+    var opacity: Double = 1.0
+
+    var body: some View {
+        Group {
+            switch self.runicTheme.shape.separator {
+            case .ascii:
+                Text(String(repeating: "─", count: 96))
+                    .font(.system(size: 9, weight: .regular, design: .monospaced))
+                    .foregroundStyle(self.runicTheme.menuSeparatorColor.opacity(0.55 * self.opacity))
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .clipped()
+            case .glow:
+                Rectangle()
+                    .fill(LinearGradient(
+                        colors: [
+                            .clear,
+                            self.runicTheme.accent.opacity(0.48 * self.opacity),
+                            self.runicTheme.highlight.opacity(0.36 * self.opacity),
+                            .clear,
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing))
+                    .frame(height: 1)
+                    .shadow(color: self.runicTheme.accent.opacity(0.28 * self.opacity), radius: 3.5)
+            case .hairline:
+                Rectangle()
+                    .fill(self.runicTheme.menuSeparatorColor.opacity(0.65 * self.opacity))
+                    .frame(height: 1)
+            }
+        }
+        .accessibilityHidden(true)
+    }
 }
 
 @MainActor

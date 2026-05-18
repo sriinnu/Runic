@@ -445,6 +445,10 @@ public struct TTYCommandRunner {
                 usleep(60000)
             }
 
+            // A fast child can print its final line and exit between read cycles.
+            // Drain once more so prompt responses are not lost on process exit.
+            _ = readChunk()
+
             if stoppedEarly {
                 let settle = max(0, min(options.settleAfterStop, deadline.timeIntervalSinceNow))
                 if settle > 0 {

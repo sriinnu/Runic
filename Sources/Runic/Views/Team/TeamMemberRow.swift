@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 struct TeamMemberRow: View {
+    @Environment(\.runicFonts) private var fonts
     let member: TeamMember
     let teamRole: TeamRole
     let onEditQuota: () -> Void
@@ -18,20 +19,20 @@ struct TeamMemberRow: View {
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 HStack(spacing: RunicSpacing.xs) {
                     Text(self.member.name)
-                        .font(RunicFont.body.weight(.medium))
+                        .font(self.fonts.body.weight(.medium))
 
                     self.roleBadge
                 }
 
                 Text(self.member.email)
-                    .font(RunicFont.caption)
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
 
                 if let quota = self.member.quotaLimit {
                     HStack(spacing: RunicSpacing.xxs) {
                         Text("\(self.member.usedQuota, format: .number) / \(quota, format: .number)")
-                            .font(RunicFont.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(self.fonts.caption2)
+                            .foregroundStyle(self.runicTheme.secondaryText)
 
                         UsageProgressBar(
                             percent: self.member.quotaUsagePercent,
@@ -84,7 +85,7 @@ struct TeamMemberRow: View {
         .padding(.horizontal, RunicSpacing.sm)
         .padding(.vertical, RunicSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(6), style: .continuous)
                 .fill(self.isHovering ? self.runicTheme.menuSubtleFill : Color.clear))
         .onHover { hovering in self.isHovering = hovering }
     }
@@ -96,7 +97,7 @@ struct TeamMemberRow: View {
                 .frame(width: 36, height: 36)
 
             Text(self.member.initials)
-                .font(RunicFont.footnote.weight(.semibold))
+                .font(self.fonts.footnote.weight(.semibold))
                 .foregroundStyle(.white)
         }
     }
@@ -104,14 +105,14 @@ struct TeamMemberRow: View {
     private var roleBadge: some View {
         HStack(spacing: RunicSpacing.xxxs) {
             Image(systemName: self.member.role.icon)
-                .font(RunicFont.caption2)
+                .font(self.fonts.caption2)
             Text(self.member.role.displayName)
-                .font(RunicFont.caption2.weight(.medium))
+                .font(self.fonts.caption2.weight(.medium))
         }
         .padding(.horizontal, RunicSpacing.xxs + RunicSpacing.xxxs)
         .padding(.vertical, RunicSpacing.xxxs)
         .background(
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(4), style: .continuous)
                 .fill(self.member.role.color.opacity(0.15)))
         .foregroundStyle(self.member.role.color)
     }

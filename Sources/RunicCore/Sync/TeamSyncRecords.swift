@@ -42,7 +42,7 @@ public enum TeamSyncZone {
 /// - Zone: TeamCollaborationZone (custom zone)
 public struct TeamRecord: SyncableRecord {
     public let recordID: String
-    public let recordType: String = CloudKitRecordType.team
+    public var recordType: String { CloudKitRecordType.team }
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?
@@ -159,7 +159,7 @@ public struct TeamRecord: SyncableRecord {
 /// - Zone: TeamCollaborationZone (custom zone)
 public struct TeamMembershipRecord: SyncableRecord {
     public let recordID: String
-    public let recordType: String = CloudKitRecordType.teamMembership
+    public var recordType: String { CloudKitRecordType.teamMembership }
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?
@@ -314,7 +314,7 @@ public struct TeamMembershipRecord: SyncableRecord {
 /// - Zone: TeamCollaborationZone (custom zone)
 public struct ProjectOwnershipRecord: SyncableRecord {
     public let recordID: String
-    public let recordType: String = CloudKitRecordType.projectOwnership
+    public var recordType: String { CloudKitRecordType.projectOwnership }
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?
@@ -459,7 +459,7 @@ public struct ProjectOwnershipRecord: SyncableRecord {
 /// - Zone: TeamCollaborationZone (custom zone)
 public struct TeamUsageSnapshotRecord: SyncableRecord {
     public let recordID: String
-    public let recordType: String = CloudKitRecordType.teamUsageSnapshot
+    public var recordType: String { CloudKitRecordType.teamUsageSnapshot }
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?
@@ -754,7 +754,6 @@ private func loadFromKeychain(key: String) -> Data? {
         kSecAttrService as String: "com.sriinnu.athena.Runic",
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
-        kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
         kSecReturnData as String: true,
     ]
     let authContext = LAContext()

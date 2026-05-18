@@ -115,7 +115,9 @@ extension StatusItemController {
                 .runicMenuPanelChrome()
                 .background(alignment: .topLeading) {
                     if self.highlightState.isHighlighted {
-                        RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                        RoundedRectangle(
+                            cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                            style: .continuous)
                             .fill(self.runicTheme.accent.opacity(0.18))
                             .padding(.horizontal, RunicSpacing.compact)
                             .padding(.vertical, RunicSpacing.xxxs)
@@ -138,6 +140,7 @@ extension StatusItemController {
         return view
             .runicTypography()
             .environment(\.runicTheme, palette)
+            .environment(\.runicFonts, RunicFontStore.shared)
             .runicColorScheme(palette)
             .runicMenuPanelChrome()
     }
@@ -164,7 +167,7 @@ extension StatusItemController {
             self.appearance = theme.nsAppearance
             self.wantsLayer = true
             self.layer?.insertSublayer(self.highlightLayer, at: 0)
-            self.highlightLayer.cornerRadius = CGFloat(RunicCornerRadius.sm)
+            self.highlightLayer.cornerRadius = theme.shape.cornerRadius(RunicCornerRadius.sm)
 
             self.iconView.image = image
             self.iconView.contentTintColor = theme.nsSecondaryTextColor
@@ -284,13 +287,15 @@ extension StatusItemController {
         let ledgerDaily = self.store.ledgerDailySummary(for: target)
         let ledgerActiveBlock = self.store.ledgerActiveBlock(for: target)
         let ledgerTopModel = self.store.ledgerTopModel(for: target)
-        let ledgerTopModelContextLabel = ledgerTopModel.flatMap {
-            ProviderContextWindowRegistry.shared.contextLabel(for: target, model: $0.model)?.text
-        }
+        let providerContextStatus = ledgerTopModel.flatMap {
+            ProviderContextWindowRegistry.shared.contextLabel(for: target, model: $0.model)
+        } ?? ProviderContextWindowRegistry.shared.contextLabel(for: target)
+        let ledgerTopModelContextLabel = providerContextStatus?.text
         let ledgerTopProject = self.store.ledgerTopProject(for: target)
         let ledgerSpendForecast = self.store.ledgerSpendForecast(for: target)
         let ledgerTopProjectSpendForecast = self.store.ledgerTopProjectSpendForecast(for: target)
         let ledgerAnomaly = self.store.ledgerAnomalySummary(for: target)
+        let ledgerCompaction = self.store.ledgerCompactionSummary(for: target)
         let ledgerReliability = self.store.ledgerReliabilityScore(for: target)
         let ledgerRouting = self.store.ledgerRoutingRecommendation(for: target)
         let ledgerError = self.store.ledgerError(for: target)
@@ -330,10 +335,12 @@ extension StatusItemController {
             ledgerSpendForecast: ledgerSpendForecast,
             ledgerTopProjectSpendForecast: ledgerTopProjectSpendForecast,
             ledgerAnomaly: ledgerAnomaly,
+            ledgerCompaction: ledgerCompaction,
             ledgerReliability: ledgerReliability,
             ledgerRouting: ledgerRouting,
             ledgerError: ledgerError,
             ledgerUpdatedAt: ledgerUpdatedAt,
+            providerContextStatus: providerContextStatus,
             account: self.account,
             isRefreshing: self.store.isRefreshing,
             lastError: self.store.error(for: target),

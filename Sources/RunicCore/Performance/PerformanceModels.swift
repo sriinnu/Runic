@@ -69,6 +69,9 @@ public struct LatencyMetric: Codable, Sendable, Identifiable {
     /// Provider that handled the request
     public let provider: UsageProvider
 
+    /// Optional provider identifier used when the source is outside the built-in UsageProvider set.
+    public let providerLabel: String?
+
     /// Model used for the request (if available)
     public let model: String?
 
@@ -91,6 +94,7 @@ public struct LatencyMetric: Codable, Sendable, Identifiable {
         id: String,
         requestID: String,
         provider: UsageProvider,
+        providerLabel: String? = nil,
         model: String?,
         startTime: Date,
         endTime: Date,
@@ -101,6 +105,7 @@ public struct LatencyMetric: Codable, Sendable, Identifiable {
         self.id = id
         self.requestID = requestID
         self.provider = provider
+        self.providerLabel = providerLabel
         self.model = model
         self.startTime = startTime
         self.endTime = endTime
@@ -120,6 +125,9 @@ public struct ErrorEvent: Codable, Sendable, Identifiable {
     /// Provider where the error occurred
     public let provider: UsageProvider
 
+    /// Optional provider identifier used when the source is outside the built-in UsageProvider set.
+    public let providerLabel: String?
+
     /// Classification of the error type
     public let errorType: ErrorType
 
@@ -135,6 +143,7 @@ public struct ErrorEvent: Codable, Sendable, Identifiable {
     public init(
         id: String,
         provider: UsageProvider,
+        providerLabel: String? = nil,
         errorType: ErrorType,
         errorMessage: String?,
         retryCount: Int,
@@ -142,6 +151,7 @@ public struct ErrorEvent: Codable, Sendable, Identifiable {
     {
         self.id = id
         self.provider = provider
+        self.providerLabel = providerLabel
         self.errorType = errorType
         self.errorMessage = errorMessage
         self.retryCount = retryCount

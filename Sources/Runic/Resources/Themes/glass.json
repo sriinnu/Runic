@@ -1,0 +1,26 @@
+{
+  "id": "glass",
+  "displayName": "Glass",
+  "tagline": "Aurora glass",
+  "symbolName": "sparkle.magnifyingglass",
+  "isCustom": true,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#0A0F2B",
+    "secondary":     "#3DE0FF",
+    "accent":        "#8A61FF",
+    "highlight":     "#FF6BC2",
+    "warm":          "#FF8F3B",
+    "tertiary":      "#2EFA9E",
+    "surface":       "#05070F",
+    "surfaceAlt":    "#14244275",
+    "cardFill":      "#FFFFFF1A",
+    "cardStroke":    "#8A61FF66",
+    "primaryText":   "#FFFFFFF0",
+    "secondaryText": "#FFFFFFA8"
+  },
+  "fonts":   { "body": "system", "numeric": "system" },
+  "shape":   { "preset": "glassy" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "normal" }
+}

@@ -8,6 +8,7 @@ import SwiftUI
 /// Large bold today usage stat with provider icon — inspired by Tokex "2h 21m Today usage".
 @MainActor
 struct HeroTodayStatView: View {
+    @Environment(\.runicFonts) private var fonts
     let providerIcon: NSImage?
     let tokenCount: Int
     let costUSD: Double?
@@ -27,17 +28,17 @@ struct HeroTodayStatView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xxs) {
                     Text(UsageFormatter.tokenCountString(self.tokenCount))
-                        .font(RunicFont.system(size: 26, weight: .bold))
+                        .font(self.fonts.system(size: 26, weight: .bold))
                         .foregroundStyle(self.runicTheme.primaryText)
                     Text("today")
-                        .font(RunicFont.subheadline)
+                        .font(self.fonts.subheadline)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
             Spacer()
             if let cost = self.costUSD, cost > 0 {
                 Text(UsageFormatter.usdString(cost))
-                    .font(RunicFont.subheadline)
+                    .font(self.fonts.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .padding(.horizontal, RunicSpacing.xs)
@@ -61,6 +62,7 @@ struct HeroTodayStatView: View {
 /// Two side-by-side frosted glass cards: Peak Hour + This Week — inspired by Tokex.
 @MainActor
 struct GlassmorphismStatCardsView: View {
+    @Environment(\.runicFonts) private var fonts
     let peakHourLabel: String
     let peakHourTokens: String
     let hourlySparkline: [Int]
@@ -97,6 +99,7 @@ struct GlassmorphismStatCardsView: View {
 }
 
 private struct GlassStatCard: View {
+    @Environment(\.runicFonts) private var fonts
     let title: String
     let value: String
     let detail: String?
@@ -108,18 +111,18 @@ private struct GlassStatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             Text(self.title)
-                .font(RunicFont.caption2)
+                .font(self.fonts.caption2)
                 .fontWeight(.medium)
                 .foregroundStyle(self.runicTheme.secondaryText)
             MiniSparklineView(data: self.sparkline, color: self.sparkColor)
                 .frame(height: 24)
             Text(self.value)
-                .font(RunicFont.title3)
+                .font(self.fonts.title3)
                 .fontWeight(.bold)
                 .foregroundStyle(self.runicTheme.primaryText)
             if let detail {
                 Text(detail)
-                    .font(RunicFont.caption2)
+                    .font(self.fonts.caption2)
                     .foregroundStyle(self.runicTheme.secondaryText)
             }
         }
@@ -127,21 +130,21 @@ private struct GlassStatCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                    .fill(self.runicTheme.menuCardGradient)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                    .fill(self.runicTheme.cardBackgroundStyle)
                 if !self.runicTheme.isTerminalHUD {
-                    RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
                         .fill(.ultraThinMaterial)
                         .opacity(0.18)
                 }
                 if self.runicTheme.isTerminalHUD {
                     RunicTerminalScanlineOverlay(opacity: 0.55)
-                        .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
                 }
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+            RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
                 .stroke(
                     self.runicTheme.isTerminalHUD
                         ? self.runicTheme.accent.opacity(0.52)
@@ -159,6 +162,7 @@ private struct GlassStatCard: View {
 
 /// Lightweight sparkline with gradient fill — no Swift Charts overhead.
 private struct MiniSparklineView: View {
+    @Environment(\.runicFonts) private var fonts
     let data: [Int]
     let color: Color
 
@@ -218,6 +222,7 @@ private struct MiniSparklineView: View {
 /// Shows "Updated X ago" with second-level precision.
 @MainActor
 struct UpdatedTimestampView: View {
+    @Environment(\.runicFonts) private var fonts
     let updatedAt: Date
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
@@ -227,7 +232,7 @@ struct UpdatedTimestampView: View {
         TimelineView(.periodic(from: .now, by: 5)) { context in
             let text = Self.relativeString(from: self.updatedAt, to: context.date)
             Text(text)
-                .font(RunicFont.caption2)
+                .font(self.fonts.caption2)
                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)

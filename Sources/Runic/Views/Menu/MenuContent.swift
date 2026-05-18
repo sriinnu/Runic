@@ -21,6 +21,7 @@ enum MenuContentMetrics {
 
 @MainActor
 struct MenuContent: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var store: UsageStore
     @Bindable var settings: SettingsStore
     let account: AccountInfo
@@ -62,11 +63,11 @@ struct MenuContent: View {
         case let .text(text, style):
             switch style {
             case .headline:
-                Text(text).font(RunicFont.headline)
+                Text(text).font(self.fonts.headline)
             case .primary:
                 Text(text)
             case .secondary:
-                Text(text).foregroundStyle(self.runicTheme.secondaryText).font(RunicFont.footnote)
+                Text(text).foregroundStyle(self.runicTheme.secondaryText).font(self.fonts.footnote)
             }
         case let .action(title, action):
             Button {

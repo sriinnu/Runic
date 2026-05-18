@@ -18,6 +18,7 @@ struct MenuPopoverActions {
 
 @MainActor
 struct MenuPopoverView: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var store: UsageStore
     @Bindable var settings: SettingsStore
     let account: AccountInfo
@@ -28,6 +29,7 @@ struct MenuPopoverView: View {
 
     @State private var selectedProvider: UsageProvider?
     @State private var selectedPanel: PopoverInsightPanel?
+    @State private var selectedTimelineRange: UsageTimelineChartMenuView.TimeRange = .sevenDays
     @State private var hasAppeared = false
 
     init(
@@ -90,6 +92,12 @@ struct MenuPopoverView: View {
                     }
 
                     self.actionSections(provider: provider, isOverview: isOverview)
+
+                    if palette.id == "retro" {
+                        RetroTaglineFooter()
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, RunicSpacing.xs)
+                    }
                 }
                 .padding(.horizontal, self.outerHorizontalPadding)
                 .padding(.top, RunicSpacing.sm)
@@ -102,19 +110,31 @@ struct MenuPopoverView: View {
         .runicTypography()
         .foregroundStyle(palette.primaryText)
         .tint(palette.accent)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: palette.shape.cornerRadius(18), style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(palette.cardStroke.opacity(palette.isTerminalHUD ? 0.55 : 0.72), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: palette.shape.cornerRadius(18), style: .continuous)
+                .stroke(
+                    style: StrokeStyle(
+                        lineWidth: palette.shape.separator == .glow ? 1.4 : (palette.id == "retro" ? 1.6 : 0.8),
+                        dash: palette.isTerminalHUD ? [3, 3] : []))
+                .foregroundStyle(palette.cardStroke.opacity(palette.isTerminalHUD ? 0.55 : 0.72))
         }
-        .shadow(color: Color.black.opacity(0.24), radius: 24, y: 12)
+        .retroBevel(baseRadius: 18)
+        .shadow(
+            color: Color.black.opacity(palette.shape.separator == .glow ? 0.34 : (palette.id == "retro" ? 0.30 : 0.24)),
+            radius: palette.shape.separator == .glow ? 32 : (palette.id == "retro" ? 18 : 24),
+            y: palette.shape.separator == .glow ? 18 : (palette.id == "retro" ? 8 : 12))
         .onAppear {
-            withAnimation(RunicAnimation.cardEntrance) {
+            withAnimation(palette.motion.curve) {
                 self.hasAppeared = true
             }
+            self.store.ensureLedgerHistoryCovers(days: self.selectedTimelineRange.days)
         }
-        .animation(RunicAnimation.providerSwitch, value: self.selectedProvider)
-        .animation(RunicAnimation.providerSwitch, value: self.selectedPanel)
+        .onChange(of: self.selectedTimelineRange) { _, range in
+            self.store.ensureLedgerHistoryCovers(days: range.days)
+        }
+        .animation(palette.motion.curve, value: self.selectedProvider)
+        .animation(palette.motion.curve, value: self.selectedPanel)
     }
 
     private var contentWidth: CGFloat {
@@ -122,23 +142,19 @@ struct MenuPopoverView: View {
     }
 
     private var outerHorizontalPadding: CGFloat {
-        RunicSpacing.md
+        self.settings.theme.palette.density.padding(RunicSpacing.md)
     }
 
     private var paddedSurfaceContentWidth: CGFloat {
         max(0, self.contentWidth - (RunicSpacing.xs * 2))
     }
 
-    private var actionLabelLeadingInset: CGFloat {
-        RunicSpacing.xs + 18 + RunicSpacing.xs
-    }
-
     private var emptyProviderState: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Label("No active providers", systemImage: "sparkles")
-                .font(RunicFont.subheadline.weight(.semibold))
+                .font(self.fonts.subheadline.weight(.semibold))
             Text("Open Settings, enable a provider, then refresh.")
-                .font(RunicFont.footnote)
+                .font(self.fonts.footnote)
                 .foregroundStyle(self.settings.theme.palette.secondaryText)
         }
         .padding(RunicSpacing.sm)
@@ -169,9 +185,13 @@ struct MenuPopoverView: View {
             onSelect: { provider in
                 self.selectProvider(provider)
             })
-            .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous))
+            .clipShape(RoundedRectangle(
+                cornerRadius: self.settings.theme.palette.shape.cornerRadius(RunicCornerRadius.lg),
+                style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.settings.theme.palette.shape.cornerRadius(RunicCornerRadius.lg),
+                    style: .continuous)
                     .stroke(self.settings.theme.palette.cardStroke.opacity(0.42), lineWidth: 0.6)
             }
             .frame(width: self.contentWidth, alignment: .leading)
@@ -230,9 +250,7 @@ struct MenuPopoverView: View {
                 MenuPopoverSurfaceCard {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
-                            Text("Explore")
-                                .font(RunicFont.caption.weight(.semibold))
-                                .foregroundStyle(self.settings.theme.palette.secondaryText)
+                            RetroSectionHeader(text: "Explore")
                             Spacer()
                         }
 
@@ -256,7 +274,9 @@ struct MenuPopoverView: View {
 
                         self.chartContent(panel: effectivePanel, provider: provider)
                             .id("\(provider.rawValue)-\(effectivePanel.id)")
-                            .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.md, style: .continuous))
+                            .clipShape(RoundedRectangle(
+                                cornerRadius: self.settings.theme.palette.shape.cornerRadius(RunicCornerRadius.md),
+                                style: .continuous))
                             .transition(.opacity.combined(with: .scale(scale: 0.985, anchor: .top)))
                     }
                     .padding(RunicSpacing.xs)
@@ -267,12 +287,11 @@ struct MenuPopoverView: View {
     }
 
     private func exportSection(provider: UsageProvider) -> some View {
-        let scope = UsageExporter.Scope(panel: self.effectivePanel(from: self.availablePanels(for: provider)) ?? .timeline)
+        let panel = self.effectivePanel(from: self.availablePanels(for: provider)) ?? .timeline
+        let scope = UsageExporter.Scope(panel: panel, timelineRange: self.selectedTimelineRange)
         return MenuPopoverSurfaceCard {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                Text("Export \(scope.displayName)")
-                    .font(RunicFont.caption.weight(.semibold))
-                    .foregroundStyle(self.settings.theme.palette.secondaryText)
+                RetroSectionHeader(text: "Export visible \(scope.displayName)")
                 HStack(spacing: RunicSpacing.xs) {
                     MenuPopoverActionButton(
                         title: "CSV",
@@ -285,6 +304,9 @@ struct MenuPopoverView: View {
                         style: .compact,
                         action: { self.actions.exportJSON(scope) })
                 }
+                Text("Exports the selected Explore panel and range.")
+                    .font(self.fonts.caption2)
+                    .foregroundStyle(self.settings.theme.palette.secondaryText)
             }
             .padding(RunicSpacing.xs)
         }
@@ -337,23 +359,27 @@ struct MenuPopoverView: View {
                     })
             }
         case let .text(text, style):
-            if style == .secondary {
+            // Mirror the exact structure of MenuPopoverActionButton so a
+            // status line like "Auto-refresh: Manual" sits at the same X as
+            // the button text above it. An invisible 18pt column stands in
+            // for the icon, then the same 8pt HStack spacing before the text.
+            HStack(spacing: RunicSpacing.xs) {
+                Color.clear.frame(width: 18, height: 1)
                 Text(text)
-                    .font(RunicFont.caption)
-                    .foregroundStyle(self.settings.theme.palette.secondaryText)
-                    .padding(.leading, self.actionLabelLeadingInset)
-                    .padding(.trailing, RunicSpacing.compact)
-                    .padding(.vertical, RunicSpacing.xxxs)
-            } else {
-                Text(text)
-                    .font(style == .headline ? RunicFont.caption.weight(.semibold) : RunicFont.caption)
-                    .foregroundStyle(self.settings.theme.palette.primaryText)
-                    .padding(.leading, self.actionLabelLeadingInset)
-                    .padding(.trailing, RunicSpacing.compact)
-                    .padding(.vertical, RunicSpacing.xxxs)
+                    .font(style == .headline
+                        ? self.fonts.caption.weight(.semibold)
+                        : self.fonts.caption)
+                    .foregroundStyle(style == .secondary
+                        ? self.settings.theme.palette.secondaryText
+                        : self.settings.theme.palette.primaryText)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                Spacer(minLength: RunicSpacing.xs)
             }
+            .padding(.horizontal, RunicSpacing.xs)
+            .padding(.vertical, RunicSpacing.xxxs)
         case .divider:
-            MenuPopoverSeparator()
+            RunicDivider().padding(.vertical, RunicSpacing.xxxs)
         }
     }
 
@@ -439,7 +465,11 @@ struct MenuPopoverView: View {
             UsageTimelineChartMenuView(
                 dailySummaries: self.store.ledgerAllDailySummary(for: provider),
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
-                width: self.paddedSurfaceContentWidth)
+                width: self.paddedSurfaceContentWidth,
+                selectedTimeRange: self.$selectedTimelineRange,
+                onRangeChange: { range in
+                    self.store.ensureLedgerHistoryCovers(days: range.days)
+                })
         case .hourly:
             HourlyActivityChartMenuView(
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
@@ -481,9 +511,10 @@ struct MenuPopoverView: View {
         let metadata = self.store.metadata(for: provider)
         let snapshot = self.store.snapshot(for: provider)
         let ledgerTopModel = self.store.ledgerTopModel(for: provider)
-        let ledgerTopModelContextLabel = ledgerTopModel.flatMap {
-            ProviderContextWindowRegistry.shared.contextLabel(for: provider, model: $0.model)?.text
-        }
+        let providerContextStatus = ledgerTopModel.flatMap {
+            ProviderContextWindowRegistry.shared.contextLabel(for: provider, model: $0.model)
+        } ?? ProviderContextWindowRegistry.shared.contextLabel(for: provider)
+        let ledgerTopModelContextLabel = providerContextStatus?.text
         let credits: CreditsSnapshot? = provider == .codex ? self.store.credits : nil
         let creditsError: String? = provider == .codex ? self.store.lastCreditsError : nil
         let dashboard: OpenAIDashboardSnapshot? = provider == .codex && !self.store.openAIDashboardRequiresLogin
@@ -509,10 +540,12 @@ struct MenuPopoverView: View {
             ledgerSpendForecast: self.store.ledgerSpendForecast(for: provider),
             ledgerTopProjectSpendForecast: self.store.ledgerTopProjectSpendForecast(for: provider),
             ledgerAnomaly: self.store.ledgerAnomalySummary(for: provider),
+            ledgerCompaction: self.store.ledgerCompactionSummary(for: provider),
             ledgerReliability: self.store.ledgerReliabilityScore(for: provider),
             ledgerRouting: self.store.ledgerRoutingRecommendation(for: provider),
             ledgerError: self.store.ledgerError(for: provider),
             ledgerUpdatedAt: self.store.ledgerUpdatedAt(for: provider),
+            providerContextStatus: providerContextStatus,
             account: self.account,
             isRefreshing: self.store.isRefreshing,
             lastError: self.store.error(for: provider),
@@ -641,10 +674,10 @@ private enum PopoverInsightPanel: String, CaseIterable, Identifiable {
 }
 
 private extension UsageExporter.Scope {
-    init(panel: PopoverInsightPanel) {
+    init(panel: PopoverInsightPanel, timelineRange: UsageTimelineChartMenuView.TimeRange) {
         switch panel {
         case .timeline:
-            self = .timeline
+            self = timelineRange.exportScope
         case .hourly:
             self = .hourly
         case .weekly:
@@ -661,7 +694,20 @@ private extension UsageExporter.Scope {
     }
 }
 
+private extension UsageTimelineChartMenuView.TimeRange {
+    var exportScope: UsageExporter.Scope {
+        switch self {
+        case .threeDays: .timeline3d
+        case .sevenDays: .timeline7d
+        case .thirtyDays: .timeline30d
+        case .quarter: .timeline90d
+        case .year: .timeline1y
+        }
+    }
+}
+
 private struct MenuPopoverBackground: View {
+    @Environment(\.runicFonts) private var fonts
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
@@ -682,6 +728,7 @@ private struct MenuPopoverBackground: View {
 }
 
 private struct MenuPopoverSurfaceCard<Content: View>: View {
+    @Environment(\.runicFonts) private var fonts
     @ViewBuilder let content: Content
     @Environment(\.runicTheme) private var runicTheme
 
@@ -690,37 +737,49 @@ private struct MenuPopoverSurfaceCard<Content: View>: View {
     }
 
     var body: some View {
+        let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
+        let strokeIsGlow = self.runicTheme.shape.separator == .glow
+        let isGlass = self.runicTheme.id == "glass"
         self.content
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                    .fill(self.runicTheme.menuSubtleFill)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(isGlass ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(self.runicTheme.menuSubtleFill))
                     .background {
-                        if self.runicTheme.id == "glass" {
-                            RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                                .fill(.thinMaterial)
+                        if isGlass {
+                            // Soft accent bloom behind the frost — what makes
+                            // Glass read as "club showroom" instead of "just
+                            // another translucent panel".
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .fill(
+                                    RadialGradient(
+                                        colors: [
+                                            self.runicTheme.accent.opacity(0.32),
+                                            self.runicTheme.highlight.opacity(0.18),
+                                            .clear,
+                                        ],
+                                        center: .topLeading,
+                                        startRadius: 12,
+                                        endRadius: 220))
+                                .blur(radius: 18)
                         }
                     }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.lg, style: .continuous)
-                    .stroke(self.runicTheme.cardStroke.opacity(self.runicTheme.isTerminalHUD ? 0.60 : 0.85), lineWidth: 0.7)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(
+                        self.runicTheme.cardStroke.opacity(self.runicTheme.isTerminalHUD ? 0.60 : 0.85),
+                        lineWidth: strokeIsGlow ? 1.2 : (self.runicTheme.id == "retro" ? 1.3 : 0.7))
+                    .shadow(color: strokeIsGlow ? self.runicTheme.accent.opacity(0.45) : .clear, radius: 6)
             }
+            .retroBevel(baseRadius: RunicCornerRadius.lg)
     }
 }
 
-private struct MenuPopoverSeparator: View {
-    @Environment(\.runicTheme) private var runicTheme
-
-    var body: some View {
-        Rectangle()
-            .fill(self.runicTheme.menuSeparatorColor.opacity(0.72))
-            .frame(height: 1)
-            .padding(.vertical, RunicSpacing.xxxs)
-    }
-}
+// MenuPopoverSeparator removed — superseded by `RunicDivider` (Sources/Runic/Core/RunicTheme.swift).
 
 private struct MenuPopoverChip: View {
+    @Environment(\.runicFonts) private var fonts
     let title: String
     let systemImage: String
     let isSelected: Bool
@@ -733,10 +792,10 @@ private struct MenuPopoverChip: View {
         Button(action: self.action) {
             HStack(spacing: RunicSpacing.xxs) {
                 Image(systemName: self.systemImage)
-                    .font(RunicFont.caption.weight(.semibold))
+                    .font(self.fonts.caption.weight(.semibold))
                     .frame(width: 15)
                 Text(self.title)
-                    .font(RunicFont.caption.weight(self.isSelected ? .semibold : .medium))
+                    .font(self.fonts.caption.weight(self.isSelected ? .semibold : .medium))
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -744,41 +803,81 @@ private struct MenuPopoverChip: View {
             .padding(.vertical, RunicSpacing.xxs + 1)
             .foregroundStyle(self.foreground)
             .background {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                    style: .continuous)
                     .fill(self.background)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                    .stroke(self.border, lineWidth: 0.7)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                    style: .continuous)
+                    .stroke(self.border, lineWidth: self.runicTheme.shape.separator == .glow ? 1.2 : 0.7)
+                    .shadow(
+                        color: self.glowColor,
+                        radius: self.glowRadius)
             }
             .scaleEffect(self.isHovered ? 1.015 : 1)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            withAnimation(RunicAnimation.hoverFeedback) {
+            withAnimation(self.runicTheme.motion.curve) {
                 self.isHovered = hovering
             }
         }
     }
 
     private var foreground: Color {
-        self.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText
+        // Terminal inverse video: hovered chip flips fg/bg so it reads like a
+        // CRT cursor highlight rather than a tinted background.
+        if self.runicTheme.isTerminalHUD, self.isHovered, !self.isSelected {
+            return self.runicTheme.surface
+        }
+        return self.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText
     }
 
     private var background: Color {
-        if self.isSelected { return self.runicTheme.accent.opacity(self.runicTheme.isTerminalHUD ? 0.16 : 0.18) }
-        if self.isHovered { return self.runicTheme.menuHoverFill }
+        if self.isSelected {
+            return self.runicTheme.accent.opacity(self.runicTheme.isTerminalHUD ? 0.16 : 0.18)
+        }
+        if self.isHovered {
+            if self.runicTheme.isTerminalHUD {
+                // CRT block highlight — solid phosphor at high opacity.
+                return self.runicTheme.accent.opacity(0.88)
+            }
+            if self.runicTheme.shape.separator == .glow {
+                // Glass / Dark — denser accent wash plus glow underlay.
+                return self.runicTheme.accent.opacity(0.24)
+            }
+            // Daybreak / Light — warm tint, kept soft.
+            return self.runicTheme.accent.opacity(0.14)
+        }
         return self.runicTheme.cardFill.opacity(0.34)
     }
 
     private var border: Color {
-        self.isSelected
+        return self.isSelected
             ? self.runicTheme.accent.opacity(0.64)
             : self.runicTheme.cardStroke.opacity(self.isHovered ? 0.72 : 0.42)
+    }
+
+    /// Neon halo color for glow-style themes (Glass, Dark). Only shows on
+    /// hover/selection — keeps idle state clean.
+    private var glowColor: Color {
+        guard self.runicTheme.shape.separator == .glow else { return .clear }
+        if self.isSelected { return self.runicTheme.accent.opacity(0.55) }
+        if self.isHovered { return self.runicTheme.accent.opacity(0.55) }
+        return .clear
+    }
+
+    private var glowRadius: CGFloat {
+        guard self.runicTheme.shape.separator == .glow else { return 0 }
+        return self.isSelected ? 6 : (self.isHovered ? 8 : 0)
     }
 }
 
 private struct MenuPopoverActionButton: View {
+    @Environment(\.runicFonts) private var fonts
     enum Style {
         case normal
         case compact
@@ -810,31 +909,67 @@ private struct MenuPopoverActionButton: View {
             .padding(.horizontal, self.style == .compact ? RunicSpacing.compact : RunicSpacing.xs)
             .padding(.vertical, self.style == .compact ? RunicSpacing.xxs : RunicSpacing.compact)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .foregroundStyle(self.runicTheme.primaryText)
+            .foregroundStyle(self.themedForeground)
             .background {
-                RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous)
-                    .fill(self.isHovered ? self.runicTheme.menuHoverFill : Color.clear)
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                    .fill(self.themedHoverFill)
             }
-            .contentShape(RoundedRectangle(cornerRadius: RunicCornerRadius.sm, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                    .stroke(self.themedHoverBorder, lineWidth: self.runicTheme.shape.separator == .glow ? 1.0 : 0.6)
+                    .shadow(color: self.themedGlow, radius: self.isHovered ? 6 : 0)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous))
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            withAnimation(RunicAnimation.hoverFeedback) {
+            withAnimation(self.runicTheme.motion.curve) {
                 self.isHovered = hovering
             }
         }
     }
 
+    /// Foreground colour adapts to Terminal inverse-video on hover.
+    private var themedForeground: Color {
+        if self.runicTheme.isTerminalHUD, self.isHovered {
+            return self.runicTheme.surface
+        }
+        return self.runicTheme.primaryText
+    }
+
+    /// Per-theme hover background. Terminal: solid phosphor block (inverse
+    /// video). Glow themes: denser accent tint. Default: light hover.
+    private var themedHoverFill: Color {
+        guard self.isHovered else { return .clear }
+        if self.runicTheme.isTerminalHUD { return self.runicTheme.accent.opacity(0.88) }
+        if self.runicTheme.shape.separator == .glow { return self.runicTheme.accent.opacity(0.22) }
+        return self.runicTheme.menuHoverFill
+    }
+
+    private var themedHoverBorder: Color {
+        guard self.isHovered, self.runicTheme.shape.separator == .glow else { return .clear }
+        return self.runicTheme.accent.opacity(0.55)
+    }
+
+    private var themedGlow: Color {
+        guard self.isHovered, self.runicTheme.shape.separator == .glow else { return .clear }
+        return self.runicTheme.accent.opacity(0.45)
+    }
+
     private var titleFont: Font {
-        self.style == .compact ? RunicFont.caption.weight(.medium) : RunicFont.body.weight(.medium)
+        // Match the surrounding section text — every other label in the
+        // popover sits at footnote / caption. The previous `.body` choice
+        // made `Settings...` and `Switch Account…` look oversized.
+        self.style == .compact ? self.fonts.caption.weight(.medium) : self.fonts.footnote.weight(.medium)
     }
 
     private var iconFont: Font {
-        self.style == .compact ? RunicFont.caption.weight(.semibold) : RunicFont.body.weight(.medium)
+        self.style == .compact ? self.fonts.caption.weight(.semibold) : self.fonts.footnote.weight(.medium)
     }
 }
 
 private struct ModelQuotaWindowsPopoverView: View {
+    @Environment(\.runicFonts) private var fonts
     let windows: [RateWindow]
     let width: CGFloat
     @Environment(\.runicTheme) private var runicTheme
@@ -842,20 +977,20 @@ private struct ModelQuotaWindowsPopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Models")
-                .font(RunicFont.caption.weight(.semibold))
+                .font(self.fonts.caption.weight(.semibold))
             if self.windows.isEmpty {
                 Text("No model windows available.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 ForEach(Array(self.windows.enumerated()), id: \.offset) { _, window in
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         HStack {
                             Text(UsageFormatter.modelDisplayName(window.label ?? "Model"))
-                                .font(RunicFont.caption.weight(.medium))
+                                .font(self.fonts.caption.weight(.medium))
                             Spacer()
                             Text("\(Int(window.usedPercent.rounded()))% used")
-                                .font(RunicFont.caption)
+                                .font(self.fonts.caption)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                         }
                         UsageProgressBar(
@@ -864,7 +999,7 @@ private struct ModelQuotaWindowsPopoverView: View {
                             accessibilityLabel: "Model quota")
                         if let reset = self.resetText(for: window) {
                             Text(reset)
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                         }
                     }

@@ -5,6 +5,7 @@ import SwiftUI
 
 @MainActor
 private struct FloatingOrb: View {
+    @Environment(\.runicFonts) private var fonts
     let color: Color
     let size: CGFloat
     let speed: Double
@@ -32,6 +33,7 @@ private struct FloatingOrb: View {
 
 @MainActor
 private struct LiquidLinkButton: View {
+    @Environment(\.runicFonts) private var fonts
     let icon: String
     let title: String
     let url: String
@@ -76,11 +78,13 @@ private struct LiquidLinkButton: View {
 
 @MainActor
 struct AboutPane: View {
+    @Environment(\.runicFonts) private var fonts
     let updater: UpdaterProviding
     @State private var iconHover = false
     @State private var appeared = false
     @AppStorage("autoUpdateEnabled") private var autoUpdateEnabled: Bool = true
     @State private var didLoadUpdaterState = false
+    @Environment(\.runicTheme) private var runicTheme
 
     private var versionString: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–"
@@ -146,7 +150,7 @@ struct AboutPane: View {
                         Image(nsImage: image)
                             .resizable()
                             .frame(width: 96, height: 96)
-                            .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.xl, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xl), style: .continuous))
                             .shadow(
                                 color: .black.opacity(0.18),
                                 radius: self.iconHover ? 16 : 8,
@@ -166,31 +170,31 @@ struct AboutPane: View {
 
             VStack(spacing: RunicSpacing.xxs) {
                 Text("Runic")
-                    .font(RunicFont.system(size: 26, weight: .bold))
+                    .font(self.fonts.system(size: 26, weight: .bold))
 
                 Text("Version \(self.versionString)")
-                    .font(RunicFont.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.system(size: 12, weight: .medium))
+                    .foregroundStyle(self.runicTheme.secondaryText)
 
                 if let buildTimestamp {
                     Text("Built \(buildTimestamp)")
-                        .font(RunicFont.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                        .font(self.fonts.system(size: 11))
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
 
             VStack(spacing: RunicSpacing.xs) {
                 Text("पूर्णमदः पूर्णमिदं पूर्णात् पूर्णमुदच्यते")
                     .font(.system(size: 12, weight: .regular, design: .serif))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .multilineTextAlignment(.center)
                 Text("From fullness comes fullness.\nWhen fullness is taken from fullness,\nfullness alone remains.")
-                    .font(RunicFont.system(size: 11.5, weight: .regular))
-                    .foregroundStyle(.tertiary)
+                    .font(self.fonts.system(size: 11.5, weight: .regular))
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
                 Text("— Isha Upanishad")
-                    .font(RunicFont.system(size: 10, weight: .medium))
+                    .font(self.fonts.system(size: 10, weight: .medium))
                     .foregroundStyle(.quaternary)
             }
         }
@@ -244,8 +248,8 @@ struct AboutPane: View {
                 }
             } else {
                 Text(self.updater.unavailableReason ?? "Updates unavailable in this build.")
-                    .font(RunicFont.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .font(self.fonts.system(size: 12))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -257,9 +261,9 @@ struct AboutPane: View {
     // MARK: - Footer
 
     private var footerSection: some View {
-        Text("© 2025–2026 Srinivas Pendela. MIT License.")
-            .font(RunicFont.system(size: 11))
-            .foregroundStyle(.tertiary)
+        Text("© 2025–2026 Srinivas Pendela. AGPL-3.0-or-later.")
+            .font(self.fonts.system(size: 11))
+            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             .frame(maxWidth: .infinity)
             .opacity(self.appeared ? 1 : 0)
             .animation(.easeOut(duration: 0.6).delay(0.35), value: self.appeared)

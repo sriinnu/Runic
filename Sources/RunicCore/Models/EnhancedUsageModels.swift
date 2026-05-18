@@ -53,7 +53,7 @@ public struct UsageResetInfo: Codable, Sendable, Hashable {
 
     /// Human-readable reset description
     public var resetDescription: String {
-        if let resetAt, let remaining = timeUntilReset, remaining > 0 {
+        if let remaining = timeUntilReset, remaining > 0 {
             let hours = Int(remaining / 3600)
             let minutes = Int((remaining.truncatingRemainder(dividingBy: 3600)) / 60)
 

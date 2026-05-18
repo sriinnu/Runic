@@ -11,11 +11,13 @@ struct CLIProviderSelectionTests {
         #expect(providers.contains(.gemini))
         #expect(providers.contains(.cursor))
         #expect(providers.contains(.factory))
+        #expect(providers.contains(.localLLM))
     }
 
     @Test
     func `provider enum resolves insights supported values`() {
         #expect(UsageProvider(rawValue: "codex") == .codex)
         #expect(UsageProvider(rawValue: "claude") == .claude)
+        #expect(UsageProvider(rawValue: "local-llm") == .localLLM)
     }
 }

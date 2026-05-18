@@ -6,11 +6,14 @@ import SwiftUI
 /// Y-axis 0-100%, two colored lines for different rate windows.
 @MainActor
 struct UsageWindowComparisonChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private struct PercentPoint: Identifiable {
         let id: String
+        let dayKey: String
         let date: Date
         let percent: Double
         let series: String
+        let tokens: Int
     }
 
     private let dailySummaries: [UsageLedgerDailySummary]
@@ -19,6 +22,7 @@ struct UsageWindowComparisonChartMenuView: View {
     private let primaryPercent: Double
     private let secondaryPercent: Double?
     private let width: CGFloat
+    @State private var selectedDayKey: String?
     @Environment(\.runicTheme) private var runicTheme
 
     init(
@@ -49,15 +53,19 @@ struct UsageWindowComparisonChartMenuView: View {
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Windows")
-                .font(RunicFont.subheadline)
+                .font(self.fonts.subheadline)
                 .fontWeight(.semibold)
 
             if model.points.isEmpty {
                 Text("No usage window data available.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(height: 80)
             } else {
+                let detail = self.detailText(model: model)
+                let isTerminal = self.runicTheme.isTerminalHUD
+                let isGlow = self.runicTheme.shape.separator == .glow
+                let lineWidth: CGFloat = isGlow ? 2.4 : (isTerminal ? 1.4 : 2)
                 Chart {
                     ForEach(model.points) { point in
                         LineMark(
@@ -65,8 +73,13 @@ struct UsageWindowComparisonChartMenuView: View {
                             y: .value("%", point.percent),
                             series: .value("Window", point.series))
                             .foregroundStyle(point.series == self.primaryLabel ? primaryColor : secondaryColor)
-                            .lineStyle(StrokeStyle(lineWidth: 2))
-                            .interpolationMethod(.catmullRom)
+                            .lineStyle(StrokeStyle(lineWidth: lineWidth))
+                            .interpolationMethod(isTerminal ? .linear : .catmullRom)
+                    }
+                    if let selected = self.selectedPoint(model: model) {
+                        RuleMark(x: .value("Date", selected.date))
+                            .foregroundStyle(self.runicTheme.primaryText.opacity(0.26))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 2]))
                     }
                 }
                 .chartYScale(domain: 0...100)
@@ -77,7 +90,7 @@ struct UsageWindowComparisonChartMenuView: View {
                         AxisValueLabel {
                             if let pct = value.as(Int.self) {
                                 Text("\(pct)%")
-                                    .font(RunicFont.caption2)
+                                    .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
@@ -88,12 +101,24 @@ struct UsageWindowComparisonChartMenuView: View {
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4, 3]))
                             .foregroundStyle(self.runicTheme.chartGridColor.opacity(0.7))
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .chartLegend(.hidden)
                 .frame(height: RunicSpacing.chartHeight + 20)
+                .help(detail)
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        ZStack(alignment: .topLeading) {
+                            MouseLocationReader { location in
+                                self.updateSelection(location: location, model: model, proxy: proxy, geo: geo)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                        }
+                    }
+                }
 
                 // Legend
                 HStack(spacing: RunicSpacing.md) {
@@ -102,7 +127,7 @@ struct UsageWindowComparisonChartMenuView: View {
                             .fill(primaryColor)
                             .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                         Text(self.primaryLabel)
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.secondaryText)
                     }
                     if let secondaryLabel = self.secondaryLabel {
@@ -111,11 +136,18 @@ struct UsageWindowComparisonChartMenuView: View {
                                 .fill(secondaryColor)
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(secondaryLabel)
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                         }
                     }
                 }
+
+                Text(detail)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(height: 16, alignment: .leading)
             }
         }
         .chartPanelStyle(width: self.width)
@@ -127,6 +159,8 @@ struct UsageWindowComparisonChartMenuView: View {
 
     private struct ComparisonModel {
         let points: [PercentPoint]
+        let pointsByDayKey: [String: [PercentPoint]]
+        let dateKeys: [(key: String, date: Date)]
     }
 
     private static func makeModel(
@@ -171,20 +205,86 @@ struct UsageWindowComparisonChartMenuView: View {
             let primaryPct = min(100, Double(tokens) * primaryScale)
             points.append(PercentPoint(
                 id: "\(key)-primary",
+                dayKey: key,
                 date: date,
                 percent: primaryPct,
-                series: primaryLabel))
+                series: primaryLabel,
+                tokens: tokens))
 
             if secondaryLabel != nil {
                 let secondaryPct = min(100, Double(tokens) * secondaryScale)
                 points.append(PercentPoint(
                     id: "\(key)-secondary",
+                    dayKey: key,
                     date: date,
                     percent: secondaryPct,
-                    series: secondaryLabel ?? ""))
+                    series: secondaryLabel ?? "",
+                    tokens: tokens))
             }
         }
 
-        return ComparisonModel(points: points)
+        let grouped = Dictionary(grouping: points, by: \.dayKey)
+        let dateKeys = grouped.compactMap { key, values -> (key: String, date: Date)? in
+            guard let date = values.first?.date else { return nil }
+            return (key, date)
+        }
+        .sorted { $0.date < $1.date }
+
+        return ComparisonModel(points: points, pointsByDayKey: grouped, dateKeys: dateKeys)
+    }
+
+    private func updateSelection(
+        location: CGPoint?,
+        model: ComparisonModel,
+        proxy: ChartProxy,
+        geo: GeometryProxy)
+    {
+        guard let location else {
+            if self.selectedDayKey != nil { self.selectedDayKey = nil }
+            return
+        }
+        guard let plotAnchor = proxy.plotFrame else { return }
+        let plotFrame = geo[plotAnchor]
+        guard plotFrame.contains(location) else {
+            if self.selectedDayKey != nil { self.selectedDayKey = nil }
+            return
+        }
+        let xInPlot = location.x - plotFrame.origin.x
+        guard let date: Date = proxy.value(atX: xInPlot) else { return }
+
+        var bestKey: String?
+        var bestDistance: TimeInterval = .greatestFiniteMagnitude
+        for entry in model.dateKeys {
+            let distance = abs(entry.date.timeIntervalSince(date))
+            if distance < bestDistance {
+                bestDistance = distance
+                bestKey = entry.key
+            }
+        }
+        if let bestKey, self.selectedDayKey != bestKey {
+            self.selectedDayKey = bestKey
+        }
+    }
+
+    private func selectedPoint(model: ComparisonModel) -> PercentPoint? {
+        guard let selectedDayKey,
+              let points = model.pointsByDayKey[selectedDayKey]
+        else {
+            return nil
+        }
+        return points.first
+    }
+
+    private func detailText(model: ComparisonModel) -> String {
+        guard let selected = self.selectedPoint(model: model) else {
+            return "Hover a window day for utilization"
+        }
+        let points = model.pointsByDayKey[selected.dayKey] ?? [selected]
+        let dayLabel = selected.date.formatted(.dateTime.month(.abbreviated).day())
+        var parts = ["\(dayLabel): \(UsageFormatter.tokenCountString(selected.tokens)) tokens"]
+        for point in points {
+            parts.append("\(point.series) \(Int(point.percent.rounded()))%")
+        }
+        return parts.joined(separator: " · ")
     }
 }

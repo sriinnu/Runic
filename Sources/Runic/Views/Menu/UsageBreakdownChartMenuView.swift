@@ -4,6 +4,7 @@ import SwiftUI
 
 @MainActor
 struct UsageBreakdownChartMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     private struct Point: Identifiable {
         let id: String
         let date: Date
@@ -34,7 +35,7 @@ struct UsageBreakdownChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
                 Text("No usage breakdown data.")
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 Chart {
@@ -60,7 +61,7 @@ struct UsageBreakdownChartMenuView: View {
                         AxisGridLine().foregroundStyle(Color.clear)
                         AxisTick().foregroundStyle(Color.clear)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
-                            .font(RunicFont.caption2)
+                            .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
@@ -90,13 +91,13 @@ struct UsageBreakdownChartMenuView: View {
                 let detail = self.detailLines(model: model)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(detail.primary)
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(height: 16, alignment: .leading)
                     Text(detail.secondary ?? " ")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -115,7 +116,7 @@ struct UsageBreakdownChartMenuView: View {
                                 .fill(serviceColors.indices.contains(index) ? serviceColors[index] : self.runicTheme.accent)
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(service)
-                                .font(RunicFont.caption2)
+                                .font(self.fonts.caption2)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                                 .lineLimit(1)
                         }

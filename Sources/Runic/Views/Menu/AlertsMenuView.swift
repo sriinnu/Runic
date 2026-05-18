@@ -5,6 +5,7 @@ import SwiftUI
 /// Menu view displaying active alerts with severity indicators and acknowledgement
 @MainActor
 struct AlertsMenuView: View {
+    @Environment(\.runicFonts) private var fonts
     // MARK: - Types
 
     typealias AlertEntry = AlertRuleStore.AlertHistoryEntry
@@ -49,7 +50,7 @@ struct AlertsMenuView: View {
     private var headerSection: some View {
         HStack(alignment: .firstTextBaseline) {
             Text("Alerts")
-                .font(RunicFont.headline)
+                .font(self.fonts.headline)
                 .fontWeight(.semibold)
 
             if self.unacknowledgedCount > 0 {
@@ -67,7 +68,7 @@ struct AlertsMenuView: View {
                     Task { await self.loadAlerts() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .font(RunicFont.caption)
+                        .font(self.fonts.caption)
                         .foregroundStyle(self.secondaryTextColor)
                 }
                 .buttonStyle(.plain)
@@ -78,12 +79,12 @@ struct AlertsMenuView: View {
 
     private var unacknowledgedBadge: some View {
         Text("\(self.unacknowledgedCount)")
-            .font(RunicFont.caption2)
+            .font(self.fonts.caption2)
             .fontWeight(.semibold)
             .foregroundStyle(.white)
             .padding(.horizontal, RunicSpacing.compact)
             .padding(.vertical, RunicSpacing.xxxs)
-            .background(Capsule().fill(Color.red))
+            .background(Capsule().fill(self.runicTheme.warm))
             .accessibilityLabel(
                 "\(self.unacknowledgedCount) unacknowledged alert\(self.unacknowledgedCount == 1 ? "" : "s")")
     }
@@ -109,11 +110,11 @@ struct AlertsMenuView: View {
     private var emptyStateView: some View {
         VStack(spacing: RunicSpacing.xs) {
             Image(systemName: "checkmark.shield")
-                .font(RunicFont.title2)
+                .font(self.fonts.title2)
                 .foregroundStyle(self.secondaryTextColor)
 
             Text("No active alerts")
-                .font(RunicFont.subheadline)
+                .font(self.fonts.subheadline)
                 .foregroundStyle(self.secondaryTextColor)
         }
         .frame(maxWidth: .infinity)
@@ -151,6 +152,7 @@ struct AlertsMenuView: View {
 // MARK: - Alert Row
 
 private struct AlertRow: View {
+    @Environment(\.runicFonts) private var fonts
     let alert: AlertsMenuView.AlertEntry
     let onAcknowledge: () async -> Void
 
@@ -164,13 +166,13 @@ private struct AlertRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(self.alert.message)
-                    .font(RunicFont.footnote)
+                    .font(self.fonts.footnote)
                     .foregroundStyle(self.primaryTextColor)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(self.timeAgo(from: self.alert.triggeredAt))
-                    .font(RunicFont.caption2)
+                    .font(self.fonts.caption2)
                     .foregroundStyle(self.secondaryTextColor)
             }
 
@@ -182,7 +184,17 @@ private struct AlertRow: View {
         }
         .padding(RunicSpacing.xs)
         .background(self.backgroundStyle)
-        .clipShape(RoundedRectangle(cornerRadius: RunicCornerRadius.sm))
+        .overlay(self.glowStroke)
+        .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm)))
+    }
+
+    /// Glass/Dark glow stroke around unacknowledged alerts — accent halo
+    /// makes severity feel kinetic. Other themes get nothing (clean).
+    private var glowStroke: some View {
+        let active = !self.alert.acknowledged && self.runicTheme.shape.separator == .glow
+        return RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
+            .strokeBorder(active ? self.severityColor.opacity(0.55) : .clear, lineWidth: active ? 1.2 : 0)
+            .shadow(color: active ? self.severityColor.opacity(0.40) : .clear, radius: active ? 5 : 0)
     }
 
     private var severityIcon: some View {
@@ -190,7 +202,7 @@ private struct AlertRow: View {
         let color = self.severityColor
 
         return Image(systemName: icon)
-            .font(RunicFont.caption)
+            .font(self.fonts.caption)
             .foregroundStyle(color)
             .frame(width: 16, alignment: .center)
     }
@@ -231,7 +243,7 @@ private struct AlertRow: View {
                     .frame(width: 12, height: 12)
             } else {
                 Image(systemName: "checkmark.circle")
-                    .font(RunicFont.caption)
+                    .font(self.fonts.caption)
                     .foregroundStyle(self.secondaryTextColor)
             }
         }

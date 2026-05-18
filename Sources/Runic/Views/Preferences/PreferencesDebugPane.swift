@@ -4,8 +4,10 @@ import SwiftUI
 
 @MainActor
 struct DebugPane: View {
+    @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
+    @Environment(\.runicTheme) private var runicTheme
     @State private var currentLogProvider: UsageProvider = .codex
     @State private var currentFetchProvider: UsageProvider = .codex
     @State private var isLoadingLog = false
@@ -128,14 +130,14 @@ struct DebugPane: View {
                 ZStack(alignment: .topLeading) {
                     ScrollView {
                         Text(self.displayedLog)
-                            .font(RunicFont.footnote)
+                            .font(self.fonts.footnote)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(RunicSpacing.xs)
                     }
                     .frame(minHeight: 160, maxHeight: 220)
                     .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(RunicCornerRadius.sm)
+                    .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
 
                     if self.isLoadingLog {
                         ProgressView()
@@ -160,14 +162,14 @@ struct DebugPane: View {
 
                 ScrollView {
                     Text(self.fetchAttemptsText(for: self.currentFetchProvider))
-                        .font(RunicFont.footnote)
+                        .font(self.fonts.footnote)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(RunicSpacing.xs)
                 }
                 .frame(minHeight: 120, maxHeight: 220)
                 .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(RunicCornerRadius.sm)
+                .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
             }
 
             SettingsSection(
@@ -185,14 +187,14 @@ struct DebugPane: View {
                     Text(self.store.openAIDashboardCookieImportDebugLog?.isEmpty == false
                         ? (self.store.openAIDashboardCookieImportDebugLog ?? "")
                         : "No log yet. Enable \"Access OpenAI via web\" in General to run an import.")
-                        .font(RunicFont.footnote)
+                        .font(self.fonts.footnote)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(RunicSpacing.xs)
                 }
                 .frame(minHeight: 120, maxHeight: 180)
                 .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(RunicCornerRadius.sm)
+                .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
             }
 
             SettingsSection(
@@ -212,8 +214,8 @@ struct DebugPane: View {
 
                     if let status = self.costCacheStatus {
                         Text(status)
-                            .font(RunicFont.footnote)
-                            .foregroundStyle(.tertiary)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
                 }
             }
@@ -313,35 +315,35 @@ struct DebugPane: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Effective PATH")
-                        .font(RunicFont.callout.weight(.semibold))
+                        .font(self.fonts.callout.weight(.semibold))
                     ScrollView {
                         Text(self.store.pathDebugInfo.effectivePATH.isEmpty
                             ? "Unavailable"
                             : self.store.pathDebugInfo.effectivePATH)
-                            .font(RunicFont.footnote)
+                            .font(self.fonts.footnote)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(RunicSpacing.xs)
                     }
                     .frame(minHeight: 60, maxHeight: 110)
                     .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(RunicCornerRadius.sm)
+                    .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
                 }
 
                 if let loginPATH = self.store.pathDebugInfo.loginShellPATH {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         Text("Login shell PATH (startup capture)")
-                            .font(RunicFont.callout.weight(.semibold))
+                            .font(self.fonts.callout.weight(.semibold))
                         ScrollView {
                             Text(loginPATH)
-                                .font(RunicFont.footnote)
+                                .font(self.fonts.footnote)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(RunicSpacing.xs)
                         }
                         .frame(minHeight: 60, maxHeight: 110)
                         .background(Color(NSColor.textBackgroundColor))
-                        .cornerRadius(RunicCornerRadius.sm)
+                        .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
                     }
                 }
             }
@@ -405,9 +407,9 @@ struct DebugPane: View {
     private func binaryRow(title: String, value: String?) -> some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text(title)
-                .font(RunicFont.callout.weight(.semibold))
+                .font(self.fonts.callout.weight(.semibold))
             Text(value ?? "Not found")
-                .font(RunicFont.footnote)
+                .font(self.fonts.footnote)
                 .foregroundStyle(value == nil ? .secondary : .primary)
         }
     }
