@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+
+## 2.2.0 — 2026-05-19
+- Themes: add Retro as the new default theme — a System-7 inspired parchment + navy palette with asymmetric bevels on every surface, plain-text email + tag-style plan badge in the provider hero, beveled checkboxes, and a VT323 pixel tagline footer.
+- Themes: move every palette to JSON under `Resources/Themes/` with `$systemColorName[@opacity]` tokens so adaptive colors stay reactive; Swift fallback remains as a safety net but `ThemeLoader` is the runtime source of truth.
+- Themes: remove the weakest themes (nocturne, pine, prism) and migrate existing users to daybreak; first-launch defaults to retro.
+- Typography: make font selection dynamic via an `@Observable` font store so swaps propagate through the live SwiftUI tree without restart; bundle Geist + GeistMono + VT323, remove unused Caveat/Inconsolata/SpaceMono-Bold.
+- Polish: migrate hardcoded padding / corner radius / opacity values to `RunicSpacing`, `RunicCornerRadius`, and `RunicColors.Opacity` tokens across menu and preferences views.
 - Menu: export actions now follow the selected Explore panel and timeline range, including scoped 3d/7d/30d/90d/1y timeline exports.
 - Charts: add hover details/tooltips for timeline, hourly, weekly, utilization, windows, model, and project breakdown panels.
 - Projects: replace opaque "Unknown project" UX with "Unattributed usage" detail text that explains when provider logs lack readable project identity.
