@@ -125,6 +125,12 @@ struct RunicTests {
         #expect(ids.contains(RunicFontChoice.commitMono.id))
         #expect(ids.contains(RunicFontChoice.geist.id))
         #expect(ids.contains(RunicFontChoice.geistMono.id))
+        if RunicTypography.discoverBundledFontFamilies().contains(RunicFontChoice.berkeleyMono.id) {
+            #expect(ids.contains(RunicFontChoice.berkeleyMono.id))
+        }
+        if RunicTypography.discoverBundledFontFamilies().contains(RunicFontChoice.operatorMono.id) {
+            #expect(ids.contains(RunicFontChoice.operatorMono.id))
+        }
         if NSFontManager.shared.availableMembers(ofFontFamily: RunicFontChoice.tx02.id)?.isEmpty == false {
             #expect(ids.contains(RunicFontChoice.tx02.id))
         }
@@ -142,16 +148,26 @@ struct RunicTests {
 
     @MainActor
     @Test
-    func `installed TX-02 is treated as a curated mono face`() {
-        guard NSFontManager.shared.availableMembers(ofFontFamily: RunicFontChoice.tx02.id)?.isEmpty == false else {
-            return
-        }
+    func `licensed Berkeley and Operator faces are treated as curated mono faces when present`() {
+        RunicTypography.registerFonts()
 
         let ids = Set(RunicFontChoice.availableChoices().map(\.id))
-        let rules = RunicFontRules.rules(for: RunicFontChoice.tx02.id)
+        let bundledFamilies = Set(RunicTypography.discoverBundledFontFamilies())
+        let expectedChoices: [RunicFontChoice] = [
+            .berkeleyMono,
+            .tx02,
+            .operatorMono,
+        ]
 
-        #expect(ids.contains(RunicFontChoice.tx02.id))
-        #expect(rules.prefersMonospacedDigits)
+        for choice in expectedChoices
+            where bundledFamilies.contains(choice.id) ||
+                NSFontManager.shared.availableMembers(ofFontFamily: choice.id)?.isEmpty == false
+        {
+            let rules = RunicFontRules.rules(for: choice.id)
+            #expect(ids.contains(choice.id))
+            #expect(rules.prefersMonospacedDigits)
+        }
+
         #expect(RunicFontChoice.tx02.displayName == "TX-02 Berkeley Mono")
     }
 

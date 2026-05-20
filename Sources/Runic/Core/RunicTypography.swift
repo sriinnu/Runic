@@ -178,6 +178,8 @@ struct RunicFontRules: Hashable {
             normalized.contains("menlo") ||
             normalized.contains("monaco") ||
             normalized.contains("commitmono") ||
+            normalized.contains("berkeley mono") ||
+            normalized.contains("operator mono") ||
             normalized == "tx-02" ||
             normalized.contains("geist mono")
         {
@@ -292,7 +294,9 @@ struct RunicFontChoice: Identifiable, Hashable {
     static let geist = RunicFontChoice(id: "Geist", displayName: "Geist")
     static let commitMono = RunicFontChoice(id: "CommitMono", displayName: "Commit Mono")
     static let geistMono = RunicFontChoice(id: "Geist Mono", displayName: "Geist Mono")
-    /// Installed commercial mono face. Not bundled; shown only when present on the Mac.
+    static let berkeleyMono = RunicFontChoice(id: "Berkeley Mono", displayName: "Berkeley Mono")
+    static let operatorMono = RunicFontChoice(id: "Operator Mono", displayName: "Operator Mono")
+    /// Licensed commercial mono face; shown only when bundled or installed on the Mac.
     static let tx02 = RunicFontChoice(id: "TX-02", displayName: "TX-02 Berkeley Mono")
 
     private static let hiddenBundledFamilies: Set<String> = ["VT323"]
@@ -318,14 +322,18 @@ struct RunicFontChoice: Identifiable, Hashable {
     static func availableChoices() -> [RunicFontChoice] {
         var choices: [RunicFontChoice] = [.monaSans, .sfPro, .sfRounded, .newYork, .sfMono]
         let bundledFamilies = Set(RunicTypography.discoverBundledFontFamilies())
-        let curatedBundled: [RunicFontChoice] = [.geist, .commitMono, .geistMono]
+        let curatedBundled: [RunicFontChoice] = [
+            .geist,
+            .commitMono,
+            .geistMono,
+            .berkeleyMono,
+            .tx02,
+            .operatorMono,
+        ]
         for choice in curatedBundled
             where bundledFamilies.contains(choice.id) || self.isFontFamilyAvailable(choice.id)
         {
             choices.append(choice)
-        }
-        if self.isFontFamilyAvailable(Self.tx02.id) {
-            choices.append(Self.tx02)
         }
 
         var seen = Set(choices.map(\.id))

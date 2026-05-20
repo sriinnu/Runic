@@ -3,7 +3,7 @@
 ## Unreleased
 - Themes: add JSON-backed typography/chrome/effects/control style tokens, with Terminal rebuilt as a calmer Tactical HUD and Retro borders softened.
 - Typography: switch the default product face to Mona Sans, add Commit Mono for Terminal/data-heavy surfaces, and migrate removed or missing saved fonts to Mona Sans.
-- Fonts: remove bundled Fira Code, IBM Plex Mono, JetBrains Mono, and Space Mono while keeping Geist, Geist Mono, SF/New York system fonts, VT323 for Retro decoration, and installed JetBrainsMono Nerd Font as a curated picker choice.
+- Fonts: remove bundled Fira Code, IBM Plex Mono, JetBrains Mono, and Space Mono while keeping Geist, Geist Mono, SF/New York system fonts, VT323 for Retro decoration, and licensed Berkeley/Operator faces as curated picker choices when bundled or installed.
 - Charts: make timeline panels respect the Settings chart style, including line, filled area, and bar rendering.
 - Privacy: remove anonymous-usage sharing UI, clarify local-only storage, and make Integrations show only working local data paths.
 - Performance: keep provider JSONL logs read-only and preserve cached daily ledger history after incremental scans.

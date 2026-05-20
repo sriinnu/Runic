@@ -101,8 +101,8 @@ Context labels prefer Kosha-discovery 1.2.0's local TTL-backed capability regist
 - JSON-driven theme style tokens for typography, chrome, effects, and controls
 - Liquid UI with glass materials and animated progress bars
 - Staggered entrance animations and glass shimmer effects
-- Curated font system with Mona Sans, Commit Mono, Geist, SF, New York, and theme-aware contrast rules
-- Drop-in font extensibility — add TTF/OTF to `Resources/Fonts`, rebuild, auto-discovered
+- Curated font system with Mona Sans, Commit Mono, Geist, Berkeley Mono, Operator Mono, SF, New York, and theme-aware contrast rules
+- Font provenance is tracked in `Sources/Runic/Resources/Fonts/FONT_PROVENANCE.md`; add only fonts you are licensed to bundle
 - Design tokens for typography, colors, spacing, corner radius, animation
 - VoiceOver accessible
 - Sparkle auto-updates
