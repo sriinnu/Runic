@@ -20,11 +20,11 @@ struct AnalyticsPane: View {
     @State private var alertsData: AlertRuleStore.AlertsData = AlertRuleStore.load()
     @State private var showingAddRule = false
     @State private var editingRule: AlertRuleStore.AlertRule?
+    @State private var guardrailStatus: String?
 
     // MARK: - Budgets state
 
     @State private var budgets: [ProjectBudgetStore.ProjectBudget] = []
-    @State private var editingProjectID: String?
     @State private var showingAddBudget = false
     @State private var newProjectID = ""
     @State private var newProjectName = ""
@@ -165,11 +165,21 @@ struct AnalyticsPane: View {
                 VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionSpacing) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
-                            Text("\(self.alertsData.rules.count) rules configured")
+                            Text(self.alertStatusLine)
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText)
 
                             Spacer()
+
+                            if self.missingDefaultGuardrailCount > 0 {
+                                Button {
+                                    self.installDefaultGuardrails()
+                                } label: {
+                                    Label("Install Defaults", systemImage: "shield.lefthalf.filled")
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
 
                             Button {
                                 self.showingAddRule = true
@@ -181,7 +191,7 @@ struct AnalyticsPane: View {
                         }
 
                         if self.alertsData.rules.isEmpty {
-                            Text("No alert rules configured. Add a rule to get started.")
+                            Text("No guardrail rules configured on this Mac.")
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                 .padding(.vertical, RunicSpacing.md)
@@ -194,6 +204,17 @@ struct AnalyticsPane: View {
                             }
                             .padding(.vertical, RunicSpacing.xs)
                         }
+                        if let guardrailStatus {
+                            Text(guardrailStatus)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText)
+                        }
+                        Text(
+                            "Rules are saved locally for guardrail configuration and webhooks. " +
+                                "Budget breach notifications are evaluated from Budgets below; " +
+                                "session quota notifications live in General.")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
                 }
                 .padding(.top, RunicSpacing.xs)
@@ -206,9 +227,14 @@ struct AnalyticsPane: View {
 
             DisclosureGroup("Budgets", isExpanded: self.$budgetsExpanded) {
                 VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionSpacing) {
+                    PreferenceToggleRow(
+                        title: "Budget breach notifications",
+                        subtitle: "Notify when a project forecast is projected to exceed its monthly budget.",
+                        binding: self.$settings.budgetNotificationsEnabled)
+
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
-                            Text("\(self.budgets.count) budgets configured")
+                            Text(self.budgetStatusLine)
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText)
 
@@ -224,7 +250,7 @@ struct AnalyticsPane: View {
                         }
 
                         if self.budgets.isEmpty {
-                            Text("No budgets configured. Add a budget to track project spending.")
+                            Text("No project budgets configured on this Mac.")
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                                 .padding(.vertical, RunicSpacing.md)
@@ -237,6 +263,12 @@ struct AnalyticsPane: View {
                             }
                             .padding(.vertical, RunicSpacing.xs)
                         }
+
+                        Text(
+                            "Budgets are local JSON and feed project forecasts, menu budget cards, " +
+                                "and breach notifications when enabled.")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
 
                         if let error = self.budgetErrorMessage {
                             HStack(alignment: .center, spacing: RunicSpacing.xs) {
@@ -303,6 +335,28 @@ struct AnalyticsPane: View {
     }
 
     // MARK: - Alert rule row
+
+    private var alertStatusLine: String {
+        let enabled = self.alertsData.rules.count(where: \.enabled)
+        let history = self.alertsData.history.count
+        return "\(enabled) enabled · \(self.alertsData.rules.count) rules · \(history) history"
+    }
+
+    private var budgetStatusLine: String {
+        let enabled = self.budgets.count(where: \.enabled)
+        return "\(enabled) enabled · \(self.budgets.count) budgets"
+    }
+
+    private var missingDefaultGuardrailCount: Int {
+        let currentIDs = Set(self.alertsData.rules.map(\.id))
+        return Self.defaultGuardrailIDs.subtracting(currentIDs).count
+    }
+
+    private static let defaultGuardrailIDs: Set<String> = [
+        "runic-default-quota-critical",
+        "runic-default-usage-velocity",
+        "runic-default-cost-anomaly",
+    ]
 
     private func alertRuleRow(_ rule: AlertRuleStore.AlertRule) -> some View {
         HStack(spacing: RunicSpacing.sm) {
@@ -434,6 +488,18 @@ struct AnalyticsPane: View {
     private func deleteRule(_ rule: AlertRuleStore.AlertRule) {
         try? AlertRuleStore.removeRule(id: rule.id)
         self.alertsData = AlertRuleStore.load()
+    }
+
+    private func installDefaultGuardrails() {
+        do {
+            let count = try RunicDiagnosticsReport.installDefaultGuardrails()
+            self.alertsData = AlertRuleStore.load()
+            self.guardrailStatus = count == 0
+                ? "Default guardrails already installed."
+                : "Installed \(count) guardrails."
+        } catch {
+            self.guardrailStatus = "Failed to install guardrails: \(error.localizedDescription)"
+        }
     }
 
     private func addBudget() {

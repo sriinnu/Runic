@@ -15,7 +15,6 @@ struct PerformancePane: View {
     @AppStorage("qualityRatingPromptsEnabled") private var qualityRatingPromptsEnabled = true
     @AppStorage("qualityRatingFrequency") private var qualityRatingFrequency = QualityRatingFrequency.every
     @AppStorage("maxPromptsPerHour") private var maxPromptsPerHour = 3
-    @AppStorage("anonymousUsageStatsEnabled") private var anonymousUsageStatsEnabled = false
 
     @State private var databaseSize: String = "Calculating..."
     @State private var isVacuuming = false
@@ -46,13 +45,14 @@ struct PerformancePane: View {
         LiquidPreferencesPane {
             LiquidSection(title: "Performance Monitoring") {
                 PreferenceToggleRow(
-                    title: "Enable performance tracking",
-                    subtitle: "Records latency, quality ratings, and error events for all AI requests.",
+                    title: "Enable local performance notes",
+                    subtitle: "Stores latency, quality ratings, and error events locally on this Mac.",
                     binding: self.$performanceTrackingEnabled)
 
                 if !self.performanceTrackingEnabled {
                     Text(
-                        "Performance tracking is disabled. Historical data is preserved but new metrics won't be collected.")
+                        "Performance tracking is disabled. Historical data is preserved, " +
+                            "but new metrics won't be collected.")
                         .font(self.fonts.footnote)
                         .foregroundStyle(.orange)
                         .padding(.vertical, RunicSpacing.xs)
@@ -60,8 +60,14 @@ struct PerformancePane: View {
             }
             .liquidEntrance(appeared: self.appeared, index: 0)
 
-            LiquidSection(title: "Data Retention") {
+            LiquidSection(title: "Local Cache & Retention") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                    Text("Provider JSONL logs are never deleted by Runic. Historical usage is " +
+                        "summarized into a local ledger cache so old logs do not need to be rescanned every time.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
+                        .fixedSize(horizontal: false, vertical: true)
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Raw metrics retention")
                             .font(self.fonts.body)
@@ -195,7 +201,8 @@ struct PerformancePane: View {
                         }
                     }
 
-                    Text("Removes metrics older than configured retention periods.")
+                    Text("Removes old local performance notes only. Provider JSONL logs and token " +
+                        "ledgers are left alone.")
                         .font(self.fonts.footnote)
                         .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
@@ -203,18 +210,13 @@ struct PerformancePane: View {
             .liquidEntrance(appeared: self.appeared, index: 3)
 
             LiquidSection(title: "Privacy") {
-                PreferenceToggleRow(
-                    title: "Share anonymous usage statistics",
-                    subtitle: "Helps improve Runic by sharing aggregated performance metrics (no personal data).",
-                    binding: self.$anonymousUsageStatsEnabled)
-
-                if self.anonymousUsageStatsEnabled {
-                    Text(
-                        "Only aggregate statistics are shared. Request IDs, prompts, and responses are never included.")
-                        .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                        .padding(.vertical, RunicSpacing.xs)
-                }
+                Text("Runic does not collect analytics, crash reports, or anonymous usage stats.")
+                    .font(self.fonts.body.weight(.semibold))
+                Text("Usage and performance history stay on this machine unless you export it, " +
+                    "copy diagnostics, or configure a webhook. Your data, your tokens, your cost.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .liquidEntrance(appeared: self.appeared, index: 4)
         }
@@ -277,7 +279,9 @@ struct PerformancePane: View {
 
             do {
                 let storage = PerformanceStorageImpl()
-                try await storage.deleteOldData(olderThan: self.rawMetricsRetentionDays)
+                try await storage.deleteOldData(
+                    olderThan: self.rawMetricsRetentionDays,
+                    aggregatedStatsOlderThanYears: self.aggregatedStatsRetentionYears)
                 self.clearDataStatus = "Success: Old data removed"
                 self.calculateDatabaseSize()
             } catch {

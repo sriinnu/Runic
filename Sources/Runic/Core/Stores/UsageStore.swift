@@ -2005,6 +2005,19 @@ final class UsageStore {
                 dailyByProvider[summary.provider] = summary
             }
         }
+        for provider in providers {
+            guard let cached = await LedgerCache.shared.loadCachedDailies(provider: provider.rawValue) else { continue }
+            let summaries = cached.dailies.compactMap { $0.toLedgerDailySummary(provider: provider) }
+            guard !summaries.isEmpty else { continue }
+            var byDay = Dictionary(uniqueKeysWithValues: summaries.map { ($0.dayKey, $0) })
+            for summary in allDailySummariesByProvider[provider] ?? [] {
+                byDay[summary.dayKey] = summary
+            }
+            allDailySummariesByProvider[provider] = byDay.values.sorted { $0.dayStart < $1.dayStart }
+            if dailyByProvider[provider] == nil {
+                dailyByProvider[provider] = byDay.values.first { $0.dayStart == todayStart }
+            }
+        }
 
         let hourlySummaries = UsageLedgerAggregator.hourlySummaries(
             entries: entries,
@@ -3639,6 +3652,7 @@ extension UsageStore {
         success: Bool) async
     {
         guard let storage = self.performanceStorage else { return }
+        guard Self.localPerformanceTrackingEnabled() else { return }
 
         let metric = LatencyMetric(
             id: UUID().uuidString,
@@ -3658,6 +3672,7 @@ extension UsageStore {
     /// Track API errors for performance monitoring
     private nonisolated func trackError(provider: UsageProvider, providerLabel: String? = nil, error: Error) async {
         guard let storage = self.performanceStorage else { return }
+        guard Self.localPerformanceTrackingEnabled() else { return }
 
         let errorType = self.classifyError(error)
         let errorEvent = ErrorEvent(
@@ -3670,6 +3685,10 @@ extension UsageStore {
             timestamp: Date())
 
         try? await storage.save(error: errorEvent)
+    }
+
+    private nonisolated static func localPerformanceTrackingEnabled() -> Bool {
+        (UserDefaults.standard.object(forKey: "performanceTrackingEnabled") as? Bool) ?? true
     }
 
     private nonisolated static func customProviderMetricLabel(_ config: CustomProviderConfig) -> String {

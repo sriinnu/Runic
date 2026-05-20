@@ -2,11 +2,9 @@ import AppKit
 import SwiftUI
 
 // MARK: - Theme identity tokens
-//
-// A theme is more than a palette. These structs describe a theme's
-// non-color identity: typography, shape language, motion, density. Together
-// with the color tokens they let a theme adapt its components structurally,
-// not just tint them.
+
+/// A theme is more than a palette. These value types describe its non-color
+/// identity so components can change structure, not just tint.
 
 /// Typographic personality of a theme. `nil` lets the user's font preference
 /// (or the SwiftUI default) take over; non-nil values force the theme's pick.
@@ -100,6 +98,168 @@ struct RunicThemeDensity {
     }
 }
 
+/// Fine-grained taste tokens loaded from theme JSON. These sit beside the
+/// older identity tokens so existing theme files keep working while richer
+/// skins can tune typography, chrome, effects, and controls as data.
+struct RunicThemeStyle {
+    var typography: RunicThemeTypographyStyle = .standard
+    var chrome: RunicThemeChromeStyle = .standard
+    var effects: RunicThemeEffectsStyle = .standard
+    var controls: RunicThemeControlStyle = .standard
+
+    static let standard = RunicThemeStyle()
+}
+
+/// JSON-backed type tuning for copy, numbers, tracking, scale, line rhythm, and contrast.
+struct RunicThemeTypographyStyle: Hashable {
+    enum ContrastStrength: String, Hashable { case soft, standard, strong }
+
+    let bodyFamily: String?
+    let numericFamily: String?
+    let scale: CGFloat
+    let tracking: CGFloat
+    let lineSpacing: CGFloat?
+    let contrast: ContrastStrength
+
+    static let standard = RunicThemeTypographyStyle(
+        bodyFamily: nil, numericFamily: nil, scale: 1, tracking: 0, lineSpacing: nil, contrast: .standard)
+}
+
+/// JSON-backed chrome tuning for borders, corners, and panel depth.
+struct RunicThemeChromeStyle: Hashable {
+    enum BorderStyle: String, Hashable { case native, hairline, bevelSoft, hud, glass }
+    enum CornerStyle: String, Hashable { case standard, soft, compact, sharp }
+    enum PanelDepth: String, Hashable { case flat, low, medium, high }
+
+    let borderStyle: BorderStyle
+    let borderWeight: CGFloat
+    let borderOpacity: Double
+    let cornerStyle: CornerStyle
+    let panelDepth: PanelDepth
+
+    static let standard = RunicThemeChromeStyle(
+        borderStyle: .hairline, borderWeight: 0.7, borderOpacity: 0.55, cornerStyle: .standard, panelDepth: .medium)
+}
+
+/// JSON-backed intensity controls for scanlines, glow, and material overlays.
+struct RunicThemeEffectsStyle: Hashable {
+    let scanlineOpacity: Double
+    let glowStrength: Double
+    let materialIntensity: Double
+
+    static let standard = RunicThemeEffectsStyle(scanlineOpacity: 0, glowStrength: 0.25, materialIntensity: 0.45)
+}
+
+/// JSON-backed controls for selected states, progress bars, and hover behavior.
+struct RunicThemeControlStyle: Hashable {
+    enum SelectedFillStyle: String, Hashable { case accentSoft, accentSolid, neutralSoft, terminalSolid }
+    enum ProgressStyle: String, Hashable { case softBar, segmentedHUD, nativeBar }
+    enum HoverStyle: String, Hashable { case neutral, accent, glow }
+
+    let selectedFillStyle: SelectedFillStyle
+    let progressStyle: ProgressStyle
+    let hoverStyle: HoverStyle
+
+    static let standard = RunicThemeControlStyle(
+        selectedFillStyle: .accentSoft, progressStyle: .softBar, hoverStyle: .accent)
+}
+
+extension RunicThemeStyle: Decodable {
+    private enum CodingKeys: String, CodingKey { case typography, chrome, effects, controls }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.typography = try values.decodeIfPresent(RunicThemeTypographyStyle.self, forKey: .typography) ?? .standard
+        self.chrome = try values.decodeIfPresent(RunicThemeChromeStyle.self, forKey: .chrome) ?? .standard
+        self.effects = try values.decodeIfPresent(RunicThemeEffectsStyle.self, forKey: .effects) ?? .standard
+        self.controls = try values.decodeIfPresent(RunicThemeControlStyle.self, forKey: .controls) ?? .standard
+    }
+}
+
+extension RunicThemeTypographyStyle: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case bodyFamily, numericFamily, scale, tracking, lineSpacing, contrast
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.standard
+        self.bodyFamily = try values.decodeIfPresent(String.self, forKey: .bodyFamily)
+        self.numericFamily = try values.decodeIfPresent(String.self, forKey: .numericFamily)
+        self.scale = values.cgFloat(forKey: .scale, default: defaults.scale)
+        self.tracking = values.cgFloat(forKey: .tracking, default: defaults.tracking)
+        self.lineSpacing = values.cgFloatIfPresent(forKey: .lineSpacing)
+        self.contrast = values.rawEnum(ContrastStrength.self, forKey: .contrast, default: defaults.contrast)
+    }
+}
+
+extension RunicThemeChromeStyle: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case borderStyle, borderWeight, borderOpacity, cornerStyle, panelDepth
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.standard
+        self.borderStyle = values.rawEnum(BorderStyle.self, forKey: .borderStyle, default: defaults.borderStyle)
+        self.borderWeight = values.cgFloat(forKey: .borderWeight, default: defaults.borderWeight)
+        self.borderOpacity = values.double(forKey: .borderOpacity, default: defaults.borderOpacity)
+        self.cornerStyle = values.rawEnum(CornerStyle.self, forKey: .cornerStyle, default: defaults.cornerStyle)
+        self.panelDepth = values.rawEnum(PanelDepth.self, forKey: .panelDepth, default: defaults.panelDepth)
+    }
+}
+
+extension RunicThemeEffectsStyle: Decodable {
+    private enum CodingKeys: String, CodingKey { case scanlineOpacity, glowStrength, materialIntensity }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.standard
+        self.scanlineOpacity = values.double(forKey: .scanlineOpacity, default: defaults.scanlineOpacity)
+        self.glowStrength = values.double(forKey: .glowStrength, default: defaults.glowStrength)
+        self.materialIntensity = values.double(forKey: .materialIntensity, default: defaults.materialIntensity)
+    }
+}
+
+extension RunicThemeControlStyle: Decodable {
+    private enum CodingKeys: String, CodingKey { case selectedFillStyle, progressStyle, hoverStyle }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.standard
+        self.selectedFillStyle = values.rawEnum(
+            SelectedFillStyle.self,
+            forKey: .selectedFillStyle,
+            default: defaults.selectedFillStyle)
+        self.progressStyle = values.rawEnum(ProgressStyle.self, forKey: .progressStyle, default: defaults.progressStyle)
+        self.hoverStyle = values.rawEnum(HoverStyle.self, forKey: .hoverStyle, default: defaults.hoverStyle)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func rawEnum<T: RawRepresentable>(
+        _ type: T.Type,
+        forKey key: Key,
+        default value: T)
+        -> T where T.RawValue == String
+    {
+        (try? self.decodeIfPresent(String.self, forKey: key)).flatMap(T.init(rawValue:)) ?? value
+    }
+
+    func double(forKey key: Key, default value: Double) -> Double {
+        (try? self.decodeIfPresent(Double.self, forKey: key)) ?? value
+    }
+
+    func cgFloat(forKey key: Key, default value: CGFloat) -> CGFloat {
+        CGFloat(self.double(forKey: key, default: Double(value)))
+    }
+
+    func cgFloatIfPresent(forKey key: Key) -> CGFloat? {
+        let value: Double? = try? self.decodeIfPresent(Double.self, forKey: key)
+        return value.map { CGFloat($0) }
+    }
+}
+
 struct RunicThemePalette {
     let id: String
     let displayName: String
@@ -126,6 +286,7 @@ struct RunicThemePalette {
     var shape: RunicThemeShape = .standard
     var motion: RunicThemeMotion = .standard
     var density: RunicThemeDensity = .normal
+    var style: RunicThemeStyle = .standard
 
     var swatchColors: [Color] {
         [self.primary, self.accent, self.highlight, self.tertiary]
@@ -212,19 +373,21 @@ struct RunicThemePalette {
     }
 
     var menuTrackColor: Color {
-        self.isTerminalHUD ? Color.white.opacity(0.10) : self.cardStroke.opacity(self.isCustom ? 0.42 : 0.26)
+        self.isTerminalHUD
+            ? self.accent.opacity(0.12 + self.style.effects.scanlineOpacity * 0.12)
+            : self.cardStroke.opacity(self.isCustom ? 0.42 : 0.26)
     }
 
     var menuSubtleFill: Color {
-        self.isTerminalHUD ? self.cardFill.opacity(0.46) : self.cardFill.opacity(self.isCustom ? 0.62 : 0.34)
+        self.isTerminalHUD ? self.cardFill.opacity(0.40) : self.cardFill.opacity(self.isCustom ? 0.62 : 0.34)
     }
 
     var chartGridColor: Color {
-        self.isTerminalHUD ? self.accent.opacity(0.18) : self.cardStroke.opacity(self.isCustom ? 0.58 : 0.42)
+        self.isTerminalHUD ? self.accent.opacity(0.20) : self.cardStroke.opacity(self.isCustom ? 0.58 : 0.42)
     }
 
     var chartAxisLabelColor: Color {
-        self.isTerminalHUD ? Color.white.opacity(0.54) : self.secondaryText.opacity(self.isCustom ? 0.78 : 0.70)
+        self.isTerminalHUD ? Color.white.opacity(0.62) : self.secondaryText.opacity(self.isCustom ? 0.82 : 0.72)
     }
 
     var chartSelectionBandColor: Color {
@@ -240,7 +403,9 @@ struct RunicThemePalette {
     }
 
     var menuSeparatorColor: Color {
-        self.isTerminalHUD ? self.accent.opacity(0.42) : self.cardStroke.opacity(self.isCustom ? 0.70 : 0.48)
+        self.isTerminalHUD
+            ? self.accent.opacity(0.24 + self.style.chrome.borderOpacity * 0.32)
+            : self.cardStroke.opacity(self.isCustom ? self.style.chrome.borderOpacity : 0.48)
     }
 
     var nsPrimaryTextColor: NSColor {
@@ -469,32 +634,53 @@ extension Theme {
                 motion: .snappy,
                 density: .normal)
         case .terminal:
-            // Phosphor green on near-black. Monospaced everywhere, sharp
-            // corners, ASCII separators, instant motion. The "mission control"
-            // theme — terse and technical.
+            // Tactical HUD: phosphor green on near-black with calmer scanlines,
+            // fewer frames, and Commit Mono for dense operational data.
             return RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Retro terminal",
+                tagline: "Tactical HUD",
                 symbolName: "terminal.fill",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.000, green: 0.957, blue: 0.451),
-                secondary: Color(red: 0.160, green: 0.835, blue: 1.000),
-                accent: Color(red: 0.000, green: 1.000, blue: 0.533),
-                highlight: Color(red: 1.000, green: 0.706, blue: 0.000),
-                warm: Color(red: 1.000, green: 0.361, blue: 0.420),
-                tertiary: Color(red: 0.267, green: 0.929, blue: 0.720),
-                surface: Color(red: 0.000, green: 0.015, blue: 0.012),
-                surfaceAlt: Color(red: 0.000, green: 0.080, blue: 0.055).opacity(0.92),
-                cardFill: Color(red: 0.000, green: 0.120, blue: 0.078).opacity(0.64),
-                cardStroke: Color(red: 0.000, green: 1.000, blue: 0.533).opacity(0.34),
-                primaryText: Color(red: 0.880, green: 0.965, blue: 0.905),
-                secondaryText: Color(red: 0.640, green: 0.760, blue: 0.690),
+                primary: Color(red: 0.051, green: 0.890, blue: 0.478),
+                secondary: Color(red: 0.184, green: 0.784, blue: 0.910),
+                accent: Color(red: 0.094, green: 0.949, blue: 0.545),
+                highlight: Color(red: 0.973, green: 0.729, blue: 0.180),
+                warm: Color(red: 0.941, green: 0.404, blue: 0.451),
+                tertiary: Color(red: 0.333, green: 0.890, blue: 0.722),
+                surface: Color(red: 0.008, green: 0.031, blue: 0.027),
+                surfaceAlt: Color(red: 0.012, green: 0.102, blue: 0.075).opacity(0.85),
+                cardFill: Color(red: 0.020, green: 0.129, blue: 0.090).opacity(0.60),
+                cardStroke: Color(red: 0.063, green: 0.843, blue: 0.478).opacity(0.26),
+                primaryText: Color(red: 0.843, green: 0.969, blue: 0.898),
+                secondaryText: Color(red: 0.612, green: 0.784, blue: 0.698),
                 fonts: RunicThemeFonts(body: .mono, numeric: .mono),
-                shape: .sharp,
+                shape: RunicThemeShape(cornerMultiplier: 0.62, separator: .hairline),
                 motion: .instant,
-                density: .compact)
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: "CommitMono",
+                        numericFamily: "CommitMono",
+                        scale: 0.98,
+                        tracking: 0.03,
+                        lineSpacing: 0.35,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hud,
+                        borderWeight: 0.75,
+                        borderOpacity: 0.44,
+                        cornerStyle: .compact,
+                        panelDepth: .low),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0.32,
+                        glowStrength: 0.16,
+                        materialIntensity: 0),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .terminalSolid,
+                        progressStyle: .segmentedHUD,
+                        hoverStyle: .neutral)))
         }
     }
 
@@ -511,10 +697,10 @@ extension EnvironmentValues {
     @Entry var runicTheme: RunicThemePalette = Theme.system.palette
 }
 
-/// Theme-aware separator. Renders ASCII `─` for Terminal, a glowing accent line
-/// for Glass / Dark (anything with `shape.separator == .glow`), and a hairline
-/// for everyone else. Use this instead of SwiftUI's `Divider()` inside menu /
-/// preferences surfaces so inner section breaks carry the theme's personality.
+/// Theme-aware separator. Renders ASCII when a theme asks for it, a glowing
+/// accent line for glow themes, and a hairline for everyone else. Use this
+/// instead of SwiftUI's `Divider()` inside menu / preferences surfaces so
+/// inner section breaks carry the theme's personality.
 @MainActor
 struct RunicDivider: View {
     @Environment(\.runicTheme) private var runicTheme

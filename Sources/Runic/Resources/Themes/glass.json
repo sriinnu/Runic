@@ -15,12 +15,18 @@
     "surface":       "#05070F",
     "surfaceAlt":    "#14244275",
     "cardFill":      "#FFFFFF1A",
-    "cardStroke":    "#8A61FF66",
-    "primaryText":   "#FFFFFFF0",
-    "secondaryText": "#FFFFFFA8"
+    "cardStroke":    "#8A61FF70",
+    "primaryText":   "#FFFFFFF5",
+    "secondaryText": "#FFFFFFB8"
   },
   "fonts":   { "body": "system", "numeric": "system" },
   "shape":   { "preset": "glassy" },
   "motion":  { "preset": "snappy" },
-  "density": { "preset": "normal" }
+  "density": { "preset": "normal" },
+  "style": {
+    "typography": { "scale": 1.02, "tracking": 0.0, "contrast": "strong" },
+    "chrome": { "borderStyle": "glass", "borderWeight": 0.85, "borderOpacity": 0.62, "cornerStyle": "soft", "panelDepth": "high" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.42, "materialIntensity": 0.62 },
+    "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "glow" }
+  }
 }

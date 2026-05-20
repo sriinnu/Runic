@@ -52,6 +52,7 @@ struct UsageTimelineChartMenuView: View {
     private let dailySummaries: [UsageLedgerDailySummary]
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
+    private let chartStyle: ChartStyle
     private let selectedTimeRangeBinding: Binding<TimeRange>?
     private let onRangeChange: (TimeRange) -> Void
     @State private var localTimeRange: TimeRange
@@ -62,12 +63,14 @@ struct UsageTimelineChartMenuView: View {
         dailySummaries: [UsageLedgerDailySummary],
         hourlySummaries: [UsageLedgerHourlySummary] = [],
         width: CGFloat,
+        chartStyle: ChartStyle = .line,
         selectedTimeRange: Binding<TimeRange>? = nil,
         onRangeChange: @escaping (TimeRange) -> Void = { _ in })
     {
         self.dailySummaries = dailySummaries
         self.hourlySummaries = hourlySummaries
         self.width = width
+        self.chartStyle = chartStyle
         self.selectedTimeRangeBinding = selectedTimeRange
         self.onRangeChange = onRangeChange
         self._localTimeRange = State(initialValue: selectedTimeRange?.wrappedValue ?? .sevenDays)
@@ -77,6 +80,7 @@ struct UsageTimelineChartMenuView: View {
         let selectedRange = self.selectedTimeRange
         let model = Self.makeDailyModel(from: self.dailySummaries, timeRange: selectedRange)
         let lineColor = self.runicTheme.chartColor(at: 0)
+        let chartStyle = self.chartStyle
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Header on its own line
@@ -99,18 +103,21 @@ struct UsageTimelineChartMenuView: View {
                     .frame(height: 100)
             } else {
                 let detail = self.detailText(model: model)
-                // Line chart. Theme-adapts: Terminal drops the area gradient
-                // entirely (sparkline-only, fits the CRT aesthetic). Daybreak
-                // gets a lush peach gradient with rounded interpolation.
-                // Glass / Dark get a denser area + glow on the line.
                 let isTerminal = self.runicTheme.isTerminalHUD
                 let isGlow = self.runicTheme.shape.separator == .glow
-                let areaTopAlpha: Double = isTerminal ? 0 : (isGlow ? 0.38 : (self.runicTheme.id == "daybreak" ? 0.36 : 0.25))
-                let areaBottomAlpha: Double = isTerminal ? 0 : 0.03
+                let areaTopAlpha: Double = isTerminal ? 0.24 : (isGlow ? 0.38 : (self.runicTheme.id == "daybreak" ? 0.36 : 0.25))
+                let areaBottomAlpha: Double = isTerminal ? 0.02 : 0.03
                 let lineWidth: CGFloat = isGlow ? 2.4 : (isTerminal ? 1.4 : 2)
                 Chart {
                     ForEach(model.points) { point in
-                        if !isTerminal {
+                        if chartStyle == .bar {
+                            BarMark(
+                                x: .value("Time", point.date, unit: .day),
+                                y: .value("Tokens", point.totalTokens),
+                                width: .ratio(isTerminal ? 0.48 : 0.62))
+                                .foregroundStyle(lineColor.opacity(isTerminal ? 0.78 : 0.66))
+                                .cornerRadius(isTerminal ? 1 : 3)
+                        } else if chartStyle == .area {
                             AreaMark(
                                 x: .value("Time", point.date),
                                 y: .value("Tokens", point.totalTokens))
@@ -122,14 +129,16 @@ struct UsageTimelineChartMenuView: View {
                                         ],
                                         startPoint: .top,
                                         endPoint: .bottom))
-                                .interpolationMethod(.catmullRom)
+                                .interpolationMethod(isTerminal ? .linear : .catmullRom)
                         }
-                        LineMark(
-                            x: .value("Time", point.date),
-                            y: .value("Tokens", point.totalTokens))
-                            .foregroundStyle(lineColor)
-                            .lineStyle(StrokeStyle(lineWidth: lineWidth))
-                            .interpolationMethod(isTerminal ? .linear : .catmullRom)
+                        if chartStyle != .bar {
+                            LineMark(
+                                x: .value("Time", point.date),
+                                y: .value("Tokens", point.totalTokens))
+                                .foregroundStyle(lineColor)
+                                .lineStyle(StrokeStyle(lineWidth: lineWidth))
+                                .interpolationMethod(isTerminal ? .linear : .catmullRom)
+                        }
                     }
                     if let peak = model.peakPoint {
                         PointMark(
@@ -144,6 +153,7 @@ struct UsageTimelineChartMenuView: View {
                             }
                     }
                 }
+                .id(chartStyle.id)
                 .chartXScale(domain: Self.xDomain(for: selectedRange))
                 .chartYAxis {
                     AxisMarks(position: .trailing) { value in
@@ -220,7 +230,8 @@ struct UsageTimelineChartMenuView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Usage timeline chart showing \(model.points.count) data points over \(selectedRange.label)")
+            "Usage timeline \(self.chartStyle.label.lowercased()) chart showing " +
+                "\(model.points.count) data points over \(selectedRange.label)")
     }
 
     private var selectedTimeRange: TimeRange {

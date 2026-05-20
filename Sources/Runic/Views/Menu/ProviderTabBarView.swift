@@ -23,35 +23,35 @@ struct ProviderTabBarView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: RunicSpacing.compact) {
+            HStack(spacing: RunicSpacing.xxs) {
                 ForEach(self.tabs) { tab in
                     let selectedColor = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : tab.brandColor
                     Button {
                         self.onSelect(tab.provider)
                     } label: {
-                        HStack(spacing: RunicSpacing.xxs) {
+                        HStack(spacing: self.runicTheme.isTerminalHUD ? RunicSpacing.xxs : 5) {
                             if self.runicTheme.isTerminalHUD {
-                                Text(tab.isSelected ? "▶" : "·")
+                                Text("▶")
                                     .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(tab.isSelected
-                                        ? self.runicTheme.accent
-                                        : self.runicTheme.secondaryText.opacity(0.55))
+                                    .foregroundStyle(self.runicTheme.accent)
+                                    .opacity(tab.isSelected ? 1 : 0)
+                                    .frame(width: 9)
                             }
                             if let nsImage = tab.icon {
                                 Image(nsImage: nsImage)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
-                                    .frame(width: 22, height: 22)
+                                    .frame(width: 18, height: 18)
                             } else if tab.provider == nil {
                                 Image(systemName: "square.grid.2x2")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.system(size: 13, weight: .medium))
                             }
                             Text(tab.label)
-                                .font(self.fonts.caption)
+                                .font(self.fonts.caption2)
                                 .fontWeight(tab.isSelected ? .semibold : .regular)
                                 .lineLimit(1)
                         }
-                        .padding(.horizontal, RunicSpacing.xs + 2)
+                        .padding(.horizontal, RunicSpacing.compact)
                         .padding(.vertical, RunicSpacing.xxs + 2)
                         .background(
                             Capsule(style: .continuous)
@@ -59,9 +59,7 @@ struct ProviderTabBarView: View {
                         .overlay(
                             Capsule(style: .continuous)
                                 .stroke(
-                                    tab.isSelected
-                                        ? selectedColor.opacity(self.runicTheme.isTerminalHUD ? 0.72 : (self.runicTheme.shape.separator == .glow ? 0.88 : RunicColors.Opacity.strong))
-                                        : self.runicTheme.cardStroke.opacity(RunicColors.Opacity.medium),
+                                    self.tabStrokeColor(selectedColor: selectedColor, isSelected: tab.isSelected),
                                     lineWidth: self.tabStrokeWidth(isSelected: tab.isSelected)))
                         .foregroundStyle(tab.isSelected ? selectedColor : self.runicTheme.secondaryText)
                         .shadow(
@@ -80,7 +78,7 @@ struct ProviderTabBarView: View {
             ZStack {
                 self.runicTheme.menuSurfaceGradient
                 if self.runicTheme.isTerminalHUD {
-                    RunicTerminalScanlineOverlay(opacity: 0.80)
+                    RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
                 }
             }
         }
@@ -93,7 +91,7 @@ struct ProviderTabBarView: View {
     private func tabBackgroundFill(selectedColor: Color, isSelected: Bool) -> Color {
         if isSelected {
             if self.runicTheme.isTerminalHUD {
-                return selectedColor.opacity(0.20)
+                return selectedColor.opacity(0.22)
             }
             if self.runicTheme.shape.separator == .glow {
                 return selectedColor.opacity(0.30)
@@ -104,22 +102,33 @@ struct ProviderTabBarView: View {
     }
 
     private func tabStrokeWidth(isSelected: Bool) -> CGFloat {
-        if self.runicTheme.isTerminalHUD { return isSelected ? 0.9 : 0.6 }
-        if self.runicTheme.shape.separator == .glow { return isSelected ? 1.3 : 0.5 }
-        return 0.5
+        if self.runicTheme.isTerminalHUD { return self.runicTheme.style.chrome.borderWeight }
+        if self.runicTheme.shape.separator == .glow { return isSelected ? 1.0 : 0.5 }
+        return self.runicTheme.style.chrome.borderWeight
+    }
+
+    private func tabStrokeColor(selectedColor: Color, isSelected: Bool) -> Color {
+        guard isSelected else {
+            return self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity * 0.65)
+        }
+        if self.runicTheme.isTerminalHUD { return selectedColor.opacity(0.60) }
+        if self.runicTheme.shape.separator == .glow { return selectedColor.opacity(0.82) }
+        return selectedColor.opacity(RunicColors.Opacity.strong)
     }
 
     private func tabGlowColor(selectedColor: Color, isSelected: Bool) -> Color {
         guard isSelected else { return .clear }
-        if self.runicTheme.isTerminalHUD { return selectedColor.opacity(0.28) }
-        if self.runicTheme.shape.separator == .glow { return selectedColor.opacity(0.62) }
+        if self.runicTheme.isTerminalHUD { return selectedColor.opacity(0.14) }
+        if self.runicTheme.shape.separator == .glow {
+            return selectedColor.opacity(self.runicTheme.style.effects.glowStrength)
+        }
         return selectedColor.opacity(0.15)
     }
 
     private func tabGlowRadius(isSelected: Bool) -> CGFloat {
         guard isSelected else { return 0 }
-        if self.runicTheme.isTerminalHUD { return 6 }
-        if self.runicTheme.shape.separator == .glow { return 10 }
+        if self.runicTheme.isTerminalHUD { return 3 }
+        if self.runicTheme.shape.separator == .glow { return 8 }
         return 4
     }
 }

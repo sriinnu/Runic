@@ -2,15 +2,15 @@ import SwiftUI
 
 // MARK: - Retro Checkbox
 
-/// System-7 style checkbox: a beveled box with a hand-drawn check glyph
-/// when on. Replaces SwiftUI's `Toggle` in Retro-themed Preference rows.
+/// Theme-owned checkbox chrome for Retro and Terminal. Retro gets the soft
+/// System-7 bevel; Terminal gets phosphor HUD boxes instead of native blue.
 /// Falls back to the standard toggle on any other theme.
 @MainActor
 struct RetroToggleStyle: ToggleStyle {
     @Environment(\.runicTheme) private var runicTheme
 
     func makeBody(configuration: Configuration) -> some View {
-        if self.runicTheme.id == "retro" {
+        if self.runicTheme.id == "retro" || self.runicTheme.isTerminalHUD {
             // `.center` aligns with PreferenceToggleRow's outer HStack so the
             // checkbox sits beside the label rather than baseline-shifting.
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
@@ -26,23 +26,35 @@ struct RetroToggleStyle: ToggleStyle {
             .contentShape(Rectangle())
         } else {
             Toggle(isOn: configuration.$isOn) { configuration.label }
+                .toggleStyle(.checkbox)
         }
     }
 
     private func box(isOn: Bool) -> some View {
         let size: CGFloat = 16
-        let radius: CGFloat = 2
+        let radius: CGFloat = self.runicTheme.isTerminalHUD ? 3 : 2
+        let fill: Color
+        if self.runicTheme.isTerminalHUD {
+            fill = isOn ? self.runicTheme.accent.opacity(0.88) : self.runicTheme.surfaceAlt.opacity(0.88)
+        } else {
+            fill = isOn ? self.runicTheme.accent : self.runicTheme.surfaceAlt
+        }
+        let stroke = self.runicTheme.isTerminalHUD
+            ? self.runicTheme.accent.opacity(isOn ? 0.95 : 0.42)
+            : self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity)
         return ZStack {
             // Card body — parchment for "off", System-7 blue for "on".
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(isOn ? self.runicTheme.accent : self.runicTheme.surfaceAlt)
+                .fill(fill)
                 .frame(width: size, height: size)
             // Two-layer bevel
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(self.runicTheme.cardStroke, lineWidth: 1)
+                .strokeBorder(stroke, lineWidth: self.runicTheme.style.chrome.borderWeight)
                 .frame(width: size, height: size)
             RoundedRectangle(cornerRadius: max(radius - 1, 0.5), style: .continuous)
-                .strokeBorder(Color.white.opacity(isOn ? 0.40 : 0.85), lineWidth: 0.7)
+                .strokeBorder(
+                    Color.white.opacity(self.runicTheme.isTerminalHUD ? 0.10 : (isOn ? 0.40 : 0.85)),
+                    lineWidth: 0.7)
                 .frame(width: size - 2, height: size - 2)
             // Check glyph
             if isOn {
@@ -57,8 +69,7 @@ struct RetroToggleStyle: ToggleStyle {
 }
 
 extension ToggleStyle where Self == RetroToggleStyle {
-    /// Use the Retro beveled checkbox when the Retro theme is active.
-    /// Falls back to system toggle on every other theme.
+    /// Use theme-owned checkbox chrome for Retro/Terminal; system toggle elsewhere.
     @MainActor
     static var retro: RetroToggleStyle { RetroToggleStyle() }
 }

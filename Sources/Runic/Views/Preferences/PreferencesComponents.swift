@@ -11,6 +11,10 @@ enum PreferencesLayoutMetrics {
     static let sectionHeaderSpacing: CGFloat = 16
 }
 
+enum PreferencesTypographyMetrics {
+    static let terminalBodyLineSpacing: CGFloat = RunicSpacing.xxxs
+}
+
 @MainActor
 struct PreferencesPane<Content: View>: View {
     @Environment(\.runicFonts) private var fonts
@@ -40,7 +44,7 @@ struct PreferencesPane<Content: View>: View {
             ZStack {
                 self.runicTheme.menuSurfaceGradient
                 if self.runicTheme.isTerminalHUD {
-                    RunicTerminalScanlineOverlay(opacity: 0.80)
+                    RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
                 }
             }
         }
@@ -75,7 +79,7 @@ struct PreferencesListPane<Content: View>: View {
                 ZStack {
                     self.runicTheme.menuSurfaceGradient
                     if self.runicTheme.isTerminalHUD {
-                        RunicTerminalScanlineOverlay(opacity: 0.80)
+                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
                     }
                 }
             }
@@ -91,20 +95,19 @@ struct PreferenceToggleRow: View {
     @Binding var binding: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                if self.runicTheme.id == "retro" {
-                    // Retro: System-7 beveled checkbox via RetroToggleStyle.
+                if self.runicTheme.id == "retro" || self.runicTheme.isTerminalHUD {
                     Toggle(isOn: self.$binding) {
                         Text(self.title)
-                            .font(self.fonts.body)
+                            .font(self.titleFont)
                     }
                     .toggleStyle(.retro)
                     .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                 } else {
                     Toggle(isOn: self.$binding) {
                         Text(self.title)
-                            .font(self.fonts.body)
+                            .font(self.titleFont)
                     }
                     .toggleStyle(.checkbox)
                     .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
@@ -113,11 +116,30 @@ struct PreferenceToggleRow: View {
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                    .font(self.subtitleFont)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(self.subtitleOpacity))
+                    .lineSpacing(self.subtitleLineSpacing)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private var titleFont: Font {
+        self.runicTheme.isTerminalHUD
+            ? self.fonts.callout.weight(.semibold)
+            : self.fonts.callout.weight(.medium)
+    }
+
+    private var subtitleFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
+    }
+
+    private var subtitleOpacity: Double {
+        self.runicTheme.isTerminalHUD ? 0.78 : 0.70
+    }
+
+    private var subtitleLineSpacing: CGFloat {
+        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
     }
 }
 
@@ -136,7 +158,7 @@ struct PreferenceStepperRow: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(spacing: RunicSpacing.sm) {
                 Text(self.title)
-                    .font(self.fonts.body)
+                    .font(self.titleFont)
                 Spacer()
                 PreferenceStepperControl(
                     valueLabel: self.valueLabel(self.value),
@@ -148,11 +170,30 @@ struct PreferenceStepperRow: View {
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                    .font(self.subtitleFont)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(self.subtitleOpacity))
+                    .lineSpacing(self.subtitleLineSpacing)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private var titleFont: Font {
+        self.runicTheme.isTerminalHUD
+            ? self.fonts.callout.weight(.semibold)
+            : self.fonts.callout.weight(.medium)
+    }
+
+    private var subtitleFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
+    }
+
+    private var subtitleOpacity: Double {
+        self.runicTheme.isTerminalHUD ? 0.78 : 0.70
+    }
+
+    private var subtitleLineSpacing: CGFloat {
+        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
     }
 }
 
@@ -190,10 +231,14 @@ private struct PreferenceStepperControl: View {
                 .padding(.horizontal, RunicSpacing.sm)
                 .padding(.vertical, RunicSpacing.xxs)
                 .background(
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                        style: .continuous)
                         .fill(self.runicTheme.menuSubtleFill))
                 .overlay(
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                        style: .continuous)
                         .stroke(self.runicTheme.menuSeparatorColor.opacity(0.62), lineWidth: 0.7))
 
             Button(action: self.onIncrement) {
@@ -231,12 +276,15 @@ struct SettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionHeaderSpacing) {
             if let title, !title.isEmpty {
                 Text(title)
-                    .font(self.fonts.subheadline.weight(.semibold))
+                    .font(self.titleFont)
+                    .tracking(self.runicTheme.isTerminalHUD ? 0.8 : 0)
+                    .textCase(self.runicTheme.isTerminalHUD ? .uppercase : nil)
             }
             if let caption {
                 Text(caption)
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                    .font(self.captionFont)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(self.captionOpacity))
+                    .lineSpacing(self.captionLineSpacing)
                     .fixedSize(horizontal: false, vertical: true)
             }
             VStack(alignment: .leading, spacing: self.contentSpacing) {
@@ -244,6 +292,22 @@ struct SettingsSection<Content: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var titleFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.headline.weight(.bold) : self.fonts.subheadline.weight(.semibold)
+    }
+
+    private var captionFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
+    }
+
+    private var captionOpacity: Double {
+        self.runicTheme.isTerminalHUD ? 0.78 : 0.70
+    }
+
+    private var captionLineSpacing: CGFloat {
+        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
     }
 }
 

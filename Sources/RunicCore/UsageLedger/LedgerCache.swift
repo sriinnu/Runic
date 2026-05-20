@@ -2,8 +2,8 @@ import Foundation
 import OSLog
 
 /// Persistent cache for aggregated ledger data. Stores daily summaries per provider
-/// so the app never re-scans old JSONL files. Works like a deque — new days are
-/// appended, historical days are immutable.
+/// so the app does not need to re-scan old JSONL files on every refresh.
+/// Changed historical days are still replaceable when a provider backfills logs.
 ///
 /// Storage: `~/Library/Application Support/Runic/ledger-cache/`
 ///   - `claude-daily.json`, `codex-daily.json`, etc.
@@ -48,28 +48,23 @@ public actor LedgerCache {
         Self.log.debug("Saved \(ledger.dailies.count) days for \(provider)")
     }
 
-    /// Merge new daily entries into existing cache. Deque behavior:
-    /// - Existing days are NOT overwritten (immutable history)
-    /// - Today's entry is REPLACED because log sources rescan today's active files
+    /// Merge new daily entries into existing cache.
+    /// - New or changed days replace the cached copy
+    /// - Missing older days remain cached
     /// - New days are appended
-    public func mergeDailies(provider: String, newDailies: [CachedDaily], scanDate: Date, todayKey: String? = nil) {
+    public func mergeDailies(provider: String, newDailies: [CachedDaily], scanDate: Date, todayKey _: String? = nil) {
         var ledger = self.loadCachedDailies(provider: provider) ?? CachedLedger(
             lastScanDate: scanDate,
             lastFullScanDate: nil,
             dailies: [])
 
-        let resolvedTodayKey = todayKey ?? Self.dayKey(for: Date())
         var existingByKey: [String: CachedDaily] = [:]
         for daily in ledger.dailies {
             existingByKey[daily.dayKey] = daily
         }
 
         for newDaily in newDailies {
-            if newDaily.dayKey == resolvedTodayKey {
-                existingByKey[newDaily.dayKey] = newDaily
-            } else if existingByKey[newDaily.dayKey] == nil {
-                existingByKey[newDaily.dayKey] = newDaily
-            }
+            existingByKey[newDaily.dayKey] = newDaily
         }
 
         ledger.dailies = existingByKey.values.sorted { $0.dayKey < $1.dayKey }

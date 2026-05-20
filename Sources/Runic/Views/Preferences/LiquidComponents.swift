@@ -14,7 +14,7 @@ struct LiquidMeshBackground: View {
         if self.runicTheme.isTerminalHUD {
             ZStack {
                 self.runicTheme.menuSurfaceGradient
-                RunicTerminalScanlineOverlay(opacity: 1.0)
+                RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
             }
         } else {
             TimelineView(.animation(minimumInterval: 1 / 30.0, paused: self.reduceMotion)) { timeline in
@@ -165,43 +165,52 @@ private struct LiquidGlassCore: ViewModifier {
     func body(content: Content) -> some View {
         let isGlassTheme = self.runicTheme.id == "glass"
         let isTerminalHUD = self.runicTheme.isTerminalHUD
+        let cornerRadius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
+        let shadowColor = self.hovering
+            ? self.runicTheme.accent.opacity(isTerminalHUD ? 0.16 : (isGlassTheme ? 0.22 : 0.10))
+            : .black.opacity(isTerminalHUD ? 0.22 : (isGlassTheme ? 0.18 : 0.04))
+        let shadowRadius: CGFloat = self.hovering
+            ? (isTerminalHUD ? 6 : (isGlassTheme ? 18 : 12))
+            : (isTerminalHUD ? 3 : (isGlassTheme ? 10 : 4))
+        let shadowY: CGFloat = self.hovering ? (isTerminalHUD ? 3 : 6) : 2
+        let borderWidth = isTerminalHUD
+            ? self.runicTheme.style.chrome.borderWeight
+            : (isGlassTheme ? 0.9 : 0.5)
         content
             .padding(RunicSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 ZStack {
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(self.runicTheme.cardBackgroundStyle)
 
-                    if !isTerminalHUD {
-                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                    if !isTerminalHUD, self.runicTheme.style.effects.materialIntensity > 0.05 {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(.ultraThinMaterial)
+                            .opacity(self.runicTheme.style.effects.materialIntensity)
                             .overlay(
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
-                                    .fill(self.runicTheme.cardFill.opacity(isGlassTheme ? 1.0 : 0.45)))
+                                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                    .fill(self.runicTheme.cardFill.opacity(isGlassTheme ? 0.92 : 0.36)))
                     }
 
                     if isTerminalHUD {
-                        RunicTerminalScanlineOverlay(opacity: 0.65)
-                            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
+                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity * 0.55)
+                            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     }
                 }
-                    .shadow(
-                        color: self.hovering
-                            ? self.runicTheme.accent.opacity(isTerminalHUD ? 0.28 : (isGlassTheme ? 0.22 : 0.12))
-                            : .black.opacity(isTerminalHUD ? 0.30 : (isGlassTheme ? 0.18 : 0.04)),
-                        radius: self.hovering ? (isTerminalHUD ? 10 : (isGlassTheme ? 18 : 12)) : (isTerminalHUD ? 4 : (isGlassTheme ? 10 : 4)),
-                        y: self.hovering ? (isTerminalHUD ? 3 : 6) : 2)
+                    .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
             }
             .overlay(
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: isTerminalHUD
                                 ? [
-                                    self.runicTheme.accent.opacity(self.hovering ? 0.82 : 0.50),
-                                    self.runicTheme.highlight.opacity(self.hovering ? 0.60 : 0.34),
-                                    self.runicTheme.accent.opacity(self.hovering ? 0.72 : 0.42),
+                                    self.runicTheme.accent.opacity(
+                                        self.hovering ? 0.56 : self.runicTheme.style.chrome.borderOpacity),
+                                    self.runicTheme.highlight.opacity(self.hovering ? 0.34 : 0.18),
+                                    self.runicTheme.accent.opacity(
+                                        self.hovering ? 0.46 : self.runicTheme.style.chrome.borderOpacity * 0.8),
                                 ]
                                 : [
                                     self.runicTheme.highlight.opacity(self.hovering ? 0.26 : 0.12),
@@ -210,12 +219,18 @@ private struct LiquidGlassCore: ViewModifier {
                                 ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing),
-                        lineWidth: isTerminalHUD ? 0.9 : (isGlassTheme ? 0.9 : 0.5)))
+                        lineWidth: borderWidth))
             .overlay {
                 if isTerminalHUD {
-                    RunicTerminalCornerOverlay(inset: 2, length: 13, lineWidth: 1.2, opacity: self.hovering ? 0.90 : 0.62)
+                    RunicTerminalCornerOverlay(
+                        inset: 2,
+                        length: 11,
+                        lineWidth: self.runicTheme.style.chrome.borderWeight,
+                        opacity: self.hovering ? 0.46 : 0.22)
                 } else {
-                    RotatingGradientBorder(cornerRadius: RunicCornerRadius.lg, isActive: self.hovering || isGlassTheme)
+                    RotatingGradientBorder(
+                        cornerRadius: RunicCornerRadius.lg,
+                        isActive: self.hovering || isGlassTheme)
                 }
             }
             .overlay {
@@ -229,11 +244,11 @@ private struct LiquidGlassCore: ViewModifier {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
                 if !isTerminalHUD {
                     ShimmerSweep(stableDelay: Double(self.shimmerIndex) * 0.8 + 1.0)
-                        .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                 }
             }
             .scaleEffect(self.hovering && !self.reduceMotion && !isTerminalHUD ? 1.01 : 1.0)
@@ -273,14 +288,23 @@ struct LiquidSection<Content: View>: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if let title {
                 Text(title)
-                    .font(self.fonts.caption.weight(.semibold))
-                    .foregroundStyle(self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.runicTheme.secondaryText)
+                    .font(self.titleFont)
+                    .foregroundStyle(self.titleColor)
                     .textCase(.uppercase)
+                    .tracking(self.runicTheme.isTerminalHUD ? 0.8 : 0.4)
                     .padding(.leading, RunicSpacing.xxs)
             }
             self.content
         }
         .modifier(LiquidGlassCore(shimmerIndex: self.title.hashValue & 0xF))
+    }
+
+    private var titleFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.headline.weight(.bold) : self.fonts.subheadline.weight(.semibold)
+    }
+
+    private var titleColor: Color {
+        self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.runicTheme.secondaryText
     }
 }
 

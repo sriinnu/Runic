@@ -6,7 +6,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 APP_BUNDLE="${ROOT_DIR}/builds/latest/Runic.app"
+INSTALLED_APP_BUNDLE="/Applications/Runic.app"
 APP_PROCESS_PATTERN="Runic.app/Contents/MacOS/Runic"
+INSTALLED_PROCESS_PATTERN="${INSTALLED_APP_BUNDLE}/Contents/MacOS/Runic"
 DEBUG_PROCESS_PATTERN="${ROOT_DIR}/.build/debug/Runic"
 RELEASE_PROCESS_PATTERN="${ROOT_DIR}/.build/release/Runic"
 LOCK_KEY="$(printf '%s' "${ROOT_DIR}" | shasum -a 256 | cut -c1-8)"
@@ -152,6 +154,7 @@ ARCHES_VALUE="${HOST_ARCH}"
 DEV_BUILD_ROOT="${ROOT_DIR}/builds/dev"
 DEV_BUILD_LABEL="${RUNIC_DEV_BUILD_LABEL:-dev-current}"
 DEV_SIGNING_MODE="${RUNIC_SIGNING:-${CODEXBAR_SIGNING:-}}"
+APP_BUNDLE="${DEV_BUILD_ROOT}/${DEV_BUILD_LABEL}/Runic.app"
 if [[ -n "${RELEASE_ARCHES}" ]]; then
   ARCHES_VALUE="${RELEASE_ARCHES}"
 fi
@@ -196,22 +199,27 @@ fi
 # 4) Copy to /Applications for easy access.
 log "==> install to /Applications"
 if [[ -d "${APP_BUNDLE}" ]]; then
-  rm -rf /Applications/Runic.app 2>/dev/null || true
-  cp -R "${APP_BUNDLE}" /Applications/Runic.app && log "OK: Installed to /Applications/Runic.app"
+  rm -rf "${INSTALLED_APP_BUNDLE}" 2>/dev/null || true
+  [[ ! -e "${INSTALLED_APP_BUNDLE}" ]] || fail "Could not remove ${INSTALLED_APP_BUNDLE}"
+  cp -R "${APP_BUNDLE}" "${INSTALLED_APP_BUNDLE}" \
+    || fail "Could not copy ${APP_BUNDLE} to ${INSTALLED_APP_BUNDLE}"
+  log "OK: Installed to ${INSTALLED_APP_BUNDLE}"
+else
+  fail "Packaged app not found at ${APP_BUNDLE}"
 fi
 
 # 5) Launch the packaged app.
 log "==> launch app"
-if ! open "${APP_BUNDLE}"; then
+if ! open "${INSTALLED_APP_BUNDLE}"; then
   log "WARN: launch app returned non-zero; falling back to direct binary launch."
-  "${APP_BUNDLE}/Contents/MacOS/Runic" >/dev/null 2>&1 &
+  "${INSTALLED_PROCESS_PATTERN}" >/dev/null 2>&1 &
   disown
 fi
 
 # 5) Verify the app stays up for at least a moment (launch can be >1s on some systems).
 for _ in {1..10}; do
-  if pgrep -f "${APP_PROCESS_PATTERN}" >/dev/null 2>&1; then
-    log "OK: Runic is running."
+  if pgrep -f "${INSTALLED_PROCESS_PATTERN}" >/dev/null 2>&1; then
+    log "OK: Runic is running from ${INSTALLED_APP_BUNDLE}."
     exit 0
   fi
   sleep 0.4

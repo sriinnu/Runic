@@ -1,7 +1,7 @@
 # Runic Design System
 
-**Version:** 1.0
-**Last Updated:** January 31, 2026
+**Version:** 1.1
+**Last Updated:** May 19, 2026
 
 This document defines the comprehensive design system for Runic's preferences UI and throughout the application. Following these guidelines ensures visual consistency, accessibility, and maintainability across all panes and components.
 
@@ -20,7 +20,7 @@ This document defines the comprehensive design system for Runic's preferences UI
 
 ## Typography Scale
 
-Runic uses SwiftUI's semantic typography system with consistent font choices across the application.
+Runic uses Mona Sans as the default product face, Commit Mono for Terminal/Tactical HUD and dense data surfaces, and SwiftUI's semantic typography scale for consistency. Theme JSON may tune scale, tracking, line rhythm, and contrast through optional `style.typography` tokens.
 
 ### Section Titles
 **Usage:** Top-level section headers in preferences panes
@@ -97,7 +97,7 @@ Text("Badge Text")
 ### Monospace Text
 **Usage:** Debug output, JSON display, technical data
 
-- **Font:** `.system(.footnote, design: .monospaced)` or `.system(.callout, design: .monospaced)`
+- **Font:** Commit Mono where available; otherwise `.system(.footnote, design: .monospaced)` or `.system(.callout, design: .monospaced)`
 - **When to use:**
   - Debug pane data display
   - File paths

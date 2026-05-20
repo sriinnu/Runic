@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import RunicCore
 import Testing
@@ -71,6 +72,155 @@ struct SettingsStoreTests {
             groqTokenStore: NoopGroqTokenStore())
 
         #expect(store.menuMode == .operator)
+    }
+
+    @Test
+    func `default font is Mona Sans`() throws {
+        let suite = "SettingsStoreTests-font-default"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+
+        let store = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(store.selectedFontFamily == RunicFontChoice.defaultFamily)
+        #expect(defaults.string(forKey: "selectedFontFamily") == RunicFontChoice.defaultFamily)
+    }
+
+    @Test
+    func `removed and missing saved fonts migrate to Mona Sans`() throws {
+        let prunedSuite = "SettingsStoreTests-font-pruned"
+        let prunedDefaults = try #require(UserDefaults(suiteName: prunedSuite))
+        prunedDefaults.removePersistentDomain(forName: prunedSuite)
+        prunedDefaults.set("Fira Code", forKey: "selectedFontFamily")
+
+        let prunedStore = SettingsStore(
+            userDefaults: prunedDefaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(prunedStore.selectedFontFamily == RunicFontChoice.defaultFamily)
+        #expect(prunedDefaults.string(forKey: "selectedFontFamily") == RunicFontChoice.defaultFamily)
+
+        let missingSuite = "SettingsStoreTests-font-missing"
+        let missingDefaults = try #require(UserDefaults(suiteName: missingSuite))
+        missingDefaults.removePersistentDomain(forName: missingSuite)
+        missingDefaults.set("Some Missing Font", forKey: "selectedFontFamily")
+
+        let missingStore = SettingsStore(
+            userDefaults: missingDefaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(missingStore.selectedFontFamily == RunicFontChoice.defaultFamily)
+        #expect(missingDefaults.string(forKey: "selectedFontFamily") == RunicFontChoice.defaultFamily)
+    }
+
+    @Test
+    func `runtime invalid font assignment persists migrated family`() throws {
+        let suite = "SettingsStoreTests-font-runtime-migration"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+
+        let store = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        store.selectedFontFamily = "JetBrains Mono"
+
+        #expect(store.selectedFontFamily == RunicFontChoice.defaultFamily)
+        #expect(defaults.string(forKey: "selectedFontFamily") == RunicFontChoice.defaultFamily)
+    }
+
+    @Test
+    func `installed JetBrainsMono Nerd Font migrates to default`() throws {
+        let suite = "SettingsStoreTests-font-jetbrains-nerd-migration"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defaults.set("JetBrainsMono Nerd Font", forKey: "selectedFontFamily")
+
+        let store = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(store.selectedFontFamily == RunicFontChoice.defaultFamily)
+        #expect(defaults.string(forKey: "selectedFontFamily") == RunicFontChoice.defaultFamily)
+    }
+
+    @Test
+    func `installed TX-02 Berkeley Mono is preserved when available`() throws {
+        guard RunicFontChoice.availableChoices().contains(where: { $0.id == RunicFontChoice.tx02.id }) else {
+            return
+        }
+        let suite = "SettingsStoreTests-font-tx02"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defaults.set(RunicFontChoice.tx02.id, forKey: "selectedFontFamily")
+
+        let store = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(store.selectedFontFamily == RunicFontChoice.tx02.id)
+    }
+
+    @Test
+    func `chart style defaults to line and persists`() throws {
+        let suite = "SettingsStoreTests-chartStyle"
+        let defaultsA = try #require(UserDefaults(suiteName: suite))
+        defaultsA.removePersistentDomain(forName: suite)
+        let storeA = SettingsStore(
+            userDefaults: defaultsA,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(storeA.chartStyle == .line)
+        storeA.chartStyle = .bar
+
+        let defaultsB = try #require(UserDefaults(suiteName: suite))
+        let storeB = SettingsStore(
+            userDefaults: defaultsB,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(storeB.chartStyle == .bar)
     }
 
     @Test

@@ -57,39 +57,52 @@ struct UsageProgressBar: View {
     }
 
     var body: some View {
-        if self.runicTheme.isTerminalHUD {
-            self.terminalBlockBody
+        if self.runicTheme.style.controls.progressStyle == .segmentedHUD || self.runicTheme.isTerminalHUD {
+            self.terminalSegmentBody
         } else {
             self.gradientBody
         }
     }
 
-    /// `[██████░░░░░░]` style progress for Terminal theme. Mono blocks reading
-    /// as a true CRT-style bar, no gradients, no glow.
+    /// Drawn HUD progress for Terminal. Text block bars were too dependent on
+    /// font rasterization and became nearly invisible in the dense theme.
     @ViewBuilder
-    private var terminalBlockBody: some View {
+    private var terminalSegmentBody: some View {
         let segmentCount = 24
-        let filled = max(0, min(segmentCount, Int((self.animatedPercent / 100.0) * Double(segmentCount))))
-        let empty = segmentCount - filled
-        HStack(spacing: 0) {
-            Text(String(repeating: "█", count: filled))
-                .foregroundStyle(self.tint)
-            Text(String(repeating: "░", count: empty))
-                .foregroundStyle(self.runicTheme.menuTrackColor.opacity(0.85))
+        GeometryReader { proxy in
+            let spacing: CGFloat = 2
+            let available = max(0, proxy.size.width - CGFloat(segmentCount - 1) * spacing)
+            let segmentWidth = max(2, available / CGFloat(segmentCount))
+            let rawFilled = Int(ceil((self.animatedPercent / 100.0) * Double(segmentCount)))
+            let filled = self.animatedPercent > 0
+                ? max(1, min(segmentCount, rawFilled))
+                : 0
+            HStack(spacing: spacing) {
+                ForEach(0..<segmentCount, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                        .fill(index < filled ? self.tint : self.runicTheme.menuTrackColor.opacity(0.78))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                                .stroke(self.runicTheme.accent.opacity(index < filled ? 0.18 : 0.10), lineWidth: 0.45))
+                        .frame(width: segmentWidth)
+                }
+            }
+            .frame(width: proxy.size.width, height: self.barHeight, alignment: .leading)
         }
-        .font(.system(size: self.barHeight * 1.3, weight: .regular, design: .monospaced))
-        .lineLimit(1)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: self.barHeight, alignment: .center)
+        .frame(height: self.barHeight)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(self.accessibilityLabel)
         .accessibilityValue("\(Int(self.clamped)) percent")
         .accessibilityAddTraits(.updatesFrequently)
         .onAppear {
-            self.animatedPercent = self.clamped
+            withAnimation(self.runicTheme.motion.curve) {
+                self.animatedPercent = self.clamped
+            }
         }
         .onChange(of: self.clamped) { _, newValue in
-            self.animatedPercent = newValue
+            withAnimation(self.runicTheme.motion.curve) {
+                self.animatedPercent = newValue
+            }
         }
     }
 

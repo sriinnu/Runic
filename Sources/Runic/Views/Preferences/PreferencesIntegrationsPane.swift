@@ -1,584 +1,133 @@
 import AppKit
 import RunicCore
-import Security
 import SwiftUI
 
 @MainActor
 struct IntegrationsPane: View {
     @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
+    @State private var copiedPath: String?
 
-    @AppStorage("vaayuAPIServerEnabled") private var vaayuAPIServerEnabled = false
-    @AppStorage("vaayuAPIServerPort") private var vaayuAPIServerPort = 3000
-    @State private var vaayuAPIKey = ""
-    @AppStorage("defaultWebhookURL") private var defaultWebhookURL = ""
-    @AppStorage("webhookFormat") private var webhookFormat = "slack"
-    @AppStorage("githubIntegrationEnabled") private var githubIntegrationEnabled = false
-    @AppStorage("githubRepositoryPath") private var githubRepositoryPath = ""
+    private var collectorPath: String {
+        OTelGenAICollectorConfiguration.defaultOutputFile().path
+    }
 
-    @State private var mcpServers: [MCPServer] = []
-    @State private var showingAddServerSheet = false
-    @State private var newServerName = ""
-    @State private var newServerPort = 8001
-    @State private var testWebhookResult: String?
-    @State private var generatedAPIKey: String?
-    @Environment(\.runicTheme) private var runicTheme
-
-    struct MCPServer: Identifiable, Codable, Hashable {
-        let id: String
-        var name: String
-        var isRunning: Bool
-        var port: Int
-
-        var statusIndicator: String {
-            "●"
-        }
-
-        var statusColor: Color {
-            self.isRunning ? .green : .red
-        }
+    private var koshaPath: String {
+        NSString(string: "~/.kosha/registry.json").expandingTildeInPath
     }
 
     var body: some View {
         PreferencesPane {
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("vaayu Integration")
-                    .font(self.fonts.caption)
-                    .foregroundStyle(self.runicTheme.secondaryText)
-                    .textCase(.uppercase)
-
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    HStack {
-                        Toggle("API Server", isOn: self.$vaayuAPIServerEnabled)
-                            .toggleStyle(.switch)
-
-                        Spacer()
-
-                        if self.vaayuAPIServerEnabled {
-                            Text("Running on port \(self.vaayuAPIServerPort)")
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(.green)
-                        } else {
-                            Text("Stopped")
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText)
-                        }
-                    }
-
-                    if self.vaayuAPIServerEnabled {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Port number")
-                                .font(self.fonts.body)
-
-                            TextField("Port", value: self.$vaayuAPIServerPort, format: .number)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(maxWidth: 150)
-
-                            Text("Default: 3000. Restart required after changing port.")
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("API Key")
-                                    .font(self.fonts.body)
-
-                                Spacer()
-
-                                if self.vaayuAPIKey.isEmpty {
-                                    Button("Generate Key") {
-                                        self.generateAPIKey()
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                } else {
-                                    Button {
-                                        self.copyToClipboard(self.vaayuAPIKey)
-                                    } label: {
-                                        Label("Copy", systemImage: "doc.on.doc")
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                }
-                            }
-
-                            if !self.vaayuAPIKey.isEmpty {
-                                Text(self.maskedAPIKey)
-                                    .font(self.fonts.footnote.monospaced())
-                                    .foregroundStyle(self.runicTheme.secondaryText)
-                                    .padding(RunicSpacing.xs)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
-                                            .fill(self.runicTheme.menuSubtleFill))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
-                                            .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
-                            }
-
-                            if let generatedKey = self.generatedAPIKey {
-                                Text("New key generated: \(generatedKey)")
-                                    .font(self.fonts.footnote)
-                                    .foregroundStyle(.green)
-                            }
-                        }
-                    }
-
-                    Text("Exposes Runic usage data via REST API for external integrations.")
-                        .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                }
+                self.sectionTitle("Local data sources")
+                self.statusRow(
+                    icon: "doc.text.magnifyingglass",
+                    title: "Provider JSONL logs",
+                    status: "Read-only",
+                    detail: "Runic never deletes Claude/Codex provider logs. It scans recent changes " +
+                        "and keeps local daily summaries for older history.")
+                self.statusRow(
+                    icon: "waveform.path.ecg.rectangle",
+                    title: "OpenTelemetry GenAI ledger",
+                    status: FileManager.default.fileExists(atPath: self.collectorPath) ? "Found" : "Ready",
+                    detail: "The local collector writes sanitized metric JSONL here. Prompts and " +
+                        "responses are not persisted.",
+                    path: self.collectorPath)
+                self.pathEditor
             }
 
             PreferencesDivider()
 
             SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("MCP Servers")
-                    .font(self.fonts.caption)
-                    .foregroundStyle(self.runicTheme.secondaryText)
-                    .textCase(.uppercase)
+                self.sectionTitle("Detected integrations")
+                self.statusRow(
+                    icon: "sparkles",
+                    title: "Kosha model registry",
+                    status: FileManager.default.fileExists(atPath: self.koshaPath) ? "Found" : "Optional",
+                    detail: "Runic reads Kosha locally for model context metadata when the registry exists.",
+                    path: self.koshaPath)
+                self.statusRow(
+                    icon: "bell.badge",
+                    title: "Alert webhooks",
+                    status: "Analytics",
+                    detail: "Per-rule webhook URLs live in Analytics > Alerts inside Add/Edit Rule.")
+                self.statusRow(
+                    icon: "terminal",
+                    title: "Runic CLI",
+                    status: "Performance",
+                    detail: "Install or refresh the command-line helper from Performance > Refresh & Safety.")
+            }
+        }
+    }
 
-                VStack(spacing: RunicSpacing.xs) {
-                    HStack {
-                        Text("Configured servers")
-                            .font(self.fonts.body)
-                        Spacer()
-                        Button {
-                            self.showingAddServerSheet = true
-                        } label: {
-                            Label("Add Server", systemImage: "plus.circle.fill")
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(self.fonts.caption.weight(.semibold))
+            .foregroundStyle(self.runicTheme.secondaryText)
+            .textCase(.uppercase)
+    }
+
+    private var pathEditor: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+            Text("Additional usage log paths")
+                .font(self.fonts.body)
+            TextField("~/Library/Logs/ai-usage.jsonl, /path/to/otel-logs", text: self.$settings.otelGenAILogPaths)
+                .textFieldStyle(.roundedBorder)
+            Text("Comma, semicolon, or newline separated JSON/JSONL files and folders.")
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.72))
+        }
+    }
+
+    private func statusRow(
+        icon: String,
+        title: String,
+        status: String,
+        detail: String,
+        path: String? = nil) -> some View
+    {
+        HStack(alignment: .top, spacing: RunicSpacing.sm) {
+            Image(systemName: icon)
+                .font(self.fonts.callout)
+                .frame(width: 22)
+                .foregroundStyle(self.runicTheme.accent)
+            VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+                HStack(spacing: RunicSpacing.xs) {
+                    Text(title)
+                        .font(self.fonts.body.weight(.semibold))
+                    Text(status)
+                        .font(self.fonts.caption.weight(.semibold))
+                        .padding(.horizontal, RunicSpacing.xs)
+                        .padding(.vertical, RunicSpacing.xxxs)
+                        .background(Capsule(style: .continuous).fill(self.runicTheme.menuSubtleFill))
+                }
+                Text(detail)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.74))
+                    .fixedSize(horizontal: false, vertical: true)
+                if let path {
+                    HStack(spacing: RunicSpacing.xs) {
+                        Text(path)
+                            .font(self.fonts.caption.monospaced())
+                            .foregroundStyle(self.runicTheme.secondaryText)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Button(self.copiedPath == path ? "Copied" : "Copy") {
+                            self.copy(path)
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                     }
-
-                    if self.mcpServers.isEmpty {
-                        VStack(spacing: RunicSpacing.xs) {
-                            Image(systemName: "terminal")
-                                .font(.system(size: 32))
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                            Text("No MCP servers yet")
-                                .font(self.fonts.body.weight(.semibold))
-                                .foregroundStyle(self.runicTheme.secondaryText)
-                            Text("Add a server to manage connection details")
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, RunicSpacing.lg)
-                    } else {
-                        ForEach(self.mcpServers) { server in
-                            HStack(spacing: RunicSpacing.sm) {
-                                Text(server.statusIndicator)
-                                    .foregroundStyle(server.statusColor)
-                                    .font(self.fonts.title3)
-
-                                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                    Text(server.name)
-                                        .font(self.fonts.body)
-                                    Text("Port \(server.port)")
-                                        .font(self.fonts.footnote)
-                                        .foregroundStyle(self.runicTheme.secondaryText)
-                                }
-
-                                Spacer()
-
-                                HStack(spacing: 4) {
-                                    Button(server.isRunning ? "Stop" : "Start") {
-                                        self.toggleMCPServer(server)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-
-                                    Button {
-                                        self.copyConnectionCommand(server)
-                                    } label: {
-                                        Image(systemName: "doc.on.doc")
-                                    }
-                                    .buttonStyle(.borderless)
-                                    .controlSize(.small)
-
-                                    Button {
-                                        self.removeMCPServer(server)
-                                    } label: {
-                                        Image(systemName: "trash")
-                                    }
-                                    .buttonStyle(.borderless)
-                                    .controlSize(.small)
-                                    .foregroundStyle(.red)
-                                }
-                            }
-                            .padding(RunicSpacing.xs)
-                            .background(
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
-                                    .fill(self.runicTheme.menuSubtleFill))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
-                                    .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
-                        }
-                    }
-                }
-
-                Text("MCP servers enable Claude Desktop and other tools to access Runic data.")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-            }
-
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("Webhooks")
-                    .font(self.fonts.caption)
-                    .foregroundStyle(self.runicTheme.secondaryText)
-                    .textCase(.uppercase)
-
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Default webhook URL")
-                            .font(self.fonts.body)
-
-                        TextField("https://hooks.slack.com/services/...", text: self.$defaultWebhookURL)
-                            .textFieldStyle(.roundedBorder)
-
-                        Text("Used for all alerts unless overridden in alert rule settings.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                    }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Webhook format")
-                            .font(self.fonts.body)
-
-                        Picker("", selection: self.$webhookFormat) {
-                            Text("Slack").tag("slack")
-                            Text("Discord").tag("discord")
-                            Text("Generic").tag("generic")
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 300)
-
-                        Text("Formats webhook payloads for different platforms.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                    }
-
-                    HStack(spacing: RunicSpacing.xs) {
-                        Button("Test Webhook") {
-                            self.testWebhook()
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(self.defaultWebhookURL.isEmpty)
-
-                        if let result = self.testWebhookResult {
-                            Text(result)
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(result.contains("Success") ? .green : .red)
-                        }
-                    }
-                }
-            }
-
-            PreferencesDivider()
-
-            SettingsSection(contentSpacing: PreferencesLayoutMetrics.sectionSpacing) {
-                Text("GitHub Integration")
-                    .font(self.fonts.caption)
-                    .foregroundStyle(self.runicTheme.secondaryText)
-                    .textCase(.uppercase)
-
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    PreferenceToggleRow(
-                        title: "Link commits to usage",
-                        subtitle: "Correlates AI usage with git commits for project-level insights.",
-                        binding: self.$githubIntegrationEnabled)
-
-                    if self.githubIntegrationEnabled {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Repository path")
-                                .font(self.fonts.body)
-
-                            HStack {
-                                TextField("/path/to/repo", text: self.$githubRepositoryPath)
-                                    .textFieldStyle(.roundedBorder)
-
-                                Button("Auto-detect") {
-                                    self.autoDetectRepository()
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                            }
-
-                            if !self.githubRepositoryPath.isEmpty {
-                                if FileManager.default.fileExists(atPath: self.githubRepositoryPath + "/.git") {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(.green)
-                                        Text("Valid Git repository")
-                                            .font(self.fonts.footnote)
-                                            .foregroundStyle(.green)
-                                    }
-                                } else {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(.red)
-                                        Text("Not a valid Git repository")
-                                            .font(self.fonts.footnote)
-                                            .foregroundStyle(.red)
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
-        .onAppear {
-            self.loadMCPServers()
-            self.vaayuAPIKey = VaayuKeychainHelper.load() ?? ""
-            // Migrate any existing value out of UserDefaults
-            let defaults = UserDefaults.standard
-            if let legacyKey = defaults.string(forKey: "vaayuAPIKey"), !legacyKey.isEmpty {
-                if VaayuKeychainHelper.save(legacyKey) {
-                    self.vaayuAPIKey = legacyKey
-                    defaults.removeObject(forKey: "vaayuAPIKey")
-                }
-            }
-        }
-        .onChange(of: self.vaayuAPIKey) { _, newValue in
-            if newValue.isEmpty {
-                VaayuKeychainHelper.delete()
-            } else {
-                VaayuKeychainHelper.save(newValue)
-            }
-        }
-        .sheet(isPresented: self.$showingAddServerSheet) {
-            AddMCPServerSheet(
-                name: self.$newServerName,
-                port: self.$newServerPort,
-                onAdd: {
-                    self.addMCPServer()
-                    self.showingAddServerSheet = false
-                },
-                onCancel: {
-                    self.showingAddServerSheet = false
-                })
-        }
     }
 
-    private var maskedAPIKey: String {
-        guard self.vaayuAPIKey.count > 8 else { return self.vaayuAPIKey }
-        let prefix = String(self.vaayuAPIKey.prefix(4))
-        let suffix = String(self.vaayuAPIKey.suffix(4))
-        return "\(prefix)••••••••\(suffix)"
-    }
-
-    private func generateAPIKey() {
-        let key = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        self.vaayuAPIKey = key
-        self.generatedAPIKey = key
-
-        Task {
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
-            self.generatedAPIKey = nil
-        }
-    }
-
-    private func copyToClipboard(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-    }
-
-    private func toggleMCPServer(_ server: MCPServer) {
-        if let index = self.mcpServers.firstIndex(where: { $0.id == server.id }) {
-            self.mcpServers[index].isRunning.toggle()
-            self.persistMCPServers()
-        }
-    }
-
-    private func copyConnectionCommand(_ server: MCPServer) {
-        let command = "mcp connect localhost:\(server.port)"
-        self.copyToClipboard(command)
-    }
-
-    private func testWebhook() {
-        guard !self.defaultWebhookURL.isEmpty else { return }
-
-        Task {
-            await MainActor.run { self.testWebhookResult = "Testing..." }
-            guard let url = URL(string: self.defaultWebhookURL) else {
-                await MainActor.run { self.testWebhookResult = "Invalid URL" }
-                return
-            }
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.timeoutInterval = 5
-            request.httpBody = Data("{\"text\":\"Runic webhook test\"}".utf8)
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            do {
-                let (_, response) = try await URLSession.shared.data(for: request)
-                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-                await MainActor.run {
-                    self.testWebhookResult = status > 0 ? "Success: \(status)" : "No response"
-                }
-            } catch {
-                await MainActor.run {
-                    self.testWebhookResult = "Failed: \(error.localizedDescription)"
-                }
-            }
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            await MainActor.run { self.testWebhookResult = nil }
-        }
-    }
-
-    private func autoDetectRepository() {
-        // Try to find .git directory in current directory or parent directories
-        var currentPath = FileManager.default.currentDirectoryPath
-        var foundPath: String?
-
-        for _ in 0..<5 {
-            if FileManager.default.fileExists(atPath: currentPath + "/.git") {
-                foundPath = currentPath
-                break
-            }
-            currentPath = (currentPath as NSString).deletingLastPathComponent
-        }
-
-        if let path = foundPath {
-            self.githubRepositoryPath = path
-        }
-    }
-
-    private func addMCPServer() {
-        let trimmedName = self.newServerName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
-        let server = MCPServer(
-            id: UUID().uuidString,
-            name: trimmedName,
-            isRunning: false,
-            port: max(1, self.newServerPort))
-        self.mcpServers.append(server)
-        self.newServerName = ""
-        self.newServerPort = 8001
-        self.persistMCPServers()
-    }
-
-    private func removeMCPServer(_ server: MCPServer) {
-        self.mcpServers.removeAll { $0.id == server.id }
-        self.persistMCPServers()
-    }
-
-    private func loadMCPServers() {
-        let defaults = UserDefaults.standard
-        guard let data = defaults.data(forKey: "runicMCPServers.v1") else { return }
-        if let servers = try? JSONDecoder().decode([MCPServer].self, from: data) {
-            self.mcpServers = servers
-        }
-    }
-
-    private func persistMCPServers() {
-        guard let data = try? JSONEncoder().encode(self.mcpServers) else { return }
-        UserDefaults.standard.set(data, forKey: "runicMCPServers.v1")
-    }
-}
-
-@MainActor
-private struct AddMCPServerSheet: View {
-    @Environment(\.runicFonts) private var fonts
-    @Binding var name: String
-    @Binding var port: Int
-    let onAdd: () -> Void
-    let onCancel: () -> Void
-    @FocusState private var isNameFocused: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.lg) {
-            Text("Add MCP Server")
-                .font(self.fonts.title2.weight(.semibold))
-
-            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                Text("Name")
-                    .font(self.fonts.subheadline.weight(.medium))
-                TextField("Local MCP Server", text: self.$name)
-                    .textFieldStyle(.roundedBorder)
-                    .focused(self.$isNameFocused)
-            }
-
-            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                Text("Port")
-                    .font(self.fonts.subheadline.weight(.medium))
-                TextField("", value: self.$port, format: .number)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 140)
-            }
-
-            HStack {
-                Spacer()
-                Button("Cancel", role: .cancel) { self.onCancel() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Add") { self.onAdd() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(self.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(RunicSpacing.lg)
-        .frame(width: 420)
-        .onAppear { self.isNameFocused = true }
-    }
-}
-
-// MARK: - Vaayu API Key Keychain Helper
-
-private enum VaayuKeychainHelper {
-    private static let service = "com.sriinnu.athena.Runic"
-    private static let account = "vaayu-api-key"
-
-    static func load() -> String? {
-        var result: CFTypeRef?
-        var query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.service,
-            kSecAttrAccount as String: self.account,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecReturnData as String: true,
-        ]
-        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
-
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let token = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !token.isEmpty
-        else {
-            return nil
-        }
-        return token
-    }
-
-    @discardableResult
-    static func save(_ value: String) -> Bool {
-        self.delete()
-        let data = Data(value.utf8)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.service,
-            kSecAttrAccount as String: self.account,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-        ]
-        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
-    }
-
-    @discardableResult
-    static func delete() -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.service,
-            kSecAttrAccount as String: self.account,
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        return status == errSecSuccess || status == errSecItemNotFound
+    private func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        self.copiedPath = text
     }
 }

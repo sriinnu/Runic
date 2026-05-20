@@ -37,9 +37,10 @@ struct RetroBevelOverlay: ViewModifier {
 
     private var bevel: some View {
         let radius = self.runicTheme.shape.cornerRadius(self.baseRadius)
-        let darkColor = self.runicTheme.cardStroke
-        let highlightColor = Color.white.opacity(0.70 * self.intensity)
-        let shadowColor = Color.black.opacity(0.18 * self.intensity)
+        let weight = max(0.45, self.runicTheme.style.chrome.borderWeight)
+        let darkColor = self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity)
+        let highlightColor = Color.white.opacity(0.48 * self.intensity)
+        let shadowColor = Color.black.opacity(0.12 * self.intensity)
 
         // System-7 bevel: a full dark outer stroke + an asymmetric inner
         // highlight that only paints the top/leading edges (raised) or
@@ -48,13 +49,13 @@ struct RetroBevelOverlay: ViewModifier {
         return ZStack {
             // Outer dark frame — the bevel's stroke.
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(darkColor, lineWidth: 1.0)
+                .strokeBorder(darkColor, lineWidth: weight)
 
             // Inner highlight ring, but masked to a diagonal gradient so it
             // fades from full opacity at top-leading to zero at bottom-trailing
             // (or reversed for inset state).
             RoundedRectangle(cornerRadius: max(radius - 1, 1), style: .continuous)
-                .strokeBorder(self.inset ? shadowColor : highlightColor, lineWidth: 0.9)
+                .strokeBorder(self.inset ? shadowColor : highlightColor, lineWidth: max(0.45, weight * 0.82))
                 .padding(1)
                 .mask(
                     LinearGradient(
@@ -71,7 +72,12 @@ extension View {
     /// Apply the Retro two-layer bevel chrome to a surface. No-op on any
     /// other theme.
     @MainActor
-    func retroBevel(baseRadius: CGFloat = RunicCornerRadius.lg, intensity: Double = 1.0, inset: Bool = false) -> some View {
+    func retroBevel(
+        baseRadius: CGFloat = RunicCornerRadius.lg,
+        intensity: Double = 1.0,
+        inset: Bool = false)
+        -> some View
+    {
         self.modifier(RetroBevelOverlay(baseRadius: baseRadius, intensity: intensity, inset: inset))
     }
 }

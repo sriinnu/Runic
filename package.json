@@ -3,7 +3,7 @@
   "version": "2.2.0",
   "description": "AI usage monitoring for your Mac menubar. Track usage, costs, and quotas across 27 AI providers.",
   "author": "Sriinnu <5410488+sriinnu@users.noreply.github.com>",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "https://github.com/sriinnu/Runic.git"

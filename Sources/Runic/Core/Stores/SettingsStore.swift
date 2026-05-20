@@ -338,7 +338,7 @@ final class SettingsStore {
         didSet {
             self.userDefaults.set(self.theme.rawValue, forKey: "theme")
             RunicApp.applyTheme(self.theme)
-            RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+            RunicFont.applyTheme(self.theme.palette)
             IconRenderer.themePalette = self.theme.palette
             self.bumpVisualSettingsRevision()
         }
@@ -346,6 +346,10 @@ final class SettingsStore {
 
     var selectedFontFamily: String {
         didSet {
+            let migrated = RunicFontChoice.migratedFamily(self.selectedFontFamily)
+            if migrated != self.selectedFontFamily {
+                self.selectedFontFamily = migrated
+            }
             self.userDefaults.set(self.selectedFontFamily, forKey: "selectedFontFamily")
             RunicFont.family = self.selectedFontFamily
             self.bumpVisualSettingsRevision()
@@ -989,7 +993,12 @@ final class SettingsStore {
             self.theme = Theme.default
             userDefaults.set(Theme.default.rawValue, forKey: "theme")
         }
-        self.selectedFontFamily = userDefaults.string(forKey: "selectedFontFamily") ?? "Fira Code"
+        let storedSelectedFont = userDefaults.string(forKey: "selectedFontFamily")
+        let migratedSelectedFont = RunicFontChoice.migratedFamily(storedSelectedFont)
+        self.selectedFontFamily = migratedSelectedFont
+        if (storedSelectedFont ?? "") != migratedSelectedFont {
+            userDefaults.set(migratedSelectedFont, forKey: "selectedFontFamily")
+        }
         self.menuBarShowsBrandIconWithPercent = userDefaults.object(
             forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
         self.menuBarVibrantIconEnabled = userDefaults.object(
@@ -1065,7 +1074,7 @@ final class SettingsStore {
             self.claudeWebExtrasEnabled = false
         }
         RunicFont.family = self.selectedFontFamily
-        RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+        RunicFont.applyTheme(self.theme.palette)
         IconRenderer.themePalette = self.theme.palette
     }
 

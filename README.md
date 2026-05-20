@@ -97,10 +97,11 @@ Context labels prefer Kosha-discovery 1.2.0's local TTL-backed capability regist
 - CLI tool (`RunicCLI`)
 
 **Design**
-- System, Light, Dark, Daybreak, Pine, Nocturne, Prism, Glass, and Terminal themes
+- Retro, System, Light, Dark, Daybreak, Glass, and Tactical HUD Terminal themes
+- JSON-driven theme style tokens for typography, chrome, effects, and controls
 - Liquid UI with glass materials and animated progress bars
 - Staggered entrance animations and glass shimmer effects
-- Custom font system with live preview and theme-aware contrast rules
+- Curated font system with Mona Sans, Commit Mono, Geist, SF, New York, and theme-aware contrast rules
 - Drop-in font extensibility — add TTF/OTF to `Resources/Fonts`, rebuild, auto-discovered
 - Design tokens for typography, colors, spacing, corner radius, animation
 - VoiceOver accessible
@@ -165,7 +166,7 @@ Install it from **Preferences → Advanced → Install CLI**. See [docs/cli.md](
 
 ## Privacy
 
-Zero telemetry. No analytics. No crash reporting. Runic stores usage data locally and makes network requests only for enabled provider fetches, localhost runtime probes, status/update checks, and optional web-dashboard features.
+Zero telemetry. No analytics. No crash reporting. Your data, your tokens, your cost. Runic keeps usage data on this Mac unless you export it, copy diagnostics, or configure a webhook. Network requests are limited to enabled provider fetches, localhost runtime probes, status/update checks, and optional web-dashboard features.
 
 API keys are stored in macOS Keychain. Browser-backed providers reuse local browser/WebKit sessions where available; Runic does not store provider passwords. Local usage logs and CLI/JSON output can include account identity fields such as email addresses, so redact diagnostics before sharing them publicly.
 

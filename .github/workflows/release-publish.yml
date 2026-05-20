@@ -120,13 +120,13 @@ jobs:
           node-version: "22"
           cache: ${{ steps.detect-pm.outputs.manager }}
 
-      # -- Install dependencies from lockfile (deterministic) --
+      # -- Install dependencies with the detected package manager --
       - name: Install dependencies
         run: |
           if [ "${{ steps.detect-pm.outputs.manager }}" = "pnpm" ]; then
             pnpm install --frozen-lockfile
           else
-            npm ci
+            npm install
           fi
 
       # -- Build the package --

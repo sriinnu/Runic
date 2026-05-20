@@ -7,7 +7,7 @@ import SwiftUI
 /// Wire-format representation of a theme. Mirrors `RunicThemePalette` but
 /// with primitive types (hex strings, preset names) so it can live in a
 /// JSON file. Decoded by `ThemeLoader`, then converted to a runtime palette.
-struct RunicThemeJSON: Codable {
+struct RunicThemeJSON: Decodable {
     let id: String
     let displayName: String
     let tagline: String
@@ -20,8 +20,9 @@ struct RunicThemeJSON: Codable {
     let shape: Shape
     let motion: Motion
     let density: Density
+    let style: RunicThemeStyle?
 
-    struct Colors: Codable {
+    struct Colors: Decodable {
         let primary: String
         let secondary: String
         let accent: String
@@ -38,7 +39,7 @@ struct RunicThemeJSON: Codable {
 
     /// Each is the name of a `RunicThemeFonts.Body` / `.Numeric` case
     /// (`"system"`, `"rounded"`, `"mono"`, `"serif"`, `"tabular"`).
-    struct Fonts: Codable {
+    struct Fonts: Decodable {
         let body: String
         let numeric: String
     }
@@ -46,19 +47,19 @@ struct RunicThemeJSON: Codable {
     /// Either named preset (`"standard"`, `"soft"`, `"sharp"`, `"glassy"`,
     /// `"retroBevel"`) — or custom `cornerMultiplier` + `separator`
     /// (`"hairline"`, `"glow"`, `"ascii"`).
-    struct Shape: Codable {
+    struct Shape: Decodable {
         let preset: String?
         let cornerMultiplier: Double?
         let separator: String?
     }
 
     /// Named motion preset.
-    struct Motion: Codable {
+    struct Motion: Decodable {
         let preset: String // standard / slow / snappy / instant / mechanical
     }
 
     /// Named density preset.
-    struct Density: Codable {
+    struct Density: Decodable {
         let preset: String // compact / normal / generous
     }
 }
@@ -186,7 +187,8 @@ extension RunicThemeJSON {
             fonts: self.makeFonts(),
             shape: self.makeShape(),
             motion: self.makeMotion(),
-            density: self.makeDensity())
+            density: self.makeDensity(),
+            style: self.style ?? .standard)
     }
 
     private static func color(_ token: String) -> Color {
@@ -245,6 +247,7 @@ extension RunicThemeJSON {
         default: return .normal
         }
     }
+
 }
 
 // MARK: - Loader
