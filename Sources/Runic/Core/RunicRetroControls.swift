@@ -8,15 +8,16 @@ import SwiftUI
 @MainActor
 struct RetroToggleStyle: ToggleStyle {
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
-        if self.runicTheme.id == "retro" || self.runicTheme.isTerminalHUD {
+        if self.runicTheme.prefersRetroToggleChrome {
             // `.center` aligns with PreferenceToggleRow's outer HStack so the
             // checkbox sits beside the label rather than baseline-shifting.
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
                 self.box(isOn: configuration.isOn)
                     .onTapGesture {
-                        withAnimation(self.runicTheme.motion.curve) {
+                        withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
                             configuration.isOn.toggle()
                         }
                     }
@@ -72,6 +73,26 @@ extension ToggleStyle where Self == RetroToggleStyle {
     /// Use theme-owned checkbox chrome for Retro/Terminal; system toggle elsewhere.
     @MainActor
     static var retro: RetroToggleStyle { RetroToggleStyle() }
+}
+
+@MainActor
+private struct RunicPreferenceToggleStyleModifier: ViewModifier {
+    @Environment(\.runicTheme) private var runicTheme
+
+    func body(content: Content) -> some View {
+        if self.runicTheme.prefersRetroToggleChrome {
+            content.toggleStyle(.retro)
+        } else {
+            content.toggleStyle(.checkbox)
+        }
+    }
+}
+
+extension View {
+    @MainActor
+    func runicPreferenceToggleStyle() -> some View {
+        self.modifier(RunicPreferenceToggleStyleModifier())
+    }
 }
 
 // RetroButtonStyle removed — was defined during prototyping but never wired

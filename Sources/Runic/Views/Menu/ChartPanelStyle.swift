@@ -19,7 +19,7 @@ struct ChartPanelStyle: ViewModifier {
                 ZStack {
                     self.runicTheme.menuSurfaceGradient
                     if self.runicTheme.isTerminalHUD {
-                        RunicTerminalScanlineOverlay(opacity: 0.90)
+                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.chartScanlineOpacity)
                     }
                 }
             }

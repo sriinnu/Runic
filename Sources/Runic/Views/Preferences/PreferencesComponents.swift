@@ -97,7 +97,7 @@ struct PreferenceToggleRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                if self.runicTheme.id == "retro" || self.runicTheme.isTerminalHUD {
+                if self.runicTheme.prefersRetroToggleChrome {
                     Toggle(isOn: self.$binding) {
                         Text(self.title)
                             .font(self.titleFont)
@@ -117,7 +117,7 @@ struct PreferenceToggleRow: View {
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(self.subtitleFont)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(self.subtitleOpacity))
+                    .foregroundStyle(self.subtitleColor)
                     .lineSpacing(self.subtitleLineSpacing)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -134,8 +134,8 @@ struct PreferenceToggleRow: View {
         self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
     }
 
-    private var subtitleOpacity: Double {
-        self.runicTheme.isTerminalHUD ? 0.78 : 0.70
+    private var subtitleColor: Color {
+        self.runicTheme.subduedSecondaryText
     }
 
     private var subtitleLineSpacing: CGFloat {
@@ -171,7 +171,7 @@ struct PreferenceStepperRow: View {
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(self.subtitleFont)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(self.subtitleOpacity))
+                    .foregroundStyle(self.subtitleColor)
                     .lineSpacing(self.subtitleLineSpacing)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -188,8 +188,8 @@ struct PreferenceStepperRow: View {
         self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
     }
 
-    private var subtitleOpacity: Double {
-        self.runicTheme.isTerminalHUD ? 0.78 : 0.70
+    private var subtitleColor: Color {
+        self.runicTheme.subduedSecondaryText
     }
 
     private var subtitleLineSpacing: CGFloat {

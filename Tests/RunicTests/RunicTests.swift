@@ -305,6 +305,24 @@ struct RunicTests {
 
     @MainActor
     @Test
+    func `theme polish helpers keep motion contrast and chrome scoped`() {
+        let retro = Theme.retro.palette
+        let terminal = Theme.terminal.palette
+        let glass = Theme.glass.palette
+        let light = Theme.light.palette
+
+        #expect(retro.prefersRetroToggleChrome)
+        #expect(terminal.prefersRetroToggleChrome)
+        #expect(!glass.prefersRetroToggleChrome)
+        #expect(!light.prefersRetroToggleChrome)
+        #expect(terminal.chartScanlineOpacity == terminal.style.effects.scanlineOpacity)
+        #expect(light.nsColor(light.chartAxisLabelColor).alphaComponent >= 0.80)
+        #expect(glass.motion.curve(reduceMotion: true) == nil)
+        #expect(glass.motion.delayedCurve(reduceMotion: true, delay: 1) == nil)
+    }
+
+    @MainActor
+    @Test
     func `terminal typography uses tight hud line rhythm`() {
         let palette = Theme.terminal.palette
         let rules = RunicFontRules.rules(for: RunicFontChoice.commitMono.id)

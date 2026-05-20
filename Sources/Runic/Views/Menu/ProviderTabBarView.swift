@@ -137,12 +137,13 @@ struct ProviderTabBarView: View {
 private struct TabButtonStyle: ButtonStyle {
     @State private var isHovered = false
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : (self.isHovered ? 1.03 : 1.0))
-            .animation(self.runicTheme.motion.curve, value: configuration.isPressed)
-            .animation(self.runicTheme.motion.curve, value: self.isHovered)
+            .scaleEffect(self.reduceMotion ? 1 : (configuration.isPressed ? 0.95 : (self.isHovered ? 1.03 : 1.0)))
+            .animation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion), value: configuration.isPressed)
+            .animation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion), value: self.isHovered)
             .onHover { self.isHovered = $0 }
     }
 }

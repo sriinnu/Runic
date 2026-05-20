@@ -54,6 +54,7 @@ struct LiquidMeshBackground: View {
 private struct CursorSpotlight: View {
     let cursorPoint: UnitPoint
     let isActive: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -68,7 +69,7 @@ private struct CursorSpotlight: View {
                     y: geo.size.height > 0 ? max(0, min(1, self.cursorPoint.y)) : 0.5),
                 startRadius: 0,
                 endRadius: 160)
-                .animation(.easeOut(duration: 0.15), value: self.isActive)
+                .animation(self.reduceMotion ? nil : .easeOut(duration: 0.15), value: self.isActive)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -83,10 +84,11 @@ private struct ShimmerSweep: View {
     @State private var offset: CGFloat = -0.4
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let stableDelay: Double
+    let isActive: Bool
 
     var body: some View {
         GeometryReader { geo in
-            if !self.reduceMotion {
+            if self.isActive, !self.reduceMotion {
                 LinearGradient(
                     colors: [
                         .clear,
@@ -105,14 +107,18 @@ private struct ShimmerSweep: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .onAppear {
-            guard !self.reduceMotion else { return }
-            withAnimation(
-                .easeInOut(duration: 2.8)
-                    .repeatForever(autoreverses: false)
-                    .delay(self.stableDelay))
-            {
-                self.offset = 1.4
-            }
+            self.startIfNeeded()
+        }
+        .onChange(of: self.isActive) { _, _ in
+            self.startIfNeeded()
+        }
+    }
+
+    private func startIfNeeded() {
+        guard self.isActive, !self.reduceMotion else { return }
+        self.offset = -0.4
+        withAnimation(.easeInOut(duration: 1.2).delay(self.stableDelay)) {
+            self.offset = 1.4
         }
     }
 }
@@ -230,7 +236,7 @@ private struct LiquidGlassCore: ViewModifier {
                 } else {
                     RotatingGradientBorder(
                         cornerRadius: RunicCornerRadius.lg,
-                        isActive: self.hovering || isGlassTheme)
+                        isActive: self.hovering && isGlassTheme)
                 }
             }
             .overlay {
@@ -247,12 +253,14 @@ private struct LiquidGlassCore: ViewModifier {
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
                 if !isTerminalHUD {
-                    ShimmerSweep(stableDelay: Double(self.shimmerIndex) * 0.8 + 1.0)
+                    ShimmerSweep(
+                        stableDelay: Double(self.shimmerIndex) * 0.8 + 1.0,
+                        isActive: self.hovering && isGlassTheme)
                         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                 }
             }
             .scaleEffect(self.hovering && !self.reduceMotion && !isTerminalHUD ? 1.01 : 1.0)
-            .animation(.spring(response: 0.35, dampingFraction: 0.72), value: self.hovering)
+            .animation(self.reduceMotion ? nil : self.runicTheme.motion.curve, value: self.hovering)
             .background(
                 GeometryReader { geo in
                     Color.clear
@@ -326,14 +334,25 @@ extension View {
     }
 
     func liquidEntrance(appeared: Bool, index: Int) -> some View {
-        self
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 14)
-            .scaleEffect(appeared ? 1 : 0.97, anchor: .top)
+        self.modifier(LiquidEntranceModifier(appeared: appeared, index: index))
+    }
+}
+
+@MainActor
+private struct LiquidEntranceModifier: ViewModifier {
+    let appeared: Bool
+    let index: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(self.appeared ? 1 : 0)
+            .offset(y: self.reduceMotion || self.appeared ? 0 : 14)
+            .scaleEffect(self.reduceMotion || self.appeared ? 1 : 0.97, anchor: .top)
             .animation(
-                .spring(response: 0.5, dampingFraction: 0.78)
-                    .delay(Double(index) * 0.07),
-                value: appeared)
+                self.reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.78)
+                    .delay(Double(self.index) * 0.07),
+                value: self.appeared)
     }
 }
 

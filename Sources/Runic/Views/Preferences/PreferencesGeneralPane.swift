@@ -6,6 +6,7 @@ import SwiftUI
 struct GeneralPane: View {
     @Environment(\.runicFonts) private var fonts
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     @State private var appeared = false
@@ -29,7 +30,7 @@ struct GeneralPane: View {
                             Text("Show cost summary")
                                 .font(self.preferenceTitleFont)
                         }
-                        .toggleStyle(.retro)
+                        .runicPreferenceToggleStyle()
 
                         Text("Reads local usage logs. Shows today + last 30 days cost in the menu.")
                             .font(self.preferenceHelpFont)
@@ -52,7 +53,7 @@ struct GeneralPane: View {
                             Text("Access OpenAI via web")
                                 .font(self.preferenceTitleFont)
                         }
-                        .toggleStyle(.retro)
+                        .runicPreferenceToggleStyle()
 
                         Text("Imports browser cookies for dashboard extras (credits history, code review).")
                             .font(self.preferenceHelpFont)
@@ -176,7 +177,7 @@ struct GeneralPane: View {
                                     theme: theme,
                                     isSelected: self.settings.theme == theme)
                                 {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+                                    withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
                                         self.settings.theme = theme
                                     }
                                 }
@@ -248,7 +249,7 @@ struct GeneralPane: View {
         }
         .onAppear {
             guard !self.appeared else { return }
-            withAnimation(.easeOut(duration: 0.6)) { self.appeared = true }
+            withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) { self.appeared = true }
         }
     }
 
@@ -277,7 +278,7 @@ struct GeneralPane: View {
     }
 
     private var preferenceHelpColor: Color {
-        self.runicTheme.secondaryText.opacity(self.runicTheme.isTerminalHUD ? 0.78 : 0.70)
+        self.runicTheme.subduedSecondaryText
     }
 
     private var preferenceHelpLineSpacing: CGFloat {
@@ -848,7 +849,7 @@ private struct RunicOperationsCenterView: View {
                 if health.count > 6 {
                     Text("+ \(health.count - 6) more providers")
                         .font(self.fonts.caption2)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
                 }
             }
 
@@ -892,7 +893,7 @@ private struct RunicOperationsCenterView: View {
                 if let status = self.guardrailStatus ?? self.diagnosticsStatus {
                     Text(status)
                         .font(self.fonts.caption2)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
                 }
             }
         }
@@ -944,7 +945,7 @@ private struct ProviderHealthCompactRow: View {
                 }
                 Text("\(self.row.credentialDetail) · \(self.row.dataDetail)")
                     .font(self.fonts.caption2)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     .lineLimit(1)
             }
 

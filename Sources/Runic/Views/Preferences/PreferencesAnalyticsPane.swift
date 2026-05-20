@@ -34,6 +34,7 @@ struct AnalyticsPane: View {
 
     @State private var appeared = false
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         LiquidPreferencesPane {
@@ -56,7 +57,7 @@ struct AnalyticsPane: View {
                         .pickerStyle(.segmented)
                         Text("Pick bars, percent, or both in the menu card.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -70,7 +71,7 @@ struct AnalyticsPane: View {
                         .pickerStyle(.segmented)
                         Text("Glance: usage only. Analyst: usage + credits/cost. Operator: full insights and actions.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     PreferenceToggleRow(
@@ -94,7 +95,7 @@ struct AnalyticsPane: View {
                         .opacity(self.settings.mergeIcons ? 1 : 0.5)
                         Text("Choose whether providers appear on top or in a left sidebar.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -110,7 +111,7 @@ struct AnalyticsPane: View {
                         .opacity(self.settings.mergeIcons ? 1 : 0.5)
                         Text("Small or medium icons for the provider switcher.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     PreferenceToggleRow(
@@ -193,7 +194,7 @@ struct AnalyticsPane: View {
                         if self.alertsData.rules.isEmpty {
                             Text("No guardrail rules configured on this Mac.")
                                 .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                                .foregroundStyle(self.runicTheme.subduedSecondaryText)
                                 .padding(.vertical, RunicSpacing.md)
                                 .frame(maxWidth: .infinity)
                         } else {
@@ -214,7 +215,7 @@ struct AnalyticsPane: View {
                                 "Budget breach notifications are evaluated from Budgets below; " +
                                 "session quota notifications live in General.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     }
                 }
                 .padding(.top, RunicSpacing.xs)
@@ -252,7 +253,7 @@ struct AnalyticsPane: View {
                         if self.budgets.isEmpty {
                             Text("No project budgets configured on this Mac.")
                                 .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                                .foregroundStyle(self.runicTheme.subduedSecondaryText)
                                 .padding(.vertical, RunicSpacing.md)
                                 .frame(maxWidth: .infinity)
                         } else {
@@ -268,7 +269,7 @@ struct AnalyticsPane: View {
                             "Budgets are local JSON and feed project forecasts, menu budget cards, " +
                                 "and breach notifications when enabled.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
 
                         if let error = self.budgetErrorMessage {
                             HStack(alignment: .center, spacing: RunicSpacing.xs) {
@@ -294,7 +295,9 @@ struct AnalyticsPane: View {
         .onAppear {
             self.alertsData = AlertRuleStore.load()
             self.budgets = ProjectBudgetStore.getAllBudgets()
-            if !self.appeared { withAnimation(.easeOut(duration: 0.6)) { self.appeared = true } }
+            if !self.appeared {
+                withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) { self.appeared = true }
+            }
         }
         .sheet(isPresented: self.$showingAddRule) {
             AnalyticsRuleEditorSheet(
@@ -559,10 +562,11 @@ struct AnalyticsPane: View {
 private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
     @Environment(\.runicTheme) private var runicTheme
     @Environment(\.runicFonts) private var fonts
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
                     configuration.isExpanded.toggle()
                 }
             } label: {
@@ -594,6 +598,7 @@ private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
 private struct AnalyticsRuleEditorSheet: View {
     @Environment(\.runicFonts) private var fonts
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("defaultWebhookURL") private var defaultWebhookURL = ""
 
     let rule: AlertRuleStore.AlertRule?
     let onSave: (AlertRuleStore.AlertRule) -> Void
@@ -611,7 +616,8 @@ private struct AnalyticsRuleEditorSheet: View {
         self._alertType = State(initialValue: rule?.type ?? .projectBudget)
         self._threshold = State(initialValue: rule?.threshold ?? 80.0)
         self._severity = State(initialValue: rule?.severity ?? .warning)
-        self._webhookURL = State(initialValue: rule?.webhookURL ?? "")
+        let savedWebhookURL = UserDefaults.standard.string(forKey: "defaultWebhookURL") ?? ""
+        self._webhookURL = State(initialValue: rule?.webhookURL ?? savedWebhookURL)
         self._notifyWebhook = State(initialValue: rule?.notifyWebhook ?? false)
     }
 
@@ -643,6 +649,11 @@ private struct AnalyticsRuleEditorSheet: View {
 
                 if self.notifyWebhook {
                     TextField("Webhook URL", text: self.$webhookURL)
+                    if !self.defaultWebhookURL.isEmpty, self.webhookURL != self.defaultWebhookURL {
+                        Button("Use default webhook") {
+                            self.webhookURL = self.defaultWebhookURL
+                        }
+                    }
                 }
             }
             .padding()

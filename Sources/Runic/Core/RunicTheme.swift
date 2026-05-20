@@ -82,6 +82,15 @@ struct RunicThemeMotion {
     /// Mechanical / click-stop motion — Retro buttons feel like physical
     /// keys. Short linear ramp.
     static let mechanical = RunicThemeMotion(duration: 0.12, curve: .linear(duration: 0.12))
+    static let reduced = RunicThemeMotion(duration: 0.01, curve: .linear(duration: 0.01))
+
+    func curve(reduceMotion: Bool) -> Animation? {
+        reduceMotion ? nil : self.curve
+    }
+
+    func delayedCurve(reduceMotion: Bool, delay: Double) -> Animation? {
+        reduceMotion ? nil : self.curve.delay(delay)
+    }
 }
 
 /// Padding/spacing multiplier. 1.0 = unchanged.
@@ -296,6 +305,22 @@ struct RunicThemePalette {
         self.id == "terminal"
     }
 
+    var prefersRetroToggleChrome: Bool {
+        self.id == "retro" || self.isTerminalHUD
+    }
+
+    var readableSecondaryText: Color {
+        self.secondaryText(minimumAlpha: self.isTerminalHUD ? 0.92 : 0.86)
+    }
+
+    var subduedSecondaryText: Color {
+        self.secondaryText(minimumAlpha: self.isTerminalHUD ? 0.84 : 0.78)
+    }
+
+    var chartScanlineOpacity: Double {
+        self.style.effects.scanlineOpacity
+    }
+
     var meshColors: [Color] {
         if self.isTerminalHUD {
             [self.surface, self.accent, self.highlight, self.secondary, self.tertiary]
@@ -387,7 +412,7 @@ struct RunicThemePalette {
     }
 
     var chartAxisLabelColor: Color {
-        self.isTerminalHUD ? Color.white.opacity(0.62) : self.secondaryText.opacity(self.isCustom ? 0.82 : 0.72)
+        self.isTerminalHUD ? self.readableSecondaryText : self.secondaryText(minimumAlpha: self.isCustom ? 0.88 : 0.82)
     }
 
     var chartSelectionBandColor: Color {
@@ -451,6 +476,12 @@ struct RunicThemePalette {
     /// like `IconRenderer` can read the theme accent ramp.
     func nsColor(_ color: Color, fallback: NSColor = .controlAccentColor) -> NSColor {
         NSColor(color).usingColorSpace(.deviceRGB) ?? fallback
+    }
+
+    private func secondaryText(minimumAlpha: CGFloat) -> Color {
+        let ns = self.nsColor(self.secondaryText, fallback: .secondaryLabelColor)
+        guard ns.alphaComponent < minimumAlpha else { return self.secondaryText }
+        return Color(nsColor: ns.withAlphaComponent(minimumAlpha))
     }
 }
 
