@@ -5,11 +5,8 @@ import SwiftUI
 
 @MainActor
 struct LiquidMeshBackground: View {
-    @State private var phase: Double = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.runicTheme) private var runicTheme
 
-    @ViewBuilder
     var body: some View {
         if self.runicTheme.isTerminalHUD {
             ZStack {
@@ -17,33 +14,34 @@ struct LiquidMeshBackground: View {
                 RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
             }
         } else {
-            TimelineView(.animation(minimumInterval: 1 / 30.0, paused: self.reduceMotion)) { timeline in
-                Canvas { context, size in
-                    let t = self.reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                    let cx = size.width / 2
-                    let cy = size.height / 2
-                    let palette = self.runicTheme.meshColors
-
-                    for (i, color) in palette.enumerated() {
-                        let fi = Double(i)
-                        let angle = t * (0.12 + fi * 0.03) + fi * 1.25
-                        let r = min(cx, cy) * (0.28 + 0.18 * sin(t * 0.15 + fi * 0.9))
-                        let x = cx + cos(angle) * r * 0.6
-                        let y = cy + sin(angle) * r * 0.5
-                        let blob = min(size.width, size.height) * (0.52 + 0.12 * sin(t * 0.2 + fi))
-
-                        let rect = CGRect(x: x - blob / 2, y: y - blob / 2, width: blob, height: blob)
-                        context.fill(
-                            Ellipse().path(in: rect),
-                            with: .radialGradient(
-                                Gradient(colors: [color.opacity(0.35), color.opacity(0.08), color.opacity(0)]),
-                                center: CGPoint(x: x, y: y),
-                                startRadius: 0,
-                                endRadius: blob / 2))
-                    }
-                }
-                .blur(radius: 40)
+            Canvas { context, size in
+                self.drawMesh(context: context, size: size)
             }
+            .blur(radius: 36)
+        }
+    }
+
+    private func drawMesh(context: GraphicsContext, size: CGSize) {
+        let cx = size.width / 2
+        let cy = size.height / 2
+        let palette = self.runicTheme.meshColors
+
+        for (index, color) in palette.enumerated() {
+            let fi = Double(index)
+            let angle = fi * 1.42
+            let r = min(cx, cy) * (0.32 + 0.08 * sin(fi * 0.9))
+            let x = cx + cos(angle) * r * 0.72
+            let y = cy + sin(angle) * r * 0.58
+            let blob = min(size.width, size.height) * (0.50 + 0.08 * sin(fi))
+
+            let rect = CGRect(x: x - blob / 2, y: y - blob / 2, width: blob, height: blob)
+            context.fill(
+                Ellipse().path(in: rect),
+                with: .radialGradient(
+                    Gradient(colors: [color.opacity(0.35), color.opacity(0.08), color.opacity(0)]),
+                    center: CGPoint(x: x, y: y),
+                    startRadius: 0,
+                    endRadius: blob / 2))
         }
     }
 }
@@ -142,7 +140,7 @@ private struct RotatingGradientBorder: View {
 
     var body: some View {
         if self.isActive, !self.reduceMotion {
-            TimelineView(.animation(minimumInterval: 1 / 60.0, paused: !self.isActive)) { timeline in
+            TimelineView(.periodic(from: .now, by: 1 / 12.0)) { timeline in
                 let rotation = timeline.date.timeIntervalSinceReferenceDate * 72
                 RoundedRectangle(cornerRadius: self.cornerRadius, style: .continuous)
                     .strokeBorder(
@@ -204,7 +202,7 @@ private struct LiquidGlassCore: ViewModifier {
                             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     }
                 }
-                    .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
+                .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
             }
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

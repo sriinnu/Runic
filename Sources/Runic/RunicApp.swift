@@ -243,6 +243,9 @@ private func makeUpdaterController() -> UpdaterProviding {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static let productionBundleID = "com.sriinnu.athena.runic"
+    private static let debugBundleID = "com.sriinnu.athena.runic.debug"
+
     let updaterController: UpdaterProviding = makeUpdaterController()
     private var statusController: StatusItemControlling?
     private var store: UsageStore?
@@ -270,13 +273,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Exit early if another Runic with the same bundle id is already running.
-    /// Stale login items pointing at multiple bundle paths can otherwise spin
-    /// up two status items at login.
+    /// Exit early if another Runic from the production/debug bundle family is already running.
+    /// Stale login items or local debug bundles can otherwise spin up two status items.
     private static func terminateIfDuplicateInstance() -> Bool {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.sriinnu.athena.runic"
         let myPID = ProcessInfo.processInfo.processIdentifier
-        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        let currentBundleID = Bundle.main.bundleIdentifier ?? Self.productionBundleID
+        let bundleIDs = Set([currentBundleID, Self.productionBundleID, Self.debugBundleID])
+        let others = bundleIDs.flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
             .filter { $0.processIdentifier != myPID }
         guard let existing = others.first else { return false }
         RunicLog.logger("singleton").info(
