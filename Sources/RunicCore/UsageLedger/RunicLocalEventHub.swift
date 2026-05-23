@@ -42,8 +42,8 @@ public actor RunicLocalEventHub {
         }
     }
 
-    public func stream(replayLatest: Bool = true) -> AsyncStream<RunicLocalEvent> {
-        AsyncStream { continuation in
+    public func stream(replayLatest: Bool = false, bufferingNewest limit: Int = 32) -> AsyncStream<RunicLocalEvent> {
+        AsyncStream(bufferingPolicy: .bufferingNewest(limit)) { continuation in
             let id = UUID()
             self.continuations[id] = continuation
             if replayLatest, let latestEvent {

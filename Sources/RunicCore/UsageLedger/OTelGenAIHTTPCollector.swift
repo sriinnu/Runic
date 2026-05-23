@@ -4,6 +4,9 @@ import Foundation
 import Network
 
 public final class OTelGenAIHTTPCollector: @unchecked Sendable {
+    private static let maxEventStreamClients = 16
+    private static let eventStreamHeartbeatInterval: Duration = .seconds(15)
+
     private let listener: NWListener
     private let queue = DispatchQueue(label: "runic.otel-genai.collector")
     private let sink: OTelGenAIIngestionSink
@@ -86,16 +89,24 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
     {
         let task = Task {
             do {
+                guard await eventHub.subscriberCount < Self.maxEventStreamClients else {
+                    try await Self.send(Self.streamUnavailableResponse(), on: connection)
+                    connection.cancel()
+                    return
+                }
                 try await Self.send(Self.streamHeaders(for: route.format), on: connection)
                 try await Self.send(Self.chunk(Self.readyFrame(for: route.format)), on: connection)
-                for await event in await eventHub.stream() {
+                for await frame in Self.frames(for: route.format, eventHub: eventHub) {
                     try Task.checkCancellation()
-                    try await Self.send(Self.chunk(Self.frame(for: event, format: route.format)), on: connection)
+                    try await Self.send(Self.chunk(frame), on: connection)
                 }
             } catch {}
             connection.cancel()
         }
 
+        Self.monitorClientClose(connection: connection) {
+            task.cancel()
+        }
         connection.stateUpdateHandler = { state in
             switch state {
             case .cancelled, .failed:
@@ -103,6 +114,44 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
             default:
                 break
             }
+        }
+    }
+
+    private static func frames(for format: EventStreamFormat, eventHub: RunicLocalEventHub) -> AsyncStream<Data> {
+        AsyncStream(bufferingPolicy: .bufferingNewest(64)) { continuation in
+            let eventTask = Task {
+                do {
+                    for await event in await eventHub.stream(replayLatest: false, bufferingNewest: 32) {
+                        try Task.checkCancellation()
+                        continuation.yield(try Self.frame(for: event, format: format))
+                    }
+                } catch {}
+                continuation.finish()
+            }
+            let heartbeatTask = Task {
+                while !Task.isCancelled {
+                    do {
+                        try await Task.sleep(for: Self.eventStreamHeartbeatInterval)
+                        continuation.yield(Self.heartbeatFrame(for: format))
+                    } catch {
+                        break
+                    }
+                }
+            }
+            continuation.onTermination = { _ in
+                eventTask.cancel()
+                heartbeatTask.cancel()
+            }
+        }
+    }
+
+    private static func monitorClientClose(connection: NWConnection, onClose: @escaping @Sendable () -> Void) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1) { data, _, isComplete, error in
+            if isComplete || error != nil || data?.isEmpty == false {
+                onClose()
+                return
+            }
+            Self.monitorClientClose(connection: connection, onClose: onClose)
         }
     }
 
@@ -152,12 +201,32 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
         return Data(header.utf8)
     }
 
+    private static func streamUnavailableResponse() -> Data {
+        let payload = Data(#"{"error":"too many local event stream clients"}"#.utf8)
+        let header = [
+            "HTTP/1.1 503 Service Unavailable",
+            "Content-Type: application/json",
+            "Content-Length: \(payload.count)",
+            "Connection: close",
+        ].joined(separator: "\r\n") + "\r\n\r\n"
+        return Data(header.utf8) + payload
+    }
+
     private static func readyFrame(for format: EventStreamFormat) -> Data {
         switch format {
         case .sse:
             Data(": runic stream ready\n\n".utf8)
         case .ndjson:
             Data(#"{"type":"ready"}"#.utf8) + Data("\n".utf8)
+        }
+    }
+
+    private static func heartbeatFrame(for format: EventStreamFormat) -> Data {
+        switch format {
+        case .sse:
+            Data(": ping\n\n".utf8)
+        case .ndjson:
+            Data(#"{"type":"heartbeat"}"#.utf8) + Data("\n".utf8)
         }
     }
 

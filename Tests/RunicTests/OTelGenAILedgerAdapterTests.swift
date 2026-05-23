@@ -332,6 +332,55 @@ struct OTelGenAILedgerAdapterTests {
         #expect(await secondIterator.next() == event)
     }
 
+    @Test
+    func `local event hub does not replay latest event by default`() async throws {
+        let hub = RunicLocalEventHub()
+        let staleEvent = RunicLocalEvent(id: "stale", type: "test.event", payload: ["stale": "true"])
+        let freshEvent = RunicLocalEvent(id: "fresh", type: "test.event", payload: ["fresh": "true"])
+
+        await hub.publish(staleEvent)
+        let stream = await hub.stream()
+        let read = Task {
+            var iterator = stream.makeAsyncIterator()
+            return await iterator.next()
+        }
+        try await Task.sleep(for: .milliseconds(20))
+        await hub.publish(freshEvent)
+
+        #expect(await read.value == freshEvent)
+    }
+
+    @Test
+    func `local event hub uses bounded newest buffering`() async {
+        let hub = RunicLocalEventHub()
+        let stream = await hub.stream(replayLatest: false, bufferingNewest: 1)
+        var iterator = stream.makeAsyncIterator()
+        let first = RunicLocalEvent(id: "first", type: "test.event", payload: ["index": "1"])
+        let second = RunicLocalEvent(id: "second", type: "test.event", payload: ["index": "2"])
+
+        await hub.publish(first)
+        await hub.publish(second)
+
+        #expect(await iterator.next() == second)
+    }
+
+    @Test
+    func `local event hub removes cancelled subscribers`() async throws {
+        let hub = RunicLocalEventHub()
+        let stream = await hub.stream(replayLatest: false)
+        let read = Task {
+            var iterator = stream.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(await hub.subscriberCount == 1)
+        read.cancel()
+        try await Task.sleep(for: .milliseconds(20))
+
+        #expect(await hub.subscriberCount == 0)
+    }
+
     #if canImport(Network)
     @Test
     func `stream frames support sse and ndjson transports`() throws {

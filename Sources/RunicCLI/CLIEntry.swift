@@ -972,6 +972,7 @@ enum RunicCLI {
             print("  Notes:")
             print("    Stores token/model/project metadata only; prompt and response content is not written.")
             print("    HTTP mode accepts OTLP JSON at /v1/traces and /v1/logs.")
+            print("    Local event streams are available at /events and /v1/events with SSE or NDJSON Accept headers.")
         }
         if command != nil,
            command != "usage",
