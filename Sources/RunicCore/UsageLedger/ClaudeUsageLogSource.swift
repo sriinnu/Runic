@@ -56,15 +56,14 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
         let allFiles = self.findUsageFiles(in: projectsDirs, minDate: minDate)
 
-        // Filter to only files modified since last scan (plus today's files which may have grown).
-        let todayStart = Calendar.current.startOfDay(for: self.now)
+        // Filter to only files modified since last scan.
         let filesToScan = allFiles.filter { file in
             guard let modDate = (try? self.fileManager
                 .attributesOfItem(atPath: file.url.path))?[.modificationDate] as? Date
             else {
                 return true
             }
-            return modDate >= incrementalCutoff || modDate >= todayStart
+            return modDate >= incrementalCutoff
         }
 
         if filesToScan.isEmpty {

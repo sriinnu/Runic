@@ -249,6 +249,67 @@ struct CodexUsageLogSourceTests {
         #expect(entries.reduce(0) { $0 + $1.outputTokens } == 45)
     }
 
+    @Test
+    func `codex usage skips unchanged files after cache scan date`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_122_400)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        let dayDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        try fm.createDirectory(at: dayDir, withIntermediateDirectories: true)
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let tokenTimestamp = formatter.string(from: now.addingTimeInterval(-20))
+        let tokenCount = try Self.jsonLine([
+            "type": "event_msg",
+            "timestamp": tokenTimestamp,
+            "payload": [
+                "type": "token_count",
+                "info": [
+                    "total_token_usage": [
+                        "input_tokens": 120,
+                        "cached_input_tokens": 20,
+                        "output_tokens": 10,
+                    ],
+                ],
+            ],
+        ])
+
+        let fileURL = dayDir.appendingPathComponent("session.jsonl")
+        try "\(tokenCount)\n".write(to: fileURL, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.modificationDate: now.addingTimeInterval(-10)], ofItemAtPath: fileURL.path)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: nil,
+            now: now,
+            cache: cache)
+
+        let firstEntries = try await source.loadEntries()
+        let secondEntries = try await source.loadEntries()
+        let cached = await cache.loadCachedDailies(provider: "codex")?.dailies.first
+
+        #expect(firstEntries.count == 1)
+        #expect(secondEntries.isEmpty)
+        #expect(cached?.inputTokens == 120)
+        #expect(cached?.cacheReadTokens == 20)
+        #expect(cached?.outputTokens == 10)
+    }
+
     private static func jsonLine(_ object: [String: Any]) throws -> String {
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
         guard let text = String(data: data, encoding: .utf8) else {

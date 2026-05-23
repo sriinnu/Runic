@@ -23,9 +23,6 @@ enum CostUsageJsonl {
             try handle.seek(toOffset: UInt64(startOffset))
         }
 
-        var buffer = Data()
-        buffer.reserveCapacity(64 * 1024)
-
         var current = Data()
         current.reserveCapacity(4 * 1024)
         var lineBytes = 0
@@ -49,12 +46,11 @@ enum CostUsageJsonl {
             }
 
             bytesRead += Int64(chunk.count)
-            buffer.append(chunk)
 
-            while true {
-                guard let nl = buffer.firstIndex(of: 0x0A) else { break }
-                let linePart = buffer[..<nl]
-                buffer.removeSubrange(...nl)
+            var cursor = chunk.startIndex
+            while cursor < chunk.endIndex {
+                let newline = chunk[cursor...].firstIndex(of: 0x0A) ?? chunk.endIndex
+                let linePart = chunk[cursor..<newline]
 
                 lineBytes += linePart.count
                 if !truncated {
@@ -65,7 +61,13 @@ enum CostUsageJsonl {
                         current.append(contentsOf: linePart)
                     }
                 }
-                flushLine()
+
+                if newline < chunk.endIndex {
+                    flushLine()
+                    cursor = chunk.index(after: newline)
+                } else {
+                    cursor = chunk.endIndex
+                }
             }
         }
 

@@ -11,7 +11,7 @@ Runic only exposes bundled or locally installed families that the app can resolv
 
 ## Licensed Commercial Fonts
 
-- Berkeley Mono: bundled OTF files currently present as `Berkeley Mono Regular.otf` and `Berkeyey Mono-Retina.otf`; picker family names are `Berkeley Mono` and `TX-02`.
+- Berkeley Mono: bundled OTF files currently present as `Berkeley Mono Regular.otf` and `Berkeley Mono-Retina.otf`; picker family names are `Berkeley Mono` and `TX-02`.
 - Operator Mono: bundled OTF file currently present as `H&Co - Operator Mono Light.otf`; picker family name is `Operator Mono`.
 
 These commercial fonts are not open-source assets. Keep this list current when adding, renaming, or removing font files so release reviewers can audit what ships.

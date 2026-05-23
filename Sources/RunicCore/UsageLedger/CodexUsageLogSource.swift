@@ -95,12 +95,10 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let cache = self.cache
         let lastScan = await cache.lastScanDate(provider: "codex")
         let incrementalCutoff = lastScan ?? minDate ?? self.now.addingTimeInterval(-86400)
-        let todayStart = Calendar.current.startOfDay(for: self.now)
-
         let allFiles = self.listSessionFiles(root: root, minDate: minDate)
         let filesToScan = allFiles.filter { file in
             guard let modDate = file.modifiedAt else { return true }
-            return modDate >= incrementalCutoff || modDate >= todayStart
+            return modDate >= incrementalCutoff
         }
 
         if filesToScan.isEmpty {
