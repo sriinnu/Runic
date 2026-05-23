@@ -1,9 +1,5 @@
 import Foundation
 
-#if canImport(Network)
-import Network
-#endif
-
 public struct OTelGenAICollectorConfiguration: Sendable, Equatable {
     public var host: String
     public var port: UInt16
@@ -142,10 +138,15 @@ public actor OTelGenAIIngestionSink {
 }
 
 public enum OTelGenAIHTTPIngestHandler {
-    public static func handle(_ requestData: Data, sink: OTelGenAIIngestionSink) async -> Data {
+    public static func handle(
+        _ requestData: Data,
+        sink: OTelGenAIIngestionSink,
+        eventHub: RunicLocalEventHub? = nil) async -> Data
+    {
         do {
             let request = try Self.parseRequest(requestData)
             let result = try await sink.ingest(request.body)
+            await eventHub?.publish(.otelIngest(acceptedEntries: result.acceptedEntries, outputFile: result.outputFile))
             return Self.response(
                 status: 200,
                 body: #"{"accepted":\#(result.acceptedEntries)}"#)
@@ -255,79 +256,3 @@ public enum OTelGenAIHTTPIngestHandler {
         let body: Data
     }
 }
-
-#if canImport(Network)
-public final class OTelGenAIHTTPCollector: @unchecked Sendable {
-    private let listener: NWListener
-    private let queue = DispatchQueue(label: "runic.otel-genai.collector")
-    private let sink: OTelGenAIIngestionSink
-    private let maxRequestBytes: Int
-
-    public init(configuration: OTelGenAICollectorConfiguration = OTelGenAICollectorConfiguration()) throws {
-        guard let port = NWEndpoint.Port(rawValue: configuration.port) else {
-            throw OTelGenAICollectorError.invalidContentLength
-        }
-        let parameters = NWParameters.tcp
-        parameters.requiredLocalEndpoint = .hostPort(
-            host: NWEndpoint.Host(configuration.host),
-            port: port)
-        self.listener = try NWListener(using: parameters, on: port)
-        self.sink = OTelGenAIIngestionSink(configuration: configuration)
-        self.maxRequestBytes = configuration.maxBodyBytes + 16_384
-    }
-
-    public func start() {
-        self.listener.newConnectionHandler = { [sink, maxRequestBytes] connection in
-            connection.start(queue: DispatchQueue(label: "runic.otel-genai.connection"))
-            Self.receive(connection: connection, sink: sink, maxRequestBytes: maxRequestBytes, buffer: Data())
-        }
-        self.listener.start(queue: self.queue)
-    }
-
-    public func cancel() {
-        self.listener.cancel()
-    }
-
-    private static func receive(
-        connection: NWConnection,
-        sink: OTelGenAIIngestionSink,
-        maxRequestBytes: Int,
-        buffer: Data)
-    {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { data, _, isComplete, error in
-            var nextBuffer = buffer
-            if let data {
-                nextBuffer.append(data)
-            }
-
-            if nextBuffer.count > maxRequestBytes || Self.hasCompleteHTTPRequest(nextBuffer) || isComplete || error != nil {
-                Task {
-                    let response = await OTelGenAIHTTPIngestHandler.handle(nextBuffer, sink: sink)
-                    connection.send(content: response, completion: .contentProcessed { _ in
-                        connection.cancel()
-                    })
-                }
-                return
-            }
-
-            Self.receive(connection: connection, sink: sink, maxRequestBytes: maxRequestBytes, buffer: nextBuffer)
-        }
-    }
-
-    private static func hasCompleteHTTPRequest(_ data: Data) -> Bool {
-        guard let headerRange = data.range(of: Data("\r\n\r\n".utf8)) else { return false }
-        let headerData = data[..<headerRange.lowerBound]
-        guard let headerText = String(data: headerData, encoding: .utf8) else { return false }
-        let contentLength = headerText.components(separatedBy: "\r\n")
-            .dropFirst()
-            .first { $0.lowercased().hasPrefix("content-length:") }
-            .flatMap { line -> Int? in
-                let value = line.split(separator: ":", maxSplits: 1).dropFirst().first
-                return value.flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            }
-        guard let contentLength else { return true }
-        let bodyStart = headerRange.upperBound
-        return data.count - bodyStart >= contentLength
-    }
-}
-#endif

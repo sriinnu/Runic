@@ -63,12 +63,14 @@ Supported insight views: `daily`, `session`, `blocks`, `models`, `projects`, `co
 
 ### Local OTLP JSON collector
 
-`runic otel-collect` gives local apps a simple OTLP/HTTP JSON endpoint for GenAI usage. It accepts JSON at `/v1/traces` and `/v1/logs`, sanitizes spans down to metric fields, and writes JSONL to Runic's default ledger. Prompt and response content is not persisted.
+`runic otel-collect` gives local apps a simple OTLP/HTTP JSON endpoint for GenAI usage. It accepts JSON at `/v1/traces` and `/v1/logs`, sanitizes spans down to metric fields, and writes JSONL to Runic's default ledger. Prompt and response content is not persisted. The same process exposes one multiplexed local event stream at `/events` and `/v1/events`; use `Accept: text/event-stream` for SSE or `Accept: application/x-ndjson` for streamable HTTP.
 
 ```bash
 runic otel-collect --port 4318
 runic otel-collect --once --input ./otel-payload.json
 cat ./otel-payload.json | runic otel-collect --once --input -
+curl -N -H 'Accept: text/event-stream' http://127.0.0.1:4318/events
+curl -N -H 'Accept: application/x-ndjson' http://127.0.0.1:4318/v1/events
 runic insights --provider vercelai --view models --json --pretty
 ```
 

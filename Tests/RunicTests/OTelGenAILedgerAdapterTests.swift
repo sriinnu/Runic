@@ -263,7 +263,7 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
-    func `http ingest handler accepts otlp json requests`() async throws {
+    func `http ingest handler accepts otlp json requests`() async {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("runic-http-otel-\(UUID().uuidString)", isDirectory: true)
         let output = directory.appendingPathComponent("ingest.jsonl")
@@ -287,4 +287,65 @@ struct OTelGenAILedgerAdapterTests {
         #expect(text.contains(#""accepted":1"#))
         #expect(FileManager.default.fileExists(atPath: output.path))
     }
+
+    @Test
+    func `http ingest publishes one multiplexed local event`() async {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-http-events-\(UUID().uuidString)", isDirectory: true)
+        let output = directory.appendingPathComponent("ingest.jsonl")
+        let sink = OTelGenAIIngestionSink(configuration: OTelGenAICollectorConfiguration(outputFile: output))
+        let hub = RunicLocalEventHub()
+        let stream = await hub.stream(replayLatest: false)
+        var iterator = stream.makeAsyncIterator()
+        let body = """
+        {"attributes":{"gen_ai.system":"openai","gen_ai.request.model":"gpt-5","gen_ai.usage.input_tokens":1}}
+        """
+        let request = """
+        POST /v1/traces HTTP/1.1\r
+        Host: 127.0.0.1\r
+        Content-Type: application/json\r
+        Content-Length: \(Data(body.utf8).count)\r
+        \r
+        \(body)
+        """
+
+        _ = await OTelGenAIHTTPIngestHandler.handle(Data(request.utf8), sink: sink, eventHub: hub)
+        let event = await iterator.next()
+
+        #expect(event?.type == "otel.ingest")
+        #expect(event?.payload["accepted_entries"] == "1")
+        #expect(event?.payload["output_file"] == output.path)
+    }
+
+    @Test
+    func `local event hub fans out one publish to multiple subscribers`() async {
+        let hub = RunicLocalEventHub()
+        let firstStream = await hub.stream(replayLatest: false)
+        let secondStream = await hub.stream(replayLatest: false)
+        var firstIterator = firstStream.makeAsyncIterator()
+        var secondIterator = secondStream.makeAsyncIterator()
+        let event = RunicLocalEvent(id: "event-1", type: "test.event", payload: ["ok": "true"])
+
+        await hub.publish(event)
+
+        #expect(await firstIterator.next() == event)
+        #expect(await secondIterator.next() == event)
+    }
+
+    #if canImport(Network)
+    @Test
+    func `stream frames support sse and ndjson transports`() throws {
+        let event = RunicLocalEvent(id: "event-1", type: "otel.ingest", payload: ["accepted_entries": "2"])
+        let sse = try OTelGenAIHTTPCollector.frame(for: event, format: .sse)
+        let ndjson = try OTelGenAIHTTPCollector.frame(for: event, format: .ndjson)
+        let sseText = String(data: sse, encoding: .utf8) ?? ""
+        let ndjsonText = String(data: ndjson, encoding: .utf8) ?? ""
+
+        #expect(sseText.contains("id: event-1"))
+        #expect(sseText.contains("event: otel.ingest"))
+        #expect(sseText.contains(#""accepted_entries":"2""#))
+        #expect(ndjsonText.hasSuffix("\n"))
+        #expect(ndjsonText.contains(#""type":"otel.ingest""#))
+    }
+    #endif
 }
