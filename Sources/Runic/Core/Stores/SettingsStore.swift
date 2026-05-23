@@ -1067,7 +1067,8 @@ final class SettingsStore {
             forKey: "providerDetectionCompleted") as? Bool ?? false
         self.toggleStore = ProviderToggleStore(userDefaults: userDefaults)
         self.toggleStore.purgeLegacyKeys()
-        LaunchAtLoginManager.setEnabled(self.launchAtLogin)
+        // Do not re-register login items during startup; macOS can surface a password prompt.
+        // The didSet hook above handles explicit user changes from Preferences.
         self.runInitialProviderDetectionIfNeeded()
         self.applyTokenCostDefaultIfNeeded()
         if self.claudeUsageDataSource != .cli {

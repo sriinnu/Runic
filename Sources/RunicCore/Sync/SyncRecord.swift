@@ -370,16 +370,20 @@ private func getOrCreateEncryptionKey() -> SymmetricKey {
 }
 
 private func saveToKeychain(key: String, data: Data) {
-    let query: [String: Any] = [
+    let baseQuery: [String: Any] = [
         kSecClass as String: kSecClassGenericPassword,
         kSecAttrService as String: "com.sriinnu.athena.Runic",
         kSecAttrAccount as String: key,
         kSecUseDataProtectionKeychain as String: true,
-        kSecValueData as String: data,
-        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
     ]
-    SecItemDelete(query as CFDictionary)
-    SecItemAdd(query as CFDictionary, nil)
+    var deleteQuery = baseQuery
+    RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &deleteQuery)
+    SecItemDelete(deleteQuery as CFDictionary)
+
+    var addQuery = baseQuery
+    addQuery[kSecValueData as String] = data
+    addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+    SecItemAdd(addQuery as CFDictionary, nil)
 }
 
 private func loadFromKeychain(key: String) -> Data? {
@@ -390,9 +394,7 @@ private func loadFromKeychain(key: String) -> Data? {
         kSecUseDataProtectionKeychain as String: true,
         kSecReturnData as String: true,
     ]
-    let authContext = LAContext()
-    authContext.interactionNotAllowed = true
-    query[kSecUseAuthenticationContext as String] = authContext
+    RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
     var result: AnyObject?
     let status = SecItemCopyMatching(query as CFDictionary, &result)
     if status == errSecInteractionNotAllowed {

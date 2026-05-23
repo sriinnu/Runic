@@ -493,11 +493,7 @@ public enum ProviderTokenResolver {
         if dataProtection {
             query[kSecUseDataProtectionKeychain as String] = true
         }
-        #if canImport(LocalAuthentication)
-        let authContext = LAContext()
-        authContext.interactionNotAllowed = true
-        query[kSecUseAuthenticationContext as String] = authContext
-        #endif
+        RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound || status == errSecInteractionNotAllowed {

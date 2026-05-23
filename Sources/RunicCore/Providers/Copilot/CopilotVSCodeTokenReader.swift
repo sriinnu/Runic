@@ -179,9 +179,7 @@ public enum CopilotVSCodeTokenReader {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
 
-        let authContext = LAContext()
-        authContext.interactionNotAllowed = !allowUserInteraction
-        query[kSecUseAuthenticationContext as String] = authContext
+        RunicCoreKeychainQueryPolicy.setAuthenticationUI(allowUserInteraction, in: &query)
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)

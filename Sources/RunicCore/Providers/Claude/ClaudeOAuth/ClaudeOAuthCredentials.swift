@@ -152,9 +152,7 @@ public enum ClaudeOAuthCredentialsStore {
         ]
         // Avoid surfacing password dialogs during automatic provider refresh.
         // When interaction would be required, we fall back to the credentials file.
-        let authContext = LAContext()
-        authContext.interactionNotAllowed = true
-        query[kSecUseAuthenticationContext as String] = authContext
+        RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
