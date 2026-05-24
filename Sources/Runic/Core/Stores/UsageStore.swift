@@ -1160,35 +1160,113 @@ final class UsageStore {
         let files = self.otelLedgerFiles(for: provider)
         guard !files.isEmpty else { return nil }
 
-        let cutoff = Calendar.current.date(byAdding: .day, value: -max(1, maxAgeDays), to: now)
         let options = OTelGenAIIngestionOptions(
             enabled: true,
             allowExperimentalSemanticConventions: true,
             defaultProvider: provider,
             source: .openTelemetry)
-        return UsageLedgerProviderFilterSource(
-            source: OTelGenAIFileLedgerSource(files: files, options: options),
+        return UsageLedgerCachedOTelProviderSource(
+            files: files,
+            options: options,
             provider: provider,
-            minTimestamp: cutoff)
+            maxAgeDays: maxAgeDays,
+            now: now)
     }
 
-    private struct UsageLedgerProviderFilterSource: UsageLedgerSource {
-        private let source: any UsageLedgerSource
+    private struct UsageLedgerCachedOTelProviderSource: UsageLedgerSource {
+        private let files: [URL]
+        private let options: OTelGenAIIngestionOptions
         private let provider: UsageProvider
-        private let minTimestamp: Date?
+        private let maxAgeDays: Int
+        private let now: Date
+        private let cache: LedgerCache
 
-        init(source: any UsageLedgerSource, provider: UsageProvider, minTimestamp: Date?) {
-            self.source = source
+        init(
+            files: [URL],
+            options: OTelGenAIIngestionOptions,
+            provider: UsageProvider,
+            maxAgeDays: Int,
+            now: Date,
+            cache: LedgerCache = .shared)
+        {
+            self.files = files
+            self.options = options
             self.provider = provider
-            self.minTimestamp = minTimestamp
+            self.maxAgeDays = maxAgeDays
+            self.now = now
+            self.cache = cache
         }
 
         func loadEntries() async throws -> [UsageLedgerEntry] {
-            let entries = try await self.source.loadEntries()
-            return entries.filter { entry in
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let todayStart = calendar.startOfDay(for: self.now)
+            let requestedCoverageDays = max(1, self.maxAgeDays)
+            let coveredDays = await self.cache.effectiveCoveredMaxAgeDays(provider: self.provider.rawValue) ?? 0
+            let historyCovered = coveredDays >= requestedCoverageDays
+            let historyStart = calendar.startOfDay(
+                for: calendar.date(byAdding: .day, value: -requestedCoverageDays, to: self.now) ?? self.now)
+            let minTimestamp = historyCovered ? todayStart : historyStart
+
+            let source = OTelGenAIFileLedgerSource(
+                files: self.files,
+                options: self.options,
+                minTimestamp: minTimestamp)
+            let loaded = try await source.loadEntries()
+            let entries = loaded.filter { entry in
                 if entry.provider != self.provider { return false }
-                if let minTimestamp, entry.timestamp < minTimestamp { return false }
+                if entry.timestamp < minTimestamp { return false }
                 return true
+            }
+
+            let dailies = Self.cachedDailies(from: entries)
+            if dailies.isEmpty {
+                await self.cache.markScanComplete(
+                    provider: self.provider.rawValue,
+                    scanDate: self.now,
+                    coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
+            } else {
+                await self.cache.mergeDailies(
+                    provider: self.provider.rawValue,
+                    newDailies: dailies,
+                    scanDate: self.now,
+                    todayKey: historyCovered ? LedgerCache.dayKey(for: self.now) : nil,
+                    coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
+            }
+            return entries
+        }
+
+        private static func cachedDailies(from entries: [UsageLedgerEntry]) -> [CachedDaily] {
+            var buckets: [String: (
+                input: Int,
+                output: Int,
+                cacheCreate: Int,
+                cacheRead: Int,
+                cost: Double,
+                requests: Int,
+                models: Set<String>)] = [:]
+            for entry in entries {
+                let key = LedgerCache.dayKey(for: entry.timestamp)
+                var bucket = buckets[key] ?? (0, 0, 0, 0, 0, 0, [])
+                bucket.input += entry.inputTokens
+                bucket.output += entry.outputTokens
+                bucket.cacheCreate += entry.cacheCreationTokens
+                bucket.cacheRead += entry.cacheReadTokens
+                bucket.cost += entry.costUSD ?? 0
+                bucket.requests += 1
+                if let model = entry.model { bucket.models.insert(model) }
+                buckets[key] = bucket
+            }
+            return buckets.map { dayKey, bucket in
+                CachedDaily(
+                    dayKey: dayKey,
+                    inputTokens: bucket.input,
+                    outputTokens: bucket.output,
+                    cacheCreationTokens: bucket.cacheCreate,
+                    cacheReadTokens: bucket.cacheRead,
+                    costUSD: bucket.cost > 0 ? bucket.cost : nil,
+                    requestCount: bucket.requests,
+                    modelsUsed: Array(bucket.models))
             }
         }
     }
@@ -1200,7 +1278,10 @@ final class UsageStore {
             .uppercased()
 
         let candidatePaths = [
-            [OTelGenAICollectorConfiguration.defaultOutputFile().path],
+            [
+                OTelGenAICollectorConfiguration.defaultOutputFile().path,
+                OTelGenAICollectorConfiguration.defaultOutputDirectory().path,
+            ],
             Self.splitPathList(self.settings.otelGenAILogPaths),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATH"]),

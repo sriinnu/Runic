@@ -6,6 +6,11 @@ import SwiftUI
 enum RunicScreenshotRenderer {
     private static let menuSize = CGSize(width: 392, height: 680)
     private static let preferencesSize = CGSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
+    private static var keepAliveWindow: NSWindow?
+
+    static var isRequested: Bool {
+        Self.request != nil
+    }
 
     static func startIfRequested(
         store: UsageStore,
@@ -15,17 +20,31 @@ enum RunicScreenshotRenderer {
         selection: PreferencesSelection) -> Bool
     {
         guard let request = Self.request else { return false }
+        self.installKeepAliveWindow()
         Task { @MainActor in
             do {
                 try await Task.sleep(nanoseconds: 600_000_000)
                 try self.render(request, store: store, settings: settings, account: account, updater: updater, selection: selection)
+                self.keepAliveWindow = nil
                 NSApp.terminate(nil)
             } catch {
                 fputs("Runic screenshot render failed: \(error.localizedDescription)\n", stderr)
+                self.keepAliveWindow = nil
                 NSApp.terminate(nil)
             }
         }
         return true
+    }
+
+    private static func installKeepAliveWindow() {
+        let window = NSWindow(
+            contentRect: CGRect(x: -10_000, y: -10_000, width: 1, height: 1),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false)
+        window.isReleasedWhenClosed = false
+        window.orderOut(nil)
+        self.keepAliveWindow = window
     }
 
     private static var request: RenderRequest? {

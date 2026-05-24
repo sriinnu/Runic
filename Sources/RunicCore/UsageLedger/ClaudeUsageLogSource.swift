@@ -190,12 +190,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private func parseFile(_ file: UsageFile, minDate: Date?) -> [UsageLedgerEntry] {
         var entries: [UsageLedgerEntry] = []
         do {
-            let handle = try FileHandle(forReadingFrom: file.url)
-            defer { try? handle.close() }
-
             var seenKeys = Set<String>()
-            var buffer = Data()
-            buffer.reserveCapacity(8 * 1024)
 
             func consume(_ lineData: Data) {
                 guard !lineData.isEmpty,
@@ -208,17 +203,14 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 }
             }
 
-            while true {
-                if Task.isCancelled { return entries }
-                let chunk = try handle.read(upToCount: 256 * 1024) ?? Data()
-                if chunk.isEmpty { break }
-                buffer.append(chunk)
-                while let range = buffer.firstRange(of: Data([0x0A])) {
-                    consume(buffer.subdata(in: buffer.startIndex..<range.lowerBound))
-                    buffer.removeSubrange(buffer.startIndex..<range.upperBound)
-                }
+            try CostUsageJsonl.scan(
+                fileURL: file.url,
+                maxLineBytes: 512 * 1024,
+                prefixBytes: 512 * 1024)
+            { line in
+                guard !line.wasTruncated else { return }
+                consume(line.bytes)
             }
-            consume(buffer)
         } catch {
             self.log.warning("Claude usage log read failed", metadata: [
                 "file": file.url.path,

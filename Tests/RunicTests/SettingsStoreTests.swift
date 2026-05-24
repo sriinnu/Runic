@@ -27,6 +27,26 @@ struct SettingsStoreTests {
     }
 
     @Test
+    func `does not hydrate keychain tokens during initialization`() throws {
+        let suite = "SettingsStoreTests-no-startup-keychain"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        let tokenStore = CountingZaiTokenStore()
+
+        let store = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: tokenStore,
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        #expect(tokenStore.loadCount == 0)
+        #expect(store.zaiAPIToken.isEmpty)
+    }
+
+    @Test
     func `persists refresh frequency across instances`() throws {
         let suite = "SettingsStoreTests-persist"
         let defaultsA = try #require(UserDefaults(suiteName: suite))

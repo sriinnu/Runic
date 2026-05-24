@@ -148,7 +148,7 @@ public actor LedgerCache {
         }
     }
 
-    static func dayKey(for date: Date) -> String {
+    public static func dayKey(for date: Date) -> String {
         self.dayKeyFormatter.string(from: date)
     }
 }
@@ -190,6 +190,26 @@ public struct CachedDaily: Codable, Sendable {
         f.timeZone = .current
         return f
     }()
+
+    public init(
+        dayKey: String,
+        inputTokens: Int,
+        outputTokens: Int,
+        cacheCreationTokens: Int,
+        cacheReadTokens: Int,
+        costUSD: Double?,
+        requestCount: Int,
+        modelsUsed: [String])
+    {
+        self.dayKey = dayKey
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.cacheCreationTokens = cacheCreationTokens
+        self.cacheReadTokens = cacheReadTokens
+        self.costUSD = costUSD
+        self.requestCount = requestCount
+        self.modelsUsed = modelsUsed
+    }
 
     public var totalTokens: Int {
         self.inputTokens + self.outputTokens + self.cacheCreationTokens + self.cacheReadTokens

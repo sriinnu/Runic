@@ -1,7 +1,8 @@
 {
   "name": "@sriinnu/runic",
   "version": "2.2.0",
-  "description": "AI usage monitoring for your Mac menubar. Track usage, costs, and quotas across 27 AI providers.",
+  "private": true,
+  "description": "AI usage monitoring for your Mac menubar. Track usage, costs, and quotas across 28 AI providers.",
   "author": "Sriinnu <5410488+sriinnu@users.noreply.github.com>",
   "license": "AGPL-3.0-or-later",
   "repository": {

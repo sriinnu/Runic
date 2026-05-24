@@ -50,5 +50,60 @@ struct KeychainQueryPolicyTests {
         let context = try #require(query[kSecUseAuthenticationContext as String] as? LAContext)
         #expect(context.interactionNotAllowed)
     }
+
+    @Test
+    func `legacy provider migration is opt in to avoid startup prompts`() {
+        let summary = ProviderCredentialKeychainMigration.migrateKnownLegacyItems()
+        let token = ProviderCredentialKeychainMigration.token(account: "runic-test-missing-\(UUID().uuidString)")
+
+        #expect(summary.migratedAccounts.isEmpty)
+        #expect(summary.blockedAccounts.isEmpty)
+        #expect(summary.failedAccounts.isEmpty)
+        #expect(token == nil)
+    }
+
+    @Test
+    func `custom provider fetcher reads standard keychain token saved by UI`() async throws {
+        let account = "runic-test-custom-provider-\(UUID().uuidString)"
+        self.deleteProviderCredential(account: account, dataProtection: false)
+        self.deleteProviderCredential(account: account, dataProtection: true)
+        defer {
+            self.deleteProviderCredential(account: account, dataProtection: false)
+            self.deleteProviderCredential(account: account, dataProtection: true)
+        }
+
+        var addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: RunicKeychainService.providerCredentials,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: Data("secret-token".utf8),
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &addQuery)
+        #expect(SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess)
+
+        let config = CustomProviderConfig(
+            name: "Test",
+            icon: "server.rack",
+            auth: AuthConfig(type: .bearer, headerName: "Authorization", tokenKeychain: account),
+            endpoints: EndpointConfig())
+        let fetcher = GenericProviderFetcher(config: config)
+
+        let token = try await fetcher._loadTokenForTesting()
+        #expect(token == "secret-token")
+    }
+
+    private func deleteProviderCredential(account: String, dataProtection: Bool) {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: RunicKeychainService.providerCredentials,
+            kSecAttrAccount as String: account,
+        ]
+        if dataProtection {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
+        RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
+        _ = SecItemDelete(query as CFDictionary)
+    }
 }
 #endif

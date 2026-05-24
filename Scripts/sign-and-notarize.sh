@@ -34,8 +34,11 @@ if [[ $(printf "%s\n" "$key_lines" | wc -l) -ne 1 ]]; then
   exit 1
 fi
 
-echo "$APP_STORE_CONNECT_API_KEY_P8" | sed 's/\\n/\n/g' > /tmp/runic-api-key.p8
-trap 'rm -f /tmp/runic-api-key.p8 /tmp/${APP_NAME}Notarize.zip' EXIT
+API_KEY_FILE=$(mktemp "${TMPDIR:-/tmp}/runic-api-key.XXXXXX.p8")
+NOTARIZE_ZIP=$(mktemp "${TMPDIR:-/tmp}/${APP_NAME}Notarize.XXXXXX.zip")
+chmod 600 "$API_KEY_FILE"
+echo "$APP_STORE_CONNECT_API_KEY_P8" | sed 's/\\n/\n/g' > "$API_KEY_FILE"
+trap 'rm -f "$API_KEY_FILE" "$NOTARIZE_ZIP"' EXIT
 
 # Allow building a universal binary if ARCHES is provided; default to universal (arm64 + x86_64).
 ARCHES_VALUE=${ARCHES:-"arm64 x86_64"}
@@ -71,11 +74,11 @@ codesign --force --timestamp --options runtime --sign "$APP_IDENTITY" \
   "$APP_BUNDLE"
 
 DITTO_BIN=${DITTO_BIN:-/usr/bin/ditto}
-"$DITTO_BIN" --norsrc -c -k --keepParent "$APP_BUNDLE" "/tmp/${APP_NAME}Notarize.zip"
+"$DITTO_BIN" --norsrc -c -k --keepParent "$APP_BUNDLE" "$NOTARIZE_ZIP"
 
 echo "Submitting for notarization"
-xcrun notarytool submit "/tmp/${APP_NAME}Notarize.zip" \
-  --key /tmp/runic-api-key.p8 \
+xcrun notarytool submit "$NOTARIZE_ZIP" \
+  --key "$API_KEY_FILE" \
   --key-id "$APP_STORE_CONNECT_KEY_ID" \
   --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
   --wait

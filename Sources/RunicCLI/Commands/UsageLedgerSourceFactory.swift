@@ -59,7 +59,7 @@ enum UsageLedgerSourceFactory {
             defaultProvider: provider,
             source: .openTelemetry)
         return UsageLedgerProviderFilterSource(
-            source: OTelGenAIFileLedgerSource(files: files, options: options),
+            source: OTelGenAIFileLedgerSource(files: files, options: options, minTimestamp: cutoff),
             provider: provider,
             minTimestamp: cutoff)
     }
@@ -71,7 +71,10 @@ enum UsageLedgerSourceFactory {
             .uppercased()
 
         let candidatePaths = [
-            [OTelGenAICollectorConfiguration.defaultOutputFile().path],
+            [
+                OTelGenAICollectorConfiguration.defaultOutputFile().path,
+                OTelGenAICollectorConfiguration.defaultOutputDirectory().path,
+            ],
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATH"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATHS"]),

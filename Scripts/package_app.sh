@@ -35,6 +35,11 @@ if [[ "$STABLE_BUILD_DIR" != "1" && -d "$BUILD_DIR" ]]; then
 fi
 mkdir -p "$BUILD_DIR"
 
+if find "$ROOT/Sources/Runic/Resources" -name ".DS_Store" -print -quit | grep -q .; then
+  echo "ERROR: remove .DS_Store files from Sources/Runic/Resources before packaging." >&2
+  exit 1
+fi
+
 # Clean build only when explicitly requested (slower).
 if [[ "${CODEXBAR_FORCE_CLEAN:-0}" == "1" ]]; then
   if [[ -d "$ROOT/.build" ]]; then
@@ -218,7 +223,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>CFBundleIconFile</key><string>Icon</string>
-    <key>NSHumanReadableCopyright</key><string>© 2025-2026 Srinivas Pendela. MIT License.</string>
+    <key>NSHumanReadableCopyright</key><string>© 2025-2026 Srinivas Pendela. AGPL-3.0-or-later.</string>
     <key>SUFeedURL</key><string>${FEED_URL}</string>
     <key>SUPublicEDKey</key><string>1Ay3r9lgXQtyOjzVSCjlT5dvQuRlJghNKa8Goqvhfz4=</string>
     <key>SUEnableAutomaticChecks</key><${AUTO_CHECKS}/>

@@ -10,7 +10,7 @@ source "$ROOT/Scripts/release-lib.sh"
 APPCAST="$ROOT/appcast.xml"
 APP_NAME="Runic"
 ARTIFACT_PREFIX="Runic-"
-BUNDLE_ID="com.steipete.runic"
+BUNDLE_ID="com.sriinnu.athena.runic"
 TAG="v${MARKETING_VERSION}"
 
 require_clean_worktree
@@ -57,7 +57,7 @@ gh release create "$TAG" ${APP_NAME}-${MARKETING_VERSION}.zip ${APP_NAME}-${MARK
 SPARKLE_PRIVATE_KEY_FILE="$KEY_FILE" \
   "$ROOT/Scripts/make_appcast.sh" \
   "${APP_NAME}-${MARKETING_VERSION}.zip" \
-  "https://raw.githubusercontent.com/steipete/Runic/main/appcast.xml"
+  "https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml"
 
 verify_appcast_entry "$APPCAST" "$MARKETING_VERSION" "$KEY_FILE"
 

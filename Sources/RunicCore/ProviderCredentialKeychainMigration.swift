@@ -40,6 +40,9 @@ public enum ProviderCredentialKeychainMigration {
 
     public static func migrateKnownLegacyItems() -> ProviderCredentialMigrationSummary {
         #if canImport(Security)
+        guard self.legacyMigrationEnabled else {
+            return ProviderCredentialMigrationSummary(migratedAccounts: [], blockedAccounts: [], failedAccounts: [])
+        }
         var migrated: [String] = []
         var blocked: [String] = []
         var failed: [String] = []
@@ -76,6 +79,7 @@ public enum ProviderCredentialKeychainMigration {
         if let token = self.read(service: RunicKeychainService.providerCredentials, account: account).token {
             return token
         }
+        guard self.legacyMigrationEnabled else { return nil }
         if case let .found(token) = self.readLegacy(account: account), self.write(token: token, account: account) {
             self.deleteLegacy(account: account)
             return token
@@ -88,6 +92,12 @@ public enum ProviderCredentialKeychainMigration {
     }
 
     #if canImport(Security)
+    /// Legacy reads can summon SecurityAgent on some macOS/keychain states, so
+    /// Runic only attempts them from an explicit repair run.
+    private static var legacyMigrationEnabled: Bool {
+        ProcessInfo.processInfo.environment["RUNIC_RUN_LEGACY_KEYCHAIN_MIGRATION"] == "1"
+    }
+
     private enum ReadResult {
         case found(String)
         case missing

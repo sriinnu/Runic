@@ -146,6 +146,12 @@ struct RunicTests {
         #expect(!ids.contains("VT323"))
     }
 
+    @Test
+    func `non curated saved fonts migrate to Mona Sans`() {
+        #expect(RunicFontChoice.migratedFamily("Avenir Next") == RunicFontChoice.defaultFamily)
+        #expect(RunicFontChoice.migratedFamily("Helvetica") == RunicFontChoice.defaultFamily)
+    }
+
     @MainActor
     @Test
     func `licensed Berkeley and Operator faces are treated as curated mono faces when present`() {

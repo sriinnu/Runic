@@ -22,12 +22,21 @@ public struct OTelGenAICollectorConfiguration: Sendable, Equatable {
     }
 
     public static func defaultOutputFile() -> URL {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        let filename = String(
+            format: "ingest-%04d-%02d-%02d.jsonl",
+            components.year ?? 1970,
+            components.month ?? 1,
+            components.day ?? 1)
+        return self.defaultOutputDirectory().appendingPathComponent(filename, isDirectory: false)
+    }
+
+    public static func defaultOutputDirectory() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.homeDirectoryForCurrentUser
         return appSupport
             .appendingPathComponent("Runic", isDirectory: true)
             .appendingPathComponent("otel-genai", isDirectory: true)
-            .appendingPathComponent("ingest.jsonl", isDirectory: false)
     }
 }
 
@@ -72,11 +81,14 @@ public enum OTelGenAICollectorError: LocalizedError, Sendable, Equatable {
 
 public actor OTelGenAIIngestionSink {
     private let outputFile: URL
+    private let rollsDefaultOutputDaily: Bool
     private let options: OTelGenAIIngestionOptions
     private let maxBodyBytes: Int
 
     public init(configuration: OTelGenAICollectorConfiguration = OTelGenAICollectorConfiguration()) {
         self.outputFile = configuration.outputFile
+        self.rollsDefaultOutputDaily = configuration.outputFile.standardizedFileURL.path
+            == OTelGenAICollectorConfiguration.defaultOutputFile().standardizedFileURL.path
         self.maxBodyBytes = configuration.maxBodyBytes
         self.options = OTelGenAIIngestionOptions(
             enabled: true,
@@ -96,20 +108,25 @@ public actor OTelGenAIIngestionSink {
         }
 
         let lines = try entries.map(Self.sanitizedJSONLine)
-        let directory = self.outputFile.deletingLastPathComponent()
+        let outputFile = self.currentOutputFile()
+        let directory = outputFile.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let payload = (lines.joined(separator: "\n") + "\n").data(using: .utf8) ?? Data()
-        if FileManager.default.fileExists(atPath: self.outputFile.path) {
-            let handle = try FileHandle(forWritingTo: self.outputFile)
+        if FileManager.default.fileExists(atPath: outputFile.path) {
+            let handle = try FileHandle(forWritingTo: outputFile)
             defer { try? handle.close() }
             try handle.seekToEnd()
             try handle.write(contentsOf: payload)
         } else {
-            try payload.write(to: self.outputFile, options: .atomic)
+            try payload.write(to: outputFile, options: .atomic)
         }
 
-        return OTelGenAICollectorResult(acceptedEntries: entries.count, outputFile: self.outputFile)
+        return OTelGenAICollectorResult(acceptedEntries: entries.count, outputFile: outputFile)
+    }
+
+    private func currentOutputFile() -> URL {
+        self.rollsDefaultOutputDaily ? OTelGenAICollectorConfiguration.defaultOutputFile() : self.outputFile
     }
 
     private static func sanitizedJSONLine(for entry: UsageLedgerEntry) throws -> String {

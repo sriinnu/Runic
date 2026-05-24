@@ -59,11 +59,10 @@
 #
 # ============================================================================
 
-name: Release & Publish to npm
+name: Manual npm Publish
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 # ---------------------------------------------------------------------------
 # Minimal permissions for the entire workflow

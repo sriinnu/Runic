@@ -357,9 +357,7 @@ struct RunicFontChoice: Identifiable, Hashable {
         guard !trimmed.isEmpty else { return self.defaultFamily }
         guard !self.isPrunedFamily(trimmed) else { return self.defaultFamily }
         guard !self.hiddenBundledFamilies.contains(trimmed) else { return self.defaultFamily }
-        guard self.availableChoices().contains(where: { $0.id == trimmed }) ||
-            self.isFontFamilyAvailable(trimmed)
-        else { return self.defaultFamily }
+        guard self.availableChoices().contains(where: { $0.id == trimmed }) else { return self.defaultFamily }
         return trimmed
     }
 

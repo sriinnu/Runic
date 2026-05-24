@@ -166,7 +166,7 @@ Install it from **Preferences → Advanced → Install CLI**. See [docs/cli.md](
 
 ## Privacy
 
-Zero telemetry. No analytics. No crash reporting. Your data, your tokens, your cost. Runic keeps usage data on this Mac unless you export it, copy diagnostics, or configure a webhook. Network requests are limited to enabled provider fetches, localhost runtime probes, status/update checks, and optional web-dashboard features.
+Zero telemetry. No analytics. No crash reporting. Your data, your tokens, your cost. Runic keeps usage data on this Mac unless you export it, copy diagnostics, or configure a webhook. Network requests are limited to enabled provider fetches, localhost runtime probes, status/update checks, optional web-dashboard features, and configured/test webhooks.
 
 API keys are stored in macOS Keychain. Browser-backed providers reuse local browser/WebKit sessions where available; Runic does not store provider passwords. Local usage logs and CLI/JSON output can include account identity fields such as email addresses, so redact diagnostics before sharing them publicly.
 

@@ -263,6 +263,31 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
+    func `file source skips files older than hot window`() async throws {
+        let fm = FileManager.default
+        let directory = fm.temporaryDirectory
+            .appendingPathComponent("runic-otel-window-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("ingest-2026-05-23.jsonl")
+        let payload = """
+        {"timestamp":"2026-05-23T12:00:00Z","provider":"openai","model":"gpt-5","input_tokens":120}
+        """
+        try (payload + "\n").write(to: file, atomically: true, encoding: .utf8)
+        let oldDate = Date(timeIntervalSince1970: 1_769_170_800) // 2026-01-23T12:00:00Z
+        try fm.setAttributes([.modificationDate: oldDate], ofItemAtPath: file.path)
+
+        let source = OTelGenAIFileLedgerSource(
+            files: [file],
+            options: OTelGenAIIngestionOptions(enabled: true),
+            minTimestamp: oldDate.addingTimeInterval(86_400))
+
+        let entries = try await source.loadEntries()
+        #expect(entries.isEmpty)
+    }
+
+    @Test
     func `http ingest handler accepts otlp json requests`() async {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("runic-http-otel-\(UUID().uuidString)", isDirectory: true)

@@ -249,6 +249,12 @@ public actor GenericProviderFetcher {
     /// Read token from keychain
     private func keychainToken(account: String) -> String? {
         #if canImport(Security)
+        if self.keychainService == RunicKeychainService.providerCredentials,
+           let token = ProviderCredentialKeychainMigration.token(account: account)
+        {
+            return token
+        }
+
         var result: CFTypeRef?
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -286,6 +292,12 @@ public actor GenericProviderFetcher {
         return nil
         #endif
     }
+
+    #if DEBUG
+    public func _loadTokenForTesting() async throws -> String {
+        try await self.loadToken()
+    }
+    #endif
 
     // MARK: - Data Extraction
 
