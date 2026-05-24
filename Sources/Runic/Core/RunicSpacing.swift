@@ -1,8 +1,8 @@
 import Foundation
 
 /// **Runic Spacing System**
-/// Defines global spacing constants following a 4pt grid system.
-/// All spacing values are multiples of 4 for consistent visual rhythm.
+/// Defines global spacing constants on a 4pt grid, with tiny optical
+/// correction tokens for borders, glyph alignment, and compact controls.
 enum RunicSpacing {
     // MARK: - Base Spacing Scale
 

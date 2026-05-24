@@ -873,7 +873,7 @@ private struct RunicMenuPanelChrome: ViewModifier {
                 ZStack {
                     self.runicTheme.menuSurfaceGradient
                     if self.runicTheme.isTerminalHUD {
-                        RunicTerminalScanlineOverlay(opacity: 0.95)
+                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
                     }
                 }
             }

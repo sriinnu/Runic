@@ -39,6 +39,7 @@ enum CostUsageJsonl {
         }
 
         while true {
+            try Task.checkCancellation()
             let chunk = try handle.read(upToCount: 256 * 1024) ?? Data()
             if chunk.isEmpty {
                 flushLine()
@@ -49,6 +50,7 @@ enum CostUsageJsonl {
 
             var cursor = chunk.startIndex
             while cursor < chunk.endIndex {
+                if Task.isCancelled { throw CancellationError() }
                 let newline = chunk[cursor...].firstIndex(of: 0x0A) ?? chunk.endIndex
                 let linePart = chunk[cursor..<newline]
 

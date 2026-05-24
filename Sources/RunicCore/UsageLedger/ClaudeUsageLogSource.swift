@@ -167,15 +167,35 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private func parseFile(_ file: UsageFile, minDate: Date?) -> [UsageLedgerEntry] {
         var entries: [UsageLedgerEntry] = []
         do {
-            let data = try Data(contentsOf: file.url)
-            guard let content = String(data: data, encoding: .utf8) else { return [] }
+            let handle = try FileHandle(forReadingFrom: file.url)
+            defer { try? handle.close() }
+
             var seenKeys = Set<String>()
-            let lines = content.split(whereSeparator: \.isNewline)
-            for line in lines {
-                if let entry = self.parseLine(line, file: file, minDate: minDate, seenKeys: &seenKeys) {
+            var buffer = Data()
+            buffer.reserveCapacity(8 * 1024)
+
+            func consume(_ lineData: Data) {
+                guard !lineData.isEmpty,
+                      let line = String(data: lineData, encoding: .utf8)?
+                          .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !line.isEmpty
+                else { return }
+                if let entry = self.parseLine(line[...], file: file, minDate: minDate, seenKeys: &seenKeys) {
                     entries.append(entry)
                 }
             }
+
+            while true {
+                if Task.isCancelled { return entries }
+                let chunk = try handle.read(upToCount: 256 * 1024) ?? Data()
+                if chunk.isEmpty { break }
+                buffer.append(chunk)
+                while let range = buffer.firstRange(of: Data([0x0A])) {
+                    consume(buffer.subdata(in: buffer.startIndex..<range.lowerBound))
+                    buffer.removeSubrange(buffer.startIndex..<range.upperBound)
+                }
+            }
+            consume(buffer)
         } catch {
             self.log.warning("Claude usage log read failed", metadata: [
                 "file": file.url.path,

@@ -37,6 +37,7 @@ struct InlineUsageChartView: View {
 
     let dailySummaries: [UsageLedgerDailySummary]
     let hourlySummaries: [UsageLedgerHourlySummary]
+    let chartStyle: ChartStyle
     let width: CGFloat
     @State private var selectedRange: TimeRange = .sevenDays
     @Environment(\.menuItemHighlighted) private var isHighlighted
@@ -73,13 +74,20 @@ struct InlineUsageChartView: View {
                 let now = Date()
                 let isTerminal = self.runicTheme.isTerminalHUD
                 let isGlow = self.runicTheme.shape.separator == .glow
+                let chartStyle = self.chartStyle
                 let areaTopAlpha: Double = isTerminal ? 0 : (isGlow ? 0.32 : (self.runicTheme.id == "daybreak" ? 0.30 : 0.20))
                 let areaBottomAlpha: Double = isTerminal ? 0 : 0.02
                 let lineWidth: CGFloat = isGlow ? 2.0 : (isTerminal ? 1.2 : 1.5)
                 ZStack(alignment: .topTrailing) {
                     Chart {
                         ForEach(points) { point in
-                            if !isTerminal {
+                            if chartStyle == .bar {
+                                BarMark(
+                                    x: .value("Time", point.date),
+                                    y: .value("Tokens", point.tokens))
+                                    .foregroundStyle(lineColor.opacity(isTerminal ? 0.86 : 0.70))
+                                    .cornerRadius(self.runicTheme.shape.cornerRadius(3))
+                            } else if chartStyle == .area, !isTerminal {
                                 AreaMark(
                                     x: .value("Time", point.date),
                                     y: .value("Tokens", point.tokens))
@@ -93,14 +101,17 @@ struct InlineUsageChartView: View {
                                             endPoint: .bottom))
                                     .interpolationMethod(.catmullRom)
                             }
-                            LineMark(
-                                x: .value("Time", point.date),
-                                y: .value("Tokens", point.tokens))
-                                .foregroundStyle(lineColor)
-                                .lineStyle(StrokeStyle(lineWidth: lineWidth))
-                                .interpolationMethod(isTerminal ? .linear : .catmullRom)
+                            if chartStyle != .bar {
+                                LineMark(
+                                    x: .value("Time", point.date),
+                                    y: .value("Tokens", point.tokens))
+                                    .foregroundStyle(lineColor)
+                                    .lineStyle(StrokeStyle(lineWidth: lineWidth))
+                                    .interpolationMethod(isTerminal ? .linear : .catmullRom)
+                            }
                         }
                     }
+                    .id(chartStyle.id)
                     .chartXScale(domain: now.addingTimeInterval(self.selectedRange.cutoffInterval)...now)
                     .chartYAxis {
                         AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
@@ -144,7 +155,8 @@ struct InlineUsageChartView: View {
         .padding(.vertical, RunicSpacing.xs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Usage chart, \(self.selectedRange.rawValue) range, \(points.count) data points")
+        .accessibilityLabel(
+            "Usage \(self.chartStyle.label.lowercased()) chart, \(self.selectedRange.rawValue) range, \(points.count) data points")
     }
 
     private var xAxisFormat: Date.FormatStyle {

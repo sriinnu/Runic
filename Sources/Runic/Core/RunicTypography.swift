@@ -288,8 +288,7 @@ struct RunicFontChoice: Identifiable, Hashable {
     static let sfRounded = RunicFontChoice(id: "__sf_rounded__", displayName: "SF Rounded")
     static let newYork = RunicFontChoice(id: "__new_york__", displayName: "New York")
 
-    /// Bundled families. Display names match the actual `family` attribute
-    /// inside each TTF so SwiftUI / NSFont can find them after registration.
+    /// Curated families. Commercial faces are shown only when installed locally.
     static let monaSans = RunicFontChoice(id: "Mona Sans", displayName: "Mona Sans")
     static let geist = RunicFontChoice(id: "Geist", displayName: "Geist")
     static let commitMono = RunicFontChoice(id: "CommitMono", displayName: "Commit Mono")

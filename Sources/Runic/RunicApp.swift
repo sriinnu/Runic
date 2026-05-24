@@ -276,6 +276,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Exit early if another Runic from the production/debug bundle family is already running.
     /// Stale login items or local debug bundles can otherwise spin up two status items.
     private static func terminateIfDuplicateInstance() -> Bool {
+        guard !Self.isRunningUnderTests else { return false }
+
         let myPID = ProcessInfo.processInfo.processIdentifier
         let currentBundleID = Bundle.main.bundleIdentifier ?? Self.productionBundleID
         let bundleIDs = Set([currentBundleID, Self.productionBundleID, Self.debugBundleID])
@@ -285,8 +287,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         RunicLog.logger("singleton").info(
             "Another Runic instance already running (pid \(existing.processIdentifier)); terminating self.")
         existing.activate(options: [])
-        NSApp.terminate(nil)
+        NSApp?.terminate(nil)
         return true
+    }
+
+    private static var isRunningUnderTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
     }
 
     private func ensureStatusController() {

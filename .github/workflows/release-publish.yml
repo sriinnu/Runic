@@ -195,7 +195,7 @@ jobs:
           if [ "${{ steps.detect-pm.outputs.manager }}" = "pnpm" ]; then
             pnpm install --frozen-lockfile
           else
-            npm ci
+            npm install
           fi
 
       # -- Build (publish needs dist output) --

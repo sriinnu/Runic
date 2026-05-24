@@ -812,6 +812,9 @@ struct ProvidersPane: View {
         PreferencesListPane(horizontalPadding: 0, verticalPadding: 0) {
             VStack(spacing: ProviderListMetrics.sidebarSectionSpacing) {
                 self.listLayoutHeader
+                if let notice = self.settings.providerCredentialMigrationNotice {
+                    self.credentialMigrationNoticeCard(notice)
+                }
 
                 ProviderListView(
                     providers: self.providers,
@@ -860,6 +863,27 @@ struct ProvidersPane: View {
                 .strokeBorder(
                     self.runicTheme.menuSeparatorColor.opacity(ProviderListMetrics.listHeaderBorderOpacity + 0.12),
                     lineWidth: 1))
+        .padding(.horizontal, ProviderListMetrics.contentInset)
+    }
+
+    private func credentialMigrationNoticeCard(_ notice: String) -> some View {
+        Label {
+            Text(notice)
+                .font(self.fonts.caption)
+                .foregroundStyle(self.runicTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "key.fill")
+                .foregroundStyle(.orange)
+        }
+        .padding(ProviderListMetrics.listHeaderPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
+                .fill(Color.orange.opacity(0.10)))
+        .overlay(
+            RoundedRectangle(cornerRadius: ProviderListMetrics.listHeaderCornerRadius, style: .continuous)
+                .strokeBorder(Color.orange.opacity(0.28), lineWidth: 1))
         .padding(.horizontal, ProviderListMetrics.contentInset)
     }
 

@@ -419,6 +419,8 @@ final class SettingsStore {
         didSet { self.userDefaults.set(self.openAIWebAccessEnabled, forKey: "openAIWebAccessEnabled") }
     }
 
+    var providerCredentialMigrationNotice: String?
+
     private var codexUsageDataSourceRaw: String? {
         didSet {
             if let raw = self.codexUsageDataSourceRaw {
@@ -789,6 +791,7 @@ final class SettingsStore {
         _ = self.claudeWebExtrasEnabled
         _ = self.showOptionalCreditsAndExtraUsage
         _ = self.openAIWebAccessEnabled
+        _ = self.providerCredentialMigrationNotice
         _ = self.codexUsageDataSource
         _ = self.claudeUsageDataSource
         _ = self.mergeIcons
@@ -1039,6 +1042,14 @@ final class SettingsStore {
         self.bedrockModelID = userDefaults.string(forKey: "bedrockModelID") ?? ""
         self.vertexaiProject = userDefaults.string(forKey: "vertexaiProject") ?? ""
         self.vertexaiLocation = userDefaults.string(forKey: "vertexaiLocation") ?? ""
+        let credentialMigration = ProviderCredentialKeychainMigration.migrateKnownLegacyItems()
+        if credentialMigration.needsUserRepair {
+            let blocked = credentialMigration.blockedAccounts.count
+            let failed = credentialMigration.failedAccounts.count
+            self.providerCredentialMigrationNotice =
+                "Some saved provider keys need a one-time re-save after keychain hardening " +
+                "(\(blocked) blocked, \(failed) failed). Re-save affected API keys below; Runic will not prompt in the background."
+        }
         self.zaiAPIToken = (try? zaiTokenStore.loadToken()) ?? ""
         self.minimaxAPIToken = (try? minimaxTokenStore.loadToken()) ?? ""
         self.minimaxCookieHeader = (try? minimaxCookieHeaderStore.loadHeader()) ?? ""

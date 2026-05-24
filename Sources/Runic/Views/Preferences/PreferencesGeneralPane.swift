@@ -12,6 +12,7 @@ struct GeneralPane: View {
     @State private var appeared = false
     @State private var diagnosticsStatus: String?
     @State private var guardrailStatus: String?
+    @State private var isImportingOpenAIWebCookies = false
 
     var body: some View {
         LiquidPreferencesPane {
@@ -55,11 +56,32 @@ struct GeneralPane: View {
                         }
                         .runicPreferenceToggleStyle()
 
-                        Text("Imports browser cookies for dashboard extras (credits history, code review).")
+                        Text("Allows dashboard extras after you explicitly import browser cookies.")
                             .font(self.preferenceHelpFont)
                             .foregroundStyle(self.preferenceHelpColor)
                             .lineSpacing(self.preferenceHelpLineSpacing)
                             .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: RunicSpacing.sm) {
+                            Button {
+                                self.importOpenAIWebCookies()
+                            } label: {
+                                if self.isImportingOpenAIWebCookies {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                                Text("Import Browser Cookies Now")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(self.isImportingOpenAIWebCookies || !self.settings.openAIWebAccessEnabled)
+
+                            if let status = self.openAIWebStatusText {
+                                Text(status)
+                                    .font(self.preferenceHelpFont)
+                                    .foregroundStyle(self.preferenceHelpColor)
+                                    .lineLimit(2)
+                            }
+                        }
                     }
                 }
             }
@@ -204,7 +226,7 @@ struct GeneralPane: View {
                         .pickerStyle(.menu)
                         .frame(maxWidth: 360)
 
-                        Text("Drop .ttf/.otf files in Resources/Fonts to add more.")
+                        Text("Install extra families with Font Book; Runic shows available local fonts here.")
                             .font(self.preferenceHelpFont)
                             .foregroundStyle(self.preferenceHelpColor)
 
@@ -289,6 +311,19 @@ struct GeneralPane: View {
 
     private var preferenceHelpLineSpacing: CGFloat {
         self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
+    }
+
+    private var openAIWebStatusText: String? {
+        self.store.openAIDashboardCookieImportStatus ?? self.store.lastOpenAIDashboardError
+    }
+
+    private func importOpenAIWebCookies() {
+        guard !self.isImportingOpenAIWebCookies else { return }
+        self.isImportingOpenAIWebCookies = true
+        Task { @MainActor in
+            await self.store.importOpenAIDashboardBrowserCookiesNow()
+            self.isImportingOpenAIWebCookies = false
+        }
     }
 
     private func costStatusLine(provider: UsageProvider) -> some View {

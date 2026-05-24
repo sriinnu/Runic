@@ -323,13 +323,13 @@ struct RunicTests {
 
     @MainActor
     @Test
-    func `terminal typography uses tight hud line rhythm`() {
+    func `terminal typography keeps readable hud line rhythm`() {
         let palette = Theme.terminal.palette
         let rules = RunicFontRules.rules(for: RunicFontChoice.commitMono.id)
             .applying(palette.style.typography)
 
-        #expect(rules.lineSpacing == 0.35)
-        #expect(rules.lineSpacing < RunicFontRules.rules(for: RunicFontChoice.commitMono.id).lineSpacing)
+        #expect(rules.lineSpacing == 1.45)
+        #expect(rules.lineSpacing > RunicFontRules.rules(for: RunicFontChoice.commitMono.id).lineSpacing)
     }
 
     @MainActor

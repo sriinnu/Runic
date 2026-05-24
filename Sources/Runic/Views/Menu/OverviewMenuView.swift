@@ -134,12 +134,12 @@ struct OverviewMenuView: View {
                 .chartYAxis {
                     AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
-                            .foregroundStyle(self.runicTheme.cardStroke.opacity(0.45))
+                            .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(self.fonts.system(size: 8))
-                                    .foregroundStyle(self.runicTheme.secondaryText)
+                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                             }
                         }
                     }
@@ -148,7 +148,7 @@ struct OverviewMenuView: View {
                     AxisMarks(values: .automatic(desiredCount: 7)) { _ in
                         AxisValueLabel(format: .dateTime.weekday(.narrow))
                             .font(self.fonts.system(size: 8, weight: .medium))
-                            .foregroundStyle(self.runicTheme.secondaryText)
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
                     }
                 }
                 .frame(height: 80)
@@ -167,7 +167,7 @@ struct OverviewMenuView: View {
     }
 
     private var chartColors: [Color] {
-        self.summaries.map(\.brandColor)
+        self.summaries.indices.map { self.runicTheme.chartColor(at: $0) }
     }
 }
 

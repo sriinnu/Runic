@@ -16,15 +16,15 @@ struct RetroToggleStyle: ToggleStyle {
             // checkbox sits beside the label rather than baseline-shifting.
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
                 self.box(isOn: configuration.isOn)
-                    .onTapGesture {
-                        withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
-                            configuration.isOn.toggle()
-                        }
-                    }
                 configuration.label
                     .foregroundStyle(self.runicTheme.primaryText)
             }
             .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
+                    configuration.isOn.toggle()
+                }
+            }
         } else {
             Toggle(isOn: configuration.$isOn) { configuration.label }
                 .toggleStyle(.checkbox)

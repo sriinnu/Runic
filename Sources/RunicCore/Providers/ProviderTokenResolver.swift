@@ -463,6 +463,9 @@ public enum ProviderTokenResolver {
 
     private static func keychainToken(service: String, account: String) -> String? {
         #if canImport(Security)
+        if service == RunicKeychainService.providerCredentials {
+            return ProviderCredentialKeychainMigration.token(account: account)
+        }
         // Token stores write to the standard keychain (dataProtection: false),
         // so try it first.  Fall back to the Data Protection keychain for
         // pre-migration items that haven't been moved yet.

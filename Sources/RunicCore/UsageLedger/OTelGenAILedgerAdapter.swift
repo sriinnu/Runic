@@ -673,10 +673,61 @@ public struct OTelGenAIFileLedgerSource: UsageLedgerSource {
 
         var entries: [UsageLedgerEntry] = []
         for file in self.files {
-            let data = try Data(contentsOf: file)
-            let parsed = try OTelGenAILedgerAdapter.parseData(data, options: self.options)
+            try Task.checkCancellation()
+            let parsed = try Self.parseFile(file, options: self.options)
             entries.append(contentsOf: parsed)
         }
         return entries.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private static func parseFile(
+        _ file: URL,
+        options: OTelGenAIIngestionOptions) throws -> [UsageLedgerEntry]
+    {
+        if file.pathExtension.lowercased() == "json" {
+            return try OTelGenAILedgerAdapter.parseData(Data(contentsOf: file), options: options)
+        }
+
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+
+        var entries: [UsageLedgerEntry] = []
+        var buffer = Data()
+        buffer.reserveCapacity(8 * 1024)
+
+        func parseLine(_ line: Data, index: Int) throws {
+            guard !line.isEmpty else { return }
+            guard let text = String(data: line, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !text.isEmpty
+            else { return }
+            guard let data = text.data(using: .utf8) else {
+                throw OTelGenAILedgerAdapterError.invalidUTF8
+            }
+            do {
+                let object = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+                entries.append(contentsOf: OTelGenAILedgerAdapter.parseJSONObject(object, options: options))
+            } catch {
+                throw OTelGenAILedgerAdapterError.invalidJSON("line \(index): \(error.localizedDescription)")
+            }
+        }
+
+        var lineIndex = 1
+        while true {
+            try Task.checkCancellation()
+            let chunk = try handle.read(upToCount: 256 * 1024) ?? Data()
+            if chunk.isEmpty { break }
+            buffer.append(chunk)
+            while let range = buffer.firstRange(of: Data([0x0A])) {
+                let line = buffer.subdata(in: buffer.startIndex..<range.lowerBound)
+                try parseLine(line, index: lineIndex)
+                lineIndex += 1
+                buffer.removeSubrange(buffer.startIndex..<range.upperBound)
+            }
+        }
+        if !buffer.isEmpty {
+            try parseLine(buffer, index: lineIndex)
+        }
+        return entries
     }
 }
