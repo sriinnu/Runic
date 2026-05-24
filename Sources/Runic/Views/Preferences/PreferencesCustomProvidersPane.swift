@@ -138,6 +138,7 @@ struct CustomProvidersPane: View {
     private func deleteProvider(_ provider: CustomProviderConfig) {
         do {
             try CustomProviderStore.removeProvider(id: provider.id)
+            try? KeychainCustomProviderTokenStore().deleteToken(account: provider.auth.tokenKeychain)
             self.loadProviders()
             self.store.clearCustomProviderSnapshot(id: provider.id)
         } catch {
@@ -280,6 +281,8 @@ private struct CustomProviderEditorView: View {
     @State private var icon: String = "server.rack"
     @State private var apiToken: String = ""
     @State private var usageEndpointURL: String = ""
+    @State private var saveError: String?
+    private let tokenStore: CustomProviderTokenStoring = KeychainCustomProviderTokenStore()
 
     var body: some View {
         VStack {
@@ -293,24 +296,18 @@ private struct CustomProviderEditorView: View {
                 TextField("Usage Endpoint URL", text: self.$usageEndpointURL)
             }
             .padding()
+            if let saveError {
+                Text(saveError)
+                    .font(self.fonts.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal)
+            }
             HStack {
                 Button("Cancel") { self.onCancel() }
                 Button(self.provider == nil ? "Add" : "Save") {
-                    // Simplified save logic
-                    self.onSave(CustomProviderConfig(
-                        id: self.provider?.id ?? UUID().uuidString,
-                        name: self.name,
-                        icon: self.icon,
-                        enabled: self.provider?.enabled ?? true,
-                        auth: AuthConfig(
-                            type: .bearer,
-                            headerName: "Authorization",
-                            tokenKeychain: "custom-\(self.name)"),
-                        endpoints: EndpointConfig(usage: UsageEndpoint(
-                            url: self.usageEndpointURL,
-                            mapping: ResponseMapping()))))
+                    self.save()
                 }
-                .disabled(self.name.isEmpty || self.apiToken.isEmpty || self.usageEndpointURL.isEmpty)
+                .disabled(!self.canSave)
             }
             .padding()
         }
@@ -321,6 +318,34 @@ private struct CustomProviderEditorView: View {
                 self.icon = p.icon
                 self.usageEndpointURL = p.endpoints.usage?.url ?? ""
             }
+        }
+    }
+
+    private var canSave: Bool {
+        !self.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !self.usageEndpointURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            (self.provider != nil || !self.apiToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    private func save() {
+        let id = self.provider?.id ?? UUID().uuidString
+        let account = self.provider?.auth.tokenKeychain ?? "custom-\(id)-api-token"
+        do {
+            try self.tokenStore.storeToken(self.apiToken, account: account)
+            self.onSave(CustomProviderConfig(
+                id: id,
+                name: self.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                icon: self.icon.trimmingCharacters(in: .whitespacesAndNewlines),
+                enabled: self.provider?.enabled ?? true,
+                auth: AuthConfig(
+                    type: .bearer,
+                    headerName: "Authorization",
+                    tokenKeychain: account),
+                endpoints: EndpointConfig(usage: UsageEndpoint(
+                    url: self.usageEndpointURL.trimmingCharacters(in: .whitespacesAndNewlines),
+                    mapping: ResponseMapping()))))
+        } catch {
+            self.saveError = "Could not save API token: \(error.localizedDescription)"
         }
     }
 }

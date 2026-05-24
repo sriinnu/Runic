@@ -181,7 +181,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             provider: "codex",
             newDailies: cachedDailies,
             scanDate: self.now,
-            todayKey: todayKey,
+            todayKey: historyCovered ? todayKey : nil,
             coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
 
         return entries

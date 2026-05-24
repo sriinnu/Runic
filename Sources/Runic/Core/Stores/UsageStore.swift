@@ -635,6 +635,7 @@ final class UsageStore {
     @ObservationIgnored private var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored private var ledgerRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var runtimeStarted = false
     @ObservationIgnored private var requestedLedgerMaxAgeDays: Int?
     @ObservationIgnored private var providerHistoryMonthCache: [
         UsageProvider: [String: ProviderHistoryMonthCacheEntry]
@@ -686,6 +687,11 @@ final class UsageStore {
             codexFetcher: fetcher,
             claudeFetcher: claudeFetcher)
         self.bindSettings()
+    }
+
+    func startRuntime() {
+        guard !self.runtimeStarted else { return }
+        self.runtimeStarted = true
         self.detectVersions()
         self.refreshPathDebugInfo()
         LoginShellPathCache.shared.captureOnce { [weak self] _ in
@@ -1047,7 +1053,12 @@ final class UsageStore {
                 let monthEntries = providerEntries.filter {
                     calendar.isDate($0.timestamp, equalTo: normalizedMonthStart, toGranularity: .month)
                 }
-                let days = Self.providerHistoryDays(entries: monthEntries, timeZone: timeZone)
+                let entryDays = Self.providerHistoryDays(entries: monthEntries, timeZone: timeZone)
+                let cachedDays = await Self.cachedProviderHistoryDays(
+                    provider: provider,
+                    monthStart: normalizedMonthStart,
+                    timeZone: timeZone)
+                let days = Self.mergedProviderHistoryDays(cachedDays: cachedDays, entryDays: entryDays)
                 return ProviderHistoryMonthSnapshot(
                     provider: provider,
                     monthStart: normalizedMonthStart,
@@ -1319,6 +1330,42 @@ final class UsageStore {
                 modelSummaries: modelSummaries,
                 projectSummaries: projectSummaries)
         }
+    }
+
+    private nonisolated static func cachedProviderHistoryDays(
+        provider: UsageProvider,
+        monthStart: Date,
+        timeZone: TimeZone) async -> [ProviderHistoryDaySnapshot]
+    {
+        guard let cached = await LedgerCache.shared.loadCachedDailies(provider: provider.rawValue) else { return [] }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return cached.dailies.compactMap { daily in
+            guard let summary = daily.toLedgerDailySummary(provider: provider),
+                  calendar.isDate(summary.dayStart, equalTo: monthStart, toGranularity: .month)
+            else { return nil }
+            return ProviderHistoryDaySnapshot(
+                dayStart: summary.dayStart,
+                totals: summary.totals,
+                requestCount: daily.requestCount,
+                modelsUsed: summary.modelsUsed,
+                topModel: nil,
+                topProject: nil,
+                modelSummaries: [],
+                projectSummaries: [])
+        }
+        .sorted { $0.dayStart < $1.dayStart }
+    }
+
+    private nonisolated static func mergedProviderHistoryDays(
+        cachedDays: [ProviderHistoryDaySnapshot],
+        entryDays: [ProviderHistoryDaySnapshot]) -> [ProviderHistoryDaySnapshot]
+    {
+        var byDay = Dictionary(uniqueKeysWithValues: cachedDays.map { ($0.dayStart, $0) })
+        for day in entryDays {
+            byDay[day.dayStart] = day
+        }
+        return byDay.values.sorted { $0.dayStart < $1.dayStart }
     }
 
     /// Refresh a single provider (used when user clicks Ping on a specific provider tab).

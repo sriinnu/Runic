@@ -180,7 +180,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             provider: "claude",
             newDailies: cachedDailies,
             scanDate: self.now,
-            todayKey: todayKey,
+            todayKey: historyCovered ? todayKey : nil,
             coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
 
         return entries

@@ -243,6 +243,10 @@ private func makeUpdaterController() -> UpdaterProviding {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+#if DEBUG
+    static var duplicateInstanceCheckDisabledForTests = false
+#endif
+
     private static let productionBundleID = "com.sriinnu.athena.runic"
     private static let debugBundleID = "com.sriinnu.athena.runic.debug"
 
@@ -262,8 +266,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if self.startScreenshotRendererIfRequested() { return }
         if Self.terminateIfDuplicateInstance() { return }
         AppNotifications.shared.requestAuthorizationOnStartup()
+        self.store?.startRuntime()
         self.ensureStatusController()
         self.installAutoRefreshLifecycleObservers()
         KeyboardShortcuts.onKeyUp(for: .openMenu) { [weak self] in
@@ -273,9 +279,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func startScreenshotRendererIfRequested() -> Bool {
+        guard let store, let settings, let account, let selection = self.preferencesSelection else { return false }
+        return RunicScreenshotRenderer.startIfRequested(
+            store: store,
+            settings: settings,
+            account: account,
+            updater: self.updaterController,
+            selection: selection)
+    }
+
     /// Exit early if another Runic from the production/debug bundle family is already running.
     /// Stale login items or local debug bundles can otherwise spin up two status items.
     private static func terminateIfDuplicateInstance() -> Bool {
+#if DEBUG
+        if Self.duplicateInstanceCheckDisabledForTests { return false }
+#endif
         guard !Self.isRunningUnderTests else { return false }
 
         let myPID = ProcessInfo.processInfo.processIdentifier
