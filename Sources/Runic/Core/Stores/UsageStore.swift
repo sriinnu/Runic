@@ -621,6 +621,7 @@ final class UsageStore {
     @ObservationIgnored private let costUsageFetcher: CostUsageFetcher
     @ObservationIgnored private let registry: ProviderRegistry
     @ObservationIgnored private let settings: SettingsStore
+    @ObservationIgnored private let processEnvironment: [String: String]
     @ObservationIgnored private let sessionQuotaNotifier: SessionQuotaNotifier
     @ObservationIgnored private let sessionQuotaLogger = RunicLog.logger("sessionQuota")
     @ObservationIgnored private let openAIWebLogger = RunicLog.logger("openai-web")
@@ -665,6 +666,7 @@ final class UsageStore {
         self.costUsageFetcher = costUsageFetcher
         self.settings = settings
         self.registry = registry
+        self.processEnvironment = ProcessInfo.processInfo.environment
         self.sessionQuotaNotifier = sessionQuotaNotifier
         self.providerMetadata = registry.metadata
         self.lastRefreshFrequency = settings.refreshFrequency
@@ -903,7 +905,7 @@ final class UsageStore {
 
     private func isProviderAvailable(_ provider: UsageProvider) -> Bool {
         if provider == .zai {
-            if ZaiSettingsReader.apiToken(environment: ProcessInfo.processInfo.environment) != nil {
+            if ZaiSettingsReader.apiToken(environment: self.processEnvironment) != nil {
                 return true
             }
             return !self.settings.zaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
