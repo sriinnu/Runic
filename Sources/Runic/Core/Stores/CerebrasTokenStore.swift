@@ -24,7 +24,7 @@ enum CerebrasTokenStoreError: LocalizedError {
 struct KeychainCerebrasTokenStore: CerebrasTokenStoring {
     private static let log = RunicLog.logger("cerebras-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "cerebras-api-token"
 
     func loadToken() throws -> String? {

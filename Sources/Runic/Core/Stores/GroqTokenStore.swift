@@ -24,7 +24,7 @@ enum GroqTokenStoreError: LocalizedError {
 struct KeychainGroqTokenStore: GroqTokenStoring {
     private static let log = RunicLog.logger("groq-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "groq-api-token"
 
     func loadToken() throws -> String? {

@@ -24,7 +24,7 @@ enum FireworksTokenStoreError: LocalizedError {
 struct KeychainFireworksTokenStore: FireworksTokenStoring {
     private static let log = RunicLog.logger("fireworks-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "fireworks-api-token"
 
     func loadToken() throws -> String? {

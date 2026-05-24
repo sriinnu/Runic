@@ -19,7 +19,7 @@ struct GeneralPane: View {
                 PreferenceToggleRow(
                     title: "Start at Login",
                     subtitle: "Automatically opens Runic when you start your Mac.",
-                    binding: self.$settings.launchAtLogin)
+                    binding: self.launchAtLoginBinding)
             }
             .liquidEntrance(appeared: self.appeared, index: 0)
 
@@ -267,6 +267,12 @@ struct GeneralPane: View {
         } catch {
             self.guardrailStatus = "Failed: \(error.localizedDescription)"
         }
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { self.settings.launchAtLogin },
+            set: { self.settings.setLaunchAtLoginFromPreferences($0) })
     }
 
     private var preferenceTitleFont: Font {

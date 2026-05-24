@@ -24,7 +24,7 @@ enum MiniMaxCookieHeaderStoreError: LocalizedError {
 struct KeychainMiniMaxCookieHeaderStore: MiniMaxCookieHeaderStoring {
     private static let log = RunicLog.logger("minimax-cookie-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "minimax-cookie-header"
 
     func loadHeader() throws -> String? {

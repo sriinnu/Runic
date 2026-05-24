@@ -24,7 +24,7 @@ enum SambaNovaTokenStoreError: LocalizedError {
 struct KeychainSambaNovaTokenStore: SambaNovaTokenStoring {
     private static let log = RunicLog.logger("sambanova-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "sambanova-api-token"
 
     func loadToken() throws -> String? {

@@ -24,7 +24,7 @@ enum KimiTokenStoreError: LocalizedError {
 struct KeychainKimiTokenStore: KimiTokenStoring {
     private static let log = RunicLog.logger("kimi-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "kimi-api-token"
 
     func loadToken() throws -> String? {

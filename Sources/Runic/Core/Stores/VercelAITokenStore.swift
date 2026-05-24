@@ -24,7 +24,7 @@ enum VercelAITokenStoreError: LocalizedError {
 struct KeychainVercelAITokenStore: VercelAITokenStoring {
     private static let log = RunicLog.logger("vercelai-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "vercelai-api-token"
 
     func loadToken() throws -> String? {

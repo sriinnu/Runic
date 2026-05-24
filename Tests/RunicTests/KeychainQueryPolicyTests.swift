@@ -13,7 +13,7 @@ struct KeychainQueryPolicyTests {
 
         RunicKeychainQuery.disallowAuthenticationUI(in: &query)
 
-        #expect(query[kSecUseAuthenticationUI as String] as? String == "u_AuthUIS")
+        #expect(query[kSecUseAuthenticationUI as String] as? String == "u_AuthUIF")
         let context = try #require(query[kSecUseAuthenticationContext as String] as? LAContext)
         #expect(context.interactionNotAllowed)
     }
@@ -24,7 +24,7 @@ struct KeychainQueryPolicyTests {
 
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
-        #expect(query[kSecUseAuthenticationUI as String] as? String == "u_AuthUIS")
+        #expect(query[kSecUseAuthenticationUI as String] as? String == "u_AuthUIF")
         let context = try #require(query[kSecUseAuthenticationContext as String] as? LAContext)
         #expect(context.interactionNotAllowed)
     }
@@ -38,6 +38,17 @@ struct KeychainQueryPolicyTests {
         #expect(query[kSecUseAuthenticationUI as String] as? String == "u_AuthUIA")
         let context = try #require(query[kSecUseAuthenticationContext as String] as? LAContext)
         #expect(!context.interactionNotAllowed)
+    }
+
+    @Test
+    func `RunicCore noninteractive safe storage reads hard fail UI`() throws {
+        var query: [String: Any] = [:]
+
+        RunicCoreKeychainQueryPolicy.setAuthenticationUI(false, in: &query)
+
+        #expect(query[kSecUseAuthenticationUI as String] as? String == "u_AuthUIF")
+        let context = try #require(query[kSecUseAuthenticationContext as String] as? LAContext)
+        #expect(context.interactionNotAllowed)
     }
 }
 #endif

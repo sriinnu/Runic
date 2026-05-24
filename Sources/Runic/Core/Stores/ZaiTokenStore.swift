@@ -24,7 +24,7 @@ enum ZaiTokenStoreError: LocalizedError {
 struct KeychainZaiTokenStore: ZaiTokenStoring {
     private static let log = RunicLog.logger("zai-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "zai-api-token"
 
     func loadToken() throws -> String? {

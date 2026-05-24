@@ -24,7 +24,7 @@ enum MiniMaxTokenStoreError: LocalizedError {
 struct KeychainMiniMaxTokenStore: MiniMaxTokenStoring {
     private static let log = RunicLog.logger("minimax-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "minimax-api-token"
 
     func loadToken() throws -> String? {

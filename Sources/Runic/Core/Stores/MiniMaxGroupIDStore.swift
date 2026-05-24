@@ -24,7 +24,7 @@ enum MiniMaxGroupIDStoreError: LocalizedError {
 struct KeychainMiniMaxGroupIDStore: MiniMaxGroupIDStoring {
     private static let log = RunicLog.logger("minimax-groupid-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "minimax-group-id"
 
     func loadGroupID() throws -> String? {

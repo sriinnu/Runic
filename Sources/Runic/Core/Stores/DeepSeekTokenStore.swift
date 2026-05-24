@@ -24,7 +24,7 @@ enum DeepSeekTokenStoreError: LocalizedError {
 struct KeychainDeepSeekTokenStore: DeepSeekTokenStoring {
     private static let log = RunicLog.logger("deepseek-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "deepseek-api-token"
 
     func loadToken() throws -> String? {

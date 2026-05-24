@@ -24,7 +24,7 @@ enum OpenRouterTokenStoreError: LocalizedError {
 struct KeychainOpenRouterTokenStore: OpenRouterTokenStoring {
     private static let log = RunicLog.logger("openrouter-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "openrouter-api-token"
 
     func loadToken() throws -> String? {

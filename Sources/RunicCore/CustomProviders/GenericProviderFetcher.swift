@@ -9,7 +9,7 @@ import LocalAuthentication
 /// Generic fetcher for custom API provider usage and balance data
 public actor GenericProviderFetcher {
     private let config: CustomProviderConfig
-    private let keychainService = "com.sriinnu.athena.Runic"
+    private let keychainService = RunicKeychainService.providerCredentials
     private let log = RunicLog.logger("generic-provider-fetcher")
 
     public init(config: CustomProviderConfig) {

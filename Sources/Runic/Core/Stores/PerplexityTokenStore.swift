@@ -24,7 +24,7 @@ enum PerplexityTokenStoreError: LocalizedError {
 struct KeychainPerplexityTokenStore: PerplexityTokenStoring {
     private static let log = RunicLog.logger("perplexity-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "perplexity-api-token"
 
     func loadToken() throws -> String? {

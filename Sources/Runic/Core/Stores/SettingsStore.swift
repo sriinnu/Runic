@@ -267,7 +267,6 @@ final class SettingsStore {
     var launchAtLogin: Bool {
         didSet {
             self.userDefaults.set(self.launchAtLogin, forKey: "launchAtLogin")
-            LaunchAtLoginManager.setEnabled(self.launchAtLogin)
         }
     }
 
@@ -1096,6 +1095,13 @@ final class SettingsStore {
         self.providerOrderRaw = order.map(\.rawValue)
     }
 
+    @MainActor
+    func setLaunchAtLoginFromPreferences(_ enabled: Bool) {
+        guard self.launchAtLogin != enabled else { return }
+        self.launchAtLogin = enabled
+        LaunchAtLoginManager.setEnabled(enabled)
+    }
+
     func isProviderEnabled(provider: UsageProvider, metadata: ProviderMetadata) -> Bool {
         _ = self.providerToggleRevision
         return self.toggleStore.isEnabled(metadata: metadata)
@@ -1849,6 +1855,7 @@ enum LaunchAtLoginManager {
             if service.status == .enabled { return }
             try? service.register()
         } else {
+            if service.status != .enabled { return }
             try? service.unregister()
         }
     }

@@ -24,7 +24,7 @@ enum XAITokenStoreError: LocalizedError {
 struct KeychainXAITokenStore: XAITokenStoring {
     private static let log = RunicLog.logger("xai-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "xai-api-token"
 
     func loadToken() throws -> String? {

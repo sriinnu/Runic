@@ -24,7 +24,7 @@ enum AzureOpenAITokenStoreError: LocalizedError {
 struct KeychainAzureOpenAITokenStore: AzureOpenAITokenStoring {
     private static let log = RunicLog.logger("azure-openai-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "azure-openai-api-token"
 
     func loadToken() throws -> String? {

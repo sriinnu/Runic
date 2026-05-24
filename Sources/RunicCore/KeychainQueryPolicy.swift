@@ -10,7 +10,7 @@ enum RunicCoreKeychainQueryPolicy {
     #if canImport(Security)
     // CFString payloads behind the deprecated kSecUseAuthenticationUI* symbols.
     private static let authenticationUIAllow = "u_AuthUIA"
-    private static let authenticationUISkip = "u_AuthUIS"
+    private static let authenticationUIFail = "u_AuthUIF"
 
     static func disallowAuthenticationUI(in query: inout [String: Any]) {
         #if canImport(LocalAuthentication)
@@ -18,13 +18,13 @@ enum RunicCoreKeychainQueryPolicy {
         context.interactionNotAllowed = true
         query[kSecUseAuthenticationContext as String] = context
         #endif
-        query[kSecUseAuthenticationUI as String] = Self.authenticationUISkip as CFString
+        query[kSecUseAuthenticationUI as String] = Self.authenticationUIFail as CFString
     }
 
     static func setAuthenticationUI(_ allowUserInteraction: Bool, in query: inout [String: Any]) {
         query[kSecUseAuthenticationUI as String] = allowUserInteraction
             ? (Self.authenticationUIAllow as CFString)
-            : (Self.authenticationUISkip as CFString)
+            : (Self.authenticationUIFail as CFString)
         #if canImport(LocalAuthentication)
         let context = LAContext()
         context.interactionNotAllowed = !allowUserInteraction

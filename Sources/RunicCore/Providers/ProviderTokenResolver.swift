@@ -27,7 +27,7 @@ public struct ProviderTokenResolution: Sendable {
 public enum ProviderTokenResolver {
     private static let log = RunicLog.logger("provider-token")
 
-    private static let keychainService = "com.sriinnu.athena.Runic"
+    private static let keychainService = RunicKeychainService.providerCredentials
     private static let zaiAccount = "zai-api-token"
     private static let copilotAccount = "copilot-api-token"
     private static let minimaxAccount = "minimax-api-token"
@@ -189,9 +189,6 @@ public enum ProviderTokenResolver {
         }
         if let token = self.copilotCLIToken(environment: environment) {
             return ProviderTokenResolution(token: token, source: .environment, sourceKey: "gh-cli")
-        }
-        if let token = CopilotVSCodeTokenReader.token(environment: environment) {
-            return ProviderTokenResolution(token: token, source: .vscode, sourceKey: "vscode")
         }
         return nil
     }

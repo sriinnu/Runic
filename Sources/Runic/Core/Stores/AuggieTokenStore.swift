@@ -24,7 +24,7 @@ enum AuggieTokenStoreError: LocalizedError {
 struct KeychainAuggieTokenStore: AuggieTokenStoring {
     private static let log = RunicLog.logger("auggie-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "auggie-api-token"
 
     func loadToken() throws -> String? {
