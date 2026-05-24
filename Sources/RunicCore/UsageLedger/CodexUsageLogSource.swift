@@ -89,19 +89,39 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
         let root = try self.resolveSessionsRoot()
-        let minDate = self.minDate()
+        let todayKey = LedgerCache.dayKey(for: self.now)
+        let todayStart = Calendar.current.startOfDay(for: self.now)
 
-        // Incremental scan: only parse files modified since our last scan.
+        // Relay scan: once the bounded window is cached, keep history frozen
+        // and scan only today's session files.
         let cache = self.cache
+        let coveredDays = await cache.effectiveCoveredMaxAgeDays(provider: "codex") ?? 0
+        let requestedCoverageDays = self.maxAgeDays.flatMap { $0 > 0 ? $0 : nil }
+        let historyCovered = requestedCoverageDays.map { coveredDays >= $0 } ?? false
+        let needsCoverageScan = requestedCoverageDays.map { coveredDays < $0 } ?? false
+        let scanMaxAgeDays = historyCovered ? 1 : self.maxAgeDays
+        var minDate = self.minDate()
+        if historyCovered {
+            minDate = minDate.map { $0 < todayStart ? todayStart : $0 } ?? todayStart
+        }
         let lastScan = await cache.lastScanDate(provider: "codex")
-        let incrementalCutoff = lastScan ?? minDate ?? self.now.addingTimeInterval(-86400)
-        let allFiles = self.listSessionFiles(root: root, minDate: minDate)
+        var incrementalCutoff = needsCoverageScan
+            ? (minDate ?? .distantPast)
+            : (lastScan ?? minDate ?? self.now.addingTimeInterval(-86400))
+        if historyCovered, incrementalCutoff < todayStart {
+            incrementalCutoff = todayStart
+        }
+        let allFiles = self.listSessionFiles(root: root, minDate: minDate, maxAgeDays: scanMaxAgeDays)
         let filesToScan = allFiles.filter { file in
             guard let modDate = file.modifiedAt else { return true }
             return modDate >= incrementalCutoff
         }
 
         if filesToScan.isEmpty {
+            await cache.markScanComplete(
+                provider: "codex",
+                scanDate: self.now,
+                coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
             return []
         }
 
@@ -157,8 +177,12 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 modelsUsed: Array(bucket.models))
         }
 
-        let todayKey = LedgerCache.dayKey(for: self.now)
-        await cache.mergeDailies(provider: "codex", newDailies: cachedDailies, scanDate: self.now, todayKey: todayKey)
+        await cache.mergeDailies(
+            provider: "codex",
+            newDailies: cachedDailies,
+            scanDate: self.now,
+            todayKey: todayKey,
+            coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
 
         return entries
     }
@@ -187,7 +211,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         throw CodexUsageLogError.noSessionsDirectory
     }
 
-    private func listSessionFiles(root: URL, minDate: Date?) -> [SessionFile] {
+    private func listSessionFiles(root: URL, minDate: Date?, maxAgeDays: Int?) -> [SessionFile] {
         var results: [SessionFile] = []
 
         let calendar = Calendar.current

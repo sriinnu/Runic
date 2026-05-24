@@ -47,14 +47,29 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             throw ClaudeUsageLogError.noProjectsDirectory
         }
 
-        // Only scan files modified since our last scan (incremental).
-        // On first run, scans the last `maxAgeDays` worth of files.
+        // Relay scan: once the bounded window is cached, keep history frozen
+        // and scan only files touched today.
         let cache = self.cache
+        let todayKey = LedgerCache.dayKey(for: self.now)
+        let todayStart = Calendar.current.startOfDay(for: self.now)
+        let coveredDays = await cache.effectiveCoveredMaxAgeDays(provider: "claude") ?? 0
+        let requestedCoverageDays = self.maxAgeDays.flatMap { $0 > 0 ? $0 : nil }
+        let historyCovered = requestedCoverageDays.map { coveredDays >= $0 } ?? false
+        let needsCoverageScan = requestedCoverageDays.map { coveredDays < $0 } ?? false
         let lastScan = await cache.lastScanDate(provider: "claude")
-        let incrementalCutoff = lastScan ?? self.minDate() ?? self.now.addingTimeInterval(-86400)
-        let minDate = self.minDate()
+        var effectiveMinDate = self.minDate()
+        if historyCovered {
+            effectiveMinDate = effectiveMinDate.map { $0 < todayStart ? todayStart : $0 } ?? todayStart
+        }
+        let scanMinDate = effectiveMinDate
+        var incrementalCutoff = needsCoverageScan
+            ? (scanMinDate ?? .distantPast)
+            : (lastScan ?? scanMinDate ?? self.now.addingTimeInterval(-86400))
+        if historyCovered, incrementalCutoff < todayStart {
+            incrementalCutoff = todayStart
+        }
 
-        let allFiles = self.findUsageFiles(in: projectsDirs, minDate: minDate)
+        let allFiles = self.findUsageFiles(in: projectsDirs, minDate: scanMinDate)
 
         // Filter to only files modified since last scan.
         let filesToScan = allFiles.filter { file in
@@ -67,6 +82,10 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         }
 
         if filesToScan.isEmpty {
+            await cache.markScanComplete(
+                provider: "claude",
+                scanDate: self.now,
+                coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
             return []
         }
 
@@ -90,7 +109,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     }
                 }
                 group.addTask {
-                    self.parseFile(file, minDate: minDate)
+                    self.parseFile(file, minDate: scanMinDate)
                 }
                 inflight += 1
             }
@@ -157,8 +176,12 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 modelsUsed: Array(bucket.models))
         }
 
-        let todayKey = LedgerCache.dayKey(for: self.now)
-        await cache.mergeDailies(provider: "claude", newDailies: cachedDailies, scanDate: self.now, todayKey: todayKey)
+        await cache.mergeDailies(
+            provider: "claude",
+            newDailies: cachedDailies,
+            scanDate: self.now,
+            todayKey: todayKey,
+            coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
 
         return entries
     }
