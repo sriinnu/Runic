@@ -336,9 +336,10 @@ struct AboutLinkRow: View {
             if let url = URL(string: self.url) { NSWorkspace.shared.open(url) }
         } label: {
             HStack(spacing: RunicSpacing.xs) {
-                Image(systemName: self.icon)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(self.runicTheme.iconColor(forSystemImage: self.icon, hovered: self.hovering))
+                RunicThemedSystemIcon(
+                    systemName: self.icon,
+                    intent: .navigation,
+                    hovered: self.hovering)
                 Text(self.title)
                     .underline(self.hovering, color: .accentColor)
             }

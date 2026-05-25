@@ -722,10 +722,12 @@ private struct AppearancePreviewCard: View {
                     .scaledToFit()
                     .frame(width: 14, height: 14)
             } else if let systemImage {
-                Image(systemName: systemImage)
-                    .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(self.theme.palette.iconColor(forSystemImage: systemImage, selected: isSelected))
+                RunicThemedSystemIcon(
+                    systemName: systemImage,
+                    intent: .navigation,
+                    selected: isSelected,
+                    font: self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette),
+                    palette: self.theme.palette)
             }
             Text(title)
                 .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
@@ -746,11 +748,12 @@ private struct AppearancePreviewCard: View {
 
     private func actionPreviewRow(title: String, systemImage: String) -> some View {
         HStack(spacing: RunicSpacing.xs) {
-            Image(systemName: systemImage)
-                .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(self.theme.palette.iconColor(forSystemImage: systemImage))
-                .frame(width: 16)
+            RunicThemedSystemIcon(
+                systemName: systemImage,
+                intent: .navigation,
+                font: self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette),
+                width: 16,
+                palette: self.theme.palette)
             Text(title)
                 .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
                 .foregroundStyle(self.theme.palette.primaryText)
@@ -936,11 +939,11 @@ private struct RunicOperationsCenterView: View {
                     .foregroundStyle(self.runicTheme.secondaryText)
                 ForEach(recommendations.prefix(4)) { recommendation in
                     HStack(alignment: .top, spacing: RunicSpacing.xs) {
-                        Image(systemName: recommendation.systemImage)
-                            .font(self.fonts.caption)
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(self.runicTheme.iconColor(forSystemImage: recommendation.systemImage))
-                            .frame(width: 16)
+                        RunicThemedSystemIcon(
+                            systemName: recommendation.systemImage,
+                            intent: .info,
+                            font: self.fonts.caption,
+                            width: 16)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(recommendation.title)
                                 .font(self.fonts.caption.weight(.semibold))
@@ -979,10 +982,10 @@ private struct RunicOperationsCenterView: View {
 
     private func summaryPill(title: String, value: String, systemImage: String) -> some View {
         HStack(spacing: RunicSpacing.xxs) {
-            Image(systemName: systemImage)
-                .font(self.fonts.caption)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: systemImage))
+            RunicThemedSystemIcon(
+                systemName: systemImage,
+                intent: .data,
+                font: self.fonts.caption)
             Text(title)
                 .font(self.fonts.caption2)
             Text(value)

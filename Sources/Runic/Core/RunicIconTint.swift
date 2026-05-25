@@ -1,6 +1,9 @@
+import AppKit
 import SwiftUI
 
-enum RunicIconIntent {
+/// Semantic intent for app chrome icons. Call sites choose the intent so visual
+/// meaning stays deliberate instead of inferred from SF Symbol names.
+enum RunicIconIntent: CaseIterable, Equatable {
     case action
     case data
     case destructive
@@ -10,23 +13,41 @@ enum RunicIconIntent {
     case statusWarning
 }
 
-extension RunicThemePalette {
-    func iconColor(
-        forSystemImage systemImage: String?,
-        selected: Bool = false,
-        hovered: Bool = false)
-        -> Color
-    {
-        self.iconColor(
-            for: Self.iconIntent(forSystemImage: systemImage),
-            systemImage: systemImage,
-            selected: selected,
-            hovered: hovered)
+/// SF Symbol wrapper that applies Runic's semantic icon palette while preserving
+/// the symbol, font, and layout control at the call site.
+@MainActor
+struct RunicThemedSystemIcon: View {
+    @Environment(\.runicTheme) private var environmentPalette
+    let systemName: String
+    var intent: RunicIconIntent = .action
+    var selected = false
+    var hovered = false
+    var font: Font?
+    var width: CGFloat?
+    var palette: RunicThemePalette?
+
+    var body: some View {
+        Image(systemName: self.systemName)
+            .font(self.font)
+            .frame(width: self.width)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(self.activePalette.iconColor(
+                for: self.intent,
+                selected: self.selected,
+                hovered: self.hovered))
     }
 
+    private var activePalette: RunicThemePalette {
+        self.palette ?? self.environmentPalette
+    }
+}
+
+extension RunicThemePalette {
+    /// Resolve a semantic icon color for the current theme and interaction
+    /// state. Neutral navigation/action icons stay quiet; semantic statuses keep
+    /// at least non-text contrast against common Runic surfaces.
     func iconColor(
         for intent: RunicIconIntent,
-        systemImage: String? = nil,
         selected: Bool = false,
         hovered: Bool = false)
         -> Color
@@ -37,56 +58,71 @@ extension RunicThemePalette {
 
         switch intent {
         case .action:
-            return selected || hovered ? self.accent : self.subduedSecondaryText
+            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.neutralIconColor
         case .data:
-            return self.dataIconColor(forSystemImage: systemImage, selected: selected)
+            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.semanticIconColor(self.secondary)
         case .destructive:
-            return self.dangerIconColor
+            return self.semanticIconColor(self.warm)
         case .info:
-            return self.infoIconColor
+            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.semanticIconColor(self.secondary)
         case .navigation:
-            return selected ? self.accent : self.secondaryText
+            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.neutralIconColor
         case .statusGood:
-            return self.successIconColor
+            return self.semanticIconColor(self.tertiary)
         case .statusWarning:
-            return self.warningIconColor
+            return self.semanticIconColor(self.highlight)
         }
     }
 
-    static func iconIntent(forSystemImage systemImage: String?) -> RunicIconIntent {
-        guard let name = systemImage else { return .action }
-        if name.contains("trash") { return .destructive }
-        if name.contains("exclamationmark") || name.contains("bell.badge") { return .statusWarning }
-        if name.contains("checkmark") { return .statusGood }
-        if name.contains("info") || name.contains("book") || name.contains("questionmark") { return .info }
-        if name.contains("chevron") || name.contains("arrow.up.right") { return .navigation }
-        if Self.dataIconNames.contains(name) || Self.dataIconPrefixes.contains(where: name.contains) {
-            return .data
-        }
-        return .action
+    private func stateIconColor(selected: Bool, hovered: Bool) -> Color {
+        let background = selected ? self.selectedIconBackground : (hovered ? self.menuHoverFill : self.surface)
+        return self.accessibleIconColor(
+            self.accent,
+            against: background,
+            minimumContrast: 3.2,
+            preferOpaque: true)
     }
 
-    private static let dataIconNames: Set<String> = [
-        "calendar", "clock", "curlybraces", "folder", "gauge.with.dots.needle.67percent",
-        "rectangle.split.2x1", "server.rack", "speedometer", "tablecells",
-    ]
+    private var neutralIconColor: Color {
+        self.accessibleIconColor(
+            self.subduedSecondaryText,
+            against: self.surface,
+            minimumContrast: 2.7,
+            preferOpaque: false)
+    }
 
-    private static let dataIconPrefixes = [
-        "chart", "cpu", "externaldrive", "paperplane", "waveform",
-    ]
+    private func semanticIconColor(_ color: Color, minimumContrast: Double = 3.05) -> Color {
+        self.accessibleIconColor(color, against: self.surface, minimumContrast: minimumContrast, preferOpaque: true)
+    }
 
-    private func dataIconColor(forSystemImage systemImage: String?, selected: Bool) -> Color {
-        switch systemImage {
-        case "tablecells":
-            return self.successIconColor
-        case "curlybraces", "cpu":
-            return self.purpleIconColor
-        case "calendar", "clock":
-            return self.blueIconColor
-        case "folder":
-            return self.goldIconColor
-        default:
-            return selected ? self.accent : self.accent.opacity(self.id == "retro" ? 0.86 : 0.92)
+    private func accessibleIconColor(
+        _ color: Color,
+        against backgroundColor: Color,
+        minimumContrast: Double,
+        preferOpaque: Bool)
+        -> Color
+    {
+        let surface = Self.opaqueRGB(self.nsColor(self.surface, fallback: .windowBackgroundColor))
+        let background = Self.composite(Self.rgba(self.nsColor(backgroundColor, fallback: .windowBackgroundColor)), over: surface)
+        let original = self.nsColor(color, fallback: .controlAccentColor)
+        let candidate = Self.composite(Self.rgba(original), over: background)
+        let adjusted = Self.adjustedRGB(candidate, against: background, minimumContrast: minimumContrast)
+        let alpha = preferOpaque ? 1 : max(original.alphaComponent, 0.78)
+        return Color(nsColor: NSColor(
+            deviceRed: adjusted.r,
+            green: adjusted.g,
+            blue: adjusted.b,
+            alpha: alpha))
+    }
+
+    private var selectedIconBackground: Color {
+        switch self.style.controls.selectedFillStyle {
+        case .accentSolid, .terminalSolid:
+            self.accent.opacity(self.isTerminalHUD ? 0.28 : 0.22)
+        case .neutralSoft:
+            self.menuSubtleFill
+        case .accentSoft:
+            self.accent.opacity(0.18)
         }
     }
 
@@ -101,40 +137,92 @@ extension RunicThemePalette {
             return self.warm
         case .statusWarning:
             return self.highlight
-        case .info:
-            return hovered || selected ? self.secondary : self.tertiary
         case .statusGood:
             return self.accent
-        case .action, .data, .navigation:
+        case .data, .info:
+            return selected || hovered ? self.accent : self.secondary
+        case .action, .navigation:
             return selected || hovered ? self.accent : self.readableSecondaryText
         }
     }
 
-    private var blueIconColor: Color {
-        self.id == "retro" ? Color(red: 0.245, green: 0.365, blue: 0.620) : Color(red: 0.180, green: 0.450, blue: 0.940)
+    private static func adjustedRGB(
+        _ foreground: RGB,
+        against background: RGB,
+        minimumContrast: Double)
+        -> RGB
+    {
+        if Self.contrast(foreground, background) >= minimumContrast {
+            return foreground
+        }
+
+        let target = Self.luminance(background) > 0.5
+            ? RGB(r: 0, g: 0, b: 0)
+            : RGB(r: 1, g: 1, b: 1)
+
+        var best = foreground
+        for step in 1...24 {
+            let amount = Double(step) / 24
+            let mixed = Self.mix(foreground, target, amount: amount)
+            best = mixed
+            if Self.contrast(mixed, background) >= minimumContrast {
+                break
+            }
+        }
+        return best
     }
 
-    private var dangerIconColor: Color {
-        self.id == "retro" ? Color(red: 0.730, green: 0.290, blue: 0.210) : Color(red: 0.930, green: 0.230, blue: 0.270)
+    private static func contrast(_ lhs: RGB, _ rhs: RGB) -> Double {
+        let l1 = Self.luminance(lhs)
+        let l2 = Self.luminance(rhs)
+        return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05)
     }
 
-    private var goldIconColor: Color {
-        self.id == "retro" ? Color(red: 0.615, green: 0.430, blue: 0.155) : Color(red: 0.920, green: 0.560, blue: 0.120)
+    private static func luminance(_ color: RGB) -> Double {
+        func channel(_ value: Double) -> Double {
+            value <= 0.03928 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b)
     }
 
-    private var infoIconColor: Color {
-        self.id == "retro" ? self.blueIconColor : Color(red: 0.120, green: 0.520, blue: 0.900)
+    private static func mix(_ lhs: RGB, _ rhs: RGB, amount: Double) -> RGB {
+        RGB(
+            r: lhs.r + (rhs.r - lhs.r) * amount,
+            g: lhs.g + (rhs.g - lhs.g) * amount,
+            b: lhs.b + (rhs.b - lhs.b) * amount)
     }
 
-    private var purpleIconColor: Color {
-        self.id == "retro" ? Color(red: 0.450, green: 0.330, blue: 0.670) : Color(red: 0.560, green: 0.310, blue: 0.920)
+    private static func composite(_ foreground: RGBA, over background: RGB) -> RGB {
+        RGB(
+            r: foreground.r * foreground.a + background.r * (1 - foreground.a),
+            g: foreground.g * foreground.a + background.g * (1 - foreground.a),
+            b: foreground.b * foreground.a + background.b * (1 - foreground.a))
     }
 
-    private var successIconColor: Color {
-        self.id == "retro" ? Color(red: 0.265, green: 0.520, blue: 0.380) : Color(red: 0.060, green: 0.610, blue: 0.380)
+    private static func opaqueRGB(_ color: NSColor) -> RGB {
+        let rgba = Self.rgba(color)
+        return RGB(r: rgba.r, g: rgba.g, b: rgba.b)
     }
 
-    private var warningIconColor: Color {
-        self.id == "retro" ? Color(red: 0.780, green: 0.410, blue: 0.220) : Color(red: 0.950, green: 0.610, blue: 0.150)
+    private static func rgba(_ color: NSColor) -> RGBA {
+        let resolved = color.usingColorSpace(.deviceRGB) ?? color
+        return RGBA(
+            r: Double(resolved.redComponent),
+            g: Double(resolved.greenComponent),
+            b: Double(resolved.blueComponent),
+            a: Double(resolved.alphaComponent))
+    }
+
+    private struct RGB {
+        let r: Double
+        let g: Double
+        let b: Double
+    }
+
+    private struct RGBA {
+        let r: Double
+        let g: Double
+        let b: Double
+        let a: Double
     }
 }

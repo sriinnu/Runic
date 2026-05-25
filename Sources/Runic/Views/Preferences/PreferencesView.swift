@@ -214,13 +214,12 @@ struct PreferencesView: View {
             }
         } label: {
             VStack(spacing: 3) {
-                Image(systemName: tab.symbolName)
-                    .font(.system(size: 18, weight: selected ? .semibold : .medium))
+                RunicThemedSystemIcon(
+                    systemName: tab.symbolName,
+                    intent: tab.iconIntent,
+                    selected: selected,
+                    font: .system(size: 18, weight: selected ? .semibold : .medium))
                     .frame(height: 22)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(self.settings.theme.palette.iconColor(
-                        forSystemImage: tab.symbolName,
-                        selected: selected))
                 Text(tab.label)
                     .font(self.fonts.caption.weight(selected ? .semibold : .medium))
                     .lineLimit(1)
@@ -248,7 +247,7 @@ struct PreferencesView: View {
     }
 }
 
-private extension PreferencesTab {
+extension PreferencesTab {
     var label: String {
         switch self {
         case .general: "General"
@@ -271,5 +270,9 @@ private extension PreferencesTab {
         case .about: "info.circle"
         case .debug: "ladybug"
         }
+    }
+
+    var iconIntent: RunicIconIntent {
+        .navigation
     }
 }

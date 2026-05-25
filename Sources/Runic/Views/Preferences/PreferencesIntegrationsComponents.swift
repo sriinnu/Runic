@@ -74,6 +74,7 @@ struct IntegrationRow<Actions: View>: View {
     @Environment(\.runicFonts) private var fonts
     @Environment(\.runicTheme) private var runicTheme
     let icon: String
+    var iconIntent: RunicIconIntent = .info
     let title: String
     let status: String
     let detail: String
@@ -82,11 +83,11 @@ struct IntegrationRow<Actions: View>: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: RunicSpacing.sm) {
-            Image(systemName: self.icon)
-                .font(self.fonts.callout)
-                .frame(width: 24)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: self.icon))
+            RunicThemedSystemIcon(
+                systemName: self.icon,
+                intent: self.iconIntent,
+                font: self.fonts.callout,
+                width: 24)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 HStack(spacing: RunicSpacing.xs) {
@@ -125,11 +126,11 @@ struct IntegrationMCPServerRow: View {
 
     var body: some View {
         HStack(spacing: RunicSpacing.sm) {
-            Image(systemName: "bolt.horizontal.circle")
-                .font(self.fonts.callout)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: "server.rack"))
-                .frame(width: 24)
+            RunicThemedSystemIcon(
+                systemName: "bolt.horizontal.circle",
+                intent: .data,
+                font: self.fonts.callout,
+                width: 24)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                 Text(self.server.name)
@@ -175,10 +176,11 @@ struct IntegrationEmptyState: View {
 
     var body: some View {
         VStack(spacing: RunicSpacing.xs) {
-            Image(systemName: self.icon)
-                .font(.system(size: 28))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: self.icon).opacity(0.72))
+            RunicThemedSystemIcon(
+                systemName: self.icon,
+                intent: .info,
+                font: .system(size: 28))
+                .opacity(0.72)
             Text(self.title)
                 .font(self.fonts.callout.weight(.semibold))
             Text(self.detail)
