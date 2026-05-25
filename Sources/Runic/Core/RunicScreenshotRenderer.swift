@@ -66,6 +66,16 @@ enum RunicScreenshotRenderer {
         updater: UpdaterProviding,
         selection: PreferencesSelection) throws
     {
+        let previousTheme = settings.theme
+        if let theme = Self.themeOverride {
+            settings.theme = theme
+        }
+        defer {
+            if settings.theme != previousTheme {
+                settings.theme = previousTheme
+            }
+        }
+
         switch request.kind {
         case "menubar":
             try Self.writePNG(
@@ -92,6 +102,11 @@ enum RunicScreenshotRenderer {
         }
     }
 
+    private static var themeOverride: Theme? {
+        guard let raw = ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_THEME"] else { return nil }
+        return Theme(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+    }
+
     private static func writePreferences(
         store: UsageStore,
         settings: SettingsStore,
@@ -116,8 +131,18 @@ enum RunicScreenshotRenderer {
             backing: .buffered,
             defer: false)
         window.contentView = hostingView
+        defer {
+            window.orderOut(nil)
+            window.contentView = nil
+        }
+
+        window.orderFrontRegardless()
         window.layoutIfNeeded()
+        window.displayIfNeeded()
+        hostingView.needsLayout = true
         hostingView.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        window.displayIfNeeded()
 
         guard let rep = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
             throw RendererError.bitmapUnavailable
@@ -132,7 +157,6 @@ enum RunicScreenshotRenderer {
             throw RendererError.pngUnavailable
         }
         try data.write(to: url, options: .atomic)
-        window.contentView = nil
     }
 
     private static let noopActions = MenuPopoverActions(

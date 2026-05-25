@@ -19,7 +19,7 @@ struct GeneralPane: View {
             LiquidSection(title: "System") {
                 PreferenceToggleRow(
                     title: "Start at Login",
-                    subtitle: "Automatically opens Runic when you start your Mac.",
+                    subtitle: "Open Runic when your Mac starts.",
                     binding: self.launchAtLoginBinding)
             }
             .liquidEntrance(appeared: self.appeared, index: 0)
@@ -33,15 +33,20 @@ struct GeneralPane: View {
                         }
                         .runicPreferenceToggleStyle()
 
-                        Text("Reads local usage logs. Shows today + last 30 days cost in the menu.")
+                        Text("Shows local cost totals in the menu.")
                             .font(self.preferenceHelpFont)
+                            .fontDesign(self.preferenceHelpDesign)
+                            .tracking(self.preferenceHelpTracking)
                             .foregroundStyle(self.preferenceHelpColor)
                             .lineSpacing(self.preferenceHelpLineSpacing)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                         if self.settings.costUsageEnabled {
                             Text("Auto-refresh: hourly · Timeout: 10m")
                                 .font(self.preferenceHelpFont)
+                                .fontDesign(self.preferenceHelpDesign)
+                                .tracking(self.preferenceHelpTracking)
                                 .foregroundStyle(self.preferenceHelpColor)
 
                             self.costStatusLine(provider: .claude)
@@ -56,11 +61,14 @@ struct GeneralPane: View {
                         }
                         .runicPreferenceToggleStyle()
 
-                        Text("Allows dashboard extras after you explicitly import browser cookies.")
+                        Text("Enable extras after manual cookie import.")
                             .font(self.preferenceHelpFont)
+                            .fontDesign(self.preferenceHelpDesign)
+                            .tracking(self.preferenceHelpTracking)
                             .foregroundStyle(self.preferenceHelpColor)
                             .lineSpacing(self.preferenceHelpLineSpacing)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                         HStack(spacing: RunicSpacing.sm) {
                             Button {
@@ -78,6 +86,8 @@ struct GeneralPane: View {
                             if let status = self.openAIWebStatusText {
                                 Text(status)
                                     .font(self.preferenceHelpFont)
+                                    .fontDesign(self.preferenceHelpDesign)
+                                    .tracking(self.preferenceHelpTracking)
                                     .foregroundStyle(self.preferenceHelpColor)
                                     .lineLimit(2)
                             }
@@ -90,12 +100,11 @@ struct GeneralPane: View {
             LiquidSection(title: "Status") {
                 PreferenceToggleRow(
                     title: "Check provider status",
-                    subtitle: "Polls OpenAI/Claude status pages and Google Workspace for " +
-                        "Gemini/Antigravity, surfacing incidents in the icon and menu.",
+                    subtitle: "Polls provider status pages.",
                     binding: self.$settings.statusChecksEnabled)
                 PreferenceToggleRow(
                     title: "Vibrant menu bar icon",
-                    subtitle: "Uses a data-reactive color ramp to show usage pressure at a glance.",
+                    subtitle: "Shows usage pressure in the menu bar.",
                     binding: self.$settings.menuBarVibrantIconEnabled)
             }
             .liquidEntrance(appeared: self.appeared, index: 2)
@@ -103,8 +112,7 @@ struct GeneralPane: View {
             LiquidSection(title: "Notifications") {
                 PreferenceToggleRow(
                     title: "Session quota notifications",
-                    subtitle: "Notifies when the 5-hour session quota hits 0% and when it becomes " +
-                        "available again.",
+                    subtitle: "Warns when session quota resets.",
                     binding: self.$settings.sessionQuotaNotificationsEnabled)
             }
             .liquidEntrance(appeared: self.appeared, index: 3)
@@ -298,11 +306,21 @@ struct GeneralPane: View {
     }
 
     private var preferenceTitleFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.callout.weight(.semibold) : self.fonts.callout.weight(.medium)
+        self.runicTheme.isTerminalHUD
+            ? .system(size: 14, weight: .semibold, design: .monospaced)
+            : self.fonts.callout.weight(.medium)
     }
 
     private var preferenceHelpFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
+        self.runicTheme.isTerminalHUD ? .system(size: 12, weight: .regular) : self.fonts.footnote
+    }
+
+    private var preferenceHelpDesign: Font.Design? {
+        self.runicTheme.isTerminalHUD ? .default : nil
+    }
+
+    private var preferenceHelpTracking: CGFloat {
+        self.runicTheme.isTerminalHUD ? 0 : RunicFont.activeRules.letterSpacing
     }
 
     private var preferenceHelpColor: Color {
@@ -332,6 +350,8 @@ struct GeneralPane: View {
         guard provider == .claude || provider == .codex else {
             return Text("\(name): unsupported")
                 .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
                 .foregroundStyle(self.preferenceHelpColor)
         }
 
@@ -346,6 +366,8 @@ struct GeneralPane: View {
             }()
             return Text("\(name): fetching…\(elapsed)")
                 .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
                 .foregroundStyle(self.preferenceHelpColor)
         }
         if let snapshot = self.store.tokenSnapshot(for: provider) {
@@ -353,12 +375,16 @@ struct GeneralPane: View {
             let cost = snapshot.last30DaysCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
             return Text("\(name): \(updated) · 30d \(cost)")
                 .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
                 .foregroundStyle(self.preferenceHelpColor)
         }
         if let error = self.store.tokenError(for: provider), !error.isEmpty {
             let truncated = UsageFormatter.truncatedSingleLine(error, max: 120)
             return Text("\(name): \(truncated)")
                 .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
                 .foregroundStyle(self.preferenceHelpColor)
         }
         if let lastAttempt = self.store.tokenLastAttemptAt(for: provider) {
@@ -367,10 +393,14 @@ struct GeneralPane: View {
             let when = rel.localizedString(for: lastAttempt, relativeTo: Date())
             return Text("\(name): last attempt \(when)")
                 .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
                 .foregroundStyle(self.preferenceHelpColor)
         }
         return Text("\(name): no data yet")
             .font(self.preferenceHelpFont)
+            .fontDesign(self.preferenceHelpDesign)
+            .tracking(self.preferenceHelpTracking)
             .foregroundStyle(self.preferenceHelpColor)
     }
 }

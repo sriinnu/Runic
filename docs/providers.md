@@ -37,7 +37,7 @@ Claude and Codex have first-class local JSONL scanners. All other built-in provi
 - Shared env: `RUNIC_OTEL_GENAI_LOG_PATHS` or `RUNIC_OTEL_GENAI_LOG_PATH`.
 - Provider env: `RUNIC_<PROVIDER>_OTEL_GENAI_LOG_PATHS`, `RUNIC_<PROVIDER>_OTEL_GENAI_LOG_PATH`, `RUNIC_<PROVIDER>_OTEL_LOG_PATHS`, or `RUNIC_<PROVIDER>_OTEL_LOG_PATH`.
 - Provider names use uppercase raw values with dashes converted to underscores, for example `RUNIC_LOCAL_LLM_OTEL_GENAI_LOG_PATHS`.
-- Default collector ledger: `~/Library/Application Support/Runic/otel-genai/ingest.jsonl`.
+- Default collector ledger: `~/Library/Application Support/Runic/otel-genai/ingest-YYYY-MM-DD.jsonl`.
 
 Ledger entries carry token/cost provenance where known: exact local log, provider-reported telemetry, estimated pricing table, inferred cumulative counter, or unknown. Runic only marks compaction tax when the source explicitly flags compaction/compact work; it does not infer semantic context loss.
 

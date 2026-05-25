@@ -77,6 +77,9 @@ enum RunicSpacing {
     static let menuReadableColumnOffset: CGFloat =
         menuControlHorizontalPadding + menuIconColumnWidth + menuControlSpacing
 
+    /// Leading inset for section titles inside menu cards.
+    static let menuSectionHeaderInset: CGFloat = menuActionIconColumnWidth + menuActionIconTextSpacing
+
     /// Vertical padding inside popover row controls.
     static let menuControlVerticalPadding: CGFloat = xxs + xxxs // 6pt
 

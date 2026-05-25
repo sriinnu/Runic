@@ -21,7 +21,7 @@ struct SyncPane: View {
         var label: String {
             switch self {
             case .integrations: "Integrations"
-            case .teams: "Teams"
+            case .teams: "Local Teams"
             }
         }
 

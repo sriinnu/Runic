@@ -57,7 +57,7 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 
 ### Insights usage sources
 
-`runic insights` reads Claude/Codex local JSONL ledgers directly. Other providers, including `local-llm`, are included when OpenTelemetry GenAI JSON/JSONL files are configured through `RUNIC_OTEL_GENAI_LOG_PATHS`, `RUNIC_OTEL_GENAI_LOG_PATH`, or provider-specific variables such as `RUNIC_LOCAL_LLM_OTEL_GENAI_LOG_PATHS`. Runic also reads its default local collector ledger at `~/Library/Application Support/Runic/otel-genai/ingest.jsonl` automatically when present.
+`runic insights` reads Claude/Codex local JSONL ledgers directly. Other providers, including `local-llm`, are included when OpenTelemetry GenAI JSON/JSONL files are configured through `RUNIC_OTEL_GENAI_LOG_PATHS`, `RUNIC_OTEL_GENAI_LOG_PATH`, or provider-specific variables such as `RUNIC_LOCAL_LLM_OTEL_GENAI_LOG_PATHS`. Runic also reads daily default collector ledgers at `~/Library/Application Support/Runic/otel-genai/ingest-YYYY-MM-DD.jsonl` automatically when present.
 
 Supported insight views: `daily`, `session`, `blocks`, `models`, `projects`, `compaction`, `comparative`, and `efficiency`.
 

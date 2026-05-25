@@ -229,6 +229,72 @@ enum RefreshTrigger: String {
     }
 }
 
+private actor UsageLedgerOTelRelay {
+    static let shared = UsageLedgerOTelRelay()
+
+    private struct FileIdentity: Hashable {
+        let path: String
+        let size: Int
+        let modifiedAt: TimeInterval
+    }
+
+    private struct Key: Hashable {
+        let files: [FileIdentity]
+        let minTimestamp: TimeInterval?
+        let options: OTelGenAIIngestionOptions
+    }
+
+    private var cache: [Key: (loadedAt: Date, entries: [UsageLedgerEntry])] = [:]
+    private var inFlight: [Key: Task<[UsageLedgerEntry], Error>] = [:]
+    private let cacheTTL: TimeInterval = 5
+
+    func loadEntries(files: [URL], options: OTelGenAIIngestionOptions, minTimestamp: Date?) async throws -> [UsageLedgerEntry] {
+        guard !files.isEmpty else { return [] }
+        let key = Key(
+            files: files.map(Self.identity(for:)).sorted { $0.path < $1.path },
+            minTimestamp: minTimestamp?.timeIntervalSince1970,
+            options: options)
+        let now = Date()
+        if let cached = self.cache[key], now.timeIntervalSince(cached.loadedAt) <= self.cacheTTL {
+            return cached.entries
+        }
+        if let task = self.inFlight[key] {
+            return try await task.value
+        }
+
+        let task = Task.detached(priority: .utility) {
+            try await OTelGenAIFileLedgerSource(
+                files: files,
+                options: options,
+                minTimestamp: minTimestamp)
+                .loadEntries()
+        }
+        self.inFlight[key] = task
+        do {
+            let entries = try await task.value
+            self.inFlight[key] = nil
+            self.cache[key] = (now, entries)
+            self.pruneCache(now: now)
+            return entries
+        } catch {
+            self.inFlight[key] = nil
+            throw error
+        }
+    }
+
+    private static func identity(for file: URL) -> FileIdentity {
+        let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        return FileIdentity(
+            path: file.standardizedFileURL.path,
+            size: values?.fileSize ?? 0,
+            modifiedAt: values?.contentModificationDate?.timeIntervalSince1970 ?? 0)
+    }
+
+    private func pruneCache(now: Date) {
+        self.cache = self.cache.filter { now.timeIntervalSince($0.value.loadedAt) <= self.cacheTTL }
+    }
+}
+
 enum AutoRefreshSuspensionReason: String {
     case systemSleep
     case screenSleep
@@ -1158,7 +1224,7 @@ final class UsageStore {
         maxAgeDays: Int) -> (any UsageLedgerSource)?
     {
         let files = self.otelLedgerFiles(for: provider)
-        guard !files.isEmpty else { return nil }
+        guard !files.common.isEmpty || !files.providerSpecific.isEmpty else { return nil }
 
         let options = OTelGenAIIngestionOptions(
             enabled: true,
@@ -1166,7 +1232,8 @@ final class UsageStore {
             defaultProvider: provider,
             source: .openTelemetry)
         return UsageLedgerCachedOTelProviderSource(
-            files: files,
+            commonFiles: files.common,
+            providerSpecificFiles: files.providerSpecific,
             options: options,
             provider: provider,
             maxAgeDays: maxAgeDays,
@@ -1174,7 +1241,8 @@ final class UsageStore {
     }
 
     private struct UsageLedgerCachedOTelProviderSource: UsageLedgerSource {
-        private let files: [URL]
+        private let commonFiles: [URL]
+        private let providerSpecificFiles: [URL]
         private let options: OTelGenAIIngestionOptions
         private let provider: UsageProvider
         private let maxAgeDays: Int
@@ -1182,14 +1250,16 @@ final class UsageStore {
         private let cache: LedgerCache
 
         init(
-            files: [URL],
+            commonFiles: [URL],
+            providerSpecificFiles: [URL],
             options: OTelGenAIIngestionOptions,
             provider: UsageProvider,
             maxAgeDays: Int,
             now: Date,
             cache: LedgerCache = .shared)
         {
-            self.files = files
+            self.commonFiles = commonFiles
+            self.providerSpecificFiles = providerSpecificFiles
             self.options = options
             self.provider = provider
             self.maxAgeDays = maxAgeDays
@@ -1208,11 +1278,20 @@ final class UsageStore {
                 for: calendar.date(byAdding: .day, value: -requestedCoverageDays, to: self.now) ?? self.now)
             let minTimestamp = historyCovered ? todayStart : historyStart
 
-            let source = OTelGenAIFileLedgerSource(
-                files: self.files,
+            let commonOptions = OTelGenAIIngestionOptions(
+                enabled: self.options.enabled,
+                allowExperimentalSemanticConventions: self.options.allowExperimentalSemanticConventions,
+                defaultProvider: nil,
+                source: self.options.source)
+            let commonEntries = try await UsageLedgerOTelRelay.shared.loadEntries(
+                files: self.commonFiles,
+                options: commonOptions,
+                minTimestamp: minTimestamp)
+            let providerEntries = try await UsageLedgerOTelRelay.shared.loadEntries(
+                files: self.providerSpecificFiles,
                 options: self.options,
                 minTimestamp: minTimestamp)
-            let loaded = try await source.loadEntries()
+            let loaded = commonEntries + providerEntries
             let entries = loaded.filter { entry in
                 if entry.provider != self.provider { return false }
                 if entry.timestamp < minTimestamp { return false }
@@ -1271,13 +1350,13 @@ final class UsageStore {
         }
     }
 
-    private func otelLedgerFiles(for provider: UsageProvider) -> [URL] {
+    private func otelLedgerFiles(for provider: UsageProvider) -> (common: [URL], providerSpecific: [URL]) {
         let env = ProcessInfo.processInfo.environment
         let providerKey = provider.rawValue
             .replacingOccurrences(of: "-", with: "_")
             .uppercased()
 
-        let candidatePaths = [
+        let commonPaths = [
             [
                 OTelGenAICollectorConfiguration.defaultOutputFile().path,
                 OTelGenAICollectorConfiguration.defaultOutputDirectory().path,
@@ -1285,14 +1364,19 @@ final class UsageStore {
             Self.splitPathList(self.settings.otelGenAILogPaths),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATH"]),
+        ].flatMap(\.self)
+        let providerPaths = [
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATH"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATH"]),
         ].flatMap(\.self)
 
-        let urls = candidatePaths.compactMap(Self.expandTildePath)
-        return Self.discoverOTelLedgerFiles(from: urls)
+        let commonFiles = Self.discoverOTelLedgerFiles(from: commonPaths.compactMap(Self.expandTildePath))
+        let commonPathsSeen = Set(commonFiles.map { $0.standardizedFileURL.path })
+        let providerFiles = Self.discoverOTelLedgerFiles(from: providerPaths.compactMap(Self.expandTildePath))
+            .filter { !commonPathsSeen.contains($0.standardizedFileURL.path) }
+        return (commonFiles, providerFiles)
     }
 
     private static func splitPathList(_ raw: String?) -> [String] {
@@ -1501,7 +1585,7 @@ final class UsageStore {
             await self.refreshCreditsIfNeeded()
         }
 
-        self.scheduleLedgerRefresh(force: true, inactiveProviders: inactiveProviders)
+        self.scheduleLedgerRefresh(force: !trigger.isAuto || forceTokenUsage, inactiveProviders: inactiveProviders)
 
         // Refresh custom providers
         await self.refreshCustomProviders()

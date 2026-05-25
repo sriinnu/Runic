@@ -12,7 +12,7 @@ enum PreferencesLayoutMetrics {
 }
 
 enum PreferencesTypographyMetrics {
-    static let terminalBodyLineSpacing: CGFloat = RunicSpacing.xxxs
+    static let terminalBodyLineSpacing: CGFloat = 6
 }
 
 @MainActor
@@ -117,21 +117,33 @@ struct PreferenceToggleRow: View {
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(self.subtitleFont)
+                    .fontDesign(self.subtitleDesign)
+                    .tracking(self.subtitleTracking)
                     .foregroundStyle(self.subtitleColor)
                     .lineSpacing(self.subtitleLineSpacing)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var titleFont: Font {
         self.runicTheme.isTerminalHUD
-            ? self.fonts.callout.weight(.semibold)
+            ? .system(size: 14, weight: .semibold, design: .monospaced)
             : self.fonts.callout.weight(.medium)
     }
 
     private var subtitleFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
+        self.runicTheme.isTerminalHUD ? .system(size: 12, weight: .regular) : self.fonts.footnote
+    }
+
+    private var subtitleDesign: Font.Design? {
+        self.runicTheme.isTerminalHUD ? .default : nil
+    }
+
+    private var subtitleTracking: CGFloat {
+        self.runicTheme.isTerminalHUD ? 0 : RunicFont.activeRules.letterSpacing
     }
 
     private var subtitleColor: Color {
@@ -180,12 +192,12 @@ struct PreferenceStepperRow: View {
 
     private var titleFont: Font {
         self.runicTheme.isTerminalHUD
-            ? self.fonts.callout.weight(.semibold)
+            ? .system(size: 14, weight: .semibold, design: .monospaced)
             : self.fonts.callout.weight(.medium)
     }
 
     private var subtitleFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
+        self.runicTheme.isTerminalHUD ? .system(size: 12, weight: .regular) : self.fonts.footnote
     }
 
     private var subtitleColor: Color {

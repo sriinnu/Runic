@@ -88,7 +88,9 @@ struct MenuPopoverView: View {
 
                     if let provider, !isOverview {
                         self.insightSection(provider: provider)
-                        self.exportSection(provider: provider)
+                        if let panel = self.effectivePanel(from: self.availablePanels(for: provider)) {
+                            self.exportSection(panel: panel)
+                        }
                     }
 
                     self.actionSections(provider: provider, isOverview: isOverview)
@@ -266,7 +268,7 @@ struct MenuPopoverView: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.menuControlSpacing) {
                         HStack {
                             RetroSectionHeader(text: "Explore")
-                                .padding(.horizontal, RunicSpacing.menuPanelBodyInset)
+                                .padding(.horizontal, RunicSpacing.menuSectionHeaderInset)
                             Spacer()
                         }
 
@@ -305,13 +307,12 @@ struct MenuPopoverView: View {
         }
     }
 
-    private func exportSection(provider: UsageProvider) -> some View {
-        let panel = self.effectivePanel(from: self.availablePanels(for: provider)) ?? .timeline
+    private func exportSection(panel: PopoverInsightPanel) -> some View {
         let scope = UsageExporter.Scope(panel: panel, timelineRange: self.selectedTimelineRange)
         return MenuPopoverSurfaceCard {
             VStack(alignment: .leading, spacing: RunicSpacing.menuControlSpacing) {
                 RetroSectionHeader(text: "Export visible \(scope.displayName)")
-                    .padding(.horizontal, RunicSpacing.menuPanelBodyInset)
+                    .padding(.horizontal, RunicSpacing.menuSectionHeaderInset)
                 HStack(spacing: RunicSpacing.menuControlSpacing) {
                     MenuPopoverActionButton(
                         title: "CSV",
@@ -330,7 +331,7 @@ struct MenuPopoverView: View {
                 Text("Exports the selected Explore panel and range.")
                     .font(self.fonts.caption2)
                     .foregroundStyle(self.settings.theme.palette.secondaryText)
-                    .padding(.horizontal, RunicSpacing.menuPanelBodyInset)
+                    .padding(.horizontal, RunicSpacing.menuSectionHeaderInset)
             }
             .padding(self.panelInset)
         }

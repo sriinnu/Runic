@@ -24,6 +24,7 @@ public struct OTelGenAIIngestionOptions: Sendable, Codable, Hashable {
 public enum OTelGenAILedgerAdapterError: LocalizedError, Sendable, Equatable {
     case invalidUTF8
     case invalidJSON(String)
+    case fileTooLarge(path: String, size: Int, limit: Int)
 
     public var errorDescription: String? {
         switch self {
@@ -31,6 +32,9 @@ public enum OTelGenAILedgerAdapterError: LocalizedError, Sendable, Equatable {
             "OTel payload is not valid UTF-8."
         case let .invalidJSON(message):
             "OTel JSON parse failed: \(message)"
+        case let .fileTooLarge(path, size, limit):
+            "OTel JSON file is too large for whole-file parsing: " +
+                "\(path) (\(size) bytes, limit \(limit) bytes). Use JSONL or split the file."
         }
     }
 }
@@ -663,6 +667,7 @@ public struct OTelGenAIFileLedgerSource: UsageLedgerSource {
     public let files: [URL]
     public let options: OTelGenAIIngestionOptions
     public let minTimestamp: Date?
+    private static let maxWholeJSONBytes = 8 * 1024 * 1024
 
     public init(
         files: [URL],
@@ -701,6 +706,13 @@ public struct OTelGenAIFileLedgerSource: UsageLedgerSource {
         minTimestamp: Date?) throws -> [UsageLedgerEntry]
     {
         if file.pathExtension.lowercased() == "json" {
+            let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            if size > Self.maxWholeJSONBytes {
+                throw OTelGenAILedgerAdapterError.fileTooLarge(
+                    path: file.path,
+                    size: size,
+                    limit: Self.maxWholeJSONBytes)
+            }
             return try OTelGenAILedgerAdapter.parseData(Data(contentsOf: file), options: options)
                 .filter { entry in minTimestamp.map { entry.timestamp >= $0 } ?? true }
         }

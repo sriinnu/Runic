@@ -288,6 +288,36 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
+    func `file source rejects oversized whole json files`() async throws {
+        let fm = FileManager.default
+        let directory = fm.temporaryDirectory
+            .appendingPathComponent("runic-otel-large-json-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("ingest.json")
+        _ = fm.createFile(atPath: file.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: file)
+        try handle.truncate(atOffset: UInt64((8 * 1024 * 1024) + 1))
+        try handle.close()
+
+        let source = OTelGenAIFileLedgerSource(
+            files: [file],
+            options: OTelGenAIIngestionOptions(enabled: true))
+
+        do {
+            _ = try await source.loadEntries()
+            Issue.record("Expected oversized JSON to be rejected before whole-file parsing")
+        } catch let error as OTelGenAILedgerAdapterError {
+            if case .fileTooLarge = error {
+                #expect(true)
+            } else {
+                Issue.record("Expected fileTooLarge, got \(error)")
+            }
+        }
+    }
+
+    @Test
     func `http ingest handler accepts otlp json requests`() async {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("runic-http-otel-\(UUID().uuidString)", isDirectory: true)

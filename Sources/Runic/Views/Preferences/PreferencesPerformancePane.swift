@@ -12,7 +12,7 @@ struct PerformancePane: View {
     @AppStorage("performanceTrackingEnabled") private var performanceTrackingEnabled = true
     @AppStorage("rawMetricsRetentionDays") private var rawMetricsRetentionDays = 30
     @AppStorage("aggregatedStatsRetentionYears") private var aggregatedStatsRetentionYears = 1
-    @AppStorage("qualityRatingPromptsEnabled") private var qualityRatingPromptsEnabled = true
+    @AppStorage("qualityRatingPromptsEnabled") private var qualityRatingPromptsEnabled = false
     @AppStorage("qualityRatingFrequency") private var qualityRatingFrequency = QualityRatingFrequency.every
     @AppStorage("maxPromptsPerHour") private var maxPromptsPerHour = 3
 
@@ -105,39 +105,43 @@ struct PerformancePane: View {
             }
             .liquidEntrance(appeared: self.appeared, index: 1)
 
-            LiquidSection(title: "Quality Rating Prompts") {
+            LiquidSection(title: "Quality Rating Prompts (Preview)") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     PreferenceToggleRow(
                         title: "Show rating prompts",
-                        subtitle: "Ask for quality ratings after AI responses to track model performance.",
+                        subtitle: "Prompt scheduling is not active yet; explicit rating views still store locally.",
                         binding: self.$qualityRatingPromptsEnabled)
+                        .disabled(true)
+                        .opacity(0.65)
 
-                    if self.qualityRatingPromptsEnabled {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Prompt frequency")
-                                .font(self.fonts.body)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Prompt frequency")
+                            .font(self.fonts.body)
 
-                            Picker("", selection: self.$qualityRatingFrequency) {
-                                ForEach(QualityRatingFrequency.allCases) { freq in
-                                    Text(freq.label).tag(freq)
-                                }
+                        Picker("", selection: self.$qualityRatingFrequency) {
+                            ForEach(QualityRatingFrequency.allCases) { freq in
+                                Text(freq.label).tag(freq)
                             }
-                            .pickerStyle(.segmented)
-                            .frame(maxWidth: 400)
-
-                            Text("When to show rating prompts based on response size.")
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 400)
+                        .disabled(true)
+                        .opacity(0.65)
 
-                        PreferenceStepperRow(
-                            title: "Max prompts per hour",
-                            subtitle: "Limits how often rating prompts appear to avoid interruptions.",
-                            step: 1,
-                            range: 1...10,
-                            valueLabel: { "\($0) prompts" },
-                            value: self.$maxPromptsPerHour)
+                        Text("Kept here as a local preview until response-level prompt triggers are wired.")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
+
+                    PreferenceStepperRow(
+                        title: "Max prompts per hour",
+                        subtitle: "Planned interruption cap for the prompt scheduler.",
+                        step: 1,
+                        range: 1...10,
+                        valueLabel: { "\($0) prompts" },
+                        value: self.$maxPromptsPerHour)
+                        .disabled(true)
+                        .opacity(0.65)
                 }
             }
             .liquidEntrance(appeared: self.appeared, index: 2)

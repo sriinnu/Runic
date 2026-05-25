@@ -30,8 +30,8 @@ struct TeamManagementView: View {
 
     var body: some View {
         PreferencesPane {
-            SettingsSection(title: "Teams", contentSpacing: RunicSpacing.md) {
-                Text("Manage team workspaces, members, and quota allocation.")
+            SettingsSection(title: "Local Teams", contentSpacing: RunicSpacing.md) {
+                Text("Plan team workspaces, members, and quota allocation locally on this Mac.")
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
@@ -62,7 +62,7 @@ struct TeamManagementView: View {
                             Text("No teams yet")
                                 .font(self.fonts.body.weight(.semibold))
                                 .foregroundStyle(self.runicTheme.secondaryText)
-                            Text("Create a team to collaborate with others")
+                            Text("Create a local team plan for showback and budget planning")
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
@@ -111,7 +111,7 @@ struct TeamManagementView: View {
                             Button {
                                 self.showingInviteSheet = true
                             } label: {
-                                Label("Invite", systemImage: "person.badge.plus")
+                                Label("Add Member", systemImage: "person.badge.plus")
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.mini)

@@ -162,7 +162,7 @@ struct AnalyticsPane: View {
 
             // MARK: - Alerts section
 
-            DisclosureGroup("Alerts", isExpanded: self.$alertsExpanded) {
+            DisclosureGroup("Guardrail Rules (Draft)", isExpanded: self.$alertsExpanded) {
                 VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionSpacing) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
@@ -211,9 +211,9 @@ struct AnalyticsPane: View {
                                 .foregroundStyle(self.runicTheme.secondaryText)
                         }
                         Text(
-                            "Rules are saved locally for guardrail configuration and webhooks. " +
-                                "Budget breach notifications are evaluated from Budgets below; " +
-                                "session quota notifications live in General.")
+                            "Rules are saved locally as drafts for upcoming guardrail automation. " +
+                                "Today, production notifications come from Budgets below and " +
+                                "session quota notifications in General.")
                             .font(self.fonts.footnote)
                             .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     }

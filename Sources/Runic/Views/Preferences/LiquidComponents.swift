@@ -301,7 +301,11 @@ struct LiquidSection<Content: View>: View {
                     .padding(.leading, RunicSpacing.xxs)
             }
             self.content
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(LiquidGlassCore(shimmerIndex: self.title.hashValue & 0xF))
     }
 
@@ -343,12 +347,14 @@ private struct LiquidEntranceModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
+        let isScreenshot = RunicScreenshotRenderer.isRequested
+        let isVisible = self.appeared || isScreenshot
         content
-            .opacity(self.appeared ? 1 : 0)
-            .offset(y: self.reduceMotion || self.appeared ? 0 : 14)
-            .scaleEffect(self.reduceMotion || self.appeared ? 1 : 0.97, anchor: .top)
+            .opacity(isVisible ? 1 : 0)
+            .offset(y: self.reduceMotion || isVisible ? 0 : 14)
+            .scaleEffect(self.reduceMotion || isVisible ? 1 : 0.97, anchor: .top)
             .animation(
-                self.reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.78)
+                self.reduceMotion || isScreenshot ? nil : .spring(response: 0.5, dampingFraction: 0.78)
                     .delay(Double(self.index) * 0.07),
                 value: self.appeared)
     }
@@ -382,6 +388,7 @@ struct LiquidPreferencesPane<Content: View>: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.md) {
                     self.content()
                 }
+                .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
                 .padding(.vertical, PreferencesLayoutMetrics.paneVertical)
