@@ -566,7 +566,6 @@ extension StatusItemController {
 
     private func scheduleOpenMenuPing(for menu: NSMenu) {
         guard self.settings.refreshFrequency != .manual else { return }
-        Task { await self.store.refresh(trigger: .menuOpen) }
         let key = ObjectIdentifier(menu)
         self.menuPingTasks[key]?.cancel()
         self.menuPingTasks[key] = Task { @MainActor [weak self, weak menu] in

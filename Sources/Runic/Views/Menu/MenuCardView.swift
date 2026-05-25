@@ -38,7 +38,7 @@ enum MenuCardMetrics {
 
     /// Tail padding at the end of sections
     static let tailPadding: CGFloat = RunicSpacing.xxs // 4
-    static let metricCardPadding: CGFloat = RunicSpacing.sm // 8
+    static let metricCardPadding: CGFloat = RunicSpacing.xs // 8
     static let metricCardCornerRadius: CGFloat = RunicCornerRadius.sm
 }
 
@@ -318,8 +318,7 @@ private struct UsageMenuCardHeaderView: View {
 
                 VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                     Text(self.model.providerName)
-                        .font(self.fonts.headline)
-                        .fontWeight(.semibold)
+                        .font(self.providerTitleFont)
                     if !self.model.email.isEmpty {
                         if self.runicTheme.id == "retro" {
                             Text(self.model.email)
@@ -384,6 +383,12 @@ private struct UsageMenuCardHeaderView: View {
         .padding(.vertical, RunicSpacing.xs)
         .background(self.headerBackground)
         .overlay(self.headerBorder)
+    }
+
+    /// Terminal needs a visible title jump because monospaced weights read
+    /// flatter at small sizes than proportional UI fonts.
+    private var providerTitleFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.title3.weight(.bold) : self.fonts.headline.weight(.semibold)
     }
 
     private var subtitleColor: Color {
@@ -925,7 +930,7 @@ private struct UsageMenuMetricCard: View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                 Text(self.metric.title)
-                    .font(self.fonts.caption.weight(.semibold))
+                    .font(self.titleFont)
                     .foregroundStyle(self.runicTheme.secondaryText)
                 Spacer(minLength: RunicSpacing.xs)
                 if let reset = self.metric.resetText {
@@ -945,8 +950,9 @@ private struct UsageMenuMetricCard: View {
             if self.displayMode.showsPercent {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                     Text(self.metric.percentLabel)
-                        .font(self.fonts.caption)
-                        .fontWeight(.medium)
+                        .font(self.percentFont)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.88)
                     Spacer()
                 }
             }
@@ -970,6 +976,14 @@ private struct UsageMenuMetricCard: View {
                 cornerRadius: MenuCardMetrics.metricCardCornerRadius,
                 style: .continuous)
                 .strokeBorder(self.runicTheme.cardStroke.opacity(0.42), lineWidth: 1))
+    }
+
+    private var titleFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.footnote.weight(.semibold) : self.fonts.caption.weight(.semibold)
+    }
+
+    private var percentFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.numericHeadline : self.fonts.numericFootnote.weight(.semibold)
     }
 }
 

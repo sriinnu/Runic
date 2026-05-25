@@ -2,8 +2,9 @@ import Foundation
 import OSLog
 
 /// Persistent cache for aggregated ledger data. Stores daily summaries per provider
-/// so the app never re-scans old JSONL files. Works like a deque — new days are
-/// appended, historical days are immutable.
+/// so the app does not need to re-scan old JSONL files on every refresh.
+/// Normal menu refreshes treat existing historical days as frozen and replace
+/// only today's aggregate; explicit full scans can still rebuild old days.
 ///
 /// Storage: `~/Library/Application Support/Runic/ledger-cache/`
 ///   - `claude-daily.json`, `codex-daily.json`, etc.
@@ -48,32 +49,52 @@ public actor LedgerCache {
         Self.log.debug("Saved \(ledger.dailies.count) days for \(provider)")
     }
 
-    /// Merge new daily entries into existing cache. Deque behavior:
-    /// - Existing days are NOT overwritten (immutable history)
-    /// - Today's entry is REPLACED because log sources rescan today's active files
-    /// - New days are appended
-    public func mergeDailies(provider: String, newDailies: [CachedDaily], scanDate: Date, todayKey: String? = nil) {
+    /// Merge hot daily entries into the frozen daily cache.
+    ///
+    /// When `todayKey` is supplied, existing days before today are immutable:
+    /// this is the fast relay path used by menu refreshes. Passing `nil`
+    /// preserves full-rebuild behavior for tests and future backfill tools.
+    public func mergeDailies(
+        provider: String,
+        newDailies: [CachedDaily],
+        scanDate: Date,
+        todayKey: String? = nil,
+        coveredMaxAgeDays: Int? = nil)
+    {
         var ledger = self.loadCachedDailies(provider: provider) ?? CachedLedger(
             lastScanDate: scanDate,
             lastFullScanDate: nil,
+            coveredMaxAgeDays: nil,
             dailies: [])
 
-        let resolvedTodayKey = todayKey ?? Self.dayKey(for: Date())
         var existingByKey: [String: CachedDaily] = [:]
         for daily in ledger.dailies {
             existingByKey[daily.dayKey] = daily
         }
 
         for newDaily in newDailies {
-            if newDaily.dayKey == resolvedTodayKey {
-                existingByKey[newDaily.dayKey] = newDaily
-            } else if existingByKey[newDaily.dayKey] == nil {
-                existingByKey[newDaily.dayKey] = newDaily
+            if let todayKey,
+               newDaily.dayKey != todayKey,
+               existingByKey[newDaily.dayKey] != nil
+            {
+                continue
             }
+            existingByKey[newDaily.dayKey] = newDaily
         }
 
         ledger.dailies = existingByKey.values.sorted { $0.dayKey < $1.dayKey }
-        ledger.lastScanDate = scanDate
+        self.updateScanMetadata(&ledger, scanDate: scanDate, coveredMaxAgeDays: coveredMaxAgeDays)
+        self.saveDailies(provider: provider, ledger: ledger)
+    }
+
+    /// Record that a provider was scanned even if it produced no new entries.
+    public func markScanComplete(provider: String, scanDate: Date, coveredMaxAgeDays: Int? = nil) {
+        var ledger = self.loadCachedDailies(provider: provider) ?? CachedLedger(
+            lastScanDate: scanDate,
+            lastFullScanDate: nil,
+            coveredMaxAgeDays: nil,
+            dailies: [])
+        self.updateScanMetadata(&ledger, scanDate: scanDate, coveredMaxAgeDays: coveredMaxAgeDays)
         self.saveDailies(provider: provider, ledger: ledger)
     }
 
@@ -94,13 +115,40 @@ public actor LedgerCache {
         self.loadCachedDailies(provider: provider)?.lastScanDate
     }
 
+    /// Largest bounded history window that has already been scanned.
+    public func coveredMaxAgeDays(provider: String) -> Int? {
+        self.loadCachedDailies(provider: provider)?.coveredMaxAgeDays
+    }
+
+    /// Best available coverage for old and new cache files.
+    ///
+    /// Older cache files do not have `coveredMaxAgeDays`; using their cached
+    /// day count avoids one expensive post-upgrade rescan for established users.
+    public func effectiveCoveredMaxAgeDays(provider: String) -> Int? {
+        guard let ledger = self.loadCachedDailies(provider: provider) else { return nil }
+        let covered = max(ledger.coveredMaxAgeDays ?? 0, ledger.dailies.count)
+        return covered > 0 ? covered : nil
+    }
+
     // MARK: - Internal
 
     private func fileURL(provider: String) -> URL {
         self.cacheDir.appendingPathComponent("\(provider)-daily.json")
     }
 
-    static func dayKey(for date: Date) -> String {
+    private func updateScanMetadata(
+        _ ledger: inout CachedLedger,
+        scanDate: Date,
+        coveredMaxAgeDays: Int?)
+    {
+        ledger.lastScanDate = scanDate
+        if let coveredMaxAgeDays {
+            ledger.coveredMaxAgeDays = max(ledger.coveredMaxAgeDays ?? 0, coveredMaxAgeDays)
+            ledger.lastFullScanDate = scanDate
+        }
+    }
+
+    public static func dayKey(for date: Date) -> String {
         self.dayKeyFormatter.string(from: date)
     }
 }
@@ -110,7 +158,20 @@ public actor LedgerCache {
 public struct CachedLedger: Codable, Sendable {
     public var lastScanDate: Date
     public var lastFullScanDate: Date?
+    public var coveredMaxAgeDays: Int?
     public var dailies: [CachedDaily]
+
+    public init(
+        lastScanDate: Date,
+        lastFullScanDate: Date?,
+        coveredMaxAgeDays: Int? = nil,
+        dailies: [CachedDaily])
+    {
+        self.lastScanDate = lastScanDate
+        self.lastFullScanDate = lastFullScanDate
+        self.coveredMaxAgeDays = coveredMaxAgeDays
+        self.dailies = dailies
+    }
 }
 
 public struct CachedDaily: Codable, Sendable {
@@ -129,6 +190,26 @@ public struct CachedDaily: Codable, Sendable {
         f.timeZone = .current
         return f
     }()
+
+    public init(
+        dayKey: String,
+        inputTokens: Int,
+        outputTokens: Int,
+        cacheCreationTokens: Int,
+        cacheReadTokens: Int,
+        costUSD: Double?,
+        requestCount: Int,
+        modelsUsed: [String])
+    {
+        self.dayKey = dayKey
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.cacheCreationTokens = cacheCreationTokens
+        self.cacheReadTokens = cacheReadTokens
+        self.costUSD = costUSD
+        self.requestCount = requestCount
+        self.modelsUsed = modelsUsed
+    }
 
     public var totalTokens: Int {
         self.inputTokens + self.outputTokens + self.cacheCreationTokens + self.cacheReadTokens

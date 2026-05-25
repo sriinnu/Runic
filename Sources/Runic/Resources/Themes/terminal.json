@@ -1,26 +1,32 @@
 {
   "id": "terminal",
   "displayName": "Terminal",
-  "tagline": "Retro terminal",
+  "tagline": "Tactical HUD",
   "symbolName": "terminal.fill",
   "isCustom": true,
   "prefersDarkAppearance": true,
   "colors": {
-    "primary":       "#00F473",
-    "secondary":     "#29D5FF",
-    "accent":        "#00FF88",
-    "highlight":     "#FFB400",
-    "warm":          "#FF5C6B",
-    "tertiary":      "#44EDB8",
-    "surface":       "#000403",
-    "surfaceAlt":    "#00140EEB",
-    "cardFill":      "#001F14A3",
-    "cardStroke":    "#00FF8857",
-    "primaryText":   "#E0F6E7",
-    "secondaryText": "#A3C2B0"
+    "primary":       "#0DE37A",
+    "secondary":     "#2FC8E8",
+    "accent":        "#18F28B",
+    "highlight":     "#F8BA2E",
+    "warm":          "#F06773",
+    "tertiary":      "#55E3B8",
+    "surface":       "#020807",
+    "surfaceAlt":    "#031A13D9",
+    "cardFill":      "#05211799",
+    "cardStroke":    "#10D77A42",
+    "primaryText":   "#D7F7E5",
+    "secondaryText": "#9CC8B2"
   },
   "fonts":   { "body": "mono", "numeric": "mono" },
-  "shape":   { "preset": "sharp" },
+  "shape":   { "cornerMultiplier": 0.62, "separator": "hairline" },
   "motion":  { "preset": "instant" },
-  "density": { "preset": "compact" }
+  "density": { "preset": "normal" },
+  "style": {
+    "typography": { "bodyFamily": "CommitMono", "numericFamily": "CommitMono", "scale": 1.03, "tracking": 0.01, "lineSpacing": 1.45, "contrast": "strong" },
+    "chrome": { "borderStyle": "hud", "borderWeight": 0.75, "borderOpacity": 0.44, "cornerStyle": "compact", "panelDepth": "low" },
+    "effects": { "scanlineOpacity": 0.16, "glowStrength": 0.14, "materialIntensity": 0.0 },
+    "controls": { "selectedFillStyle": "terminalSolid", "progressStyle": "segmentedHUD", "hoverStyle": "neutral" }
+  }
 }

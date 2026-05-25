@@ -427,9 +427,9 @@ extension StatusItemController {
         return container
     }
 
-    // MARK: - Fira Code menu font post-processor
+    // MARK: - Runic menu font post-processor
 
-    /// Recursively apply Fira Code to every NSMenuItem that uses a plain title (no custom view).
+    /// Recursively apply the active Runic font to every NSMenuItem that uses a plain title (no custom view).
     ///
     /// We intentionally do NOT set `.foregroundColor` on `attributedTitle`. The
     /// theme palettes encode their primary/secondary text as `Color.x.opacity(α)`

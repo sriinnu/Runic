@@ -37,7 +37,9 @@ enum RunicTypography {
             for case let fileURL as URL in enumerator
                 where fileURL.pathExtension.lowercased() == "ttf" || fileURL.pathExtension.lowercased() == "otf"
             {
-                if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(fileURL as CFURL) as? [CTFontDescriptor] {
+                if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(fileURL as CFURL)
+                    as? [CTFontDescriptor]
+                {
                     for desc in descriptors {
                         if let name = CTFontDescriptorCopyAttribute(desc, kCTFontFamilyNameAttribute) as? String {
                             families.insert(name)
@@ -121,6 +123,29 @@ struct RunicFontContrast: Hashable {
         case (.dark, .muted): Color.white.opacity(self.darkMutedOpacity)
         }
     }
+
+    func applying(_ strength: RunicThemeTypographyStyle.ContrastStrength) -> RunicFontContrast {
+        switch strength {
+        case .soft:
+            RunicFontContrast(
+                lightPrimaryOpacity: max(0.82, self.lightPrimaryOpacity - 0.03),
+                lightSecondaryOpacity: max(0.54, self.lightSecondaryOpacity - 0.03),
+                lightMutedOpacity: max(0.36, self.lightMutedOpacity - 0.02),
+                darkPrimaryOpacity: max(0.88, self.darkPrimaryOpacity - 0.03),
+                darkSecondaryOpacity: max(0.56, self.darkSecondaryOpacity - 0.03),
+                darkMutedOpacity: max(0.38, self.darkMutedOpacity - 0.02))
+        case .standard:
+            self
+        case .strong:
+            RunicFontContrast(
+                lightPrimaryOpacity: min(0.96, self.lightPrimaryOpacity + 0.04),
+                lightSecondaryOpacity: min(0.76, self.lightSecondaryOpacity + 0.08),
+                lightMutedOpacity: min(0.58, self.lightMutedOpacity + 0.07),
+                darkPrimaryOpacity: min(0.98, self.darkPrimaryOpacity + 0.03),
+                darkSecondaryOpacity: min(0.78, self.darkSecondaryOpacity + 0.08),
+                darkMutedOpacity: min(0.60, self.darkMutedOpacity + 0.07))
+        }
+    }
 }
 
 struct RunicFontRules: Hashable {
@@ -132,51 +157,66 @@ struct RunicFontRules: Hashable {
     let contrast: RunicFontContrast
 
     var summary: String {
-        "letter \(Self.format(self.letterSpacing)) · word \(Self.format(self.wordSpacing)) · line \(Self.format(self.lineSpacing))"
+        "letter \(Self.format(self.letterSpacing)) · " +
+            "word \(Self.format(self.wordSpacing)) · line \(Self.format(self.lineSpacing))"
+    }
+
+    func applying(_ typography: RunicThemeTypographyStyle) -> RunicFontRules {
+        let lineSpacing = typography.lineSpacing ?? self.lineSpacing * typography.scale
+        return RunicFontRules(
+            letterSpacing: max(0, self.letterSpacing + typography.tracking),
+            compactLetterSpacing: max(0, self.compactLetterSpacing + typography.tracking * 0.65),
+            wordSpacing: self.wordSpacing,
+            lineSpacing: max(0, lineSpacing),
+            prefersMonospacedDigits: self.prefersMonospacedDigits,
+            contrast: self.contrast.applying(typography.contrast))
     }
 
     static func rules(for family: String) -> RunicFontRules {
         let normalized = family.lowercased()
         if family == RunicFontChoice.sfMono.id ||
-            normalized.contains("fira") ||
-            normalized.contains("jetbrains") ||
-            normalized.contains("ibm plex mono") ||
             normalized.contains("menlo") ||
             normalized.contains("monaco") ||
-            normalized.contains("space mono") ||
+            normalized.contains("commitmono") ||
+            normalized.contains("berkeley mono") ||
+            normalized.contains("operator mono") ||
+            normalized == "tx-02" ||
             normalized.contains("geist mono")
         {
             return RunicFontRules(
                 letterSpacing: 0.10,
                 compactLetterSpacing: 0,
                 wordSpacing: 0,
-                lineSpacing: 1.0,
+                lineSpacing: 1.15,
                 prefersMonospacedDigits: true,
                 contrast: RunicFontContrast(
-                    lightPrimaryOpacity: 0.90,
-                    lightSecondaryOpacity: 0.62,
-                    lightMutedOpacity: 0.42,
-                    darkPrimaryOpacity: 0.94,
-                    darkSecondaryOpacity: 0.66,
-                    darkMutedOpacity: 0.46))
+                    lightPrimaryOpacity: 0.92,
+                    lightSecondaryOpacity: 0.68,
+                    lightMutedOpacity: 0.48,
+                    darkPrimaryOpacity: 0.96,
+                    darkSecondaryOpacity: 0.72,
+                    darkMutedOpacity: 0.52))
         }
 
-        // Geist Sans — Vercel's modern UI sans. Tight letter spacing, no
-        // tabular digits (it's not a mono), neutral contrast.
-        if normalized == "geist" || normalized.hasPrefix("geist ") && !normalized.contains("mono") {
+        // Mona Sans is the default product face: compact, clear, and calm.
+        // Geist stays available as a slightly warmer alternate sans.
+        if normalized == "mona sans" ||
+            normalized == "geist" ||
+            normalized.hasPrefix("geist ") && !normalized.contains("mono")
+        {
             return RunicFontRules(
                 letterSpacing: 0,
-                compactLetterSpacing: -0.05,
+                compactLetterSpacing: 0,
                 wordSpacing: 0,
-                lineSpacing: 1.1,
+                lineSpacing: normalized == "mona sans" ? 1.25 : 1.15,
                 prefersMonospacedDigits: false,
                 contrast: RunicFontContrast(
-                    lightPrimaryOpacity: 0.90,
-                    lightSecondaryOpacity: 0.60,
-                    lightMutedOpacity: 0.40,
-                    darkPrimaryOpacity: 0.94,
-                    darkSecondaryOpacity: 0.64,
-                    darkMutedOpacity: 0.44))
+                    lightPrimaryOpacity: 0.92,
+                    lightSecondaryOpacity: 0.68,
+                    lightMutedOpacity: 0.48,
+                    darkPrimaryOpacity: 0.96,
+                    darkSecondaryOpacity: 0.72,
+                    darkMutedOpacity: 0.52))
         }
 
         if family == RunicFontChoice.newYork.id ||
@@ -191,47 +231,15 @@ struct RunicFontRules: Hashable {
                 lineSpacing: 2.0,
                 prefersMonospacedDigits: false,
                 contrast: RunicFontContrast(
-                    lightPrimaryOpacity: 0.88,
-                    lightSecondaryOpacity: 0.58,
-                    lightMutedOpacity: 0.40,
-                    darkPrimaryOpacity: 0.93,
-                    darkSecondaryOpacity: 0.64,
-                    darkMutedOpacity: 0.46))
-        }
-
-        if normalized.contains("helvetica") {
-            return RunicFontRules(
-                letterSpacing: 0,
-                compactLetterSpacing: 0,
-                wordSpacing: 0.05,
-                lineSpacing: 1.1,
-                prefersMonospacedDigits: false,
-                contrast: RunicFontContrast(
                     lightPrimaryOpacity: 0.90,
-                    lightSecondaryOpacity: 0.61,
-                    lightMutedOpacity: 0.42,
-                    darkPrimaryOpacity: 0.94,
-                    darkSecondaryOpacity: 0.65,
-                    darkMutedOpacity: 0.46))
-        }
-
-        if normalized.contains("din") {
-            return RunicFontRules(
-                letterSpacing: 0.45,
-                compactLetterSpacing: 0.25,
-                wordSpacing: 0.15,
-                lineSpacing: 0.8,
-                prefersMonospacedDigits: false,
-                contrast: RunicFontContrast(
-                    lightPrimaryOpacity: 0.91,
-                    lightSecondaryOpacity: 0.62,
-                    lightMutedOpacity: 0.42,
+                    lightSecondaryOpacity: 0.64,
+                    lightMutedOpacity: 0.46,
                     darkPrimaryOpacity: 0.95,
-                    darkSecondaryOpacity: 0.66,
-                    darkMutedOpacity: 0.47))
+                    darkSecondaryOpacity: 0.70,
+                    darkMutedOpacity: 0.50))
         }
 
-        if family == RunicFontChoice.sfRounded.id || normalized.contains("avenir") || normalized.contains("gill sans") {
+        if family == RunicFontChoice.sfRounded.id {
             return RunicFontRules(
                 letterSpacing: 0,
                 compactLetterSpacing: 0,
@@ -239,12 +247,12 @@ struct RunicFontRules: Hashable {
                 lineSpacing: 1.5,
                 prefersMonospacedDigits: false,
                 contrast: RunicFontContrast(
-                    lightPrimaryOpacity: 0.89,
-                    lightSecondaryOpacity: 0.60,
-                    lightMutedOpacity: 0.41,
-                    darkPrimaryOpacity: 0.94,
-                    darkSecondaryOpacity: 0.65,
-                    darkMutedOpacity: 0.46))
+                    lightPrimaryOpacity: 0.91,
+                    lightSecondaryOpacity: 0.66,
+                    lightMutedOpacity: 0.47,
+                    darkPrimaryOpacity: 0.95,
+                    darkSecondaryOpacity: 0.71,
+                    darkMutedOpacity: 0.51))
         }
 
         return RunicFontRules(
@@ -254,12 +262,12 @@ struct RunicFontRules: Hashable {
             lineSpacing: 1.4,
             prefersMonospacedDigits: false,
             contrast: RunicFontContrast(
-                lightPrimaryOpacity: 0.88,
-                lightSecondaryOpacity: 0.60,
-                lightMutedOpacity: 0.40,
-                darkPrimaryOpacity: 0.93,
-                darkSecondaryOpacity: 0.64,
-                darkMutedOpacity: 0.45))
+                lightPrimaryOpacity: 0.91,
+                lightSecondaryOpacity: 0.66,
+                lightMutedOpacity: 0.47,
+                darkPrimaryOpacity: 0.95,
+                darkSecondaryOpacity: 0.70,
+                darkMutedOpacity: 0.50))
     }
 
     private static func format(_ value: CGFloat) -> String {
@@ -272,25 +280,32 @@ struct RunicFontChoice: Identifiable, Hashable {
     let id: String
     let displayName: String
 
+    static let defaultFamily = "Mona Sans"
+
     /// System fonts — always available, no bundling.
     static let sfPro = RunicFontChoice(id: "__sf_pro__", displayName: "SF Pro")
     static let sfMono = RunicFontChoice(id: "__sf_mono__", displayName: "SF Mono")
     static let sfRounded = RunicFontChoice(id: "__sf_rounded__", displayName: "SF Rounded")
     static let newYork = RunicFontChoice(id: "__new_york__", displayName: "New York")
 
-    /// Bundled families. Display names match the actual `family` attribute
-    /// inside each TTF so SwiftUI / NSFont can find them after registration.
+    /// Curated families. Commercial faces are shown only when installed locally.
+    static let monaSans = RunicFontChoice(id: "Mona Sans", displayName: "Mona Sans")
     static let geist = RunicFontChoice(id: "Geist", displayName: "Geist")
+    static let commitMono = RunicFontChoice(id: "CommitMono", displayName: "Commit Mono")
     static let geistMono = RunicFontChoice(id: "Geist Mono", displayName: "Geist Mono")
+    static let berkeleyMono = RunicFontChoice(id: "Berkeley Mono", displayName: "Berkeley Mono")
+    static let operatorMono = RunicFontChoice(id: "Operator Mono", displayName: "Operator Mono")
+    /// Licensed commercial mono face; shown only when bundled or installed on the Mac.
+    static let tx02 = RunicFontChoice(id: "TX-02", displayName: "TX-02 Berkeley Mono")
 
-    /// Curated macOS families. They are shown only when available on the machine.
-    static let avenirNext = RunicFontChoice(id: "Avenir Next", displayName: "Avenir Next")
-    static let helveticaNeue = RunicFontChoice(id: "Helvetica Neue", displayName: "Helvetica Neue")
-    static let gillSans = RunicFontChoice(id: "Gill Sans", displayName: "Gill Sans")
-    static let menlo = RunicFontChoice(id: "Menlo", displayName: "Menlo")
-    static let dinAlternate = RunicFontChoice(id: "DIN Alternate", displayName: "DIN Alternate")
-    static let optima = RunicFontChoice(id: "Optima", displayName: "Optima")
-    static let hoeflerText = RunicFontChoice(id: "Hoefler Text", displayName: "Hoefler Text")
+    private static let hiddenBundledFamilies: Set<String> = ["VT323"]
+    private static let prunedBundledFamilies: Set<String> = [
+        "fira code",
+        "firacode",
+        "ibm plex mono",
+        "jetbrains mono",
+        "space mono",
+    ]
 
     var rules: RunicFontRules {
         RunicFontRules.rules(for: self.id)
@@ -304,22 +319,26 @@ struct RunicFontChoice: Identifiable, Hashable {
 
     /// Build the full list: system fonts first, then bundled custom fonts.
     static func availableChoices() -> [RunicFontChoice] {
-        var choices: [RunicFontChoice] = [.sfPro, .sfMono, .sfRounded, .newYork]
-        let curatedFamilies: [RunicFontChoice] = [
-            .avenirNext,
-            .helveticaNeue,
-            .gillSans,
-            .menlo,
-            .dinAlternate,
-            .optima,
-            .hoeflerText,
+        var choices: [RunicFontChoice] = [.monaSans, .sfPro, .sfRounded, .newYork, .sfMono]
+        let bundledFamilies = Set(RunicTypography.discoverBundledFontFamilies())
+        let curatedBundled: [RunicFontChoice] = [
+            .geist,
+            .commitMono,
+            .geistMono,
+            .berkeleyMono,
+            .tx02,
+            .operatorMono,
         ]
-        for choice in curatedFamilies where self.isFontFamilyAvailable(choice.id) {
+        for choice in curatedBundled
+            where bundledFamilies.contains(choice.id) || self.isFontFamilyAvailable(choice.id)
+        {
             choices.append(choice)
         }
 
         var seen = Set(choices.map(\.id))
-        for family in RunicTypography.discoverBundledFontFamilies() {
+        for family in bundledFamilies.sorted() {
+            guard !self.hiddenBundledFamilies.contains(family) else { continue }
+            guard !self.isPrunedFamily(family) else { continue }
             guard seen.insert(family).inserted else { continue }
             choices.append(RunicFontChoice(id: family, displayName: family))
         }
@@ -333,8 +352,34 @@ struct RunicFontChoice: Identifiable, Hashable {
         return id
     }
 
+    static func migratedFamily(_ storedFamily: String?) -> String {
+        let trimmed = storedFamily?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty else { return self.defaultFamily }
+        guard !self.isPrunedFamily(trimmed) else { return self.defaultFamily }
+        guard !self.hiddenBundledFamilies.contains(trimmed) else { return self.defaultFamily }
+        guard self.availableChoices().contains(where: { $0.id == trimmed }) else { return self.defaultFamily }
+        return trimmed
+    }
+
+    static func resolvedThemeFamily(_ family: String?) -> String? {
+        guard let family = family?.trimmingCharacters(in: .whitespacesAndNewlines), !family.isEmpty else {
+            return nil
+        }
+        guard !self.isPrunedFamily(family), !self.hiddenBundledFamilies.contains(family) else {
+            return self.defaultFamily
+        }
+        return family
+    }
+
     private static func isFontFamilyAvailable(_ family: String) -> Bool {
         NSFontManager.shared.availableMembers(ofFontFamily: family)?.isEmpty == false
+    }
+
+    private static func isPrunedFamily(_ family: String) -> Bool {
+        let normalized = family.lowercased()
+        let compact = normalized.replacingOccurrences(of: " ", with: "")
+        return self.prunedBundledFamilies.contains(normalized) ||
+            compact.contains("jetbrainsmono") && normalized.contains("nerd font")
     }
 }
 
@@ -356,6 +401,10 @@ enum RunicFont {
     static var themeDesignOverride: Font.Design? {
         get { RunicFontStore.shared.themeDesign }
         set { RunicFontStore.shared.themeDesign = newValue }
+    }
+
+    static func applyTheme(_ palette: RunicThemePalette) {
+        RunicFontStore.shared.applyTheme(palette)
     }
 
     static var activeRules: RunicFontRules { RunicFontStore.shared.activeRules }
@@ -396,38 +445,7 @@ enum RunicFont {
 
 extension RunicFont {
     static func nsFont(size: CGFloat, weight: NSFont.Weight = .regular) -> NSFont {
-        switch self.family {
-        case RunicFontChoice.sfPro.id:
-            return .systemFont(ofSize: size, weight: weight)
-        case RunicFontChoice.sfMono.id:
-            return .monospacedSystemFont(ofSize: size, weight: weight)
-        case RunicFontChoice.sfRounded.id:
-            return self.nsSystemFont(size: size, weight: weight, design: .rounded)
-        case RunicFontChoice.newYork.id:
-            return self.nsSystemFont(size: size, weight: weight, design: .serif)
-        default:
-            let fontName = RunicTypography.fontName(for: self.family, nsWeight: weight)
-            if let font = NSFont(name: fontName, size: size) {
-                return font
-            }
-            let traits: [NSFontDescriptor.TraitKey: Any] = [.weight: weight]
-            let descriptor = NSFontDescriptor(fontAttributes: [
-                .family: family,
-                .traits: traits,
-            ])
-            return NSFont(descriptor: descriptor, size: size)
-                ?? .monospacedSystemFont(ofSize: size, weight: weight)
-        }
-    }
-
-    private static func nsSystemFont(
-        size: CGFloat,
-        weight: NSFont.Weight,
-        design: NSFontDescriptor.SystemDesign) -> NSFont
-    {
-        let base = NSFont.systemFont(ofSize: size, weight: weight)
-        guard let descriptor = base.fontDescriptor.withDesign(design) else { return base }
-        return NSFont(descriptor: descriptor, size: size) ?? base
+        RunicFontStore.shared.nsFont(size: size, weight: weight)
     }
 }
 

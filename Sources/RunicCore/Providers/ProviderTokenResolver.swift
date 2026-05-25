@@ -27,7 +27,7 @@ public struct ProviderTokenResolution: Sendable {
 public enum ProviderTokenResolver {
     private static let log = RunicLog.logger("provider-token")
 
-    private static let keychainService = "com.sriinnu.athena.Runic"
+    private static let keychainService = RunicKeychainService.providerCredentials
     private static let zaiAccount = "zai-api-token"
     private static let copilotAccount = "copilot-api-token"
     private static let minimaxAccount = "minimax-api-token"
@@ -189,9 +189,6 @@ public enum ProviderTokenResolver {
         }
         if let token = self.copilotCLIToken(environment: environment) {
             return ProviderTokenResolution(token: token, source: .environment, sourceKey: "gh-cli")
-        }
-        if let token = CopilotVSCodeTokenReader.token(environment: environment) {
-            return ProviderTokenResolution(token: token, source: .vscode, sourceKey: "vscode")
         }
         return nil
     }
@@ -466,6 +463,9 @@ public enum ProviderTokenResolver {
 
     private static func keychainToken(service: String, account: String) -> String? {
         #if canImport(Security)
+        if service == RunicKeychainService.providerCredentials {
+            return ProviderCredentialKeychainMigration.token(account: account)
+        }
         // Token stores write to the standard keychain (dataProtection: false),
         // so try it first.  Fall back to the Data Protection keychain for
         // pre-migration items that haven't been moved yet.
@@ -493,11 +493,7 @@ public enum ProviderTokenResolver {
         if dataProtection {
             query[kSecUseDataProtectionKeychain as String] = true
         }
-        #if canImport(LocalAuthentication)
-        let authContext = LAContext()
-        authContext.interactionNotAllowed = true
-        query[kSecUseAuthenticationContext as String] = authContext
-        #endif
+        RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound || status == errSecInteractionNotAllowed {

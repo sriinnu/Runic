@@ -38,14 +38,13 @@ public struct CostUsageFetcher: Sendable {
             options.refreshMinIntervalSeconds = 0
             options.forceRescan = true
         }
-        let daily = await Task.detached(priority: .utility) {
-            CostUsageScanner.loadDailyReport(
-                provider: provider,
-                since: since,
-                until: until,
-                now: now,
-                options: options)
-        }.value
+        let daily = CostUsageScanner.loadDailyReport(
+            provider: provider,
+            since: since,
+            until: until,
+            now: now,
+            options: options)
+        try Task.checkCancellation()
 
         return Self.tokenSnapshot(from: daily, now: now)
     }

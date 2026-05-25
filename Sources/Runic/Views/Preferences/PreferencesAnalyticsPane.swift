@@ -20,11 +20,11 @@ struct AnalyticsPane: View {
     @State private var alertsData: AlertRuleStore.AlertsData = AlertRuleStore.load()
     @State private var showingAddRule = false
     @State private var editingRule: AlertRuleStore.AlertRule?
+    @State private var guardrailStatus: String?
 
     // MARK: - Budgets state
 
     @State private var budgets: [ProjectBudgetStore.ProjectBudget] = []
-    @State private var editingProjectID: String?
     @State private var showingAddBudget = false
     @State private var newProjectID = ""
     @State private var newProjectName = ""
@@ -34,6 +34,7 @@ struct AnalyticsPane: View {
 
     @State private var appeared = false
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         LiquidPreferencesPane {
@@ -56,7 +57,7 @@ struct AnalyticsPane: View {
                         .pickerStyle(.segmented)
                         Text("Pick bars, percent, or both in the menu card.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -70,7 +71,7 @@ struct AnalyticsPane: View {
                         .pickerStyle(.segmented)
                         Text("Glance: usage only. Analyst: usage + credits/cost. Operator: full insights and actions.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     PreferenceToggleRow(
@@ -94,7 +95,7 @@ struct AnalyticsPane: View {
                         .opacity(self.settings.mergeIcons ? 1 : 0.5)
                         Text("Choose whether providers appear on top or in a left sidebar.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
@@ -110,7 +111,7 @@ struct AnalyticsPane: View {
                         .opacity(self.settings.mergeIcons ? 1 : 0.5)
                         Text("Small or medium icons for the provider switcher.")
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     PreferenceToggleRow(
@@ -161,15 +162,25 @@ struct AnalyticsPane: View {
 
             // MARK: - Alerts section
 
-            DisclosureGroup("Alerts", isExpanded: self.$alertsExpanded) {
+            DisclosureGroup("Guardrail Rules (Draft)", isExpanded: self.$alertsExpanded) {
                 VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionSpacing) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
-                            Text("\(self.alertsData.rules.count) rules configured")
+                            Text(self.alertStatusLine)
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText)
 
                             Spacer()
+
+                            if self.missingDefaultGuardrailCount > 0 {
+                                Button {
+                                    self.installDefaultGuardrails()
+                                } label: {
+                                    Label("Install Defaults", systemImage: "shield.lefthalf.filled")
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
 
                             Button {
                                 self.showingAddRule = true
@@ -181,9 +192,9 @@ struct AnalyticsPane: View {
                         }
 
                         if self.alertsData.rules.isEmpty {
-                            Text("No alert rules configured. Add a rule to get started.")
+                            Text("No guardrail rules configured on this Mac.")
                                 .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                                .foregroundStyle(self.runicTheme.subduedSecondaryText)
                                 .padding(.vertical, RunicSpacing.md)
                                 .frame(maxWidth: .infinity)
                         } else {
@@ -194,6 +205,17 @@ struct AnalyticsPane: View {
                             }
                             .padding(.vertical, RunicSpacing.xs)
                         }
+                        if let guardrailStatus {
+                            Text(guardrailStatus)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.secondaryText)
+                        }
+                        Text(
+                            "Rules are saved locally as drafts for upcoming guardrail automation. " +
+                                "Today, production notifications come from Budgets below and " +
+                                "session quota notifications in General.")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     }
                 }
                 .padding(.top, RunicSpacing.xs)
@@ -206,9 +228,14 @@ struct AnalyticsPane: View {
 
             DisclosureGroup("Budgets", isExpanded: self.$budgetsExpanded) {
                 VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionSpacing) {
+                    PreferenceToggleRow(
+                        title: "Budget breach notifications",
+                        subtitle: "Notify when a project forecast is projected to exceed its monthly budget.",
+                        binding: self.$settings.budgetNotificationsEnabled)
+
                     VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                         HStack {
-                            Text("\(self.budgets.count) budgets configured")
+                            Text(self.budgetStatusLine)
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText)
 
@@ -224,9 +251,9 @@ struct AnalyticsPane: View {
                         }
 
                         if self.budgets.isEmpty {
-                            Text("No budgets configured. Add a budget to track project spending.")
+                            Text("No project budgets configured on this Mac.")
                                 .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                                .foregroundStyle(self.runicTheme.subduedSecondaryText)
                                 .padding(.vertical, RunicSpacing.md)
                                 .frame(maxWidth: .infinity)
                         } else {
@@ -237,6 +264,12 @@ struct AnalyticsPane: View {
                             }
                             .padding(.vertical, RunicSpacing.xs)
                         }
+
+                        Text(
+                            "Budgets are local JSON and feed project forecasts, menu budget cards, " +
+                                "and breach notifications when enabled.")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
 
                         if let error = self.budgetErrorMessage {
                             HStack(alignment: .center, spacing: RunicSpacing.xs) {
@@ -262,7 +295,9 @@ struct AnalyticsPane: View {
         .onAppear {
             self.alertsData = AlertRuleStore.load()
             self.budgets = ProjectBudgetStore.getAllBudgets()
-            if !self.appeared { withAnimation(.easeOut(duration: 0.6)) { self.appeared = true } }
+            if !self.appeared {
+                withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) { self.appeared = true }
+            }
         }
         .sheet(isPresented: self.$showingAddRule) {
             AnalyticsRuleEditorSheet(
@@ -303,6 +338,28 @@ struct AnalyticsPane: View {
     }
 
     // MARK: - Alert rule row
+
+    private var alertStatusLine: String {
+        let enabled = self.alertsData.rules.count(where: \.enabled)
+        let history = self.alertsData.history.count
+        return "\(enabled) enabled · \(self.alertsData.rules.count) rules · \(history) history"
+    }
+
+    private var budgetStatusLine: String {
+        let enabled = self.budgets.count(where: \.enabled)
+        return "\(enabled) enabled · \(self.budgets.count) budgets"
+    }
+
+    private var missingDefaultGuardrailCount: Int {
+        let currentIDs = Set(self.alertsData.rules.map(\.id))
+        return Self.defaultGuardrailIDs.subtracting(currentIDs).count
+    }
+
+    private static let defaultGuardrailIDs: Set<String> = [
+        "runic-default-quota-critical",
+        "runic-default-usage-velocity",
+        "runic-default-cost-anomaly",
+    ]
 
     private func alertRuleRow(_ rule: AlertRuleStore.AlertRule) -> some View {
         HStack(spacing: RunicSpacing.sm) {
@@ -436,6 +493,18 @@ struct AnalyticsPane: View {
         self.alertsData = AlertRuleStore.load()
     }
 
+    private func installDefaultGuardrails() {
+        do {
+            let count = try RunicDiagnosticsReport.installDefaultGuardrails()
+            self.alertsData = AlertRuleStore.load()
+            self.guardrailStatus = count == 0
+                ? "Default guardrails already installed."
+                : "Installed \(count) guardrails."
+        } catch {
+            self.guardrailStatus = "Failed to install guardrails: \(error.localizedDescription)"
+        }
+    }
+
     private func addBudget() {
         guard !self.newProjectID.isEmpty else {
             self.budgetErrorMessage = "Project ID is required"
@@ -493,10 +562,11 @@ struct AnalyticsPane: View {
 private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
     @Environment(\.runicTheme) private var runicTheme
     @Environment(\.runicFonts) private var fonts
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
                     configuration.isExpanded.toggle()
                 }
             } label: {
@@ -527,7 +597,9 @@ private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
 @MainActor
 private struct AnalyticsRuleEditorSheet: View {
     @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("defaultWebhookURL") private var defaultWebhookURL = ""
 
     let rule: AlertRuleStore.AlertRule?
     let onSave: (AlertRuleStore.AlertRule) -> Void
@@ -545,13 +617,14 @@ private struct AnalyticsRuleEditorSheet: View {
         self._alertType = State(initialValue: rule?.type ?? .projectBudget)
         self._threshold = State(initialValue: rule?.threshold ?? 80.0)
         self._severity = State(initialValue: rule?.severity ?? .warning)
-        self._webhookURL = State(initialValue: rule?.webhookURL ?? "")
+        let savedWebhookURL = UserDefaults.standard.string(forKey: "defaultWebhookURL") ?? ""
+        self._webhookURL = State(initialValue: rule?.webhookURL ?? savedWebhookURL)
         self._notifyWebhook = State(initialValue: rule?.notifyWebhook ?? false)
     }
 
     var body: some View {
         VStack(spacing: RunicSpacing.lg) {
-            Text(self.rule == nil ? "Add Alert Rule" : "Edit Alert Rule")
+            Text(self.rule == nil ? "Add Guardrail Draft" : "Edit Guardrail Draft")
                 .font(self.fonts.headline)
 
             Form {
@@ -573,11 +646,23 @@ private struct AnalyticsRuleEditorSheet: View {
                     Text("Critical").tag(AlertRuleStore.AlertSeverity.critical)
                 }
 
-                Toggle("Enable webhook notifications", isOn: self.$notifyWebhook)
+                Toggle("Save webhook URL for future automation", isOn: self.$notifyWebhook)
+                    .disabled(true)
 
                 if self.notifyWebhook {
                     TextField("Webhook URL", text: self.$webhookURL)
+                        .disabled(true)
+                    if !self.defaultWebhookURL.isEmpty, self.webhookURL != self.defaultWebhookURL {
+                        Button("Use default webhook") {
+                            self.webhookURL = self.defaultWebhookURL
+                        }
+                        .disabled(true)
+                    }
                 }
+
+                Text("Webhook delivery is not active yet; this draft only stores rule intent.")
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
             .padding()
 
@@ -593,8 +678,8 @@ private struct AnalyticsRuleEditorSheet: View {
                         type: self.alertType,
                         threshold: self.threshold,
                         severity: self.severity,
-                        notifyWebhook: self.notifyWebhook,
-                        webhookURL: self.webhookURL.isEmpty ? nil : self.webhookURL,
+                        notifyWebhook: false,
+                        webhookURL: nil,
                         enabled: self.rule?.enabled ?? true,
                         createdAt: self.rule?.createdAt ?? Date())
                     self.onSave(newRule)

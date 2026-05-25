@@ -236,6 +236,7 @@ extension StatusItemController {
                 InlineUsageChartView(
                     dailySummaries: allDaily,
                     hourlySummaries: hourlySummaries,
+                    chartStyle: self.settings.chartStyle,
                     width: $0)
                     .menuCardEntrance(index: 1)
             }

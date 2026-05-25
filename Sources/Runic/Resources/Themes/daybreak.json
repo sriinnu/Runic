@@ -12,15 +12,21 @@
     "highlight":     "#FFBD4A",
     "warm":          "#B06BDB",
     "tertiary":      "#45AD9E",
-    "surface":       "#FEF6F1",
-    "surfaceAlt":    "#FFEDE8D9",
-    "cardFill":      "#FFFFFFC7",
-    "cardStroke":    "#6B305929",
-    "primaryText":   "#22142EEB",
-    "secondaryText": "#22142E94"
+    "surface":       "#FFF7F2",
+    "surfaceAlt":    "#FFEDE8CC",
+    "cardFill":      "#FFFFFFD6",
+    "cardStroke":    "#60254233",
+    "primaryText":   "#21142EF0",
+    "secondaryText": "#21142EAD"
   },
   "fonts":   { "body": "rounded", "numeric": "rounded" },
   "shape":   { "preset": "soft" },
   "motion":  { "preset": "slow" },
-  "density": { "preset": "generous" }
+  "density": { "preset": "generous" },
+  "style": {
+    "typography": { "scale": 1.02, "tracking": 0.0, "contrast": "strong" },
+    "chrome": { "borderStyle": "hairline", "borderWeight": 0.75, "borderOpacity": 0.55, "cornerStyle": "soft", "panelDepth": "medium" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.12, "materialIntensity": 0.24 },
+    "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "accent" }
+  }
 }

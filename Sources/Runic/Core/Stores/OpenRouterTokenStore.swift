@@ -24,7 +24,7 @@ enum OpenRouterTokenStoreError: LocalizedError {
 struct KeychainOpenRouterTokenStore: OpenRouterTokenStoring {
     private static let log = RunicLog.logger("openrouter-token-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "openrouter-api-token"
 
     func loadToken() throws -> String? {
@@ -101,7 +101,8 @@ struct KeychainOpenRouterTokenStore: OpenRouterTokenStoring {
     }
 
     private func deleteToken(dataProtection: Bool) throws {
-        let query = self.baseQuery(dataProtection: dataProtection)
+        var query = self.baseQuery(dataProtection: dataProtection)
+        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
         let status = SecItemDelete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound { return }
         Self.log.error("Keychain delete failed: \(status)")

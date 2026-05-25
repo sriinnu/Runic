@@ -32,6 +32,7 @@ struct OpenAIWebAccountSwitchTests {
         #expect(store.openAIDashboard == nil)
         #expect(store.openAIDashboardRequiresLogin == true)
         #expect(store.openAIDashboardCookieImportStatus?.contains("Codex account changed") == true)
+        #expect(store.openAIDashboardCookieImportStatus?.contains("manually") == true)
     }
 
     @Test

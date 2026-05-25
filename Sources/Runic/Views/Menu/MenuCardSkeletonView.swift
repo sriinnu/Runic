@@ -6,6 +6,7 @@ import SwiftUI
 struct MenuCardSkeletonView: View {
     let width: CGFloat
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // MARK: - Placeholder dimensions
 
@@ -19,25 +20,31 @@ struct MenuCardSkeletonView: View {
     private static let subtitleBarHeight: CGFloat = 10
 
     var body: some View {
-        TimelineView(.animation) { timeline in
-            let phase = self.shimmerPhase(date: timeline.date)
+        TimelineView(.periodic(from: .now, by: 1 / 12.0)) { timeline in
+            let phase = self.reduceMotion ? 0.35 : self.shimmerPhase(date: timeline.date)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                 // Header row: avatar + text placeholders
                 HStack(alignment: .center, spacing: RunicSpacing.sm) {
                     // Avatar placeholder
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg),
+                        style: .continuous)
                         .fill(self.shimmerGradient(phase: phase))
                         .frame(width: Self.avatarSize, height: Self.avatarSize)
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
                         // Provider name placeholder
-                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                        RoundedRectangle(
+                            cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                            style: .continuous)
                             .fill(self.shimmerGradient(phase: phase))
                             .frame(width: Self.nameBarWidth, height: Self.nameBarHeight)
 
                         // Email placeholder
-                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                        RoundedRectangle(
+                            cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                            style: .continuous)
                             .fill(self.shimmerGradient(phase: phase))
                             .frame(width: Self.emailBarWidth, height: Self.emailBarHeight)
                     }
@@ -46,7 +53,9 @@ struct MenuCardSkeletonView: View {
                 }
 
                 // Subtitle placeholder
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                    style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(width: Self.subtitleBarWidth, height: Self.subtitleBarHeight)
 
@@ -54,17 +63,23 @@ struct MenuCardSkeletonView: View {
                     .padding(.vertical, RunicSpacing.xxs)
 
                 // Usage section title placeholder
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                    style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(width: 80, height: Self.nameBarHeight)
 
                 // Progress bar placeholder
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                    style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(height: Self.progressBarHeight)
 
                 // Percent label placeholder
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                    style: .continuous)
                     .fill(self.shimmerGradient(phase: phase))
                     .frame(width: 60, height: Self.subtitleBarHeight)
             }
@@ -78,7 +93,6 @@ struct MenuCardSkeletonView: View {
                         .allowsHitTesting(false)
                 }
             }
-            .animation(RunicAnimation.shimmer, value: phase)
         }
     }
 

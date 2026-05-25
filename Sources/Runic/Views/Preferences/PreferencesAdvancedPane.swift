@@ -139,7 +139,7 @@ struct AdvancedPane: View {
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Auto-refresh also switches to Manual when your Mac sleeps or is locked.")
+                Text("Auto-refresh pauses during sleep or lock, and can switch to Manual when the safety toggle is on.")
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)

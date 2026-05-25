@@ -30,8 +30,8 @@ struct TeamManagementView: View {
 
     var body: some View {
         PreferencesPane {
-            SettingsSection(title: "Teams", contentSpacing: RunicSpacing.md) {
-                Text("Manage team workspaces, members, and quota allocation.")
+            SettingsSection(title: "Local Teams", contentSpacing: RunicSpacing.md) {
+                Text("Sketch local member and quota plans on this Mac. These plans do not sync or feed showback exports yet.")
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
@@ -62,7 +62,7 @@ struct TeamManagementView: View {
                             Text("No teams yet")
                                 .font(self.fonts.body.weight(.semibold))
                                 .foregroundStyle(self.runicTheme.secondaryText)
-                            Text("Create a team to collaborate with others")
+                            Text("Create a local planning group for quota what-ifs")
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
@@ -111,7 +111,7 @@ struct TeamManagementView: View {
                             Button {
                                 self.showingInviteSheet = true
                             } label: {
-                                Label("Invite", systemImage: "person.badge.plus")
+                                Label("Add Member", systemImage: "person.badge.plus")
                             }
                             .buttonStyle(.bordered)
                             .controlSize(.mini)
@@ -164,7 +164,7 @@ struct TeamManagementView: View {
             SettingsSection(contentSpacing: RunicSpacing.md) {
                 HStack {
                     Spacer()
-                    Button("View Team Dashboard") {
+                    Button("View Local Plan") {
                         self.openTeamDashboard()
                     }
                     .buttonStyle(.bordered)

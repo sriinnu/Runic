@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 2.2.1 — 2026-05-25
+- Themes: add JSON-backed typography/chrome/effects/control style tokens, with Terminal rebuilt as a calmer Tactical HUD and Retro borders softened.
+- Typography: switch the default product face to Mona Sans, add Commit Mono for Terminal/data-heavy surfaces, and migrate removed or missing saved fonts to Mona Sans.
+- Fonts: remove bundled Fira Code, IBM Plex Mono, JetBrains Mono, and Space Mono while keeping Geist, Geist Mono, SF/New York system fonts, VT323 for Retro decoration, and licensed Berkeley/Operator faces as curated picker choices when bundled or installed.
+- Charts: make timeline panels respect the Settings chart style, including line, filled area, and bar rendering.
+- Preferences: restore Integrations as an active local control center for CLI commands, MCP profiles, alert webhook defaults/tests, GitHub commit correlation, Kosha detection, and provider docs.
+- Privacy: remove anonymous-usage sharing UI and clarify local-only integration storage.
+- Performance: keep provider JSONL logs read-only and preserve cached daily ledger history after incremental scans.
 
 ## 2.2.0 — 2026-05-19
 - Themes: add Retro as the new default theme — a System-7 inspired parchment + navy palette with asymmetric bevels on every surface, plain-text email + tag-style plan badge in the provider hero, beveled checkboxes, and a VT323 pixel tagline footer.

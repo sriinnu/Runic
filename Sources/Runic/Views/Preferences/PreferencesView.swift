@@ -3,6 +3,8 @@ import SwiftUI
 
 @MainActor
 struct PreferencesView: View {
+    @Environment(\.runicFonts) private var fonts
+
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     let updater: UpdaterProviding
@@ -63,17 +65,66 @@ struct PreferencesView: View {
     }
 
     var body: some View {
-        TabView(selection: self.$selection.tab) {
-            // MARK: - General
+        VStack(spacing: 0) {
+            self.tabStrip
+            Rectangle()
+                .fill(self.settings.theme.palette.menuSeparatorColor)
+                .frame(height: 1)
+            self.content(for: self.selection.tab)
+        }
+        .runicTypography()
+        .id(self.settings.visualSettingsRevision)
+        .environment(\.runicTheme, self.settings.theme.palette)
+        .runicColorScheme(self.settings.theme.palette)
+        .foregroundStyle(self.settings.theme.palette.primaryText)
+        .tint(self.settings.theme.palette.accent)
+        .background {
+            ZStack {
+                self.settings.theme.palette.surface
+                LiquidMeshBackground()
+                    .opacity(self.settings.theme.palette.isTerminalHUD ? 1.0 : (self.settings.theme.palette.isCustom ? 0.38 : 0.12))
+            }
+            .ignoresSafeArea()
+        }
+        .frame(
+            minWidth: PreferencesTab.windowWidth,
+            idealWidth: PreferencesTab.windowWidth,
+            maxWidth: PreferencesTab.windowWidth,
+            minHeight: PreferencesTab.windowHeight,
+            idealHeight: PreferencesTab.windowHeight,
+            maxHeight: .infinity,
+            alignment: .center)
+        .onAppear {
+            self.ensureValidTabSelection()
+        }
+        .onChange(of: self.settings.debugMenuEnabled) { _, _ in
+            self.ensureValidTabSelection()
+        }
+    }
 
-            GeneralPane(settings: self.settings, store: self.store)
-                .tabItem {
-                    Label("General", systemImage: "gearshape")
+    private var visibleTabs: [PreferencesTab] {
+        PreferencesTab.allCases.filter { self.settings.debugMenuEnabled || $0 != .debug }
+    }
+
+    private var tabStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: RunicSpacing.xs) {
+                ForEach(self.visibleTabs) { tab in
+                    self.tabButton(tab)
                 }
-                .tag(PreferencesTab.general)
+            }
+            .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+            .padding(.vertical, RunicSpacing.sm)
+        }
+        .background(self.settings.theme.palette.surfaceAlt.opacity(self.settings.theme.palette.isTerminalHUD ? 0.68 : 0.82))
+    }
 
-            // MARK: - Providers (Built-in + Custom)
-
+    @ViewBuilder
+    private func content(for tab: PreferencesTab) -> some View {
+        switch tab {
+        case .general:
+            GeneralPane(settings: self.settings, store: self.store)
+        case .providers:
             ZStack {
                 LiquidMeshBackground()
                     .ignoresSafeArea()
@@ -108,29 +159,11 @@ struct PreferencesView: View {
                     }
                 }
             }
-            .tabItem {
-                Label("Providers", systemImage: "square.grid.2x2")
-            }
-            .tag(PreferencesTab.providers)
-
-            // MARK: - Analytics (Display + Insights + Alerts + Budgets)
-
+        case .analytics:
             AnalyticsPane(settings: self.settings, store: self.store)
-                .tabItem {
-                    Label("Analytics", systemImage: "chart.bar.xaxis")
-                }
-                .tag(PreferencesTab.analytics)
-
-            // MARK: - Sync (Integrations + Teams)
-
+        case .sync:
             SyncPane(settings: self.settings, store: self.store)
-                .tabItem {
-                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                }
-                .tag(PreferencesTab.sync)
-
-            // MARK: - Performance (Monitoring + Refresh/Safety)
-
+        case .performance:
             VStack(spacing: 0) {
                 Picker("", selection: self.$performanceSection) {
                     ForEach(PerformanceSubSection.allCases) { section in
@@ -149,13 +182,7 @@ struct PreferencesView: View {
                     AdvancedPane(settings: self.settings, store: self.store)
                 }
             }
-            .tabItem {
-                Label("Performance", systemImage: "speedometer")
-            }
-            .tag(PreferencesTab.performance)
-
-            // MARK: - About (About + Help)
-
+        case .about:
             VStack(spacing: 0) {
                 Picker("", selection: self.$aboutSection) {
                     ForEach(AboutSubSection.allCases) { section in
@@ -174,55 +201,71 @@ struct PreferencesView: View {
                     HelpPane()
                 }
             }
-            .tabItem {
-                Label("About", systemImage: "info.circle")
-            }
-            .tag(PreferencesTab.about)
-
-            // MARK: - Debug (conditional)
-
-            if self.settings.debugMenuEnabled {
-                DebugPane(settings: self.settings, store: self.store)
-                    .tabItem {
-                        Label("Debug", systemImage: "ladybug")
-                    }
-                    .tag(PreferencesTab.debug)
-            }
+        case .debug:
+            DebugPane(settings: self.settings, store: self.store)
         }
-        .runicTypography()
-        .id(self.settings.visualSettingsRevision)
-        .environment(\.runicTheme, self.settings.theme.palette)
-        .runicColorScheme(self.settings.theme.palette)
-        .foregroundStyle(self.settings.theme.palette.primaryText)
-        .tint(self.settings.theme.palette.accent)
+    }
+
+    private func tabButton(_ tab: PreferencesTab) -> some View {
+        let selected = self.selection.tab == tab
+        return Button {
+            withAnimation(.easeOut(duration: 0.14)) {
+                self.selection.tab = tab
+            }
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: tab.symbolName)
+                    .font(.system(size: 18, weight: selected ? .semibold : .medium))
+                    .frame(height: 22)
+                Text(tab.label)
+                    .font(self.fonts.caption.weight(selected ? .semibold : .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(width: 72, height: 56)
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(selected ? self.settings.theme.palette.accent : self.settings.theme.palette.secondaryText)
         .background {
-            ZStack {
-                self.settings.theme.palette.surface
-                LiquidMeshBackground()
-                    .opacity(self.settings.theme.palette.isTerminalHUD ? 1.0 : (self.settings.theme.palette.isCustom ? 0.38 : 0.12))
-            }
-            .ignoresSafeArea()
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(selected ? self.settings.theme.palette.accent.opacity(self.settings.theme.palette.isTerminalHUD ? 0.18 : 0.12) : .clear)
         }
-        .tabViewStyle(.automatic)
-        .frame(
-            minWidth: PreferencesTab.windowWidth,
-            idealWidth: PreferencesTab.windowWidth,
-            maxWidth: PreferencesTab.windowWidth,
-            minHeight: PreferencesTab.windowHeight,
-            idealHeight: PreferencesTab.windowHeight,
-            maxHeight: .infinity,
-            alignment: .center)
-        .onAppear {
-            self.ensureValidTabSelection()
-        }
-        .onChange(of: self.settings.debugMenuEnabled) { _, _ in
-            self.ensureValidTabSelection()
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(selected ? self.settings.theme.palette.accent.opacity(0.45) : .clear, lineWidth: 1)
         }
     }
 
     private func ensureValidTabSelection() {
         if !self.settings.debugMenuEnabled, self.selection.tab == .debug {
             self.selection.tab = .general
+        }
+    }
+}
+
+private extension PreferencesTab {
+    var label: String {
+        switch self {
+        case .general: "General"
+        case .providers: "Providers"
+        case .analytics: "Analytics"
+        case .sync: "Sync"
+        case .performance: "Performance"
+        case .about: "About"
+        case .debug: "Debug"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .general: "gearshape"
+        case .providers: "square.grid.2x2"
+        case .analytics: "chart.bar.xaxis"
+        case .sync: "arrow.triangle.2.circlepath"
+        case .performance: "speedometer"
+        case .about: "info.circle"
+        case .debug: "ladybug"
         }
     }
 }

@@ -9,10 +9,10 @@ import SwiftUI
 @main
 struct RunicApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var settings: SettingsStore
-    @State private var store: UsageStore
-    @State private var preferencesSelection: PreferencesSelection
-    private let account: AccountInfo
+    @State private var settings: SettingsStore?
+    @State private var store: UsageStore?
+    @State private var preferencesSelection: PreferencesSelection?
+    private let account: AccountInfo?
 
     init() {
         RunicTypography.registerFonts()
@@ -23,6 +23,16 @@ struct RunicApp: App {
             destination: .oslog(subsystem: "com.sriinnu.athena.runic"),
             level: level,
             json: false))
+
+        if !RunicScreenshotRenderer.isRequested, let existing = AppDelegate.existingDuplicateInstance() {
+            _settings = State(wrappedValue: nil)
+            _store = State(wrappedValue: nil)
+            _preferencesSelection = State(wrappedValue: nil)
+            self.account = nil
+            RunicLog.logger("singleton").info(
+                "Another Runic instance already running (pid \(existing.processIdentifier)); delaying heavy startup.")
+            return
+        }
 
         let preferencesSelection = PreferencesSelection()
         let settings = SettingsStore()
@@ -55,12 +65,16 @@ struct RunicApp: App {
         .windowStyle(.hiddenTitleBar)
 
         Settings {
-            PreferencesView(
-                settings: self.settings,
-                store: self.store,
-                updater: self.appDelegate.updaterController,
-                selection: self.preferencesSelection)
-                .environment(\.runicFonts, RunicFontStore.shared)
+            if let settings, let store, let preferencesSelection {
+                PreferencesView(
+                    settings: settings,
+                    store: store,
+                    updater: self.appDelegate.updaterController,
+                    selection: preferencesSelection)
+                    .environment(\.runicFonts, RunicFontStore.shared)
+            } else {
+                EmptyView()
+            }
         }
         .defaultSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
     }
@@ -75,7 +89,8 @@ struct RunicApp: App {
     }
 
     private func openSettings(tab: PreferencesTab) {
-        self.preferencesSelection.tab = tab
+        guard let preferencesSelection else { return }
+        preferencesSelection.tab = tab
         NSApp.activate(ignoringOtherApps: true)
         _ = NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
     }
@@ -243,6 +258,13 @@ private func makeUpdaterController() -> UpdaterProviding {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+#if DEBUG
+    static var duplicateInstanceCheckDisabledForTests = false
+#endif
+
+    private static let productionBundleID = "com.sriinnu.athena.runic"
+    private static let debugBundleID = "com.sriinnu.athena.runic.debug"
+
     let updaterController: UpdaterProviding = makeUpdaterController()
     private var statusController: StatusItemControlling?
     private var store: UsageStore?
@@ -259,8 +281,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if self.startScreenshotRendererIfRequested() { return }
         if Self.terminateIfDuplicateInstance() { return }
         AppNotifications.shared.requestAuthorizationOnStartup()
+        self.store?.startRuntime()
         self.ensureStatusController()
         self.installAutoRefreshLifecycleObservers()
         KeyboardShortcuts.onKeyUp(for: .openMenu) { [weak self] in
@@ -270,20 +294,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Exit early if another Runic with the same bundle id is already running.
-    /// Stale login items pointing at multiple bundle paths can otherwise spin
-    /// up two status items at login.
+    private func startScreenshotRendererIfRequested() -> Bool {
+        guard let store, let settings, let account, let selection = self.preferencesSelection else { return false }
+        return RunicScreenshotRenderer.startIfRequested(
+            store: store,
+            settings: settings,
+            account: account,
+            updater: self.updaterController,
+            selection: selection)
+    }
+
+    /// Exit early if another Runic from the production/debug bundle family is already running.
+    /// Stale login items or local debug bundles can otherwise spin up two status items.
     private static func terminateIfDuplicateInstance() -> Bool {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.sriinnu.athena.runic"
-        let myPID = ProcessInfo.processInfo.processIdentifier
-        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-            .filter { $0.processIdentifier != myPID }
-        guard let existing = others.first else { return false }
+        guard let existing = Self.existingDuplicateInstance() else { return false }
         RunicLog.logger("singleton").info(
             "Another Runic instance already running (pid \(existing.processIdentifier)); terminating self.")
         existing.activate(options: [])
-        NSApp.terminate(nil)
+        NSApp?.terminate(nil)
         return true
+    }
+
+    static func existingDuplicateInstance() -> NSRunningApplication? {
+#if DEBUG
+        if Self.duplicateInstanceCheckDisabledForTests { return nil }
+#endif
+        guard !Self.isRunningUnderTests else { return nil }
+
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        let currentBundleID = Bundle.main.bundleIdentifier ?? Self.productionBundleID
+        let bundleIDs = Set([currentBundleID, Self.productionBundleID, Self.debugBundleID])
+        let others = bundleIDs.flatMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0) }
+            .filter { $0.processIdentifier != myPID }
+        return others.first
+    }
+
+    private static var isRunningUnderTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
     }
 
     private func ensureStatusController() {

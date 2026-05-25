@@ -19,9 +19,9 @@ struct TeamInviteSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.lg) {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                Text("Invite to \(self.team.name)")
+                Text("Add Member to \(self.team.name)")
                     .font(self.fonts.title2.weight(.semibold))
-                Text("Send an invitation to join your team")
+                Text("Adds a local planning member. No email is sent.")
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             }
@@ -45,7 +45,7 @@ struct TeamInviteSheet: View {
                             .font(self.fonts.caption)
                             .foregroundStyle(.red)
                     } else {
-                        Text("They will receive an email invitation")
+                        Text("Used as a local member identifier; no invitation is sent.")
                             .font(self.fonts.caption)
                             .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
@@ -114,7 +114,7 @@ struct TeamInviteSheet: View {
                 }
                 .keyboardShortcut(.cancelAction)
 
-                Button("Send Invitation") {
+                Button("Add Member") {
                     self.sendInvitation()
                 }
                 .buttonStyle(.borderedProminent)

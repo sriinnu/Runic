@@ -229,6 +229,72 @@ enum RefreshTrigger: String {
     }
 }
 
+private actor UsageLedgerOTelRelay {
+    static let shared = UsageLedgerOTelRelay()
+
+    private struct FileIdentity: Hashable {
+        let path: String
+        let size: Int
+        let modifiedAt: TimeInterval
+    }
+
+    private struct Key: Hashable {
+        let files: [FileIdentity]
+        let minTimestamp: TimeInterval?
+        let options: OTelGenAIIngestionOptions
+    }
+
+    private var cache: [Key: (loadedAt: Date, entries: [UsageLedgerEntry])] = [:]
+    private var inFlight: [Key: Task<[UsageLedgerEntry], Error>] = [:]
+    private let cacheTTL: TimeInterval = 5
+
+    func loadEntries(files: [URL], options: OTelGenAIIngestionOptions, minTimestamp: Date?) async throws -> [UsageLedgerEntry] {
+        guard !files.isEmpty else { return [] }
+        let key = Key(
+            files: files.map(Self.identity(for:)).sorted { $0.path < $1.path },
+            minTimestamp: minTimestamp?.timeIntervalSince1970,
+            options: options)
+        let now = Date()
+        if let cached = self.cache[key], now.timeIntervalSince(cached.loadedAt) <= self.cacheTTL {
+            return cached.entries
+        }
+        if let task = self.inFlight[key] {
+            return try await task.value
+        }
+
+        let task = Task.detached(priority: .utility) {
+            try await OTelGenAIFileLedgerSource(
+                files: files,
+                options: options,
+                minTimestamp: minTimestamp)
+                .loadEntries()
+        }
+        self.inFlight[key] = task
+        do {
+            let entries = try await task.value
+            self.inFlight[key] = nil
+            self.cache[key] = (now, entries)
+            self.pruneCache(now: now)
+            return entries
+        } catch {
+            self.inFlight[key] = nil
+            throw error
+        }
+    }
+
+    private static func identity(for file: URL) -> FileIdentity {
+        let values = try? file.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        return FileIdentity(
+            path: file.standardizedFileURL.path,
+            size: values?.fileSize ?? 0,
+            modifiedAt: values?.contentModificationDate?.timeIntervalSince1970 ?? 0)
+    }
+
+    private func pruneCache(now: Date) {
+        self.cache = self.cache.filter { now.timeIntervalSince($0.value.loadedAt) <= self.cacheTTL }
+    }
+}
+
 enum AutoRefreshSuspensionReason: String {
     case systemSleep
     case screenSleep
@@ -621,6 +687,7 @@ final class UsageStore {
     @ObservationIgnored private let costUsageFetcher: CostUsageFetcher
     @ObservationIgnored private let registry: ProviderRegistry
     @ObservationIgnored private let settings: SettingsStore
+    @ObservationIgnored private let processEnvironment: [String: String]
     @ObservationIgnored private let sessionQuotaNotifier: SessionQuotaNotifier
     @ObservationIgnored private let sessionQuotaLogger = RunicLog.logger("sessionQuota")
     @ObservationIgnored private let openAIWebLogger = RunicLog.logger("openai-web")
@@ -634,6 +701,7 @@ final class UsageStore {
     @ObservationIgnored private var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored private var ledgerRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var runtimeStarted = false
     @ObservationIgnored private var requestedLedgerMaxAgeDays: Int?
     @ObservationIgnored private var providerHistoryMonthCache: [
         UsageProvider: [String: ProviderHistoryMonthCacheEntry]
@@ -665,6 +733,7 @@ final class UsageStore {
         self.costUsageFetcher = costUsageFetcher
         self.settings = settings
         self.registry = registry
+        self.processEnvironment = ProcessInfo.processInfo.environment
         self.sessionQuotaNotifier = sessionQuotaNotifier
         self.providerMetadata = registry.metadata
         self.lastRefreshFrequency = settings.refreshFrequency
@@ -684,6 +753,11 @@ final class UsageStore {
             codexFetcher: fetcher,
             claudeFetcher: claudeFetcher)
         self.bindSettings()
+    }
+
+    func startRuntime() {
+        guard !self.runtimeStarted else { return }
+        self.runtimeStarted = true
         self.detectVersions()
         self.refreshPathDebugInfo()
         LoginShellPathCache.shared.captureOnce { [weak self] _ in
@@ -903,7 +977,7 @@ final class UsageStore {
 
     private func isProviderAvailable(_ provider: UsageProvider) -> Bool {
         if provider == .zai {
-            if ZaiSettingsReader.apiToken(environment: ProcessInfo.processInfo.environment) != nil {
+            if ZaiSettingsReader.apiToken(environment: self.processEnvironment) != nil {
                 return true
             }
             return !self.settings.zaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -1045,7 +1119,12 @@ final class UsageStore {
                 let monthEntries = providerEntries.filter {
                     calendar.isDate($0.timestamp, equalTo: normalizedMonthStart, toGranularity: .month)
                 }
-                let days = Self.providerHistoryDays(entries: monthEntries, timeZone: timeZone)
+                let entryDays = Self.providerHistoryDays(entries: monthEntries, timeZone: timeZone)
+                let cachedDays = await Self.cachedProviderHistoryDays(
+                    provider: provider,
+                    monthStart: normalizedMonthStart,
+                    timeZone: timeZone)
+                let days = Self.mergedProviderHistoryDays(cachedDays: cachedDays, entryDays: entryDays)
                 return ProviderHistoryMonthSnapshot(
                     provider: provider,
                     monthStart: normalizedMonthStart,
@@ -1145,60 +1224,159 @@ final class UsageStore {
         maxAgeDays: Int) -> (any UsageLedgerSource)?
     {
         let files = self.otelLedgerFiles(for: provider)
-        guard !files.isEmpty else { return nil }
+        guard !files.common.isEmpty || !files.providerSpecific.isEmpty else { return nil }
 
-        let cutoff = Calendar.current.date(byAdding: .day, value: -max(1, maxAgeDays), to: now)
         let options = OTelGenAIIngestionOptions(
             enabled: true,
             allowExperimentalSemanticConventions: true,
             defaultProvider: provider,
             source: .openTelemetry)
-        return UsageLedgerProviderFilterSource(
-            source: OTelGenAIFileLedgerSource(files: files, options: options),
+        return UsageLedgerCachedOTelProviderSource(
+            commonFiles: files.common,
+            providerSpecificFiles: files.providerSpecific,
+            options: options,
             provider: provider,
-            minTimestamp: cutoff)
+            maxAgeDays: maxAgeDays,
+            now: now)
     }
 
-    private struct UsageLedgerProviderFilterSource: UsageLedgerSource {
-        private let source: any UsageLedgerSource
+    private struct UsageLedgerCachedOTelProviderSource: UsageLedgerSource {
+        private let commonFiles: [URL]
+        private let providerSpecificFiles: [URL]
+        private let options: OTelGenAIIngestionOptions
         private let provider: UsageProvider
-        private let minTimestamp: Date?
+        private let maxAgeDays: Int
+        private let now: Date
+        private let cache: LedgerCache
 
-        init(source: any UsageLedgerSource, provider: UsageProvider, minTimestamp: Date?) {
-            self.source = source
+        init(
+            commonFiles: [URL],
+            providerSpecificFiles: [URL],
+            options: OTelGenAIIngestionOptions,
+            provider: UsageProvider,
+            maxAgeDays: Int,
+            now: Date,
+            cache: LedgerCache = .shared)
+        {
+            self.commonFiles = commonFiles
+            self.providerSpecificFiles = providerSpecificFiles
+            self.options = options
             self.provider = provider
-            self.minTimestamp = minTimestamp
+            self.maxAgeDays = maxAgeDays
+            self.now = now
+            self.cache = cache
         }
 
         func loadEntries() async throws -> [UsageLedgerEntry] {
-            let entries = try await self.source.loadEntries()
-            return entries.filter { entry in
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let todayStart = calendar.startOfDay(for: self.now)
+            let requestedCoverageDays = max(1, self.maxAgeDays)
+            let coveredDays = await self.cache.effectiveCoveredMaxAgeDays(provider: self.provider.rawValue) ?? 0
+            let historyCovered = coveredDays >= requestedCoverageDays
+            let historyStart = calendar.startOfDay(
+                for: calendar.date(byAdding: .day, value: -requestedCoverageDays, to: self.now) ?? self.now)
+            let minTimestamp = historyCovered ? todayStart : historyStart
+
+            let commonOptions = OTelGenAIIngestionOptions(
+                enabled: self.options.enabled,
+                allowExperimentalSemanticConventions: self.options.allowExperimentalSemanticConventions,
+                defaultProvider: nil,
+                source: self.options.source)
+            let commonEntries = try await UsageLedgerOTelRelay.shared.loadEntries(
+                files: self.commonFiles,
+                options: commonOptions,
+                minTimestamp: minTimestamp)
+            let providerEntries = try await UsageLedgerOTelRelay.shared.loadEntries(
+                files: self.providerSpecificFiles,
+                options: self.options,
+                minTimestamp: minTimestamp)
+            let loaded = commonEntries + providerEntries
+            let entries = loaded.filter { entry in
                 if entry.provider != self.provider { return false }
-                if let minTimestamp, entry.timestamp < minTimestamp { return false }
+                if entry.timestamp < minTimestamp { return false }
                 return true
+            }
+
+            let dailies = Self.cachedDailies(from: entries)
+            if dailies.isEmpty {
+                await self.cache.markScanComplete(
+                    provider: self.provider.rawValue,
+                    scanDate: self.now,
+                    coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
+            } else {
+                await self.cache.mergeDailies(
+                    provider: self.provider.rawValue,
+                    newDailies: dailies,
+                    scanDate: self.now,
+                    todayKey: historyCovered ? LedgerCache.dayKey(for: self.now) : nil,
+                    coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
+            }
+            return entries
+        }
+
+        private static func cachedDailies(from entries: [UsageLedgerEntry]) -> [CachedDaily] {
+            var buckets: [String: (
+                input: Int,
+                output: Int,
+                cacheCreate: Int,
+                cacheRead: Int,
+                cost: Double,
+                requests: Int,
+                models: Set<String>)] = [:]
+            for entry in entries {
+                let key = LedgerCache.dayKey(for: entry.timestamp)
+                var bucket = buckets[key] ?? (0, 0, 0, 0, 0, 0, [])
+                bucket.input += entry.inputTokens
+                bucket.output += entry.outputTokens
+                bucket.cacheCreate += entry.cacheCreationTokens
+                bucket.cacheRead += entry.cacheReadTokens
+                bucket.cost += entry.costUSD ?? 0
+                bucket.requests += 1
+                if let model = entry.model { bucket.models.insert(model) }
+                buckets[key] = bucket
+            }
+            return buckets.map { dayKey, bucket in
+                CachedDaily(
+                    dayKey: dayKey,
+                    inputTokens: bucket.input,
+                    outputTokens: bucket.output,
+                    cacheCreationTokens: bucket.cacheCreate,
+                    cacheReadTokens: bucket.cacheRead,
+                    costUSD: bucket.cost > 0 ? bucket.cost : nil,
+                    requestCount: bucket.requests,
+                    modelsUsed: Array(bucket.models))
             }
         }
     }
 
-    private func otelLedgerFiles(for provider: UsageProvider) -> [URL] {
+    private func otelLedgerFiles(for provider: UsageProvider) -> (common: [URL], providerSpecific: [URL]) {
         let env = ProcessInfo.processInfo.environment
         let providerKey = provider.rawValue
             .replacingOccurrences(of: "-", with: "_")
             .uppercased()
 
-        let candidatePaths = [
-            [OTelGenAICollectorConfiguration.defaultOutputFile().path],
+        let commonPaths = [
+            [
+                OTelGenAICollectorConfiguration.defaultOutputFile().path,
+                OTelGenAICollectorConfiguration.defaultOutputDirectory().path,
+            ],
             Self.splitPathList(self.settings.otelGenAILogPaths),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_OTEL_GENAI_LOG_PATH"]),
+        ].flatMap(\.self)
+        let providerPaths = [
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_GENAI_LOG_PATH"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATHS"]),
             Self.splitPathList(env["RUNIC_\(providerKey)_OTEL_LOG_PATH"]),
         ].flatMap(\.self)
 
-        let urls = candidatePaths.compactMap(Self.expandTildePath)
-        return Self.discoverOTelLedgerFiles(from: urls)
+        let commonFiles = Self.discoverOTelLedgerFiles(from: commonPaths.compactMap(Self.expandTildePath))
+        let commonPathsSeen = Set(commonFiles.map { $0.standardizedFileURL.path })
+        let providerFiles = Self.discoverOTelLedgerFiles(from: providerPaths.compactMap(Self.expandTildePath))
+            .filter { !commonPathsSeen.contains($0.standardizedFileURL.path) }
+        return (commonFiles, providerFiles)
     }
 
     private static func splitPathList(_ raw: String?) -> [String] {
@@ -1319,6 +1497,42 @@ final class UsageStore {
         }
     }
 
+    private nonisolated static func cachedProviderHistoryDays(
+        provider: UsageProvider,
+        monthStart: Date,
+        timeZone: TimeZone) async -> [ProviderHistoryDaySnapshot]
+    {
+        guard let cached = await LedgerCache.shared.loadCachedDailies(provider: provider.rawValue) else { return [] }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return cached.dailies.compactMap { daily in
+            guard let summary = daily.toLedgerDailySummary(provider: provider),
+                  calendar.isDate(summary.dayStart, equalTo: monthStart, toGranularity: .month)
+            else { return nil }
+            return ProviderHistoryDaySnapshot(
+                dayStart: summary.dayStart,
+                totals: summary.totals,
+                requestCount: daily.requestCount,
+                modelsUsed: summary.modelsUsed,
+                topModel: nil,
+                topProject: nil,
+                modelSummaries: [],
+                projectSummaries: [])
+        }
+        .sorted { $0.dayStart < $1.dayStart }
+    }
+
+    private nonisolated static func mergedProviderHistoryDays(
+        cachedDays: [ProviderHistoryDaySnapshot],
+        entryDays: [ProviderHistoryDaySnapshot]) -> [ProviderHistoryDaySnapshot]
+    {
+        var byDay = Dictionary(uniqueKeysWithValues: cachedDays.map { ($0.dayStart, $0) })
+        for day in entryDays {
+            byDay[day.dayStart] = day
+        }
+        return byDay.values.sorted { $0.dayStart < $1.dayStart }
+    }
+
     /// Refresh a single provider (used when user clicks Ping on a specific provider tab).
     func refreshSingleProvider(_ provider: UsageProvider) async {
         self.isRefreshing = true
@@ -1371,7 +1585,7 @@ final class UsageStore {
             await self.refreshCreditsIfNeeded()
         }
 
-        self.scheduleLedgerRefresh(force: true, inactiveProviders: inactiveProviders)
+        self.scheduleLedgerRefresh(force: !trigger.isAuto || forceTokenUsage, inactiveProviders: inactiveProviders)
 
         // Refresh custom providers
         await self.refreshCustomProviders()
@@ -2005,6 +2219,20 @@ final class UsageStore {
                 dailyByProvider[summary.provider] = summary
             }
         }
+        for provider in providers {
+            guard let cached = await LedgerCache.shared.loadCachedDailies(provider: provider.rawValue) else { continue }
+            let summaries = cached.dailies.compactMap { $0.toLedgerDailySummary(provider: provider) }
+            guard !summaries.isEmpty else { continue }
+            var byDay = Dictionary(uniqueKeysWithValues: summaries.map { ($0.dayKey, $0) })
+            for summary in allDailySummariesByProvider[provider] ?? [] {
+                byDay[summary.dayKey] = summary
+            }
+            allDailySummariesByProvider[provider] = byDay.values.sorted { $0.dayStart < $1.dayStart }
+            if dailyByProvider[provider] == nil {
+                dailyByProvider[provider] = byDay.values.first { $0.dayStart == todayStart }
+            }
+        }
+        let mergedDailySummaries = allDailySummariesByProvider.values.flatMap { $0 }
 
         let hourlySummaries = UsageLedgerAggregator.hourlySummaries(
             entries: entries,
@@ -2054,10 +2282,10 @@ final class UsageStore {
             projectBreakdownsByProvider[summary.provider, default: []].append(summary)
         }
 
-        let providerForecasts = UsageLedgerAggregator.providerSpendForecasts(
-            entries: entries,
+        let providerForecasts = self.providerSpendForecasts(
+            from: mergedDailySummaries,
             now: now,
-            timeZone: timeZone)
+            calendar: calendar)
         var spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
         for forecast in providerForecasts where spendForecastsByProvider[forecast.provider] == nil {
             spendForecastsByProvider[forecast.provider] = forecast
@@ -2087,7 +2315,7 @@ final class UsageStore {
             }
         }
         let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
-            dailySummaries: dailySummaries,
+            dailySummaries: mergedDailySummaries,
             now: now,
             calendar: calendar)
         var compactionsByProvider: [UsageProvider: UsageLedgerCompactionSummary] = [:]
@@ -2133,6 +2361,45 @@ final class UsageStore {
             limitsByProjectID[budget.projectID] = budget.monthlyLimit
         }
         return limitsByProjectID
+    }
+
+    private func providerSpendForecasts(
+        from dailySummaries: [UsageLedgerDailySummary],
+        now: Date,
+        calendar: Calendar,
+        projectionDays: Int = 30) -> [UsageLedgerSpendForecast]
+    {
+        struct Bucket {
+            var costByDay: [Date: Double] = [:]
+        }
+
+        var buckets: [UsageProvider: Bucket] = [:]
+        for summary in dailySummaries where calendar.isDate(summary.dayStart, equalTo: now, toGranularity: .month) {
+            guard let cost = summary.totals.costUSD, cost.isFinite else { continue }
+            buckets[summary.provider, default: Bucket()].costByDay[summary.dayStart, default: 0] += cost
+        }
+
+        return buckets.compactMap { provider, bucket in
+            let costs = bucket.costByDay.values.filter(\.isFinite)
+            guard !costs.isEmpty else { return nil }
+            let observedCost = costs.reduce(0, +)
+            guard observedCost.isFinite else { return nil }
+            let averageDailyCost = observedCost / Double(costs.count)
+            guard averageDailyCost.isFinite else { return nil }
+            return UsageLedgerSpendForecast(
+                provider: provider,
+                observedDays: costs.count,
+                observedCostUSD: observedCost,
+                averageDailyCostUSD: averageDailyCost,
+                projected30DayCostUSD: averageDailyCost * Double(projectionDays),
+                projectionDays: projectionDays)
+        }
+        .sorted { lhs, rhs in
+            if lhs.projected30DayCostUSD != rhs.projected30DayCostUSD {
+                return lhs.projected30DayCostUSD > rhs.projected30DayCostUSD
+            }
+            return lhs.provider.rawValue < rhs.provider.rawValue
+        }
     }
 
     private func resolvedSpendForecast(
@@ -2467,7 +2734,10 @@ final class UsageStore {
         }
     }
 
-    private func refreshOpenAIDashboardIfNeeded(force: Bool = false) async {
+    private func refreshOpenAIDashboardIfNeeded(
+        force: Bool = false,
+        allowBrowserCookieImport: Bool = false) async
+    {
         guard self.isEnabled(.codex), self.settings.openAIWebAccessEnabled else {
             await MainActor.run {
                 self.openAIDashboard = nil
@@ -2515,17 +2785,19 @@ final class UsageStore {
             var effectiveEmail = targetEmail
 
             // Use a per-email persistent `WKWebsiteDataStore` so multiple dashboard sessions can coexist.
-            // Strategy:
-            // - Try the existing per-email WebKit cookie store first (fast; avoids Keychain prompts).
-            // - On login-required or account mismatch, import cookies from the configured browser order and retry once.
+            // Background refresh must never touch browser keychains; manual import owns that path.
             if self.openAIWebAccountDidChange, let targetEmail, !targetEmail.isEmpty {
-                // On account switches, proactively re-import cookies so we don't show stale data from the previous
-                // user.
-                if let imported = await self.importOpenAIDashboardCookiesIfNeeded(
+                if allowBrowserCookieImport,
+                   let imported = await self.importOpenAIDashboardCookiesIfNeeded(
                     targetEmail: targetEmail,
                     force: true)
                 {
                     effectiveEmail = imported
+                } else {
+                    await MainActor.run {
+                        self.openAIDashboardCookieImportStatus =
+                            "Codex account changed; import browser cookies manually to refresh web extras."
+                    }
                 }
                 self.openAIWebAccountDidChange = false
             }
@@ -2536,7 +2808,8 @@ final class UsageStore {
                 debugDumpHTML: false)
 
             if self.dashboardEmailMismatch(expected: normalized, actual: dash.signedInEmail) {
-                if let imported = await self.importOpenAIDashboardCookiesIfNeeded(
+                if allowBrowserCookieImport,
+                   let imported = await self.importOpenAIDashboardCookiesIfNeeded(
                     targetEmail: targetEmail,
                     force: true)
                 {
@@ -2563,12 +2836,21 @@ final class UsageStore {
 
             await self.applyOpenAIDashboard(dash, targetEmail: effectiveEmail)
         } catch let OpenAIDashboardFetcher.FetchError.noDashboardData(body) {
-            // Often indicates a missing/stale session without an obvious login prompt. Retry once after
-            // importing cookies from the user's browser.
             let targetEmail = self.codexAccountEmailForOpenAIDashboard()
             var effectiveEmail = targetEmail
-            if let imported = await self.importOpenAIDashboardCookiesIfNeeded(targetEmail: targetEmail, force: true) {
+            if allowBrowserCookieImport,
+               let imported = await self.importOpenAIDashboardCookiesIfNeeded(targetEmail: targetEmail, force: true)
+            {
                 effectiveEmail = imported
+            }
+            guard allowBrowserCookieImport else {
+                let message = self.openAIDashboardFriendlyError(
+                    body: body,
+                    targetEmail: targetEmail,
+                    cookieImportStatus: self.openAIDashboardCookieImportStatus)
+                    ?? OpenAIDashboardFetcher.FetchError.noDashboardData(body: body).localizedDescription
+                await self.applyOpenAIDashboardFailure(message: message)
+                return
             }
             do {
                 let dash = try await OpenAIDashboardFetcher().loadLatestDashboard(
@@ -2590,8 +2872,21 @@ final class UsageStore {
         } catch OpenAIDashboardFetcher.FetchError.loginRequired {
             let targetEmail = self.codexAccountEmailForOpenAIDashboard()
             var effectiveEmail = targetEmail
-            if let imported = await self.importOpenAIDashboardCookiesIfNeeded(targetEmail: targetEmail, force: true) {
+            if allowBrowserCookieImport,
+               let imported = await self.importOpenAIDashboardCookiesIfNeeded(targetEmail: targetEmail, force: true)
+            {
                 effectiveEmail = imported
+            }
+            guard allowBrowserCookieImport else {
+                await MainActor.run {
+                    self.lastOpenAIDashboardError = [
+                        "OpenAI web access requires a signed-in chatgpt.com session.",
+                        "Use manual browser-cookie import to refresh web extras.",
+                    ].joined(separator: " ")
+                    self.openAIDashboard = self.lastOpenAIDashboardSnapshot
+                    self.openAIDashboardRequiresLogin = true
+                }
+                return
             }
             do {
                 let dash = try await OpenAIDashboardFetcher().loadLatestDashboard(
@@ -2644,7 +2939,8 @@ final class UsageStore {
             self.lastOpenAIDashboardSnapshot = nil
             self.lastOpenAIDashboardError = nil
             self.openAIDashboardRequiresLogin = true
-            self.openAIDashboardCookieImportStatus = "Codex account changed; importing browser cookies…"
+            self.openAIDashboardCookieImportStatus =
+                "Codex account changed; import browser cookies manually to refresh web extras."
             self.lastOpenAIDashboardCookieImportAttemptAt = nil
             self.lastOpenAIDashboardCookieImportEmail = nil
         }
@@ -2654,7 +2950,7 @@ final class UsageStore {
         self.resetOpenAIWebDebugLog(context: "manual import")
         let targetEmail = self.codexAccountEmailForOpenAIDashboard()
         _ = await self.importOpenAIDashboardCookiesIfNeeded(targetEmail: targetEmail, force: true)
-        await self.refreshOpenAIDashboardIfNeeded(force: true)
+        await self.refreshOpenAIDashboardIfNeeded(force: true, allowBrowserCookieImport: false)
     }
 
     private func importOpenAIDashboardCookiesIfNeeded(targetEmail: String?, force: Bool) async -> String? {
@@ -3639,6 +3935,7 @@ extension UsageStore {
         success: Bool) async
     {
         guard let storage = self.performanceStorage else { return }
+        guard Self.localPerformanceTrackingEnabled() else { return }
 
         let metric = LatencyMetric(
             id: UUID().uuidString,
@@ -3658,6 +3955,7 @@ extension UsageStore {
     /// Track API errors for performance monitoring
     private nonisolated func trackError(provider: UsageProvider, providerLabel: String? = nil, error: Error) async {
         guard let storage = self.performanceStorage else { return }
+        guard Self.localPerformanceTrackingEnabled() else { return }
 
         let errorType = self.classifyError(error)
         let errorEvent = ErrorEvent(
@@ -3670,6 +3968,10 @@ extension UsageStore {
             timestamp: Date())
 
         try? await storage.save(error: errorEvent)
+    }
+
+    private nonisolated static func localPerformanceTrackingEnabled() -> Bool {
+        (UserDefaults.standard.object(forKey: "performanceTrackingEnabled") as? Bool) ?? true
     }
 
     private nonisolated static func customProviderMetricLabel(_ config: CustomProviderConfig) -> String {

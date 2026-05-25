@@ -24,6 +24,7 @@ public struct OTelGenAIIngestionOptions: Sendable, Codable, Hashable {
 public enum OTelGenAILedgerAdapterError: LocalizedError, Sendable, Equatable {
     case invalidUTF8
     case invalidJSON(String)
+    case fileTooLarge(path: String, size: Int, limit: Int)
 
     public var errorDescription: String? {
         switch self {
@@ -31,6 +32,9 @@ public enum OTelGenAILedgerAdapterError: LocalizedError, Sendable, Equatable {
             "OTel payload is not valid UTF-8."
         case let .invalidJSON(message):
             "OTel JSON parse failed: \(message)"
+        case let .fileTooLarge(path, size, limit):
+            "OTel JSON file is too large for whole-file parsing: " +
+                "\(path) (\(size) bytes, limit \(limit) bytes). Use JSONL or split the file."
         }
     }
 }
@@ -592,17 +596,34 @@ public enum OTelGenAILedgerAdapter {
     private static func dateValue(for keys: [String], in dictionary: [String: Any]) -> Date? {
         for key in keys {
             guard let raw = self.lookupValue(forKey: key, in: dictionary) else { continue }
-            if let nanos = self.coerceDouble(raw), nanos > 1_000_000_000_000 {
-                return Date(timeIntervalSince1970: nanos / 1_000_000_000)
-            }
-            if let seconds = self.coerceDouble(raw), seconds > 0, seconds < 4_102_444_800 {
-                return Date(timeIntervalSince1970: seconds)
+            if let numeric = self.coerceDouble(raw),
+               let date = self.dateFromNumericTimestamp(numeric)
+            {
+                return date
             }
             if let text = raw as? String, let parsed = self.parseISODate(text) {
                 return parsed
             }
         }
         return nil
+    }
+
+    private static func dateFromNumericTimestamp(_ raw: Double) -> Date? {
+        guard raw > 0 else { return nil }
+
+        let seconds: Double
+        if raw >= 100_000_000_000_000_000 {
+            seconds = raw / 1_000_000_000
+        } else if raw >= 100_000_000_000_000 {
+            seconds = raw / 1_000_000
+        } else if raw >= 100_000_000_000 {
+            seconds = raw / 1_000
+        } else {
+            seconds = raw
+        }
+
+        guard seconds > 0, seconds < 4_102_444_800 else { return nil }
+        return Date(timeIntervalSince1970: seconds)
     }
 
     private static func parseISODate(_ text: String) -> Date? {
@@ -662,10 +683,17 @@ public enum OTelGenAILedgerAdapter {
 public struct OTelGenAIFileLedgerSource: UsageLedgerSource {
     public let files: [URL]
     public let options: OTelGenAIIngestionOptions
+    public let minTimestamp: Date?
+    private static let maxWholeJSONBytes = 8 * 1024 * 1024
 
-    public init(files: [URL], options: OTelGenAIIngestionOptions = .disabled) {
+    public init(
+        files: [URL],
+        options: OTelGenAIIngestionOptions = .disabled,
+        minTimestamp: Date? = nil)
+    {
         self.files = files
         self.options = options
+        self.minTimestamp = minTimestamp
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
@@ -673,10 +701,81 @@ public struct OTelGenAIFileLedgerSource: UsageLedgerSource {
 
         var entries: [UsageLedgerEntry] = []
         for file in self.files {
-            let data = try Data(contentsOf: file)
-            let parsed = try OTelGenAILedgerAdapter.parseData(data, options: self.options)
+            try Task.checkCancellation()
+            guard Self.shouldRead(file: file, minTimestamp: self.minTimestamp) else { continue }
+            let parsed = try Self.parseFile(file, options: self.options, minTimestamp: self.minTimestamp)
             entries.append(contentsOf: parsed)
         }
         return entries.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private static func shouldRead(file: URL, minTimestamp: Date?) -> Bool {
+        guard let minTimestamp else { return true }
+        guard let modifiedAt = try? file.resourceValues(forKeys: [.contentModificationDateKey])
+            .contentModificationDate
+        else { return true }
+        return modifiedAt >= minTimestamp
+    }
+
+    private static func parseFile(
+        _ file: URL,
+        options: OTelGenAIIngestionOptions,
+        minTimestamp: Date?) throws -> [UsageLedgerEntry]
+    {
+        if file.pathExtension.lowercased() == "json" {
+            let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            if size > Self.maxWholeJSONBytes {
+                throw OTelGenAILedgerAdapterError.fileTooLarge(
+                    path: file.path,
+                    size: size,
+                    limit: Self.maxWholeJSONBytes)
+            }
+            return try OTelGenAILedgerAdapter.parseData(Data(contentsOf: file), options: options)
+                .filter { entry in minTimestamp.map { entry.timestamp >= $0 } ?? true }
+        }
+
+        var entries: [UsageLedgerEntry] = []
+
+        func parseLine(_ line: Data, index: Int) throws {
+            guard !line.isEmpty else { return }
+            guard let text = String(data: line, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !text.isEmpty
+            else { return }
+            guard let data = text.data(using: .utf8) else {
+                throw OTelGenAILedgerAdapterError.invalidUTF8
+            }
+            do {
+                let object = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+                let parsed = OTelGenAILedgerAdapter.parseJSONObject(object, options: options)
+                entries.append(contentsOf: parsed.filter { entry in
+                    minTimestamp.map { entry.timestamp >= $0 } ?? true
+                })
+            } catch {
+                throw OTelGenAILedgerAdapterError.invalidJSON("line \(index): \(error.localizedDescription)")
+            }
+        }
+
+        var lineIndex = 1
+        var parseError: Error?
+        try CostUsageJsonl.scan(
+            fileURL: file,
+            maxLineBytes: 512 * 1024,
+            prefixBytes: 512 * 1024)
+        { line in
+            guard parseError == nil else { return }
+            guard !line.wasTruncated else {
+                lineIndex += 1
+                return
+            }
+            do {
+                try parseLine(line.bytes, index: lineIndex)
+            } catch {
+                parseError = error
+            }
+            lineIndex += 1
+        }
+        if let parseError { throw parseError }
+        return entries
     }
 }

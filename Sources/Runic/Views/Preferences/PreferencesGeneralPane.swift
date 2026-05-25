@@ -6,19 +6,21 @@ import SwiftUI
 struct GeneralPane: View {
     @Environment(\.runicFonts) private var fonts
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     @State private var appeared = false
     @State private var diagnosticsStatus: String?
     @State private var guardrailStatus: String?
+    @State private var isImportingOpenAIWebCookies = false
 
     var body: some View {
         LiquidPreferencesPane {
             LiquidSection(title: "System") {
                 PreferenceToggleRow(
                     title: "Start at Login",
-                    subtitle: "Automatically opens Runic when you start your Mac.",
-                    binding: self.$settings.launchAtLogin)
+                    subtitle: "Open Runic when your Mac starts.",
+                    binding: self.launchAtLoginBinding)
             }
             .liquidEntrance(appeared: self.appeared, index: 0)
 
@@ -27,19 +29,25 @@ struct GeneralPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.costUsageEnabled) {
                             Text("Show cost summary")
-                                .font(self.fonts.body)
+                                .font(self.preferenceTitleFont)
                         }
-                        .toggleStyle(.checkbox)
+                        .runicPreferenceToggleStyle()
 
-                        Text("Reads local usage logs. Shows today + last 30 days cost in the menu.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Shows local cost totals in the menu.")
+                            .font(self.preferenceHelpFont)
+                            .fontDesign(self.preferenceHelpDesign)
+                            .tracking(self.preferenceHelpTracking)
+                            .foregroundStyle(self.preferenceHelpColor)
+                            .lineSpacing(self.preferenceHelpLineSpacing)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                         if self.settings.costUsageEnabled {
                             Text("Auto-refresh: hourly · Timeout: 10m")
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                                .font(self.preferenceHelpFont)
+                                .fontDesign(self.preferenceHelpDesign)
+                                .tracking(self.preferenceHelpTracking)
+                                .foregroundStyle(self.preferenceHelpColor)
 
                             self.costStatusLine(provider: .claude)
                             self.costStatusLine(provider: .codex)
@@ -49,14 +57,41 @@ struct GeneralPane: View {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Toggle(isOn: self.$settings.openAIWebAccessEnabled) {
                             Text("Access OpenAI via web")
-                                .font(self.fonts.body)
+                                .font(self.preferenceTitleFont)
                         }
-                        .toggleStyle(.checkbox)
+                        .runicPreferenceToggleStyle()
 
-                        Text("Imports browser cookies for dashboard extras (credits history, code review).")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Enable extras after manual cookie import.")
+                            .font(self.preferenceHelpFont)
+                            .fontDesign(self.preferenceHelpDesign)
+                            .tracking(self.preferenceHelpTracking)
+                            .foregroundStyle(self.preferenceHelpColor)
+                            .lineSpacing(self.preferenceHelpLineSpacing)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        HStack(spacing: RunicSpacing.sm) {
+                            Button {
+                                self.importOpenAIWebCookies()
+                            } label: {
+                                if self.isImportingOpenAIWebCookies {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                                Text("Import Browser Cookies Now")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(self.isImportingOpenAIWebCookies || !self.settings.openAIWebAccessEnabled)
+
+                            if let status = self.openAIWebStatusText {
+                                Text(status)
+                                    .font(self.preferenceHelpFont)
+                                    .fontDesign(self.preferenceHelpDesign)
+                                    .tracking(self.preferenceHelpTracking)
+                                    .foregroundStyle(self.preferenceHelpColor)
+                                    .lineLimit(2)
+                            }
+                        }
                     }
                 }
             }
@@ -65,12 +100,11 @@ struct GeneralPane: View {
             LiquidSection(title: "Status") {
                 PreferenceToggleRow(
                     title: "Check provider status",
-                    subtitle: "Polls OpenAI/Claude status pages and Google Workspace for " +
-                        "Gemini/Antigravity, surfacing incidents in the icon and menu.",
+                    subtitle: "Polls provider status pages.",
                     binding: self.$settings.statusChecksEnabled)
                 PreferenceToggleRow(
                     title: "Vibrant menu bar icon",
-                    subtitle: "Uses a data-reactive color ramp to show usage pressure at a glance.",
+                    subtitle: "Shows usage pressure in the menu bar.",
                     binding: self.$settings.menuBarVibrantIconEnabled)
             }
             .liquidEntrance(appeared: self.appeared, index: 2)
@@ -78,8 +112,7 @@ struct GeneralPane: View {
             LiquidSection(title: "Notifications") {
                 PreferenceToggleRow(
                     title: "Session quota notifications",
-                    subtitle: "Notifies when the 5-hour session quota hits 0% and when it becomes " +
-                        "available again.",
+                    subtitle: "Warns when session quota resets.",
                     binding: self.$settings.sessionQuotaNotificationsEnabled)
             }
             .liquidEntrance(appeared: self.appeared, index: 3)
@@ -88,7 +121,7 @@ struct GeneralPane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Menu refresh rate")
-                            .font(self.fonts.body)
+                            .font(self.preferenceTitleFont)
 
                         Picker("", selection: self.$settings.refreshFrequency) {
                             ForEach(RefreshFrequency.allCases) { option in
@@ -98,13 +131,13 @@ struct GeneralPane: View {
                         .pickerStyle(.segmented)
 
                         Text("How often to automatically refresh usage data.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .font(self.preferenceHelpFont)
+                            .foregroundStyle(self.preferenceHelpColor)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Chart style")
-                            .font(self.fonts.body)
+                            .font(self.preferenceTitleFont)
 
                         Picker("", selection: self.$settings.chartStyle) {
                             Text("Line").tag(ChartStyle.line)
@@ -114,14 +147,14 @@ struct GeneralPane: View {
                         .pickerStyle(.segmented)
                         .frame(maxWidth: 360)
 
-                        Text("Visual style for usage charts and graphs.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                        Text("Timeline charts can render as a line, filled area, or bars.")
+                            .font(self.preferenceHelpFont)
+                            .foregroundStyle(self.preferenceHelpColor)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Number format")
-                            .font(self.fonts.body)
+                            .font(self.preferenceTitleFont)
 
                         Picker("", selection: self.$settings.numberFormat) {
                             Text("Abbreviated (45.2K)").tag(NumberFormat.abbreviated)
@@ -131,13 +164,13 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("How to display large numbers in the UI.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .font(self.preferenceHelpFont)
+                            .foregroundStyle(self.preferenceHelpColor)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Date format")
-                            .font(self.fonts.body)
+                            .font(self.preferenceTitleFont)
 
                         Picker("", selection: self.$settings.dateFormat) {
                             Text("Relative (2h ago)").tag(DateFormat.relative)
@@ -147,8 +180,8 @@ struct GeneralPane: View {
                         .frame(maxWidth: 360)
 
                         Text("How to display timestamps throughout the app.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .font(self.preferenceHelpFont)
+                            .foregroundStyle(self.preferenceHelpColor)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -160,7 +193,7 @@ struct GeneralPane: View {
                             .padding(.bottom, RunicSpacing.xs)
 
                         Text("Theme")
-                            .font(self.fonts.body)
+                            .font(self.preferenceTitleFont)
 
                         LazyVGrid(
                             columns: [
@@ -174,7 +207,7 @@ struct GeneralPane: View {
                                     theme: theme,
                                     isSelected: self.settings.theme == theme)
                                 {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+                                    withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
                                         self.settings.theme = theme
                                     }
                                 }
@@ -183,14 +216,16 @@ struct GeneralPane: View {
                         .frame(maxWidth: 560, alignment: .leading)
 
                         Text("Custom skins apply immediately to Runic panels; System/Light/Dark follow macOS chrome.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .font(self.preferenceHelpFont)
+                            .foregroundStyle(self.preferenceHelpColor)
                     }
 
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                         Text("Font")
-                            .font(self.fonts.body)
+                            .font(self.preferenceTitleFont)
 
+                        let lockedFamily = RunicFontChoice.resolvedThemeFamily(
+                            self.settings.theme.palette.style.typography.bodyFamily)
                         Picker("", selection: self.$settings.selectedFontFamily) {
                             ForEach(RunicFontChoice.availableChoices()) { choice in
                                 Text(choice.displayName)
@@ -200,10 +235,22 @@ struct GeneralPane: View {
                         }
                         .pickerStyle(.menu)
                         .frame(maxWidth: 360)
+                        .disabled(lockedFamily != nil)
+                        .opacity(lockedFamily == nil ? 1 : 0.55)
 
-                        Text("Drop .ttf/.otf files in Resources/Fonts to add more.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                        Text(lockedFamily == nil
+                            ? "Install extra families with Font Book; Runic shows available local fonts here."
+                            : "This theme uses a curated typography lock.")
+                            .font(self.preferenceHelpFont)
+                            .foregroundStyle(self.preferenceHelpColor)
+
+                        if let lockedFamily {
+                            Text("\(self.settings.theme.label) locks menu typography to " +
+                                "\(RunicFontChoice.displayName(for: lockedFamily)). " +
+                                "The picker applies to unlocked themes.")
+                                .font(self.preferenceHelpFont)
+                                .foregroundStyle(self.preferenceHelpColor)
+                        }
 
                         TypographyRulesPreview(
                             fontFamily: self.settings.selectedFontFamily,
@@ -236,7 +283,7 @@ struct GeneralPane: View {
         }
         .onAppear {
             guard !self.appeared else { return }
-            withAnimation(.easeOut(duration: 0.6)) { self.appeared = true }
+            withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) { self.appeared = true }
         }
     }
 
@@ -256,13 +303,60 @@ struct GeneralPane: View {
         }
     }
 
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { self.settings.launchAtLogin },
+            set: { self.settings.setLaunchAtLoginFromPreferences($0) })
+    }
+
+    private var preferenceTitleFont: Font {
+        self.runicTheme.isTerminalHUD
+            ? .system(size: 14, weight: .semibold, design: .monospaced)
+            : self.fonts.callout.weight(.medium)
+    }
+
+    private var preferenceHelpFont: Font {
+        self.runicTheme.isTerminalHUD ? .system(size: 12, weight: .regular) : self.fonts.footnote
+    }
+
+    private var preferenceHelpDesign: Font.Design? {
+        self.runicTheme.isTerminalHUD ? .default : nil
+    }
+
+    private var preferenceHelpTracking: CGFloat {
+        self.runicTheme.isTerminalHUD ? 0 : RunicFont.activeRules.letterSpacing
+    }
+
+    private var preferenceHelpColor: Color {
+        self.runicTheme.subduedSecondaryText
+    }
+
+    private var preferenceHelpLineSpacing: CGFloat {
+        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
+    }
+
+    private var openAIWebStatusText: String? {
+        self.store.openAIDashboardCookieImportStatus ?? self.store.lastOpenAIDashboardError
+    }
+
+    private func importOpenAIWebCookies() {
+        guard !self.isImportingOpenAIWebCookies else { return }
+        self.isImportingOpenAIWebCookies = true
+        Task { @MainActor in
+            await self.store.importOpenAIDashboardBrowserCookiesNow()
+            self.isImportingOpenAIWebCookies = false
+        }
+    }
+
     private func costStatusLine(provider: UsageProvider) -> some View {
         let name = ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName
 
         guard provider == .claude || provider == .codex else {
             return Text("\(name): unsupported")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
+                .foregroundStyle(self.preferenceHelpColor)
         }
 
         if self.store.isTokenRefreshInFlight(for: provider) {
@@ -275,33 +369,43 @@ struct GeneralPane: View {
                 return formatter.string(from: seconds).map { " (\($0))" } ?? ""
             }()
             return Text("\(name): fetching…\(elapsed)")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
+                .foregroundStyle(self.preferenceHelpColor)
         }
         if let snapshot = self.store.tokenSnapshot(for: provider) {
             let updated = UsageFormatter.updatedString(from: snapshot.updatedAt)
             let cost = snapshot.last30DaysCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
             return Text("\(name): \(updated) · 30d \(cost)")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
+                .foregroundStyle(self.preferenceHelpColor)
         }
         if let error = self.store.tokenError(for: provider), !error.isEmpty {
             let truncated = UsageFormatter.truncatedSingleLine(error, max: 120)
             return Text("\(name): \(truncated)")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
+                .foregroundStyle(self.preferenceHelpColor)
         }
         if let lastAttempt = self.store.tokenLastAttemptAt(for: provider) {
             let rel = RelativeDateTimeFormatter()
             rel.unitsStyle = .abbreviated
             let when = rel.localizedString(for: lastAttempt, relativeTo: Date())
             return Text("\(name): last attempt \(when)")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                .font(self.preferenceHelpFont)
+                .fontDesign(self.preferenceHelpDesign)
+                .tracking(self.preferenceHelpTracking)
+                .foregroundStyle(self.preferenceHelpColor)
         }
         return Text("\(name): no data yet")
-            .font(self.fonts.footnote)
-            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+            .font(self.preferenceHelpFont)
+            .fontDesign(self.preferenceHelpDesign)
+            .tracking(self.preferenceHelpTracking)
+            .foregroundStyle(self.preferenceHelpColor)
     }
 }
 
@@ -388,7 +492,11 @@ private struct AppearancePreviewCard: View {
         let selectedProvider = self.previewProviders.first ?? .codex
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(spacing: RunicSpacing.xxs) {
-                self.providerChip(title: "Overview", systemImage: "square.grid.2x2", tint: palette.secondary, isSelected: false)
+                self.providerChip(
+                    title: "Overview",
+                    systemImage: "square.grid.2x2",
+                    tint: palette.secondary,
+                    isSelected: false)
                 self.providerChip(
                     title: self.providerLabel(selectedProvider),
                     provider: selectedProvider,
@@ -421,15 +529,15 @@ private struct AppearancePreviewCard: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(self.providerLabel(selectedProvider))
-                        .font(self.fonts.body.weight(.bold))
+                        .font(self.previewValueFont(size: 13, weight: .bold, palette: palette))
                         .foregroundStyle(palette.primaryText)
                         .lineLimit(1)
                     Text("\(palette.displayName) · \(self.fontLabel)")
-                        .font(self.fonts.caption)
+                        .font(self.previewValueFont(size: 11, weight: .regular, palette: palette))
                         .foregroundStyle(palette.secondaryText)
                         .lineLimit(1)
                     Text("Top model · 42M tokens · 118 req")
-                        .font(self.fonts.caption2)
+                        .font(self.previewValueFont(size: 10, weight: .regular, palette: palette))
                         .foregroundStyle(palette.secondaryText)
                         .lineLimit(1)
                 }
@@ -438,7 +546,7 @@ private struct AppearancePreviewCard: View {
                 Spacer()
 
                 Text("Pro")
-                    .font(self.fonts.caption.weight(.semibold))
+                    .font(self.previewValueFont(size: 11, weight: .semibold, palette: palette))
                     .foregroundStyle(palette.primaryText)
                     .padding(.horizontal, RunicSpacing.xs)
                     .padding(.vertical, 4)
@@ -486,7 +594,11 @@ private struct AppearancePreviewCard: View {
     }
 
     private var fontLabel: String {
-        RunicFontChoice.displayName(for: self.fontFamily)
+        RunicFontChoice.displayName(for: self.previewFamily)
+    }
+
+    private var previewFamily: String {
+        RunicFontChoice.resolvedThemeFamily(self.theme.palette.style.typography.bodyFamily) ?? self.fontFamily
     }
 
     /// Theme-faithful divider for the preview tile — same branching as
@@ -523,14 +635,22 @@ private struct AppearancePreviewCard: View {
     }
 
     /// Font for value text in the preview, picking up the theme's font design
-    /// (mono for Terminal, rounded for Daybreak, system elsewhere). Bypasses
-    /// the static RunicFont.themeDesignOverride so each preview row reflects
-    /// its own theme.
+    /// (Commit Mono for Terminal, rounded for Daybreak, selected family elsewhere).
     private func previewValueFont(size: CGFloat, weight: Font.Weight, palette: RunicThemePalette) -> Font {
-        if let design = palette.fonts.swiftUIDesignOverride {
-            return .system(size: size, weight: weight, design: design)
+        let family = RunicFontChoice.resolvedThemeFamily(palette.style.typography.bodyFamily) ?? self.fontFamily
+        if self.usesVirtualSystemFamily(family), let design = palette.fonts.swiftUIDesignOverride {
+            return .system(size: size * palette.style.typography.scale, weight: weight, design: design)
         }
-        return .system(size: size, weight: weight)
+        return RunicFont.previewFont(for: family, size: size * palette.style.typography.scale).weight(weight)
+    }
+
+    private func usesVirtualSystemFamily(_ family: String) -> Bool {
+        [
+            RunicFontChoice.sfPro.id,
+            RunicFontChoice.sfMono.id,
+            RunicFontChoice.sfRounded.id,
+            RunicFontChoice.newYork.id,
+        ].contains(family)
     }
 
     private func metricPreview(title: String, value: String, color: Color, fill: CGFloat) -> some View {
@@ -547,17 +667,16 @@ private struct AppearancePreviewCard: View {
             }
 
             if palette.isTerminalHUD {
-                let blocks = max(1, Int(fill * 24))
-                HStack(spacing: 0) {
-                    Text(String(repeating: "█", count: blocks))
-                        .foregroundStyle(color)
-                    Text(String(repeating: "░", count: 24 - blocks))
-                        .foregroundStyle(palette.menuTrackColor.opacity(0.85))
+                let segmentCount = 18
+                let filled = max(1, min(segmentCount, Int(ceil(fill * CGFloat(segmentCount)))))
+                HStack(spacing: 2) {
+                    ForEach(0..<segmentCount, id: \.self) { index in
+                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                            .fill(index < filled ? color : palette.menuTrackColor.opacity(0.78))
+                            .frame(maxWidth: .infinity)
+                    }
                 }
-                .font(.system(size: 8, weight: .regular, design: .monospaced))
-                .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .clipped()
                 .frame(height: 6)
             } else {
                 GeometryReader { proxy in
@@ -577,10 +696,14 @@ private struct AppearancePreviewCard: View {
         }
         .padding(palette.density.padding(RunicSpacing.xs))
         .background(
-            RoundedRectangle(cornerRadius: self.theme.palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+            RoundedRectangle(
+                cornerRadius: self.theme.palette.shape.cornerRadius(RunicCornerRadius.sm),
+                style: .continuous)
                 .fill(self.theme.palette.menuSubtleFill))
         .overlay(
-            RoundedRectangle(cornerRadius: self.theme.palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+            RoundedRectangle(
+                cornerRadius: self.theme.palette.shape.cornerRadius(RunicCornerRadius.sm),
+                style: .continuous)
                 .stroke(self.theme.palette.menuSeparatorColor.opacity(0.72), lineWidth: 0.7))
     }
 
@@ -600,11 +723,11 @@ private struct AppearancePreviewCard: View {
                     .frame(width: 14, height: 14)
             } else if let systemImage {
                 Image(systemName: systemImage)
-                    .font(self.fonts.caption.weight(.semibold))
+                    .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
                     .foregroundStyle(tint)
             }
             Text(title)
-                .font(self.fonts.caption.weight(.semibold))
+                .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
                 .foregroundStyle(isSelected ? self.theme.palette.primaryText : self.theme.palette.secondaryText)
                 .lineLimit(1)
         }
@@ -615,21 +738,23 @@ private struct AppearancePreviewCard: View {
                 .fill(isSelected ? tint.opacity(0.24) : self.theme.palette.menuSubtleFill))
         .overlay(
             Capsule(style: .continuous)
-                .stroke(isSelected ? tint.opacity(0.55) : self.theme.palette.menuSeparatorColor.opacity(0.45), lineWidth: 0.7))
+                .stroke(
+                    isSelected ? tint.opacity(0.55) : self.theme.palette.menuSeparatorColor.opacity(0.45),
+                    lineWidth: 0.7))
     }
 
     private func actionPreviewRow(title: String, systemImage: String) -> some View {
         HStack(spacing: RunicSpacing.xs) {
             Image(systemName: systemImage)
-                .font(self.fonts.caption.weight(.semibold))
+                .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
                 .foregroundStyle(self.theme.palette.secondaryText)
                 .frame(width: 16)
             Text(title)
-                .font(self.fonts.caption.weight(.semibold))
+                .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
                 .foregroundStyle(self.theme.palette.primaryText)
             Spacer()
             Image(systemName: "chevron.right")
-                .font(self.fonts.caption2.weight(.semibold))
+                .font(self.previewValueFont(size: 10, weight: .semibold, palette: self.theme.palette))
                 .foregroundStyle(self.theme.palette.secondaryText)
         }
         .padding(.vertical, 5)
@@ -657,7 +782,12 @@ private struct TypographyRulesPreview: View {
     @Environment(\.runicTheme) private var runicTheme
 
     private var rules: RunicFontRules {
-        RunicFontRules.rules(for: self.fontFamily)
+        RunicFontRules.rules(for: self.previewFamily)
+            .applying(self.theme.palette.style.typography)
+    }
+
+    private var previewFamily: String {
+        RunicFontChoice.resolvedThemeFamily(self.theme.palette.style.typography.bodyFamily) ?? self.fontFamily
     }
 
     private var tone: RunicBackgroundTone {
@@ -669,12 +799,12 @@ private struct TypographyRulesPreview: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(RunicFontChoice.displayName(for: self.fontFamily))
-                        .font(RunicFont.previewFont(for: self.fontFamily, size: 16).weight(.semibold))
+                    Text(RunicFontChoice.displayName(for: self.previewFamily))
+                        .font(RunicFont.previewFont(for: self.previewFamily, size: 16).weight(.semibold))
                         .tracking(self.rules.letterSpacing)
                         .foregroundStyle(self.rules.contrast.color(role: .primary, on: self.tone))
                     Text("Aa 123 · tokens · context window · project spend")
-                        .font(RunicFont.previewFont(for: self.fontFamily, size: 12))
+                        .font(RunicFont.previewFont(for: self.previewFamily, size: 12))
                         .tracking(self.rules.compactLetterSpacing)
                         .lineSpacing(self.rules.lineSpacing)
                         .foregroundStyle(self.rules.contrast.color(role: .secondary, on: self.tone))
@@ -711,10 +841,18 @@ private struct TypographyRulesPreview: View {
     private var contrastSummary: String {
         switch self.tone {
         case .light:
-            "\(Int((self.rules.contrast.lightPrimaryOpacity * 100).rounded()))/\(Int((self.rules.contrast.lightSecondaryOpacity * 100).rounded()))"
+            self.contrastPair(
+                primary: self.rules.contrast.lightPrimaryOpacity,
+                secondary: self.rules.contrast.lightSecondaryOpacity)
         case .dark:
-            "\(Int((self.rules.contrast.darkPrimaryOpacity * 100).rounded()))/\(Int((self.rules.contrast.darkSecondaryOpacity * 100).rounded()))"
+            self.contrastPair(
+                primary: self.rules.contrast.darkPrimaryOpacity,
+                secondary: self.rules.contrast.darkSecondaryOpacity)
         }
+    }
+
+    private func contrastPair(primary: Double, secondary: Double) -> String {
+        "\(Int((primary * 100).rounded()))/\(Int((secondary * 100).rounded()))"
     }
 
     private func rulePill(title: String, value: String) -> some View {
@@ -755,11 +893,16 @@ private struct RunicOperationsCenterView: View {
     var body: some View {
         let health = RunicDiagnosticsReport.providerHealthRows(settings: self.settings, store: self.store)
         let recommendations = RunicDiagnosticsReport.recommendations(settings: self.settings, store: self.store)
+        let connected = health.count {
+            $0.credentialState == .connected ||
+                $0.credentialState == .configured ||
+                $0.credentialState == .local
+        }
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack(spacing: RunicSpacing.xs) {
                 self.summaryPill(
                     title: "Credentials",
-                    value: "\(health.count(where: { $0.credentialState == .connected || $0.credentialState == .configured || $0.credentialState == .local }))/\(max(health.count, 1))",
+                    value: "\(connected)/\(max(health.count, 1))",
                     systemImage: "key.horizontal")
                 self.summaryPill(
                     title: "Alerts",
@@ -781,7 +924,7 @@ private struct RunicOperationsCenterView: View {
                 if health.count > 6 {
                     Text("+ \(health.count - 6) more providers")
                         .font(self.fonts.caption2)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
                 }
             }
 
@@ -825,7 +968,7 @@ private struct RunicOperationsCenterView: View {
                 if let status = self.guardrailStatus ?? self.diagnosticsStatus {
                     Text(status)
                         .font(self.fonts.caption2)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
                 }
             }
         }
@@ -877,7 +1020,7 @@ private struct ProviderHealthCompactRow: View {
                 }
                 Text("\(self.row.credentialDetail) · \(self.row.dataDetail)")
                     .font(self.fonts.caption2)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     .lineLimit(1)
             }
 

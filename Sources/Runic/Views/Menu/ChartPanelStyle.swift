@@ -14,12 +14,12 @@ struct ChartPanelStyle: ViewModifier {
             .padding(.horizontal, MenuCardMetrics.horizontalPadding)
             .padding(.top, RunicSpacing.sm)
             .padding(.bottom, RunicSpacing.xs)
-            .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
+            .frame(width: self.width, alignment: .leading)
             .background {
                 ZStack {
                     self.runicTheme.menuSurfaceGradient
                     if self.runicTheme.isTerminalHUD {
-                        RunicTerminalScanlineOverlay(opacity: 0.90)
+                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.chartScanlineOpacity)
                     }
                 }
             }

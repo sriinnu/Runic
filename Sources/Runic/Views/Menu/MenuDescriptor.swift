@@ -243,7 +243,7 @@ struct MenuDescriptor {
         {
             let loginAction = self.switchAccountTarget(for: provider, store: store)
             let hasAccount = self.hasAccount(for: provider, store: store, account: account)
-            let accountLabel = hasAccount ? "Switch Account..." : "Add Account..."
+            let accountLabel = hasAccount ? "Switch Account…" : "Add Account…"
             entries.append(.action(accountLabel, loginAction))
         }
 
@@ -275,7 +275,7 @@ struct MenuDescriptor {
             entries.append(.action("Update ready, restart now?", .installUpdate))
         }
         entries.append(contentsOf: [
-            .action("Settings...", .settings),
+            .action("Settings…", .settings),
             .action("About Runic", .about),
             .action("Quit", .quit),
         ])

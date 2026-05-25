@@ -9,7 +9,7 @@ import LocalAuthentication
 /// Generic fetcher for custom API provider usage and balance data
 public actor GenericProviderFetcher {
     private let config: CustomProviderConfig
-    private let keychainService = "com.sriinnu.athena.Runic"
+    private let keychainService = RunicKeychainService.providerCredentials
     private let log = RunicLog.logger("generic-provider-fetcher")
 
     public init(config: CustomProviderConfig) {
@@ -249,6 +249,12 @@ public actor GenericProviderFetcher {
     /// Read token from keychain
     private func keychainToken(account: String) -> String? {
         #if canImport(Security)
+        if self.keychainService == RunicKeychainService.providerCredentials,
+           let token = ProviderCredentialKeychainMigration.token(account: account)
+        {
+            return token
+        }
+
         var result: CFTypeRef?
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -258,11 +264,7 @@ public actor GenericProviderFetcher {
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]
-        #if canImport(LocalAuthentication)
-        let authContext = LAContext()
-        authContext.interactionNotAllowed = true
-        query[kSecUseAuthenticationContext as String] = authContext
-        #endif
+        RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound {
@@ -290,6 +292,12 @@ public actor GenericProviderFetcher {
         return nil
         #endif
     }
+
+    #if DEBUG
+    public func _loadTokenForTesting() async throws -> String {
+        try await self.loadToken()
+    }
+    #endif
 
     // MARK: - Data Extraction
 

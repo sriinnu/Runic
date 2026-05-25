@@ -47,27 +47,46 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             throw ClaudeUsageLogError.noProjectsDirectory
         }
 
-        // Only scan files modified since our last scan (incremental).
-        // On first run, scans the last `maxAgeDays` worth of files.
+        // Relay scan: once the bounded window is cached, keep history frozen
+        // and scan only files touched today.
         let cache = self.cache
-        let lastScan = await cache.lastScanDate(provider: "claude")
-        let incrementalCutoff = lastScan ?? self.minDate() ?? self.now.addingTimeInterval(-86400)
-        let minDate = self.minDate()
-
-        let allFiles = self.findUsageFiles(in: projectsDirs, minDate: minDate)
-
-        // Filter to only files modified since last scan (plus today's files which may have grown).
+        let todayKey = LedgerCache.dayKey(for: self.now)
         let todayStart = Calendar.current.startOfDay(for: self.now)
+        let coveredDays = await cache.effectiveCoveredMaxAgeDays(provider: "claude") ?? 0
+        let requestedCoverageDays = self.maxAgeDays.flatMap { $0 > 0 ? $0 : nil }
+        let historyCovered = requestedCoverageDays.map { coveredDays >= $0 } ?? false
+        let needsCoverageScan = requestedCoverageDays.map { coveredDays < $0 } ?? false
+        let lastScan = await cache.lastScanDate(provider: "claude")
+        var effectiveMinDate = self.minDate()
+        if historyCovered {
+            effectiveMinDate = effectiveMinDate.map { $0 < todayStart ? todayStart : $0 } ?? todayStart
+        }
+        let scanMinDate = effectiveMinDate
+        let incrementalCutoff: Date = if historyCovered {
+            todayStart
+        } else if needsCoverageScan {
+            scanMinDate ?? .distantPast
+        } else {
+            lastScan ?? scanMinDate ?? self.now.addingTimeInterval(-86400)
+        }
+
+        let allFiles = self.findUsageFiles(in: projectsDirs, minDate: scanMinDate)
+
+        // Filter to only files modified since last scan.
         let filesToScan = allFiles.filter { file in
             guard let modDate = (try? self.fileManager
                 .attributesOfItem(atPath: file.url.path))?[.modificationDate] as? Date
             else {
                 return true
             }
-            return modDate >= incrementalCutoff || modDate >= todayStart
+            return modDate >= incrementalCutoff
         }
 
         if filesToScan.isEmpty {
+            await cache.markScanComplete(
+                provider: "claude",
+                scanDate: self.now,
+                coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
             return []
         }
 
@@ -91,7 +110,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     }
                 }
                 group.addTask {
-                    self.parseFile(file, minDate: minDate)
+                    self.parseFile(file, minDate: scanMinDate)
                 }
                 inflight += 1
             }
@@ -158,8 +177,12 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 modelsUsed: Array(bucket.models))
         }
 
-        let todayKey = LedgerCache.dayKey(for: self.now)
-        await cache.mergeDailies(provider: "claude", newDailies: cachedDailies, scanDate: self.now, todayKey: todayKey)
+        await cache.mergeDailies(
+            provider: "claude",
+            newDailies: cachedDailies,
+            scanDate: self.now,
+            todayKey: historyCovered ? todayKey : nil,
+            coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
 
         return entries
     }
@@ -168,14 +191,26 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private func parseFile(_ file: UsageFile, minDate: Date?) -> [UsageLedgerEntry] {
         var entries: [UsageLedgerEntry] = []
         do {
-            let data = try Data(contentsOf: file.url)
-            guard let content = String(data: data, encoding: .utf8) else { return [] }
             var seenKeys = Set<String>()
-            let lines = content.split(whereSeparator: \.isNewline)
-            for line in lines {
-                if let entry = self.parseLine(line, file: file, minDate: minDate, seenKeys: &seenKeys) {
+
+            func consume(_ lineData: Data) {
+                guard !lineData.isEmpty,
+                      let line = String(data: lineData, encoding: .utf8)?
+                          .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !line.isEmpty
+                else { return }
+                if let entry = self.parseLine(line[...], file: file, minDate: minDate, seenKeys: &seenKeys) {
                     entries.append(entry)
                 }
+            }
+
+            try CostUsageJsonl.scan(
+                fileURL: file.url,
+                maxLineBytes: 512 * 1024,
+                prefixBytes: 512 * 1024)
+            { line in
+                guard !line.wasTruncated else { return }
+                consume(line.bytes)
             }
         } catch {
             self.log.warning("Claude usage log read failed", metadata: [

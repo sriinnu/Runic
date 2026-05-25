@@ -15,7 +15,11 @@ struct AppDelegateTests {
             factoryCalls += 1
             return DummyStatusController()
         }
-        defer { StatusItemController.factory = StatusItemController.defaultFactory }
+        AppDelegate.duplicateInstanceCheckDisabledForTests = true
+        defer {
+            StatusItemController.factory = StatusItemController.defaultFactory
+            AppDelegate.duplicateInstanceCheckDisabledForTests = false
+        }
 
         let settings = SettingsStore(
             zaiTokenStore: NoopZaiTokenStore(),

@@ -11,7 +11,8 @@ private struct FloatingOrb: View {
     let speed: Double
     let offset: Double
     @State private var phase: Double = 0
-    private let timer = Timer.publish(every: 1 / 24.0, on: .main, in: .common).autoconnect()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let timer = Timer.publish(every: 1 / 8.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Circle()
@@ -25,7 +26,10 @@ private struct FloatingOrb: View {
             .offset(
                 x: sin(self.phase * self.speed + self.offset) * 20,
                 y: cos(self.phase * self.speed * 0.7 + self.offset) * 14)
-            .onReceive(self.timer) { _ in self.phase += 1 / 24.0 }
+            .onReceive(self.timer) { _ in
+                guard !self.reduceMotion else { return }
+                self.phase += 1 / 8.0
+            }
     }
 }
 
@@ -61,7 +65,8 @@ private struct LiquidLinkButton: View {
             .overlay(
                 Capsule(style: .continuous)
                     .strokeBorder(
-                        self.runicTheme.menuSeparatorColor.opacity(self.hovering ? 0.72 : (self.runicTheme.isTerminalHUD ? 0.34 : 0)),
+                        self.runicTheme.menuSeparatorColor
+                            .opacity(self.hovering ? 0.72 : (self.runicTheme.isTerminalHUD ? 0.34 : 0)),
                         lineWidth: self.runicTheme.isTerminalHUD ? 0.8 : 0.5))
         }
         .buttonStyle(.plain)
@@ -150,7 +155,9 @@ struct AboutPane: View {
                         Image(nsImage: image)
                             .resizable()
                             .frame(width: 96, height: 96)
-                            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xl), style: .continuous))
+                            .clipShape(RoundedRectangle(
+                                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xl),
+                                style: .continuous))
                             .shadow(
                                 color: .black.opacity(0.18),
                                 radius: self.iconHover ? 16 : 8,

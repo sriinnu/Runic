@@ -84,6 +84,35 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
+    func `parses numeric timestamps by magnitude`() throws {
+        let expectedSeconds = 1_771_828_800.0
+        let values = [
+            "1771828800",
+            "1771828800000",
+            "1771828800000000",
+            "1771828800000000000",
+        ]
+
+        for value in values {
+            let payload = """
+            {
+              "attributes": {
+                "gen_ai.system": "openai",
+                "gen_ai.request.model": "gpt-5",
+                "gen_ai.usage.input_tokens": 1,
+                "timestamp": \(value)
+              }
+            }
+            """
+            let entries = try OTelGenAILedgerAdapter.parseData(
+                Data(payload.utf8),
+                options: OTelGenAIIngestionOptions(enabled: true))
+            let entry = try #require(entries.first)
+            #expect(abs(entry.timestamp.timeIntervalSince1970 - expectedSeconds) < 0.001)
+        }
+    }
+
+    @Test
     func `feature flag disables ingestion`() throws {
         let payload = """
         {"attributes":{"gen_ai.system":"openai","gen_ai.request.model":"gpt-5","gen_ai.usage.input_tokens":1}}
@@ -263,7 +292,62 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
-    func `http ingest handler accepts otlp json requests`() async throws {
+    func `file source skips files older than hot window`() async throws {
+        let fm = FileManager.default
+        let directory = fm.temporaryDirectory
+            .appendingPathComponent("runic-otel-window-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("ingest-2026-05-23.jsonl")
+        let payload = """
+        {"timestamp":"2026-05-23T12:00:00Z","provider":"openai","model":"gpt-5","input_tokens":120}
+        """
+        try (payload + "\n").write(to: file, atomically: true, encoding: .utf8)
+        let oldDate = Date(timeIntervalSince1970: 1_769_170_800) // 2026-01-23T12:00:00Z
+        try fm.setAttributes([.modificationDate: oldDate], ofItemAtPath: file.path)
+
+        let source = OTelGenAIFileLedgerSource(
+            files: [file],
+            options: OTelGenAIIngestionOptions(enabled: true),
+            minTimestamp: oldDate.addingTimeInterval(86_400))
+
+        let entries = try await source.loadEntries()
+        #expect(entries.isEmpty)
+    }
+
+    @Test
+    func `file source rejects oversized whole json files`() async throws {
+        let fm = FileManager.default
+        let directory = fm.temporaryDirectory
+            .appendingPathComponent("runic-otel-large-json-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: directory) }
+
+        let file = directory.appendingPathComponent("ingest.json")
+        _ = fm.createFile(atPath: file.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: file)
+        try handle.truncate(atOffset: UInt64((8 * 1024 * 1024) + 1))
+        try handle.close()
+
+        let source = OTelGenAIFileLedgerSource(
+            files: [file],
+            options: OTelGenAIIngestionOptions(enabled: true))
+
+        do {
+            _ = try await source.loadEntries()
+            Issue.record("Expected oversized JSON to be rejected before whole-file parsing")
+        } catch let error as OTelGenAILedgerAdapterError {
+            if case .fileTooLarge = error {
+                #expect(true)
+            } else {
+                Issue.record("Expected fileTooLarge, got \(error)")
+            }
+        }
+    }
+
+    @Test
+    func `http ingest handler accepts otlp json requests`() async {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("runic-http-otel-\(UUID().uuidString)", isDirectory: true)
         let output = directory.appendingPathComponent("ingest.jsonl")
@@ -287,4 +371,114 @@ struct OTelGenAILedgerAdapterTests {
         #expect(text.contains(#""accepted":1"#))
         #expect(FileManager.default.fileExists(atPath: output.path))
     }
+
+    @Test
+    func `http ingest publishes one multiplexed local event`() async {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-http-events-\(UUID().uuidString)", isDirectory: true)
+        let output = directory.appendingPathComponent("ingest.jsonl")
+        let sink = OTelGenAIIngestionSink(configuration: OTelGenAICollectorConfiguration(outputFile: output))
+        let hub = RunicLocalEventHub()
+        let stream = await hub.stream(replayLatest: false)
+        var iterator = stream.makeAsyncIterator()
+        let body = """
+        {"attributes":{"gen_ai.system":"openai","gen_ai.request.model":"gpt-5","gen_ai.usage.input_tokens":1}}
+        """
+        let request = """
+        POST /v1/traces HTTP/1.1\r
+        Host: 127.0.0.1\r
+        Content-Type: application/json\r
+        Content-Length: \(Data(body.utf8).count)\r
+        \r
+        \(body)
+        """
+
+        _ = await OTelGenAIHTTPIngestHandler.handle(Data(request.utf8), sink: sink, eventHub: hub)
+        let event = await iterator.next()
+
+        #expect(event?.type == "otel.ingest")
+        #expect(event?.payload["accepted_entries"] == "1")
+        #expect(event?.payload["output_file"] == output.path)
+    }
+
+    @Test
+    func `local event hub fans out one publish to multiple subscribers`() async {
+        let hub = RunicLocalEventHub()
+        let firstStream = await hub.stream(replayLatest: false)
+        let secondStream = await hub.stream(replayLatest: false)
+        var firstIterator = firstStream.makeAsyncIterator()
+        var secondIterator = secondStream.makeAsyncIterator()
+        let event = RunicLocalEvent(id: "event-1", type: "test.event", payload: ["ok": "true"])
+
+        await hub.publish(event)
+
+        #expect(await firstIterator.next() == event)
+        #expect(await secondIterator.next() == event)
+    }
+
+    @Test
+    func `local event hub does not replay latest event by default`() async throws {
+        let hub = RunicLocalEventHub()
+        let staleEvent = RunicLocalEvent(id: "stale", type: "test.event", payload: ["stale": "true"])
+        let freshEvent = RunicLocalEvent(id: "fresh", type: "test.event", payload: ["fresh": "true"])
+
+        await hub.publish(staleEvent)
+        let stream = await hub.stream()
+        let read = Task {
+            var iterator = stream.makeAsyncIterator()
+            return await iterator.next()
+        }
+        try await Task.sleep(for: .milliseconds(20))
+        await hub.publish(freshEvent)
+
+        #expect(await read.value == freshEvent)
+    }
+
+    @Test
+    func `local event hub uses bounded newest buffering`() async {
+        let hub = RunicLocalEventHub()
+        let stream = await hub.stream(replayLatest: false, bufferingNewest: 1)
+        var iterator = stream.makeAsyncIterator()
+        let first = RunicLocalEvent(id: "first", type: "test.event", payload: ["index": "1"])
+        let second = RunicLocalEvent(id: "second", type: "test.event", payload: ["index": "2"])
+
+        await hub.publish(first)
+        await hub.publish(second)
+
+        #expect(await iterator.next() == second)
+    }
+
+    @Test
+    func `local event hub removes cancelled subscribers`() async throws {
+        let hub = RunicLocalEventHub()
+        let stream = await hub.stream(replayLatest: false)
+        let read = Task {
+            var iterator = stream.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(await hub.subscriberCount == 1)
+        read.cancel()
+        try await Task.sleep(for: .milliseconds(20))
+
+        #expect(await hub.subscriberCount == 0)
+    }
+
+    #if canImport(Network)
+    @Test
+    func `stream frames support sse and ndjson transports`() throws {
+        let event = RunicLocalEvent(id: "event-1", type: "otel.ingest", payload: ["accepted_entries": "2"])
+        let sse = try OTelGenAIHTTPCollector.frame(for: event, format: .sse)
+        let ndjson = try OTelGenAIHTTPCollector.frame(for: event, format: .ndjson)
+        let sseText = String(data: sse, encoding: .utf8) ?? ""
+        let ndjsonText = String(data: ndjson, encoding: .utf8) ?? ""
+
+        #expect(sseText.contains("id: event-1"))
+        #expect(sseText.contains("event: otel.ingest"))
+        #expect(sseText.contains(#""accepted_entries":"2""#))
+        #expect(ndjsonText.hasSuffix("\n"))
+        #expect(ndjsonText.contains(#""type":"otel.ingest""#))
+    }
+    #endif
 }

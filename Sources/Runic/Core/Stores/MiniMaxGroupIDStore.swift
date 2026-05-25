@@ -24,7 +24,7 @@ enum MiniMaxGroupIDStoreError: LocalizedError {
 struct KeychainMiniMaxGroupIDStore: MiniMaxGroupIDStoring {
     private static let log = RunicLog.logger("minimax-groupid-store")
 
-    private let service = "com.sriinnu.athena.Runic"
+    private let service = RunicKeychainService.providerCredentials
     private let account = "minimax-group-id"
 
     func loadGroupID() throws -> String? {
@@ -101,7 +101,8 @@ struct KeychainMiniMaxGroupIDStore: MiniMaxGroupIDStoring {
     }
 
     private func deleteGroupID(dataProtection: Bool) throws {
-        let query = self.baseQuery(dataProtection: dataProtection)
+        var query = self.baseQuery(dataProtection: dataProtection)
+        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
         let status = SecItemDelete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound { return }
         Self.log.error("Keychain delete failed: \(status)")

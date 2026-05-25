@@ -294,11 +294,11 @@ private func drawSettingsThemes(_ c: Canvas) {
     c.text("Appearance", 70, 74, 300, 40, size: 34, color: palette.text, weight: .bold)
     c.text("Themes and fonts preview live before you close settings.", 70, 118, 540, 26, size: 17, color: palette.secondary)
     let themes: [(String, NSColor, NSColor)] = [
+        ("Retro", NSColor.hex(0x3B5BA5), NSColor.hex(0xF2E9D4)),
         ("System", NSColor.hex(0x5B7CFA), NSColor.hex(0xF4F6F8)),
+        ("Light", NSColor.hex(0x2670EB), NSColor.hex(0xF6F8FB)),
+        ("Dark", NSColor.hex(0x8CCCFF), NSColor.hex(0x06080B)),
         ("Daybreak", daybreak.accent, daybreak.surface),
-        ("Pine", NSColor.hex(0x00F082), NSColor.hex(0x06130E)),
-        ("Nocturne", NSColor.hex(0x66A3FF), NSColor.hex(0x120F22)),
-        ("Prism", NSColor.hex(0xFF5C84), NSColor.hex(0x201735)),
         ("Glass", NSColor.hex(0x6FE8FF), NSColor.hex(0xEAFBFF)),
         ("Terminal", terminal.accent, terminal.background),
     ]
@@ -309,14 +309,14 @@ private func drawSettingsThemes(_ c: Canvas) {
         let y = CGFloat(180 + row * 170)
         c.rounded(item.2, x, y, 290, 130, radius: 20, stroke: item.0 == "Daybreak" ? item.1 : palette.stroke.withAlphaComponent(0.45), lineWidth: item.0 == "Daybreak" ? 3 : 1)
         c.circle(item.1, centerX: x + 44, centerY: y + 42, radius: 18)
-        let darkTile = ["Terminal", "Pine", "Nocturne", "Prism"].contains(item.0)
+        let darkTile = ["Terminal", "Dark"].contains(item.0)
         c.text(item.0, x + 76, y + 30, 170, 28, size: 22, color: darkTile ? NSColor.hex(0xD7FCE8) : palette.text, weight: .bold)
         c.text("Aa 123 - preview", x + 28, y + 80, 230, 26, size: 17, color: darkTile ? terminal.secondary : palette.secondary, monospaced: item.0 == "Terminal")
     }
 
     c.rounded(palette.card, 70, 700, c.width - 140, 210, radius: 22, stroke: palette.stroke.withAlphaComponent(0.45))
     c.text("Fonts", 104, 736, 200, 30, size: 26, color: palette.text, weight: .bold)
-    let fonts = ["SF Pro", "SF Rounded", "New York", "Avenir Next", "Menlo", "DIN Alternate", "Optima", "JetBrains Mono"]
+    let fonts = ["Mona Sans", "SF Pro", "SF Rounded", "New York", "SF Mono", "Geist", "Commit Mono", "Geist Mono"]
     for (i, font) in fonts.enumerated() {
         let x = CGFloat(104 + (i % 4) * 230)
         let y = CGFloat(792 + (i / 4) * 62)

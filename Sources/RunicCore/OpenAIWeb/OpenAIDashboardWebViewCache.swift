@@ -28,7 +28,8 @@ final class OpenAIDashboardWebViewCache {
     }
 
     private var entries: [ObjectIdentifier: Entry] = [:]
-    private let idleTimeout: TimeInterval = 10 * 60
+    private var pruneTask: Task<Void, Never>?
+    private let idleTimeout: TimeInterval = 90
 
     func acquire(
         websiteDataStore: WKWebsiteDataStore,
@@ -36,6 +37,7 @@ final class OpenAIDashboardWebViewCache {
         logger: ((String) -> Void)?) async throws -> OpenAIDashboardWebViewLease
     {
         let now = Date()
+        self.pruneTask?.cancel()
         self.prune(now: now)
 
         let log: (String) -> Void = { message in
@@ -81,6 +83,7 @@ final class OpenAIDashboardWebViewCache {
                     entry.lastUsedAt = Date()
                     entry.host.hide()
                     self.prune(now: Date())
+                    self.scheduleIdlePrune()
                 })
         }
 
@@ -106,6 +109,7 @@ final class OpenAIDashboardWebViewCache {
                 entry.lastUsedAt = Date()
                 entry.host.hide()
                 self.prune(now: Date())
+                self.scheduleIdlePrune()
             })
     }
 
@@ -117,11 +121,24 @@ final class OpenAIDashboardWebViewCache {
 
     private func prune(now: Date) {
         let expired = self.entries.filter { _, entry in
-            !entry.isBusy && now.timeIntervalSince(entry.lastUsedAt) > self.idleTimeout
+            !entry.isBusy && now.timeIntervalSince(entry.lastUsedAt) >= self.idleTimeout
         }
         for (key, entry) in expired {
             entry.host.close()
             self.entries.removeValue(forKey: key)
+        }
+    }
+
+    private func scheduleIdlePrune() {
+        self.pruneTask?.cancel()
+        let delay = self.idleTimeout
+        self.pruneTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard let self else { return }
+            self.prune(now: Date())
+            if self.entries.contains(where: { !$0.value.isBusy }) {
+                self.scheduleIdlePrune()
+            }
         }
     }
 

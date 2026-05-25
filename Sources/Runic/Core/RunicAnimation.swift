@@ -30,11 +30,6 @@ enum RunicAnimation {
     /// Fade-out duration for copy confirmation revert.
     static let copyFeedbackFadeOut: Animation = .easeOut(duration: 0.2)
 
-    // MARK: - Skeleton / Loading
-
-    /// Continuous shimmer animation for loading skeletons.
-    static let shimmer: Animation = .easeInOut(duration: 1.5).repeatForever(autoreverses: false)
-
     /// Subtle hover feedback on interactive elements.
     static let hoverFeedback: Animation = .easeInOut(duration: 0.15)
 

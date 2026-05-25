@@ -370,17 +370,20 @@ public final class PerformanceStorageImpl {
         try self.execute("VACUUM")
     }
 
-    public func deleteOldData(olderThan days: Int) async throws {
+    public func deleteOldData(olderThan days: Int, aggregatedStatsOlderThanYears years: Int? = nil) async throws {
         try self.open()
 
         let cutoffDate = Date().addingTimeInterval(-Double(days) * 24 * 60 * 60)
         let cutoffTimestamp = cutoffDate.timeIntervalSince1970
 
-        let queries = [
+        var queries = [
             "DELETE FROM latency_metrics WHERE created_at < \(cutoffTimestamp)",
             "DELETE FROM quality_ratings WHERE timestamp < \(cutoffTimestamp)",
             "DELETE FROM error_events WHERE timestamp < \(cutoffTimestamp)",
         ]
+        if let years {
+            queries.append("DELETE FROM daily_stats WHERE date < date('now', '-\(years) years')")
+        }
 
         for query in queries {
             try self.execute(query)

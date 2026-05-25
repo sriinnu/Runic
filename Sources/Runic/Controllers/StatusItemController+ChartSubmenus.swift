@@ -412,6 +412,7 @@ extension StatusItemController {
             dailySummaries: dailySummaries,
             hourlySummaries: hourlySummaries,
             width: width,
+            chartStyle: self.settings.chartStyle,
             onRangeChange: { [weak self] range in
                 self?.store.ensureLedgerHistoryCovers(days: range.days)
             }))

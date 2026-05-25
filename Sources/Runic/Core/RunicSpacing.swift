@@ -1,8 +1,8 @@
 import Foundation
 
 /// **Runic Spacing System**
-/// Defines global spacing constants following a 4pt grid system.
-/// All spacing values are multiples of 4 for consistent visual rhythm.
+/// Defines global spacing constants on a 4pt grid, with tiny optical
+/// correction tokens for borders, glyph alignment, and compact controls.
 enum RunicSpacing {
     // MARK: - Base Spacing Scale
 
@@ -43,6 +43,45 @@ enum RunicSpacing {
 
     /// Spacing between major sections
     static let sectionSpacing: CGFloat = lg // 24pt
+
+    // MARK: - Menu Surface Spacing
+
+    /// Outer inset for the menu popover content.
+    static let menuOuterInset: CGFloat = md // 16pt
+
+    /// Consistent inner inset for popover cards and panels.
+    static let menuPanelInset: CGFloat = sm // 12pt
+
+    /// Gap between sibling popover panels.
+    static let menuPanelSpacing: CGFloat = sm // 12pt
+
+    /// Gap between controls inside a popover panel.
+    static let menuControlSpacing: CGFloat = xs // 8pt
+
+    /// Small inset for section bodies inside a popover panel.
+    static let menuPanelBodyInset: CGFloat = xs // 8pt
+
+    /// Shared icon column width for menu rows and compact actions.
+    static let menuIconColumnWidth: CGFloat = 20
+
+    /// Compact icon column for action-list rows inside popover panels.
+    static let menuActionIconColumnWidth: CGFloat = 16
+
+    /// Tight icon-to-label gap for action-list rows.
+    static let menuActionIconTextSpacing: CGFloat = xxs // 4pt
+
+    /// Horizontal padding inside popover row controls.
+    static let menuControlHorizontalPadding: CGFloat = xs // 8pt
+
+    /// Leading offset from a panel's content edge to the readable text column.
+    static let menuReadableColumnOffset: CGFloat =
+        menuControlHorizontalPadding + menuIconColumnWidth + menuControlSpacing
+
+    /// Leading inset for section titles inside menu cards.
+    static let menuSectionHeaderInset: CGFloat = menuActionIconColumnWidth + menuActionIconTextSpacing
+
+    /// Vertical padding inside popover row controls.
+    static let menuControlVerticalPadding: CGFloat = xxs + xxxs // 6pt
 
     // MARK: - Preferences Spacing
 

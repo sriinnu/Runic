@@ -267,7 +267,6 @@ final class SettingsStore {
     var launchAtLogin: Bool {
         didSet {
             self.userDefaults.set(self.launchAtLogin, forKey: "launchAtLogin")
-            LaunchAtLoginManager.setEnabled(self.launchAtLogin)
         }
     }
 
@@ -338,7 +337,7 @@ final class SettingsStore {
         didSet {
             self.userDefaults.set(self.theme.rawValue, forKey: "theme")
             RunicApp.applyTheme(self.theme)
-            RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+            RunicFont.applyTheme(self.theme.palette)
             IconRenderer.themePalette = self.theme.palette
             self.bumpVisualSettingsRevision()
         }
@@ -346,6 +345,10 @@ final class SettingsStore {
 
     var selectedFontFamily: String {
         didSet {
+            let migrated = RunicFontChoice.migratedFamily(self.selectedFontFamily)
+            if migrated != self.selectedFontFamily {
+                self.selectedFontFamily = migrated
+            }
             self.userDefaults.set(self.selectedFontFamily, forKey: "selectedFontFamily")
             RunicFont.family = self.selectedFontFamily
             self.bumpVisualSettingsRevision()
@@ -415,6 +418,8 @@ final class SettingsStore {
     var openAIWebAccessEnabled: Bool {
         didSet { self.userDefaults.set(self.openAIWebAccessEnabled, forKey: "openAIWebAccessEnabled") }
     }
+
+    var providerCredentialMigrationNotice: String?
 
     private var codexUsageDataSourceRaw: String? {
         didSet {
@@ -786,6 +791,7 @@ final class SettingsStore {
         _ = self.claudeWebExtrasEnabled
         _ = self.showOptionalCreditsAndExtraUsage
         _ = self.openAIWebAccessEnabled
+        _ = self.providerCredentialMigrationNotice
         _ = self.codexUsageDataSource
         _ = self.claudeUsageDataSource
         _ = self.mergeIcons
@@ -989,7 +995,12 @@ final class SettingsStore {
             self.theme = Theme.default
             userDefaults.set(Theme.default.rawValue, forKey: "theme")
         }
-        self.selectedFontFamily = userDefaults.string(forKey: "selectedFontFamily") ?? "Fira Code"
+        let storedSelectedFont = userDefaults.string(forKey: "selectedFontFamily")
+        let migratedSelectedFont = RunicFontChoice.migratedFamily(storedSelectedFont)
+        self.selectedFontFamily = migratedSelectedFont
+        if (storedSelectedFont ?? "") != migratedSelectedFont {
+            userDefaults.set(migratedSelectedFont, forKey: "selectedFontFamily")
+        }
         self.menuBarShowsBrandIconWithPercent = userDefaults.object(
             forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
         self.menuBarVibrantIconEnabled = userDefaults.object(
@@ -1031,41 +1042,52 @@ final class SettingsStore {
         self.bedrockModelID = userDefaults.string(forKey: "bedrockModelID") ?? ""
         self.vertexaiProject = userDefaults.string(forKey: "vertexaiProject") ?? ""
         self.vertexaiLocation = userDefaults.string(forKey: "vertexaiLocation") ?? ""
-        self.zaiAPIToken = (try? zaiTokenStore.loadToken()) ?? ""
-        self.minimaxAPIToken = (try? minimaxTokenStore.loadToken()) ?? ""
-        self.minimaxCookieHeader = (try? minimaxCookieHeaderStore.loadHeader()) ?? ""
-        self.minimaxGroupID = (try? minimaxGroupIDStore.loadGroupID()) ?? ""
-        self.copilotAPIToken = (try? copilotTokenStore.loadToken()) ?? ""
-        self.openRouterAPIToken = (try? openRouterTokenStore.loadToken()) ?? ""
-        self.vercelAIAPIToken = (try? vercelAITokenStore.loadToken()) ?? ""
-        self.groqAPIToken = (try? groqTokenStore.loadToken()) ?? ""
-        self.deepSeekAPIToken = (try? deepSeekTokenStore.loadToken()) ?? ""
-        self.fireworksAPIToken = (try? fireworksTokenStore.loadToken()) ?? ""
-        self.mistralAPIToken = (try? mistralTokenStore.loadToken()) ?? ""
-        self.perplexityAPIToken = (try? perplexityTokenStore.loadToken()) ?? ""
-        self.kimiAPIToken = (try? kimiTokenStore.loadToken()) ?? ""
-        self.auggieAPIToken = (try? auggieTokenStore.loadToken()) ?? ""
-        self.togetherAPIToken = (try? togetherTokenStore.loadToken()) ?? ""
-        self.cohereAPIToken = (try? cohereTokenStore.loadToken()) ?? ""
-        self.xaiAPIToken = (try? xaiTokenStore.loadToken()) ?? ""
-        self.cerebrasAPIToken = (try? cerebrasTokenStore.loadToken()) ?? ""
-        self.sambaNovaAPIToken = (try? sambaNovaTokenStore.loadToken()) ?? ""
-        self.qwenAPIToken = (try? qwenTokenStore.loadToken()) ?? ""
-        self.azureOpenAIAPIToken = (try? azureOpenAITokenStore.loadToken()) ?? ""
+        let credentialMigration = ProviderCredentialKeychainMigration.migrateKnownLegacyItems()
+        if credentialMigration.needsUserRepair {
+            let blocked = credentialMigration.blockedAccounts.count
+            let failed = credentialMigration.failedAccounts.count
+            self.providerCredentialMigrationNotice =
+                "Some saved provider keys need a one-time re-save after keychain hardening " +
+                "(\(blocked) blocked, \(failed) failed). Re-save affected API keys below; Runic will not prompt in the background."
+        }
+        // Keep secrets cold at startup; provider fetchers read keychain values
+        // only when needed so relaunch never summons SecurityAgent.
+        self.zaiAPIToken = ""
+        self.minimaxAPIToken = ""
+        self.minimaxCookieHeader = ""
+        self.minimaxGroupID = ""
+        self.copilotAPIToken = ""
+        self.openRouterAPIToken = ""
+        self.vercelAIAPIToken = ""
+        self.groqAPIToken = ""
+        self.deepSeekAPIToken = ""
+        self.fireworksAPIToken = ""
+        self.mistralAPIToken = ""
+        self.perplexityAPIToken = ""
+        self.kimiAPIToken = ""
+        self.auggieAPIToken = ""
+        self.togetherAPIToken = ""
+        self.cohereAPIToken = ""
+        self.xaiAPIToken = ""
+        self.cerebrasAPIToken = ""
+        self.sambaNovaAPIToken = ""
+        self.qwenAPIToken = ""
+        self.azureOpenAIAPIToken = ""
         let selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
         self.selectedMenuProviderRaw = selectedMenuProviderRaw.flatMap { UsageProvider(rawValue: $0)?.rawValue }
         self.providerDetectionCompleted = userDefaults.object(
             forKey: "providerDetectionCompleted") as? Bool ?? false
         self.toggleStore = ProviderToggleStore(userDefaults: userDefaults)
         self.toggleStore.purgeLegacyKeys()
-        LaunchAtLoginManager.setEnabled(self.launchAtLogin)
+        // Do not re-register login items during startup; macOS can surface a password prompt.
+        // The didSet hook above handles explicit user changes from Preferences.
         self.runInitialProviderDetectionIfNeeded()
         self.applyTokenCostDefaultIfNeeded()
         if self.claudeUsageDataSource != .cli {
             self.claudeWebExtrasEnabled = false
         }
         RunicFont.family = self.selectedFontFamily
-        RunicFont.themeDesignOverride = self.theme.palette.fonts.swiftUIDesignOverride
+        RunicFont.applyTheme(self.theme.palette)
         IconRenderer.themePalette = self.theme.palette
     }
 
@@ -1084,6 +1106,13 @@ final class SettingsStore {
         var order = self.orderedProviders()
         order.move(fromOffsets: fromOffsets, toOffset: toOffset)
         self.providerOrderRaw = order.map(\.rawValue)
+    }
+
+    @MainActor
+    func setLaunchAtLoginFromPreferences(_ enabled: Bool) {
+        guard self.launchAtLogin != enabled else { return }
+        self.launchAtLogin = enabled
+        LaunchAtLoginManager.setEnabled(enabled)
     }
 
     func isProviderEnabled(provider: UsageProvider, metadata: ProviderMetadata) -> Bool {
@@ -1839,6 +1868,7 @@ enum LaunchAtLoginManager {
             if service.status == .enabled { return }
             try? service.register()
         } else {
+            if service.status != .enabled { return }
             try? service.unregister()
         }
     }

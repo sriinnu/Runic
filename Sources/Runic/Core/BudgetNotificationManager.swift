@@ -10,6 +10,21 @@ final class BudgetNotificationManager {
 
     /// UserDefaults key prefix for tracking which breaches have already been notified.
     private static let notifiedKeyPrefix = "budgetBreachNotified-"
+    private static let thresholdNotifiedKeyPrefix = "budgetThresholdNotified-"
+
+    enum NotificationReason: Equatable { case threshold, breach }
+
+    struct NotificationCandidate: Equatable {
+        let notificationKey: String
+        let idPrefix: String
+        let title: String
+        let body: String
+        let provider: UsageProvider
+        let projectKey: String
+        let limitUSD: Double
+        let projectedUSD: Double
+        let reason: NotificationReason
+    }
 
     /// The calendar month key used to scope notifications (e.g. "2026-03").
     /// Notifications reset each month so users are re-notified in new billing cycles.
@@ -35,47 +50,98 @@ final class BudgetNotificationManager {
         guard settings.budgetNotificationsEnabled else { return }
 
         let monthKey = self.currentMonthKey
+        let candidates = Self.notificationCandidates(
+            forecasts: forecasts,
+            budgets: ProjectBudgetStore.getAllBudgets(),
+            monthKey: monthKey,
+            wasNotified: { UserDefaults.standard.bool(forKey: $0) })
+
+        for candidate in candidates {
+            self.logger.info(
+                "posting budget notification",
+                metadata: [
+                    "provider": candidate.provider.rawValue,
+                    "project": candidate.projectKey,
+                    "limit": UsageFormatter.usdString(candidate.limitUSD),
+                    "projected": UsageFormatter.usdString(candidate.projectedUSD),
+                    "reason": "\(candidate.reason)",
+                ])
+
+            AppNotifications.shared.post(
+                idPrefix: candidate.idPrefix,
+                title: candidate.title,
+                body: candidate.body)
+
+            UserDefaults.standard.set(true, forKey: candidate.notificationKey)
+        }
+    }
+
+    static func notificationCandidates(
+        forecasts: [UsageProvider: [UsageLedgerSpendForecast]],
+        budgets: [ProjectBudgetStore.ProjectBudget],
+        monthKey: String,
+        wasNotified: (String) -> Bool) -> [NotificationCandidate]
+    {
+        var candidates: [NotificationCandidate] = []
+
         for (provider, providerForecasts) in forecasts {
             for forecast in providerForecasts {
-                guard forecast.budgetWillBreach else { continue }
-                guard let budgetLimit = forecast.budgetLimitUSD, budgetLimit > 0 else { continue }
-
                 let projectKey = forecast.projectKey ?? forecast.projectID ?? "global"
-                let notificationKey = Self.notifiedKeyPrefix + "\(monthKey)-\(provider.rawValue)-\(projectKey)"
-
-                // Skip if already notified this month for this project
-                if UserDefaults.standard.bool(forKey: notificationKey) {
-                    continue
+                let budget = budgets.first { budget in
+                    guard budget.enabled else { return false }
+                    return budget.projectID == projectKey
+                        || budget.projectID == forecast.projectID
+                        || budget.projectID == forecast.projectKey
                 }
+                let budgetLimit = budget?.monthlyLimit ?? forecast.budgetLimitUSD
+                guard let budgetLimit, budgetLimit > 0 else { continue }
 
                 let projectName = forecast.projectName
                     ?? forecast.projectID
                     ?? ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName
+                let idPrefix = "budget-\(provider.rawValue)-\(projectKey)"
+                let projected = forecast.projected30DayCostUSD
 
-                let overshoot = forecast.projected30DayCostUSD - budgetLimit
-                let limitStr = UsageFormatter.usdString(budgetLimit)
-                let overshootStr = UsageFormatter.usdString(max(0, overshoot))
+                if forecast.budgetWillBreach || projected > budgetLimit {
+                    let notificationKey = Self.notifiedKeyPrefix + "\(monthKey)-\(provider.rawValue)-\(projectKey)"
+                    guard !wasNotified(notificationKey) else { continue }
+                    let overshoot = projected - budgetLimit
+                    let limitStr = UsageFormatter.usdString(budgetLimit)
+                    let overshootStr = UsageFormatter.usdString(max(0, overshoot))
+                    candidates.append(NotificationCandidate(
+                        notificationKey: notificationKey,
+                        idPrefix: idPrefix,
+                        title: "Budget Alert: \(projectName)",
+                        body: "Projected to exceed \(limitStr) limit by \(overshootStr) this month",
+                        provider: provider,
+                        projectKey: projectKey,
+                        limitUSD: budgetLimit,
+                        projectedUSD: projected,
+                        reason: .breach))
+                    continue
+                }
 
-                let title = "Budget Alert: \(projectName)"
-                let body = "Projected to exceed \(limitStr) limit by \(overshootStr) this month"
+                guard let budget else { continue }
+                let threshold = min(1, max(0.01, budget.alertThreshold))
+                guard projected >= budgetLimit * threshold else { continue }
+                let thresholdKey = Int((threshold * 100).rounded())
+                let notificationKey = Self.thresholdNotifiedKeyPrefix
+                    + "\(monthKey)-\(provider.rawValue)-\(projectKey)-\(thresholdKey)"
+                guard !wasNotified(notificationKey) else { continue }
 
-                self.logger.info(
-                    "posting budget breach notification",
-                    metadata: [
-                        "provider": provider.rawValue,
-                        "project": projectKey,
-                        "limit": limitStr,
-                        "projected": UsageFormatter.usdString(forecast.projected30DayCostUSD),
-                    ])
-
-                AppNotifications.shared.post(
-                    idPrefix: "budget-\(provider.rawValue)-\(projectKey)",
-                    title: title,
-                    body: body)
-
-                // Mark as notified for this month
-                UserDefaults.standard.set(true, forKey: notificationKey)
+                candidates.append(NotificationCandidate(
+                    notificationKey: notificationKey,
+                    idPrefix: idPrefix,
+                    title: "Budget Watch: \(projectName)",
+                    body: "Projected to reach \(UsageFormatter.usdString(projected)) of \(UsageFormatter.usdString(budgetLimit)) limit (\(thresholdKey)% alert threshold)",
+                    provider: provider,
+                    projectKey: projectKey,
+                    limitUSD: budgetLimit,
+                    projectedUSD: projected,
+                    reason: .threshold))
             }
         }
+
+        return candidates
     }
 }

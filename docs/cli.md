@@ -57,18 +57,20 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 
 ### Insights usage sources
 
-`runic insights` reads Claude/Codex local JSONL ledgers directly. Other providers, including `local-llm`, are included when OpenTelemetry GenAI JSON/JSONL files are configured through `RUNIC_OTEL_GENAI_LOG_PATHS`, `RUNIC_OTEL_GENAI_LOG_PATH`, or provider-specific variables such as `RUNIC_LOCAL_LLM_OTEL_GENAI_LOG_PATHS`. Runic also reads its default local collector ledger at `~/Library/Application Support/Runic/otel-genai/ingest.jsonl` automatically when present.
+`runic insights` reads Claude/Codex local JSONL ledgers directly. Other providers, including `local-llm`, are included when OpenTelemetry GenAI JSON/JSONL files are configured through `RUNIC_OTEL_GENAI_LOG_PATHS`, `RUNIC_OTEL_GENAI_LOG_PATH`, or provider-specific variables such as `RUNIC_LOCAL_LLM_OTEL_GENAI_LOG_PATHS`. Runic also reads daily default collector ledgers at `~/Library/Application Support/Runic/otel-genai/ingest-YYYY-MM-DD.jsonl` automatically when present.
 
 Supported insight views: `daily`, `session`, `blocks`, `models`, `projects`, `compaction`, `comparative`, and `efficiency`.
 
 ### Local OTLP JSON collector
 
-`runic otel-collect` gives local apps a simple OTLP/HTTP JSON endpoint for GenAI usage. It accepts JSON at `/v1/traces` and `/v1/logs`, sanitizes spans down to metric fields, and writes JSONL to Runic's default ledger. Prompt and response content is not persisted.
+`runic otel-collect` gives local apps a simple OTLP/HTTP JSON endpoint for GenAI usage. It accepts JSON at `/v1/traces` and `/v1/logs`, sanitizes spans down to metric fields, and writes JSONL to Runic's default ledger. Prompt and response content is not persisted. The same process exposes one multiplexed local event stream at `/events` and `/v1/events`; use `Accept: text/event-stream` for SSE or `Accept: application/x-ndjson` for streamable HTTP.
 
 ```bash
 runic otel-collect --port 4318
 runic otel-collect --once --input ./otel-payload.json
 cat ./otel-payload.json | runic otel-collect --once --input -
+curl -N -H 'Accept: text/event-stream' http://127.0.0.1:4318/events
+curl -N -H 'Accept: application/x-ndjson' http://127.0.0.1:4318/v1/events
 runic insights --provider vercelai --view models --json --pretty
 ```
 

@@ -5,45 +5,43 @@ import SwiftUI
 
 @MainActor
 struct LiquidMeshBackground: View {
-    @State private var phase: Double = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.runicTheme) private var runicTheme
 
-    @ViewBuilder
     var body: some View {
         if self.runicTheme.isTerminalHUD {
             ZStack {
                 self.runicTheme.menuSurfaceGradient
-                RunicTerminalScanlineOverlay(opacity: 1.0)
+                RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
             }
         } else {
-            TimelineView(.animation(minimumInterval: 1 / 30.0, paused: self.reduceMotion)) { timeline in
-                Canvas { context, size in
-                    let t = self.reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                    let cx = size.width / 2
-                    let cy = size.height / 2
-                    let palette = self.runicTheme.meshColors
-
-                    for (i, color) in palette.enumerated() {
-                        let fi = Double(i)
-                        let angle = t * (0.12 + fi * 0.03) + fi * 1.25
-                        let r = min(cx, cy) * (0.28 + 0.18 * sin(t * 0.15 + fi * 0.9))
-                        let x = cx + cos(angle) * r * 0.6
-                        let y = cy + sin(angle) * r * 0.5
-                        let blob = min(size.width, size.height) * (0.52 + 0.12 * sin(t * 0.2 + fi))
-
-                        let rect = CGRect(x: x - blob / 2, y: y - blob / 2, width: blob, height: blob)
-                        context.fill(
-                            Ellipse().path(in: rect),
-                            with: .radialGradient(
-                                Gradient(colors: [color.opacity(0.35), color.opacity(0.08), color.opacity(0)]),
-                                center: CGPoint(x: x, y: y),
-                                startRadius: 0,
-                                endRadius: blob / 2))
-                    }
-                }
-                .blur(radius: 40)
+            Canvas { context, size in
+                self.drawMesh(context: context, size: size)
             }
+            .blur(radius: 36)
+        }
+    }
+
+    private func drawMesh(context: GraphicsContext, size: CGSize) {
+        let cx = size.width / 2
+        let cy = size.height / 2
+        let palette = self.runicTheme.meshColors
+
+        for (index, color) in palette.enumerated() {
+            let fi = Double(index)
+            let angle = fi * 1.42
+            let r = min(cx, cy) * (0.32 + 0.08 * sin(fi * 0.9))
+            let x = cx + cos(angle) * r * 0.72
+            let y = cy + sin(angle) * r * 0.58
+            let blob = min(size.width, size.height) * (0.50 + 0.08 * sin(fi))
+
+            let rect = CGRect(x: x - blob / 2, y: y - blob / 2, width: blob, height: blob)
+            context.fill(
+                Ellipse().path(in: rect),
+                with: .radialGradient(
+                    Gradient(colors: [color.opacity(0.35), color.opacity(0.08), color.opacity(0)]),
+                    center: CGPoint(x: x, y: y),
+                    startRadius: 0,
+                    endRadius: blob / 2))
         }
     }
 }
@@ -54,6 +52,7 @@ struct LiquidMeshBackground: View {
 private struct CursorSpotlight: View {
     let cursorPoint: UnitPoint
     let isActive: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -68,7 +67,7 @@ private struct CursorSpotlight: View {
                     y: geo.size.height > 0 ? max(0, min(1, self.cursorPoint.y)) : 0.5),
                 startRadius: 0,
                 endRadius: 160)
-                .animation(.easeOut(duration: 0.15), value: self.isActive)
+                .animation(self.reduceMotion ? nil : .easeOut(duration: 0.15), value: self.isActive)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -83,10 +82,11 @@ private struct ShimmerSweep: View {
     @State private var offset: CGFloat = -0.4
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let stableDelay: Double
+    let isActive: Bool
 
     var body: some View {
         GeometryReader { geo in
-            if !self.reduceMotion {
+            if self.isActive, !self.reduceMotion {
                 LinearGradient(
                     colors: [
                         .clear,
@@ -105,14 +105,18 @@ private struct ShimmerSweep: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .onAppear {
-            guard !self.reduceMotion else { return }
-            withAnimation(
-                .easeInOut(duration: 2.8)
-                    .repeatForever(autoreverses: false)
-                    .delay(self.stableDelay))
-            {
-                self.offset = 1.4
-            }
+            self.startIfNeeded()
+        }
+        .onChange(of: self.isActive) { _, _ in
+            self.startIfNeeded()
+        }
+    }
+
+    private func startIfNeeded() {
+        guard self.isActive, !self.reduceMotion else { return }
+        self.offset = -0.4
+        withAnimation(.easeInOut(duration: 1.2).delay(self.stableDelay)) {
+            self.offset = 1.4
         }
     }
 }
@@ -136,7 +140,7 @@ private struct RotatingGradientBorder: View {
 
     var body: some View {
         if self.isActive, !self.reduceMotion {
-            TimelineView(.animation(minimumInterval: 1 / 60.0, paused: !self.isActive)) { timeline in
+            TimelineView(.periodic(from: .now, by: 1 / 12.0)) { timeline in
                 let rotation = timeline.date.timeIntervalSinceReferenceDate * 72
                 RoundedRectangle(cornerRadius: self.cornerRadius, style: .continuous)
                     .strokeBorder(
@@ -165,43 +169,52 @@ private struct LiquidGlassCore: ViewModifier {
     func body(content: Content) -> some View {
         let isGlassTheme = self.runicTheme.id == "glass"
         let isTerminalHUD = self.runicTheme.isTerminalHUD
+        let cornerRadius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
+        let shadowColor = self.hovering
+            ? self.runicTheme.accent.opacity(isTerminalHUD ? 0.16 : (isGlassTheme ? 0.22 : 0.10))
+            : .black.opacity(isTerminalHUD ? 0.22 : (isGlassTheme ? 0.18 : 0.04))
+        let shadowRadius: CGFloat = self.hovering
+            ? (isTerminalHUD ? 6 : (isGlassTheme ? 18 : 12))
+            : (isTerminalHUD ? 3 : (isGlassTheme ? 10 : 4))
+        let shadowY: CGFloat = self.hovering ? (isTerminalHUD ? 3 : 6) : 2
+        let borderWidth = isTerminalHUD
+            ? self.runicTheme.style.chrome.borderWeight
+            : (isGlassTheme ? 0.9 : 0.5)
         content
             .padding(RunicSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 ZStack {
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(self.runicTheme.cardBackgroundStyle)
 
-                    if !isTerminalHUD {
-                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                    if !isTerminalHUD, self.runicTheme.style.effects.materialIntensity > 0.05 {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(.ultraThinMaterial)
+                            .opacity(self.runicTheme.style.effects.materialIntensity)
                             .overlay(
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
-                                    .fill(self.runicTheme.cardFill.opacity(isGlassTheme ? 1.0 : 0.45)))
+                                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                                    .fill(self.runicTheme.cardFill.opacity(isGlassTheme ? 0.92 : 0.36)))
                     }
 
                     if isTerminalHUD {
-                        RunicTerminalScanlineOverlay(opacity: 0.65)
-                            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
+                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity * 0.55)
+                            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                     }
                 }
-                    .shadow(
-                        color: self.hovering
-                            ? self.runicTheme.accent.opacity(isTerminalHUD ? 0.28 : (isGlassTheme ? 0.22 : 0.12))
-                            : .black.opacity(isTerminalHUD ? 0.30 : (isGlassTheme ? 0.18 : 0.04)),
-                        radius: self.hovering ? (isTerminalHUD ? 10 : (isGlassTheme ? 18 : 12)) : (isTerminalHUD ? 4 : (isGlassTheme ? 10 : 4)),
-                        y: self.hovering ? (isTerminalHUD ? 3 : 6) : 2)
+                .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
             }
             .overlay(
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
                             colors: isTerminalHUD
                                 ? [
-                                    self.runicTheme.accent.opacity(self.hovering ? 0.82 : 0.50),
-                                    self.runicTheme.highlight.opacity(self.hovering ? 0.60 : 0.34),
-                                    self.runicTheme.accent.opacity(self.hovering ? 0.72 : 0.42),
+                                    self.runicTheme.accent.opacity(
+                                        self.hovering ? 0.56 : self.runicTheme.style.chrome.borderOpacity),
+                                    self.runicTheme.highlight.opacity(self.hovering ? 0.34 : 0.18),
+                                    self.runicTheme.accent.opacity(
+                                        self.hovering ? 0.46 : self.runicTheme.style.chrome.borderOpacity * 0.8),
                                 ]
                                 : [
                                     self.runicTheme.highlight.opacity(self.hovering ? 0.26 : 0.12),
@@ -210,12 +223,18 @@ private struct LiquidGlassCore: ViewModifier {
                                 ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing),
-                        lineWidth: isTerminalHUD ? 0.9 : (isGlassTheme ? 0.9 : 0.5)))
+                        lineWidth: borderWidth))
             .overlay {
                 if isTerminalHUD {
-                    RunicTerminalCornerOverlay(inset: 2, length: 13, lineWidth: 1.2, opacity: self.hovering ? 0.90 : 0.62)
+                    RunicTerminalCornerOverlay(
+                        inset: 2,
+                        length: 11,
+                        lineWidth: self.runicTheme.style.chrome.borderWeight,
+                        opacity: self.hovering ? 0.46 : 0.22)
                 } else {
-                    RotatingGradientBorder(cornerRadius: RunicCornerRadius.lg, isActive: self.hovering || isGlassTheme)
+                    RotatingGradientBorder(
+                        cornerRadius: RunicCornerRadius.lg,
+                        isActive: self.hovering && isGlassTheme)
                 }
             }
             .overlay {
@@ -229,15 +248,17 @@ private struct LiquidGlassCore: ViewModifier {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
                 if !isTerminalHUD {
-                    ShimmerSweep(stableDelay: Double(self.shimmerIndex) * 0.8 + 1.0)
-                        .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
+                    ShimmerSweep(
+                        stableDelay: Double(self.shimmerIndex) * 0.8 + 1.0,
+                        isActive: self.hovering && isGlassTheme)
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                 }
             }
             .scaleEffect(self.hovering && !self.reduceMotion && !isTerminalHUD ? 1.01 : 1.0)
-            .animation(.spring(response: 0.35, dampingFraction: 0.72), value: self.hovering)
+            .animation(self.reduceMotion ? nil : self.runicTheme.motion.curve, value: self.hovering)
             .background(
                 GeometryReader { geo in
                     Color.clear
@@ -273,14 +294,27 @@ struct LiquidSection<Content: View>: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if let title {
                 Text(title)
-                    .font(self.fonts.caption.weight(.semibold))
-                    .foregroundStyle(self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.runicTheme.secondaryText)
+                    .font(self.titleFont)
+                    .foregroundStyle(self.titleColor)
                     .textCase(.uppercase)
+                    .tracking(self.runicTheme.isTerminalHUD ? 0.8 : 0.4)
                     .padding(.leading, RunicSpacing.xxs)
             }
             self.content
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(LiquidGlassCore(shimmerIndex: self.title.hashValue & 0xF))
+    }
+
+    private var titleFont: Font {
+        self.runicTheme.isTerminalHUD ? self.fonts.headline.weight(.bold) : self.fonts.subheadline.weight(.semibold)
+    }
+
+    private var titleColor: Color {
+        self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.runicTheme.secondaryText
     }
 }
 
@@ -302,14 +336,27 @@ extension View {
     }
 
     func liquidEntrance(appeared: Bool, index: Int) -> some View {
-        self
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 14)
-            .scaleEffect(appeared ? 1 : 0.97, anchor: .top)
+        self.modifier(LiquidEntranceModifier(appeared: appeared, index: index))
+    }
+}
+
+@MainActor
+private struct LiquidEntranceModifier: ViewModifier {
+    let appeared: Bool
+    let index: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        let isScreenshot = RunicScreenshotRenderer.isRequested
+        let isVisible = self.appeared || isScreenshot
+        content
+            .opacity(isVisible ? 1 : 0)
+            .offset(y: self.reduceMotion || isVisible ? 0 : 14)
+            .scaleEffect(self.reduceMotion || isVisible ? 1 : 0.97, anchor: .top)
             .animation(
-                .spring(response: 0.5, dampingFraction: 0.78)
-                    .delay(Double(index) * 0.07),
-                value: appeared)
+                self.reduceMotion || isScreenshot ? nil : .spring(response: 0.5, dampingFraction: 0.78)
+                    .delay(Double(self.index) * 0.07),
+                value: self.appeared)
     }
 }
 
@@ -341,6 +388,7 @@ struct LiquidPreferencesPane<Content: View>: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.md) {
                     self.content()
                 }
+                .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
                 .padding(.vertical, PreferencesLayoutMetrics.paneVertical)

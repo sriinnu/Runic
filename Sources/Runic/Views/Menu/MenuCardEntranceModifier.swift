@@ -7,15 +7,16 @@ struct MenuCardEntranceModifier: ViewModifier {
     let index: Int
     @State private var appeared = false
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .opacity(self.appeared ? 1 : 0)
-            .offset(y: self.appeared ? 0 : 8)
-            .scaleEffect(self.appeared ? 1 : 0.97, anchor: .top)
+            .offset(y: self.reduceMotion || self.appeared ? 0 : 8)
+            .scaleEffect(self.reduceMotion || self.appeared ? 1 : 0.97, anchor: .top)
             .onAppear {
                 let delay = Double(self.index) * RunicAnimation.cardEntranceStagger
-                withAnimation(self.runicTheme.motion.curve.delay(delay)) {
+                withAnimation(self.runicTheme.motion.delayedCurve(reduceMotion: self.reduceMotion, delay: delay)) {
                     self.appeared = true
                 }
             }
@@ -26,12 +27,13 @@ struct MenuCardEntranceModifier: ViewModifier {
 struct GlassShimmerModifier: ViewModifier {
     @State private var shimmerPhase: CGFloat = -1
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .overlay(
                 GeometryReader { geo in
-                    if !self.runicTheme.isTerminalHUD {
+                    if !self.runicTheme.isTerminalHUD, !self.reduceMotion, self.runicTheme.id == "glass" {
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: max(0, self.shimmerPhase - 0.15)),
@@ -46,7 +48,7 @@ struct GlassShimmerModifier: ViewModifier {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)))
             .onAppear {
-                guard !self.runicTheme.isTerminalHUD else { return }
+                guard !self.runicTheme.isTerminalHUD, !self.reduceMotion, self.runicTheme.id == "glass" else { return }
                 withAnimation(.easeInOut(duration: 2.0).delay(0.5)) {
                     self.shimmerPhase = 1.2
                 }

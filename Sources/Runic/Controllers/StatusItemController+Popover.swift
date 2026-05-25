@@ -213,8 +213,6 @@ extension StatusItemController {
         self.popoverPingTask?.cancel()
         guard self.settings.refreshFrequency != .manual else { return }
 
-        Task { await self.store.refresh(trigger: .menuOpen) }
-
         self.popoverPingTask = Task { @MainActor [weak self] in
             guard let self else { return }
             try? await Task.sleep(for: PerformanceConstants.menuOpenPingDelay)

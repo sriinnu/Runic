@@ -79,10 +79,8 @@ struct RunicTests {
         let h = rep.pixelsHigh
         var transparentPixels = 0
         for y in 0..<h {
-            for x in 0..<w {
-                if alphaAt(px: x, y) < 0.05 {
-                    transparentPixels += 1
-                }
+            for x in 0..<w where alphaAt(px: x, y) < 0.05 {
+                transparentPixels += 1
             }
         }
 
@@ -107,10 +105,247 @@ struct RunicTests {
     func `bundled font families resolve to real font names`() {
         RunicTypography.registerFonts()
 
-        let resolved = RunicTypography.fontName(for: "Fira Code")
+        let mona = RunicTypography.fontName(for: RunicFontChoice.monaSans.id)
+        let commit = RunicTypography.fontName(for: RunicFontChoice.commitMono.id)
 
-        #expect(resolved == "FiraCode-Regular")
-        #expect(NSFont(name: resolved, size: 13) != nil)
+        #expect(mona == "MonaSans-Regular")
+        #expect(commit == "CommitMono-Regular")
+        #expect(NSFont(name: mona, size: 13) != nil)
+        #expect(NSFont(name: commit, size: 13) != nil)
+    }
+
+    @MainActor
+    @Test
+    func `font picker exposes curated families and hides pruned fonts`() {
+        RunicTypography.registerFonts()
+
+        let ids = Set(RunicFontChoice.availableChoices().map(\.id))
+
+        #expect(ids.contains(RunicFontChoice.monaSans.id))
+        #expect(ids.contains(RunicFontChoice.commitMono.id))
+        #expect(ids.contains(RunicFontChoice.geist.id))
+        #expect(ids.contains(RunicFontChoice.geistMono.id))
+        if RunicTypography.discoverBundledFontFamilies().contains(RunicFontChoice.berkeleyMono.id) {
+            #expect(ids.contains(RunicFontChoice.berkeleyMono.id))
+        }
+        if RunicTypography.discoverBundledFontFamilies().contains(RunicFontChoice.operatorMono.id) {
+            #expect(ids.contains(RunicFontChoice.operatorMono.id))
+        }
+        if NSFontManager.shared.availableMembers(ofFontFamily: RunicFontChoice.tx02.id)?.isEmpty == false {
+            #expect(ids.contains(RunicFontChoice.tx02.id))
+        }
+        #expect(!ids.contains("Fira Code"))
+        #expect(!ids.contains("JetBrains Mono"))
+        #expect(!ids.contains(where: { id in
+            let normalized = id.lowercased()
+            let compact = normalized.replacingOccurrences(of: " ", with: "")
+            return compact.contains("jetbrainsmono") && normalized.contains("nerd font")
+        }))
+        #expect(!ids.contains("IBM Plex Mono"))
+        #expect(!ids.contains("Space Mono"))
+        #expect(!ids.contains("VT323"))
+    }
+
+    @Test
+    func `non curated saved fonts migrate to Mona Sans`() {
+        #expect(RunicFontChoice.migratedFamily("Avenir Next") == RunicFontChoice.defaultFamily)
+        #expect(RunicFontChoice.migratedFamily("Helvetica") == RunicFontChoice.defaultFamily)
+    }
+
+    @MainActor
+    @Test
+    func `licensed Berkeley and Operator faces are treated as curated mono faces when present`() {
+        RunicTypography.registerFonts()
+
+        let ids = Set(RunicFontChoice.availableChoices().map(\.id))
+        let bundledFamilies = Set(RunicTypography.discoverBundledFontFamilies())
+        let expectedChoices: [RunicFontChoice] = [
+            .berkeleyMono,
+            .tx02,
+            .operatorMono,
+        ]
+
+        for choice in expectedChoices
+            where bundledFamilies.contains(choice.id) ||
+                NSFontManager.shared.availableMembers(ofFontFamily: choice.id)?.isEmpty == false
+        {
+            let rules = RunicFontRules.rules(for: choice.id)
+            #expect(ids.contains(choice.id))
+            #expect(rules.prefersMonospacedDigits)
+        }
+
+        #expect(RunicFontChoice.tx02.displayName == "TX-02 Berkeley Mono")
+    }
+
+    @MainActor
+    @Test
+    func `legacy theme JSON decodes with default style`() throws {
+        let json = """
+        {
+          "id": "legacy-test",
+          "displayName": "Legacy",
+          "tagline": "Old file",
+          "symbolName": "circle",
+          "isCustom": false,
+          "prefersDarkAppearance": false,
+          "colors": {
+            "primary": "#336BE6",
+            "secondary": "#1A9EB8",
+            "accent": "#2670EB",
+            "highlight": "#E6781F",
+            "warm": "#DB4761",
+            "tertiary": "#219457",
+            "surface": "#F5F7FA",
+            "surfaceAlt": "#FFFFFFB8",
+            "cardFill": "#FFFFFFA8",
+            "cardStroke": "#0000001E",
+            "primaryText": "#000000DB",
+            "secondaryText": "#0000008C"
+          },
+          "fonts": { "body": "system", "numeric": "system" },
+          "shape": { "preset": "standard" },
+          "motion": { "preset": "standard" },
+          "density": { "preset": "normal" }
+        }
+        """
+
+        let dto = try JSONDecoder().decode(RunicThemeJSON.self, from: Data(json.utf8))
+        let palette = dto.toPalette()
+
+        #expect(palette.style.typography.scale == 1.0)
+        #expect(palette.style.chrome.borderStyle == .hairline)
+        #expect(palette.style.controls.progressStyle == .softBar)
+    }
+
+    @MainActor
+    @Test
+    func `rich theme JSON decodes style settings`() throws {
+        let json = """
+        {
+          "id": "terminal-test",
+          "displayName": "Terminal",
+          "tagline": "HUD",
+          "symbolName": "terminal.fill",
+          "isCustom": true,
+          "prefersDarkAppearance": true,
+          "colors": {
+            "primary": "#0DE37A",
+            "secondary": "#2FC8E8",
+            "accent": "#18F28B",
+            "highlight": "#F8BA2E",
+            "warm": "#F06773",
+            "tertiary": "#55E3B8",
+            "surface": "#020807",
+            "surfaceAlt": "#031A13D9",
+            "cardFill": "#05211799",
+            "cardStroke": "#10D77A42",
+            "primaryText": "#D7F7E5",
+            "secondaryText": "#9CC8B2"
+          },
+          "fonts": { "body": "mono", "numeric": "mono" },
+          "shape": { "cornerMultiplier": 0.62, "separator": "hairline" },
+          "motion": { "preset": "instant" },
+          "density": { "preset": "normal" },
+          "style": {
+            "typography": {
+              "bodyFamily": "CommitMono",
+              "numericFamily": "CommitMono",
+              "scale": 0.98,
+              "tracking": 0.03,
+              "lineSpacing": 0.35,
+              "contrast": "strong"
+            },
+            "chrome": {
+              "borderStyle": "hud",
+              "borderWeight": 0.75,
+              "borderOpacity": 0.44,
+              "cornerStyle": "compact",
+              "panelDepth": "low"
+            },
+            "effects": {
+              "scanlineOpacity": 0.32,
+              "glowStrength": 0.16,
+              "materialIntensity": 0.0
+            },
+            "controls": {
+              "selectedFillStyle": "terminalSolid",
+              "progressStyle": "segmentedHUD",
+              "hoverStyle": "neutral"
+            }
+          }
+        }
+        """
+
+        let dto = try JSONDecoder().decode(RunicThemeJSON.self, from: Data(json.utf8))
+        let palette = dto.toPalette()
+
+        #expect(palette.style.typography.bodyFamily == "CommitMono")
+        #expect(palette.style.typography.lineSpacing == 0.35)
+        #expect(palette.style.typography.contrast == .strong)
+        #expect(palette.style.chrome.borderStyle == .hud)
+        #expect(palette.style.effects.scanlineOpacity == 0.32)
+        #expect(palette.style.controls.progressStyle == .segmentedHUD)
+    }
+
+    @MainActor
+    @Test
+    func `bundled theme JSON decodes every current theme`() throws {
+        let themeDirs = RunicResourceLocator.directories(named: "Themes")
+        var decodedIDs = Set<String>()
+
+        for dir in themeDirs {
+            let files = try FileManager.default.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: nil)
+            for file in files where file.pathExtension.lowercased() == "json" {
+                let data = try Data(contentsOf: file)
+                let palette = try JSONDecoder().decode(RunicThemeJSON.self, from: data).toPalette()
+                decodedIDs.insert(palette.id)
+                #expect(palette.style.typography.scale > 0)
+                #expect(palette.style.chrome.borderWeight > 0)
+            }
+        }
+
+        #expect(Set(Theme.allCases.map(\.rawValue)).isSubset(of: decodedIDs))
+    }
+
+    @MainActor
+    @Test
+    func `theme polish helpers keep motion contrast and chrome scoped`() {
+        let retro = Theme.retro.palette
+        let terminal = Theme.terminal.palette
+        let glass = Theme.glass.palette
+        let light = Theme.light.palette
+
+        #expect(retro.prefersRetroToggleChrome)
+        #expect(terminal.prefersRetroToggleChrome)
+        #expect(!glass.prefersRetroToggleChrome)
+        #expect(!light.prefersRetroToggleChrome)
+        #expect(terminal.chartScanlineOpacity == terminal.style.effects.scanlineOpacity)
+        #expect(light.nsColor(light.chartAxisLabelColor).alphaComponent >= 0.80)
+        #expect(glass.motion.curve(reduceMotion: true) == nil)
+        #expect(glass.motion.delayedCurve(reduceMotion: true, delay: 1) == nil)
+    }
+
+    @MainActor
+    @Test
+    func `terminal typography keeps readable hud line rhythm`() {
+        let palette = Theme.terminal.palette
+        let rules = RunicFontRules.rules(for: RunicFontChoice.commitMono.id)
+            .applying(palette.style.typography)
+
+        #expect(rules.lineSpacing == 1.45)
+        #expect(rules.lineSpacing > RunicFontRules.rules(for: RunicFontChoice.commitMono.id).lineSpacing)
+    }
+
+    @MainActor
+    @Test
+    func `theme numeric family drives numeric font store`() {
+        let store = RunicFontStore()
+
+        store.applyTheme(Theme.terminal.palette)
+
+        #expect(store.activeNumericFamily == RunicFontChoice.commitMono.id)
     }
 
     @MainActor

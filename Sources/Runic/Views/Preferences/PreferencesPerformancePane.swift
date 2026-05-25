@@ -12,10 +12,9 @@ struct PerformancePane: View {
     @AppStorage("performanceTrackingEnabled") private var performanceTrackingEnabled = true
     @AppStorage("rawMetricsRetentionDays") private var rawMetricsRetentionDays = 30
     @AppStorage("aggregatedStatsRetentionYears") private var aggregatedStatsRetentionYears = 1
-    @AppStorage("qualityRatingPromptsEnabled") private var qualityRatingPromptsEnabled = true
+    @AppStorage("qualityRatingPromptsEnabled") private var qualityRatingPromptsEnabled = false
     @AppStorage("qualityRatingFrequency") private var qualityRatingFrequency = QualityRatingFrequency.every
     @AppStorage("maxPromptsPerHour") private var maxPromptsPerHour = 3
-    @AppStorage("anonymousUsageStatsEnabled") private var anonymousUsageStatsEnabled = false
 
     @State private var databaseSize: String = "Calculating..."
     @State private var isVacuuming = false
@@ -46,13 +45,14 @@ struct PerformancePane: View {
         LiquidPreferencesPane {
             LiquidSection(title: "Performance Monitoring") {
                 PreferenceToggleRow(
-                    title: "Enable performance tracking",
-                    subtitle: "Records latency, quality ratings, and error events for all AI requests.",
+                    title: "Enable local performance notes",
+                    subtitle: "Stores latency, quality ratings, and error events locally on this Mac.",
                     binding: self.$performanceTrackingEnabled)
 
                 if !self.performanceTrackingEnabled {
                     Text(
-                        "Performance tracking is disabled. Historical data is preserved but new metrics won't be collected.")
+                        "Performance tracking is disabled. Historical data is preserved, " +
+                            "but new metrics won't be collected.")
                         .font(self.fonts.footnote)
                         .foregroundStyle(.orange)
                         .padding(.vertical, RunicSpacing.xs)
@@ -60,8 +60,14 @@ struct PerformancePane: View {
             }
             .liquidEntrance(appeared: self.appeared, index: 0)
 
-            LiquidSection(title: "Data Retention") {
+            LiquidSection(title: "Local Cache & Retention") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                    Text("Provider JSONL logs are never deleted by Runic. Historical usage is " +
+                        "summarized into a local ledger cache so old logs do not need to be rescanned every time.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
+                        .fixedSize(horizontal: false, vertical: true)
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Raw metrics retention")
                             .font(self.fonts.body)
@@ -99,39 +105,43 @@ struct PerformancePane: View {
             }
             .liquidEntrance(appeared: self.appeared, index: 1)
 
-            LiquidSection(title: "Quality Rating Prompts") {
+            LiquidSection(title: "Quality Rating Prompts (Preview)") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     PreferenceToggleRow(
                         title: "Show rating prompts",
-                        subtitle: "Ask for quality ratings after AI responses to track model performance.",
+                        subtitle: "Prompt scheduling is not active yet; explicit rating views still store locally.",
                         binding: self.$qualityRatingPromptsEnabled)
+                        .disabled(true)
+                        .opacity(0.65)
 
-                    if self.qualityRatingPromptsEnabled {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Prompt frequency")
-                                .font(self.fonts.body)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Prompt frequency")
+                            .font(self.fonts.body)
 
-                            Picker("", selection: self.$qualityRatingFrequency) {
-                                ForEach(QualityRatingFrequency.allCases) { freq in
-                                    Text(freq.label).tag(freq)
-                                }
+                        Picker("", selection: self.$qualityRatingFrequency) {
+                            ForEach(QualityRatingFrequency.allCases) { freq in
+                                Text(freq.label).tag(freq)
                             }
-                            .pickerStyle(.segmented)
-                            .frame(maxWidth: 400)
-
-                            Text("When to show rating prompts based on response size.")
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                         }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 400)
+                        .disabled(true)
+                        .opacity(0.65)
 
-                        PreferenceStepperRow(
-                            title: "Max prompts per hour",
-                            subtitle: "Limits how often rating prompts appear to avoid interruptions.",
-                            step: 1,
-                            range: 1...10,
-                            valueLabel: { "\($0) prompts" },
-                            value: self.$maxPromptsPerHour)
+                        Text("Kept here as a local preview until response-level prompt triggers are wired.")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
+
+                    PreferenceStepperRow(
+                        title: "Max prompts per hour",
+                        subtitle: "Planned interruption cap for the prompt scheduler.",
+                        step: 1,
+                        range: 1...10,
+                        valueLabel: { "\($0) prompts" },
+                        value: self.$maxPromptsPerHour)
+                        .disabled(true)
+                        .opacity(0.65)
                 }
             }
             .liquidEntrance(appeared: self.appeared, index: 2)
@@ -195,7 +205,8 @@ struct PerformancePane: View {
                         }
                     }
 
-                    Text("Removes metrics older than configured retention periods.")
+                    Text("Removes old local performance notes only. Provider JSONL logs and token " +
+                        "ledgers are left alone.")
                         .font(self.fonts.footnote)
                         .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
@@ -203,18 +214,13 @@ struct PerformancePane: View {
             .liquidEntrance(appeared: self.appeared, index: 3)
 
             LiquidSection(title: "Privacy") {
-                PreferenceToggleRow(
-                    title: "Share anonymous usage statistics",
-                    subtitle: "Helps improve Runic by sharing aggregated performance metrics (no personal data).",
-                    binding: self.$anonymousUsageStatsEnabled)
-
-                if self.anonymousUsageStatsEnabled {
-                    Text(
-                        "Only aggregate statistics are shared. Request IDs, prompts, and responses are never included.")
-                        .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                        .padding(.vertical, RunicSpacing.xs)
-                }
+                Text("Runic does not collect analytics, crash reports, or anonymous usage stats.")
+                    .font(self.fonts.body.weight(.semibold))
+                Text("Usage and performance history stay on this machine unless you export it, " +
+                    "copy diagnostics, or configure a webhook. Your data, your tokens, your cost.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .liquidEntrance(appeared: self.appeared, index: 4)
         }
@@ -277,7 +283,9 @@ struct PerformancePane: View {
 
             do {
                 let storage = PerformanceStorageImpl()
-                try await storage.deleteOldData(olderThan: self.rawMetricsRetentionDays)
+                try await storage.deleteOldData(
+                    olderThan: self.rawMetricsRetentionDays,
+                    aggregatedStatsOlderThanYears: self.aggregatedStatsRetentionYears)
                 self.clearDataStatus = "Success: Old data removed"
                 self.calculateDatabaseSize()
             } catch {

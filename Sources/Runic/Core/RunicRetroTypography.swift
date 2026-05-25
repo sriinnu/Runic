@@ -71,10 +71,14 @@ struct RetroSectionHeader: View {
                     Text(self.text.uppercased())
                         .tracking(1.8)
                         .foregroundStyle(self.runicTheme.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .allowsTightening(true)
                     Text("]")
                         .foregroundStyle(self.runicTheme.accent.opacity(0.85))
                 }
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .font(self.fonts.callout.weight(.bold))
+                .lineLimit(1)
             } else {
                 Text(self.text)
                     .font(self.fonts.subheadline.weight(.semibold))
