@@ -85,7 +85,8 @@ struct IntegrationRow<Actions: View>: View {
             Image(systemName: self.icon)
                 .font(self.fonts.callout)
                 .frame(width: 24)
-                .foregroundStyle(self.runicTheme.accent)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: self.icon))
 
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 HStack(spacing: RunicSpacing.xs) {
@@ -126,7 +127,8 @@ struct IntegrationMCPServerRow: View {
         HStack(spacing: RunicSpacing.sm) {
             Image(systemName: "bolt.horizontal.circle")
                 .font(self.fonts.callout)
-                .foregroundStyle(self.runicTheme.accent)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: "server.rack"))
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
@@ -175,7 +177,8 @@ struct IntegrationEmptyState: View {
         VStack(spacing: RunicSpacing.xs) {
             Image(systemName: self.icon)
                 .font(.system(size: 28))
-                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.62))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: self.icon).opacity(0.72))
             Text(self.title)
                 .font(self.fonts.callout.weight(.semibold))
             Text(self.detail)

@@ -102,6 +102,19 @@ struct RunicTests {
 
     @MainActor
     @Test
+    func `system icon tint policy keeps color semantic`() {
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "tablecells") == .data)
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "curlybraces") == .data)
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "calendar") == .data)
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "chart.xyaxis.line") == .data)
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "info.circle") == .info)
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "exclamationmark.triangle.fill") == .statusWarning)
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "trash") == .destructive)
+        #expect(RunicThemePalette.iconIntent(forSystemImage: "gearshape") == .action)
+    }
+
+    @MainActor
+    @Test
     func `bundled font families resolve to real font names`() {
         RunicTypography.registerFonts()
 

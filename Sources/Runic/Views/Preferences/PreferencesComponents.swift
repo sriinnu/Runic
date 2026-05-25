@@ -325,6 +325,7 @@ struct SettingsSection<Content: View>: View {
 
 @MainActor
 struct AboutLinkRow: View {
+    @Environment(\.runicTheme) private var runicTheme
     let icon: String
     let title: String
     let url: String
@@ -336,12 +337,14 @@ struct AboutLinkRow: View {
         } label: {
             HStack(spacing: RunicSpacing.xs) {
                 Image(systemName: self.icon)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(self.runicTheme.iconColor(forSystemImage: self.icon, hovered: self.hovering))
                 Text(self.title)
                     .underline(self.hovering, color: .accentColor)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, RunicSpacing.xxs)
-            .foregroundColor(.accentColor)
+            .foregroundStyle(self.runicTheme.accent)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())

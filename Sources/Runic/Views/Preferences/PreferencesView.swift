@@ -217,6 +217,10 @@ struct PreferencesView: View {
                 Image(systemName: tab.symbolName)
                     .font(.system(size: 18, weight: selected ? .semibold : .medium))
                     .frame(height: 22)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(self.settings.theme.palette.iconColor(
+                        forSystemImage: tab.symbolName,
+                        selected: selected))
                 Text(tab.label)
                     .font(self.fonts.caption.weight(selected ? .semibold : .medium))
                     .lineLimit(1)
@@ -226,7 +230,7 @@ struct PreferencesView: View {
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(selected ? self.settings.theme.palette.accent : self.settings.theme.palette.secondaryText)
+        .foregroundStyle(selected ? self.settings.theme.palette.primaryText : self.settings.theme.palette.secondaryText)
         .background {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(selected ? self.settings.theme.palette.accent.opacity(self.settings.theme.palette.isTerminalHUD ? 0.18 : 0.12) : .clear)

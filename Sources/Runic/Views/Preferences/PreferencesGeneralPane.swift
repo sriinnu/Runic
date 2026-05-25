@@ -724,7 +724,8 @@ private struct AppearancePreviewCard: View {
             } else if let systemImage {
                 Image(systemName: systemImage)
                     .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
-                    .foregroundStyle(tint)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(self.theme.palette.iconColor(forSystemImage: systemImage, selected: isSelected))
             }
             Text(title)
                 .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
@@ -747,7 +748,8 @@ private struct AppearancePreviewCard: View {
         HStack(spacing: RunicSpacing.xs) {
             Image(systemName: systemImage)
                 .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
-                .foregroundStyle(self.theme.palette.secondaryText)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(self.theme.palette.iconColor(forSystemImage: systemImage))
                 .frame(width: 16)
             Text(title)
                 .font(self.previewValueFont(size: 11, weight: .semibold, palette: self.theme.palette))
@@ -936,7 +938,8 @@ private struct RunicOperationsCenterView: View {
                     HStack(alignment: .top, spacing: RunicSpacing.xs) {
                         Image(systemName: recommendation.systemImage)
                             .font(self.fonts.caption)
-                            .foregroundStyle(self.runicTheme.secondaryText)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(self.runicTheme.iconColor(forSystemImage: recommendation.systemImage))
                             .frame(width: 16)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(recommendation.title)
@@ -978,6 +981,8 @@ private struct RunicOperationsCenterView: View {
         HStack(spacing: RunicSpacing.xxs) {
             Image(systemName: systemImage)
                 .font(self.fonts.caption)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(self.runicTheme.iconColor(forSystemImage: systemImage))
             Text(title)
                 .font(self.fonts.caption2)
             Text(value)

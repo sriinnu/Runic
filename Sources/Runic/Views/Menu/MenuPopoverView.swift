@@ -831,6 +831,8 @@ private struct MenuPopoverChip: View {
                 Image(systemName: self.systemImage)
                     .font(self.fonts.caption.weight(.semibold))
                     .frame(width: RunicSpacing.menuIconColumnWidth)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(self.iconColor)
                 Text(self.title)
                     .font(self.fonts.caption.weight(self.isSelected ? .semibold : .medium))
                     .lineLimit(1)
@@ -871,6 +873,13 @@ private struct MenuPopoverChip: View {
             return self.runicTheme.primaryText
         }
         return self.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText
+    }
+
+    private var iconColor: Color {
+        self.runicTheme.iconColor(
+            forSystemImage: self.systemImage,
+            selected: self.isSelected,
+            hovered: self.isHovered)
     }
 
     private var background: Color {
@@ -941,7 +950,8 @@ private struct MenuPopoverActionButton: View {
                     Image(systemName: systemImage)
                         .font(self.iconFont)
                         .frame(width: self.iconColumnWidth)
-                        .foregroundStyle(self.runicTheme.secondaryText)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(self.iconColor)
                 } else {
                     Color.clear.frame(width: self.iconColumnWidth, height: 1)
                 }
@@ -1002,6 +1012,12 @@ private struct MenuPopoverActionButton: View {
     private var themedGlow: Color {
         guard self.isHovered, self.runicTheme.shape.separator == .glow else { return .clear }
         return self.runicTheme.accent.opacity(0.45)
+    }
+
+    private var iconColor: Color {
+        self.runicTheme.iconColor(
+            forSystemImage: self.systemImage,
+            hovered: self.isHovered)
     }
 
     private var titleFont: Font {
