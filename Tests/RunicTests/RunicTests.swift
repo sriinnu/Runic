@@ -111,6 +111,28 @@ struct RunicTests {
 
     @MainActor
     @Test
+    func `menu action icon intents stay semantic`() {
+        #expect(MenuDescriptor.MenuAction.dashboard.iconIntent == .data)
+        #expect(MenuDescriptor.MenuAction.statusPage.iconIntent == .info)
+        #expect(MenuDescriptor.MenuAction.about.iconIntent == .info)
+        #expect(MenuDescriptor.MenuAction.quit.iconIntent == .destructive)
+        #expect(MenuDescriptor.MenuAction.copyError("boom").iconIntent == .statusWarning)
+        #expect(MenuDescriptor.MenuAction.installUpdate.iconIntent == .action)
+        #expect(MenuDescriptor.MenuAction.refresh.iconIntent == .action)
+        #expect(MenuDescriptor.MenuAction.settings.iconIntent == .action)
+        #expect(MenuDescriptor.MenuAction.switchAccount(.codex).iconIntent == .action)
+    }
+
+    @MainActor
+    @Test
+    func `popover insight panel icons stay navigation`() {
+        for panel in PopoverInsightPanel.allCases {
+            #expect(panel.iconIntent == .navigation, "\(panel.rawValue) should scan like navigation")
+        }
+    }
+
+    @MainActor
+    @Test
     func `semantic icon colors keep non text contrast on themed surfaces`() {
         let semanticIntents: [RunicIconIntent] = [.data, .destructive, .info, .statusGood, .statusWarning]
 
@@ -141,6 +163,26 @@ struct RunicTests {
         }
     }
 
+    @MainActor
+    @Test
+    func `icon colors keep contrast on actual menu control fills`() {
+        for theme in Theme.allCases {
+            let palette = theme.palette
+            let selectedIcon = palette.iconColor(for: .navigation, selected: true)
+            let hoveredIcon = palette.iconColor(for: .navigation, hovered: true)
+
+            #expect(
+                self.contrast(selectedIcon, against: self.providerTabSelectedFill(for: palette), palette: palette) >= 3.0,
+                "\(theme.rawValue) selected provider tab icon should read over selected tab fill")
+            #expect(
+                self.contrast(hoveredIcon, against: self.popoverChipHoverFill(for: palette), palette: palette) >= 3.0,
+                "\(theme.rawValue) hovered chip icon should read over chip hover fill")
+            #expect(
+                self.contrast(hoveredIcon, against: self.popoverActionHoverFill(for: palette), palette: palette) >= 3.0,
+                "\(theme.rawValue) hovered action icon should read over action hover fill")
+        }
+    }
+
     private func selectedFill(for palette: RunicThemePalette) -> Color {
         switch palette.style.controls.selectedFillStyle {
         case .accentSolid, .terminalSolid:
@@ -150,6 +192,36 @@ struct RunicTests {
         case .accentSoft:
             palette.accent.opacity(0.18)
         }
+    }
+
+    private func providerTabSelectedFill(for palette: RunicThemePalette) -> Color {
+        if palette.isTerminalHUD {
+            return palette.accent.opacity(0.22)
+        }
+        if palette.shape.separator == .glow {
+            return palette.accent.opacity(0.30)
+        }
+        return palette.accent.opacity(RunicColors.Opacity.medium)
+    }
+
+    private func popoverChipHoverFill(for palette: RunicThemePalette) -> Color {
+        if palette.isTerminalHUD {
+            return palette.accent.opacity(0.16)
+        }
+        if palette.shape.separator == .glow {
+            return palette.accent.opacity(0.24)
+        }
+        return palette.accent.opacity(0.14)
+    }
+
+    private func popoverActionHoverFill(for palette: RunicThemePalette) -> Color {
+        if palette.isTerminalHUD {
+            return palette.accent.opacity(0.16)
+        }
+        if palette.shape.separator == .glow {
+            return palette.accent.opacity(0.22)
+        }
+        return palette.menuHoverFill
     }
 
     private func contrast(_ foreground: Color, against background: Color, palette: RunicThemePalette) -> Double {

@@ -180,7 +180,6 @@ struct IntegrationEmptyState: View {
                 systemName: self.icon,
                 intent: .info,
                 font: .system(size: 28))
-                .opacity(0.72)
             Text(self.title)
                 .font(self.fonts.callout.weight(.semibold))
             Text(self.detail)

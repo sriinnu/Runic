@@ -388,7 +388,7 @@ struct MenuPopoverView: View {
                 MenuPopoverActionButton(
                     title: title,
                     systemImage: self.systemImage(for: action),
-                    iconIntent: self.iconIntent(for: action),
+                    iconIntent: action.iconIntent,
                     action: {
                         self.perform(action, provider: provider)
                     })
@@ -432,21 +432,6 @@ struct MenuPopoverView: View {
         case .about: "info.circle"
         case .quit: "power"
         default: action.systemImageName
-        }
-    }
-
-    private func iconIntent(for action: MenuDescriptor.MenuAction) -> RunicIconIntent {
-        switch action {
-        case .about, .statusPage:
-            .info
-        case .dashboard:
-            .data
-        case .quit:
-            .destructive
-        case .copyError:
-            .statusWarning
-        case .installUpdate, .refresh, .settings, .switchAccount:
-            .action
         }
     }
 
@@ -690,7 +675,7 @@ struct MenuPopoverView: View {
     }
 }
 
-private enum PopoverInsightPanel: String, CaseIterable, Identifiable {
+enum PopoverInsightPanel: String, CaseIterable, Identifiable {
     case timeline
     case hourly
     case weekly
