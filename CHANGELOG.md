@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.2.1 — 2026-05-25
 - Themes: add JSON-backed typography/chrome/effects/control style tokens, with Terminal rebuilt as a calmer Tactical HUD and Retro borders softened.
 - Typography: switch the default product face to Mona Sans, add Commit Mono for Terminal/data-heavy surfaces, and migrate removed or missing saved fonts to Mona Sans.
 - Fonts: remove bundled Fira Code, IBM Plex Mono, JetBrains Mono, and Space Mono while keeping Geist, Geist Mono, SF/New York system fonts, VT323 for Retro decoration, and licensed Berkeley/Operator faces as curated picker choices when bundled or installed.
