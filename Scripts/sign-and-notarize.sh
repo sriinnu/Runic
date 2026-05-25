@@ -34,8 +34,8 @@ if [[ $(printf "%s\n" "$key_lines" | wc -l) -ne 1 ]]; then
   exit 1
 fi
 
-API_KEY_FILE=$(mktemp "${TMPDIR:-/tmp}/runic-api-key.XXXXXX.p8")
-NOTARIZE_ZIP=$(mktemp "${TMPDIR:-/tmp}/${APP_NAME}Notarize.XXXXXX.zip")
+API_KEY_FILE=$(mktemp "${TMPDIR:-/tmp}/runic-api-key.XXXXXX")
+NOTARIZE_ZIP=$(mktemp "${TMPDIR:-/tmp}/${APP_NAME}Notarize.XXXXXX")
 chmod 600 "$API_KEY_FILE"
 echo "$APP_STORE_CONNECT_API_KEY_P8" | sed 's/\\n/\n/g' > "$API_KEY_FILE"
 trap 'rm -f "$API_KEY_FILE" "$NOTARIZE_ZIP"' EXIT
