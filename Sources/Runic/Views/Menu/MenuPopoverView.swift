@@ -54,6 +54,7 @@ struct MenuPopoverView: View {
 
     var body: some View {
         let palette = self.settings.theme.palette
+        let popoverRadius = min(palette.shape.cornerRadius(18), 14)
         let enabledProviders = self.store.enabledProviders()
         let provider = self.effectiveProvider(enabledProviders: enabledProviders)
         let isOverview = provider == nil && enabledProviders.count > 1
@@ -112,16 +113,16 @@ struct MenuPopoverView: View {
         .runicTypography()
         .foregroundStyle(palette.primaryText)
         .tint(palette.accent)
-        .clipShape(RoundedRectangle(cornerRadius: palette.shape.cornerRadius(18), style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: popoverRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: palette.shape.cornerRadius(18), style: .continuous)
+            RoundedRectangle(cornerRadius: popoverRadius, style: .continuous)
                 .stroke(
                     style: StrokeStyle(
                         lineWidth: palette.style.chrome.borderWeight,
                         dash: []))
                 .foregroundStyle(palette.cardStroke.opacity(palette.style.chrome.borderOpacity))
         }
-        .retroBevel(baseRadius: 18)
+        .retroBevel(baseRadius: popoverRadius)
         .shadow(
             color: Color.black.opacity(palette.id == "retro" ? 0.22 : 0.24 + palette.style.effects.glowStrength * 0.12),
             radius: palette.shape.separator == .glow ? 22 : (palette.id == "retro" ? 12 : 20),
@@ -212,8 +213,6 @@ struct MenuPopoverView: View {
                         lineWidth: self.settings.theme.palette.style.chrome.borderWeight)
             }
             .frame(width: self.contentWidth, alignment: .leading)
-            .scaleEffect(self.hasAppeared ? 1 : 0.98)
-            .opacity(self.hasAppeared ? 1 : 0)
     }
 
     private func providerTabItems(
@@ -744,7 +743,7 @@ private struct MenuPopoverBackground: View {
             if self.runicTheme.id == "glass" {
                 Rectangle()
                     .fill(.ultraThinMaterial)
-                    .opacity(0.72)
+                    .opacity(0.52)
             }
             if self.runicTheme.isTerminalHUD {
                 RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)

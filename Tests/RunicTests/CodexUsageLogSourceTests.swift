@@ -345,6 +345,40 @@ struct CodexUsageLogSourceTests {
     }
 
     @Test
+    func `codex relay recomputes the whole mutable day after history coverage`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let todayStart = Calendar.current.startOfDay(for: now)
+        let earlyToday = todayStart.addingTimeInterval(60 * 60)
+        let laterToday = todayStart.addingTimeInterval(3 * 60 * 60)
+        try Self.writeSession(root: root, date: earlyToday, input: 40, modifiedAt: earlyToday, fileManager: fm)
+        try Self.writeSession(root: root, date: laterToday, input: 70, modifiedAt: now, fileManager: fm)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        await cache.markScanComplete(
+            provider: "codex",
+            scanDate: todayStart.addingTimeInterval(2 * 60 * 60),
+            coveredMaxAgeDays: 30)
+
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+
+        let entries = try await source.loadEntries()
+        #expect(entries.map(\.inputTokens).sorted() == [40, 70])
+    }
+
+    @Test
     func `codex relay backfills when requested history exceeds cache coverage`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory

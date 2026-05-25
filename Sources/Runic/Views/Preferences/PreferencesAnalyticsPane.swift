@@ -597,6 +597,7 @@ private struct AnalyticsSectionDisclosureStyle: DisclosureGroupStyle {
 @MainActor
 private struct AnalyticsRuleEditorSheet: View {
     @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
     @Environment(\.dismiss) private var dismiss
     @AppStorage("defaultWebhookURL") private var defaultWebhookURL = ""
 
@@ -623,7 +624,7 @@ private struct AnalyticsRuleEditorSheet: View {
 
     var body: some View {
         VStack(spacing: RunicSpacing.lg) {
-            Text(self.rule == nil ? "Add Alert Rule" : "Edit Alert Rule")
+            Text(self.rule == nil ? "Add Guardrail Draft" : "Edit Guardrail Draft")
                 .font(self.fonts.headline)
 
             Form {
@@ -645,16 +646,23 @@ private struct AnalyticsRuleEditorSheet: View {
                     Text("Critical").tag(AlertRuleStore.AlertSeverity.critical)
                 }
 
-                Toggle("Enable webhook notifications", isOn: self.$notifyWebhook)
+                Toggle("Save webhook URL for future automation", isOn: self.$notifyWebhook)
+                    .disabled(true)
 
                 if self.notifyWebhook {
                     TextField("Webhook URL", text: self.$webhookURL)
+                        .disabled(true)
                     if !self.defaultWebhookURL.isEmpty, self.webhookURL != self.defaultWebhookURL {
                         Button("Use default webhook") {
                             self.webhookURL = self.defaultWebhookURL
                         }
+                        .disabled(true)
                     }
                 }
+
+                Text("Webhook delivery is not active yet; this draft only stores rule intent.")
+                    .font(self.fonts.caption)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
             .padding()
 
@@ -670,8 +678,8 @@ private struct AnalyticsRuleEditorSheet: View {
                         type: self.alertType,
                         threshold: self.threshold,
                         severity: self.severity,
-                        notifyWebhook: self.notifyWebhook,
-                        webhookURL: self.webhookURL.isEmpty ? nil : self.webhookURL,
+                        notifyWebhook: false,
+                        webhookURL: nil,
                         enabled: self.rule?.enabled ?? true,
                         createdAt: self.rule?.createdAt ?? Date())
                     self.onSave(newRule)

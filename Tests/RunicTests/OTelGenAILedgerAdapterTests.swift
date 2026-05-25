@@ -84,6 +84,35 @@ struct OTelGenAILedgerAdapterTests {
     }
 
     @Test
+    func `parses numeric timestamps by magnitude`() throws {
+        let expectedSeconds = 1_771_828_800.0
+        let values = [
+            "1771828800",
+            "1771828800000",
+            "1771828800000000",
+            "1771828800000000000",
+        ]
+
+        for value in values {
+            let payload = """
+            {
+              "attributes": {
+                "gen_ai.system": "openai",
+                "gen_ai.request.model": "gpt-5",
+                "gen_ai.usage.input_tokens": 1,
+                "timestamp": \(value)
+              }
+            }
+            """
+            let entries = try OTelGenAILedgerAdapter.parseData(
+                Data(payload.utf8),
+                options: OTelGenAIIngestionOptions(enabled: true))
+            let entry = try #require(entries.first)
+            #expect(abs(entry.timestamp.timeIntervalSince1970 - expectedSeconds) < 0.001)
+        }
+    }
+
+    @Test
     func `feature flag disables ingestion`() throws {
         let payload = """
         {"attributes":{"gen_ai.system":"openai","gen_ai.request.model":"gpt-5","gen_ai.usage.input_tokens":1}}

@@ -105,11 +105,12 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             minDate = minDate.map { $0 < todayStart ? todayStart : $0 } ?? todayStart
         }
         let lastScan = await cache.lastScanDate(provider: "codex")
-        var incrementalCutoff = needsCoverageScan
-            ? (minDate ?? .distantPast)
-            : (lastScan ?? minDate ?? self.now.addingTimeInterval(-86400))
-        if historyCovered, incrementalCutoff < todayStart {
-            incrementalCutoff = todayStart
+        let incrementalCutoff: Date = if historyCovered {
+            todayStart
+        } else if needsCoverageScan {
+            minDate ?? .distantPast
+        } else {
+            lastScan ?? minDate ?? self.now.addingTimeInterval(-86400)
         }
         let allFiles = self.listSessionFiles(root: root, minDate: minDate, maxAgeDays: scanMaxAgeDays)
         let filesToScan = allFiles.filter { file in

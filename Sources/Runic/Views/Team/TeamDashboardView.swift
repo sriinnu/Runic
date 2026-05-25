@@ -5,7 +5,6 @@ import SwiftUI
 struct TeamDashboardView: View {
     @Environment(\.runicFonts) private var fonts
     let team: Team
-    @State private var selectedPeriod: TimePeriod = .week
     @State private var selectedMemberID: String?
     @Environment(\.runicTheme) private var runicTheme
 
@@ -24,7 +23,7 @@ struct TeamDashboardView: View {
 
                 PreferencesDivider()
 
-                self.recentActivitySection
+                self.planningNoticeSection
             }
             .padding(RunicSpacing.lg)
         }
@@ -44,14 +43,6 @@ struct TeamDashboardView: View {
                 }
 
                 Spacer()
-
-                Picker("Period", selection: self.$selectedPeriod) {
-                    ForEach(TimePeriod.allCases) { period in
-                        Text(period.displayName).tag(period)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 240)
             }
         }
     }
@@ -208,36 +199,15 @@ struct TeamDashboardView: View {
         }
     }
 
-    private var recentActivitySection: some View {
+    private var planningNoticeSection: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.md) {
-            Text("Recent Activity")
+            Text("Local Planning Mode")
                 .font(self.fonts.headline)
 
-            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                ForEach(self.recentActivities) { activity in
-                    HStack(spacing: RunicSpacing.sm) {
-                        Image(systemName: activity.icon)
-                            .font(self.fonts.body)
-                            .foregroundStyle(activity.color)
-                            .frame(width: 24)
-
-                        VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
-                            Text(activity.title)
-                                .font(self.fonts.footnote)
-                            Text(activity.timestamp)
-                                .font(self.fonts.caption2)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                        }
-
-                        Spacer()
-                    }
-                    .padding(.horizontal, RunicSpacing.sm)
-                    .padding(.vertical, RunicSpacing.xs)
-                    .background(
-                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(6), style: .continuous)
-                            .fill(self.runicTheme.menuSubtleFill.opacity(0.60)))
-                }
-            }
+            Text("Member usage values here are manually entered planning numbers. Ledger-backed team showback is not active yet.")
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -288,35 +258,6 @@ struct TeamDashboardView: View {
         }
     }
 
-    private var recentActivities: [ActivityItem] {
-        [
-            ActivityItem(
-                id: "1",
-                title: "Alice Johnson used 2,500 credits",
-                timestamp: "2 hours ago",
-                icon: "arrow.up.circle.fill",
-                color: Color(nsColor: .systemOrange)),
-            ActivityItem(
-                id: "2",
-                title: "Bob Smith joined the team",
-                timestamp: "5 hours ago",
-                icon: "person.badge.plus.fill",
-                color: Color(nsColor: .systemGreen)),
-            ActivityItem(
-                id: "3",
-                title: "Quota increased to 100,000 credits",
-                timestamp: "1 day ago",
-                icon: "chart.line.uptrend.xyaxis",
-                color: Color(nsColor: .systemBlue)),
-            ActivityItem(
-                id: "4",
-                title: "Charlie Davis invited Diana Williams",
-                timestamp: "2 days ago",
-                icon: "envelope.fill",
-                color: Color(nsColor: .systemPurple)),
-        ]
-    }
-
     private func handleChartTap(
         location: CGPoint,
         proxy: ChartProxy,
@@ -341,26 +282,6 @@ struct TeamDashboardView: View {
 
 // MARK: - Models
 
-enum TimePeriod: String, CaseIterable, Identifiable {
-    case day
-    case week
-    case month
-    case year
-
-    var id: String {
-        self.rawValue
-    }
-
-    var displayName: String {
-        switch self {
-        case .day: "Today"
-        case .week: "Week"
-        case .month: "Month"
-        case .year: "Year"
-        }
-    }
-}
-
 struct MemberUsageItem: Identifiable {
     let memberID: String
     let memberName: String
@@ -370,12 +291,4 @@ struct MemberUsageItem: Identifiable {
     var id: String {
         self.memberID
     }
-}
-
-struct ActivityItem: Identifiable {
-    let id: String
-    let title: String
-    let timestamp: String
-    let icon: String
-    let color: Color
 }

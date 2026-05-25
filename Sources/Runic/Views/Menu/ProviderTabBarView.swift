@@ -61,7 +61,9 @@ struct ProviderTabBarView: View {
                                 .stroke(
                                     self.tabStrokeColor(selectedColor: selectedColor, isSelected: tab.isSelected),
                                     lineWidth: self.tabStrokeWidth(isSelected: tab.isSelected)))
-                        .foregroundStyle(tab.isSelected ? selectedColor : self.runicTheme.secondaryText)
+                        .foregroundStyle(self.runicTheme.isTerminalHUD
+                            ? (tab.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText.opacity(0.68))
+                            : (tab.isSelected ? self.runicTheme.primaryText : self.runicTheme.primaryText.opacity(0.66)))
                         .shadow(
                             color: self.tabGlowColor(selectedColor: selectedColor, isSelected: tab.isSelected),
                             radius: self.tabGlowRadius(isSelected: tab.isSelected),

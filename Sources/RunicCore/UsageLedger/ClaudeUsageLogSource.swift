@@ -62,11 +62,12 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             effectiveMinDate = effectiveMinDate.map { $0 < todayStart ? todayStart : $0 } ?? todayStart
         }
         let scanMinDate = effectiveMinDate
-        var incrementalCutoff = needsCoverageScan
-            ? (scanMinDate ?? .distantPast)
-            : (lastScan ?? scanMinDate ?? self.now.addingTimeInterval(-86400))
-        if historyCovered, incrementalCutoff < todayStart {
-            incrementalCutoff = todayStart
+        let incrementalCutoff: Date = if historyCovered {
+            todayStart
+        } else if needsCoverageScan {
+            scanMinDate ?? .distantPast
+        } else {
+            lastScan ?? scanMinDate ?? self.now.addingTimeInterval(-86400)
         }
 
         let allFiles = self.findUsageFiles(in: projectsDirs, minDate: scanMinDate)

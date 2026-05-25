@@ -110,7 +110,7 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
         // If access requires UI, return nil and let callers fall back gracefully.
         let authContext = LAContext()
         authContext.interactionNotAllowed = true
-        query[kSecUseAuthenticationUI as String] = "kSecUseAuthenticationUIFail" as CFString
+            query[kSecUseAuthenticationUI as String] = "u_AuthUIF" as CFString
         query[kSecUseAuthenticationContext as String] = authContext
 
         var item: CFTypeRef?

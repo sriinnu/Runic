@@ -596,17 +596,34 @@ public enum OTelGenAILedgerAdapter {
     private static func dateValue(for keys: [String], in dictionary: [String: Any]) -> Date? {
         for key in keys {
             guard let raw = self.lookupValue(forKey: key, in: dictionary) else { continue }
-            if let nanos = self.coerceDouble(raw), nanos > 1_000_000_000_000 {
-                return Date(timeIntervalSince1970: nanos / 1_000_000_000)
-            }
-            if let seconds = self.coerceDouble(raw), seconds > 0, seconds < 4_102_444_800 {
-                return Date(timeIntervalSince1970: seconds)
+            if let numeric = self.coerceDouble(raw),
+               let date = self.dateFromNumericTimestamp(numeric)
+            {
+                return date
             }
             if let text = raw as? String, let parsed = self.parseISODate(text) {
                 return parsed
             }
         }
         return nil
+    }
+
+    private static func dateFromNumericTimestamp(_ raw: Double) -> Date? {
+        guard raw > 0 else { return nil }
+
+        let seconds: Double
+        if raw >= 100_000_000_000_000_000 {
+            seconds = raw / 1_000_000_000
+        } else if raw >= 100_000_000_000_000 {
+            seconds = raw / 1_000_000
+        } else if raw >= 100_000_000_000 {
+            seconds = raw / 1_000
+        } else {
+            seconds = raw
+        }
+
+        guard seconds > 0, seconds < 4_102_444_800 else { return nil }
+        return Date(timeIntervalSince1970: seconds)
     }
 
     private static func parseISODate(_ text: String) -> Date? {

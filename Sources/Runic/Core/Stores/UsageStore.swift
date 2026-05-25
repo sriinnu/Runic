@@ -2232,6 +2232,7 @@ final class UsageStore {
                 dailyByProvider[provider] = byDay.values.first { $0.dayStart == todayStart }
             }
         }
+        let mergedDailySummaries = allDailySummariesByProvider.values.flatMap { $0 }
 
         let hourlySummaries = UsageLedgerAggregator.hourlySummaries(
             entries: entries,
@@ -2281,10 +2282,10 @@ final class UsageStore {
             projectBreakdownsByProvider[summary.provider, default: []].append(summary)
         }
 
-        let providerForecasts = UsageLedgerAggregator.providerSpendForecasts(
-            entries: entries,
+        let providerForecasts = self.providerSpendForecasts(
+            from: mergedDailySummaries,
             now: now,
-            timeZone: timeZone)
+            calendar: calendar)
         var spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
         for forecast in providerForecasts where spendForecastsByProvider[forecast.provider] == nil {
             spendForecastsByProvider[forecast.provider] = forecast
@@ -2314,7 +2315,7 @@ final class UsageStore {
             }
         }
         let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
-            dailySummaries: dailySummaries,
+            dailySummaries: mergedDailySummaries,
             now: now,
             calendar: calendar)
         var compactionsByProvider: [UsageProvider: UsageLedgerCompactionSummary] = [:]
@@ -2360,6 +2361,45 @@ final class UsageStore {
             limitsByProjectID[budget.projectID] = budget.monthlyLimit
         }
         return limitsByProjectID
+    }
+
+    private func providerSpendForecasts(
+        from dailySummaries: [UsageLedgerDailySummary],
+        now: Date,
+        calendar: Calendar,
+        projectionDays: Int = 30) -> [UsageLedgerSpendForecast]
+    {
+        struct Bucket {
+            var costByDay: [Date: Double] = [:]
+        }
+
+        var buckets: [UsageProvider: Bucket] = [:]
+        for summary in dailySummaries where calendar.isDate(summary.dayStart, equalTo: now, toGranularity: .month) {
+            guard let cost = summary.totals.costUSD, cost.isFinite else { continue }
+            buckets[summary.provider, default: Bucket()].costByDay[summary.dayStart, default: 0] += cost
+        }
+
+        return buckets.compactMap { provider, bucket in
+            let costs = bucket.costByDay.values.filter(\.isFinite)
+            guard !costs.isEmpty else { return nil }
+            let observedCost = costs.reduce(0, +)
+            guard observedCost.isFinite else { return nil }
+            let averageDailyCost = observedCost / Double(costs.count)
+            guard averageDailyCost.isFinite else { return nil }
+            return UsageLedgerSpendForecast(
+                provider: provider,
+                observedDays: costs.count,
+                observedCostUSD: observedCost,
+                averageDailyCostUSD: averageDailyCost,
+                projected30DayCostUSD: averageDailyCost * Double(projectionDays),
+                projectionDays: projectionDays)
+        }
+        .sorted { lhs, rhs in
+            if lhs.projected30DayCostUSD != rhs.projected30DayCostUSD {
+                return lhs.projected30DayCostUSD > rhs.projected30DayCostUSD
+            }
+            return lhs.provider.rawValue < rhs.provider.rawValue
+        }
     }
 
     private func resolvedSpendForecast(
