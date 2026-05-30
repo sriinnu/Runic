@@ -1,15 +1,15 @@
 ---
-summary: "Codex provider data sources: OpenAI web dashboard, Codex CLI RPC/PTY, credits, and local cost usage."
+summary: "Codex provider data sources: OpenAI web dashboard, Codex CLI RPC/PTY, credits, and local cost relay."
 read_when:
   - Debugging Codex usage/credits parsing
   - Updating OpenAI dashboard scraping or cookie import
   - Changing Codex CLI RPC/PTY behavior
-  - Reviewing local cost usage scanning
+  - Reviewing local cost relay behavior
 ---
 
 # Codex provider
 
-Codex has four usage data paths (OAuth API, web dashboard, CLI RPC, CLI PTY) plus a local cost-usage scanner.
+Codex has four usage data paths (OAuth API, web dashboard, CLI RPC, CLI PTY) plus a local cost-usage relay.
 The OAuth API is the default app source when credentials are available; web access is optional for dashboard extras.
 
 ## Data sources + fallback order
@@ -85,20 +85,28 @@ The OAuth API is the default app source when credentials are available; web acce
 - CLI RPC: `account/rateLimits/read` → credits balance.
 - CLI PTY fallback: parse `Credits:` from `/status`.
 
-## Cost usage (local log scan)
-- Source files:
-  - `~/.codex/sessions/YYYY/MM/DD/*.jsonl`
-  - Or `$CODEX_HOME/sessions/...` if `CODEX_HOME` is set.
-- Scanner:
-  - Parses `event_msg` token_count entries and `turn_context` model markers.
+## Cost usage relay
+- Live source files:
+  - Today's `~/.codex/sessions/YYYY/MM/DD/*.jsonl`
+  - Or today's `$CODEX_HOME/sessions/...` files if `CODEX_HOME` is set.
+- Historical source:
+  - Runic-owned event relay: `~/Library/Application Support/Runic/relay/codex-events.jsonl`
+  - Daily materialized cache: `~/Library/Application Support/Runic/ledger-cache/codex-daily.json`
+  - One-time seed from legacy scanner cache: `~/Library/Caches/Runic/cost-usage/codex-v1.json`
+- Refresh rule:
+  - Provider JSONLs before today are not reopened during normal refresh.
+  - `runic cost --rebuild --provider codex` is the explicit repair path that reopens the 30-day Codex JSONL window.
+  - Today's Codex JSONLs are normalized into relay events with source fingerprints and scan watermarks.
+  - Daily totals are materialized from the newest relay snapshot for each day, then merged into the 30-day token/cost view.
+  - Legacy cache days with implausible token/request totals are quarantined before any cache seeding.
+- Parser:
+  - Parses today's `event_msg` token_count entries and `turn_context` model markers.
   - Computes input/cached/output token deltas and per-model cost.
-- Cache:
-  - `~/Library/Caches/Runic/cost-usage/codex-v1.json`
-- Window: last 30 days (rolling), with a 60s minimum refresh interval.
 
 ## Key files
 - Web: `Sources/RunicCore/OpenAIWeb/*`
 - CLI RPC + PTY: `Sources/RunicCore/UsageFetcher.swift`,
   `Sources/RunicCore/Providers/Codex/CodexStatusProbe.swift`
-- Cost usage: `Sources/RunicCore/CostUsageFetcher.swift`,
-  `Sources/RunicCore/Vendored/CostUsage/*`
+- Cost usage relay: `Sources/RunicCore/CostUsageFetcher.swift`,
+  `Sources/RunicCore/UsageLedger/CodexUsageLogSource.swift`,
+  `Sources/RunicCore/UsageLedger/LedgerCache.swift`

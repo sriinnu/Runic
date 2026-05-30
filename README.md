@@ -2,136 +2,61 @@
 
 <div align="center">
 
-<img src="runic.png" alt="Runic — infinity symbol with usage bars" width="160" />
+<img src="runic.png" alt="Runic infinity symbol with usage bars" width="144" />
 
-**AI usage monitoring for your Mac menubar.**
-
-Monitor usage, quotas, context labels, and best-effort cost signals across 28 AI providers.
+**Local-first AI usage visibility for macOS.**
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000?logo=apple)
 ![Swift 6.2](https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white)
-![License AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)
-[![Sponsor](https://img.shields.io/badge/support-Buy%20Me%20a%20Coffee-ffdd00?logo=buymeacoffee&logoColor=111)](https://buymeacoffee.com/sriinnu)
+![License MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)
 
 </div>
 
----
+Runic is a menubar app for seeing AI usage, quota signals, reset windows, cost estimates, context metadata, and local usage history across the providers you enable.
 
-## What it does
+Its job is not to make provider usage look cleaner than it is. Its job is to report what can be known, label what is inferred, and avoid pretending when a provider does not expose the data.
 
-Runic sits in your menubar and shows how much of your AI subscription you've used, what it's costing, and when your limits reset. One click gives you charts, breakdowns, forecasts, scoped exports, and provider health across your enabled providers.
+## What We Stand For
 
-## Screenshots
+**Truth over polish.** Runic should never fake precision. If a number comes from a provider API, local log, browser session, pricing table, heuristic, or fallback, that provenance should be visible in the code and, where useful, in exports.
 
-Screenshots below use sanitized demo data.
+**Local first.** Usage data belongs on the Mac by default. Runic has no product analytics, no telemetry, and no crash reporting. Network access is limited to the provider/status/update/webhook paths the app needs for enabled features.
 
-| Codex Menu | Timeline Details |
-|---|---|
-| <img src="assets/screenshots/menubar-codex.png" alt="Runic Codex provider menu with terminal theme, quota bars, and timeline controls" width="360" /> | <img src="assets/screenshots/menubar-codex-details.png" alt="Runic Codex timeline detail panel with scoped CSV and JSON export actions" width="360" /> |
+**No dark patterns.** Budget warnings, quota labels, exports, and cost estimates should help the user understand their usage, not scare them into a workflow or hide uncertainty.
 
-| Claude Menu | General Settings |
-|---|---|
-| <img src="assets/screenshots/menubar-claude.png" alt="Runic Claude provider menu with terminal theme and usage timeline" width="360" /> | <img src="assets/screenshots/settings-general.png" alt="Runic General settings showing chart, number, date, theme, and preview controls" width="360" /> |
+**Provider reality, not provider mythology.** Context windows are capability labels, not proof that every old token is semantically retained. Costs are best-effort unless provider-reported. Compaction tax is shown only when logs or telemetry explicitly identify compaction work.
 
-| Performance Settings |
-|---|
-| <img src="assets/screenshots/settings-performance.png" alt="Runic Performance settings showing monitoring, retention, quality prompts, and database controls" width="360" /> |
+**Secrets stay out.** API keys and locally entered credentials belong in macOS Keychain or local provider sessions, not in git, screenshots, docs, diagnostics, or examples.
 
-## Supported Providers
+## What It Does
 
-| | | |
-|---|---|---|
-| Claude (1M ctx) | Codex (400K ctx) | Cursor (128K ctx) |
-| Gemini (1M ctx) | Copilot (128K ctx) | z.ai (205K ctx) |
-| OpenRouter (ctx varies) | Groq (128K ctx) | DeepSeek (64K ctx) |
-| Fireworks (128K ctx) | Mistral (128K ctx) | Perplexity (128K ctx) |
-| Kimi (128K ctx) | Together (128K ctx) | Cohere (128K ctx) |
-| xAI (128K ctx) | Cerebras (128K ctx) | SambaNova (128K ctx) |
-| Azure OpenAI (ctx varies) | Bedrock (ctx varies) | Vertex AI (ctx varies) |
-| Qwen (128K ctx) | MiniMax (ctx varies) | Auggie (ctx varies) |
-| Antigravity (ctx varies) | Factory (Droid, ctx varies) | Vercel AI (ctx varies) |
-| Local LLM (ctx varies) | | |
+- Shows enabled provider usage from APIs, local CLIs, web sessions, local probes, and local telemetry where available.
+- Tracks token and cost history for Claude and Codex through a Runic-owned relay, with normal refresh reading today's live logs and explicit rebuild repairing historical JSONL data.
+- Reads capability metadata from Kosha-discovery when present, then falls back to bundled context metadata.
+- Exports scoped usage data as CSV or JSON with provenance fields where known.
+- Provides a CLI for scripts and diagnostics.
 
-Context labels prefer Kosha-discovery 1.2.0's local TTL-backed capability registry at `~/.kosha/registry.json` when it is present. Runic reads that file only as local metadata, marks Kosha model/provider capability data stale after 24 hours, and falls back to `Sources/Runic/Resources/provider-context-windows.json`. Fixed labels describe known model context capacity; `ctx varies` means the selected model or deployment context capacity depends on the hosted model, deployment, or upstream provider.
+Provider behavior is uneven because provider surfaces are uneven. Claude and Codex expose richer local usage signals than most API-only providers. Some providers expose quota windows, some expose spend, some expose model inventory, and some expose almost nothing useful. Runic should make that unevenness visible instead of smoothing it away.
 
-## Features
+## Privacy Boundary
 
-**Overview dashboard**
-- All providers at a glance with brand icons and progress bars
-- Activity ring showing average usage across providers
-- Model context capacity, reset countdown, and usage window per provider
-- Combined 7-day stacked bar chart
+Runic keeps usage data on this Mac unless you export it, copy diagnostics, enable a configured webhook, or use a provider feature that requires a provider request.
 
-**Per-provider view**
-- Hero stat with provider icon, today's token count and cost
-- Inline line chart with 1h / 6h / 1d / 7d / 30d range picker
-- Glassmorphism stat cards (Peak Hour, This Week) with sparklines
-- Usage progress bars with sheen animation and glow effects
-- Live "Updated Xs ago" timestamp
+The local OpenTelemetry collector stores sanitized metric JSONL only: provider, model, timestamps, token counts, cache counts, IDs, explicit costs, SDK version, and explicit operation kind. Prompt and response content from upstream telemetry is not persisted.
 
-**Charts** (submenus)
-- Usage timeline (area + line, Catmull-Rom interpolated)
-- Today by hour (24-bar chart with peak highlight)
-- Last 7 days (weekly bar chart)
-- Subscription utilization (Daily / Weekly / Monthly)
-- Usage window comparison (dual-line session vs weekly)
-- Model breakdown (donut chart)
-- Project breakdown (horizontal bar chart)
-- Hover details for tokens, percent share, spend, attribution, and selected time range
-
-**Analytics**
-- Token usage tracking (input, output, cache)
-- Cost estimation with per-model pricing
-- Spend forecasting with budget breach detection
-- Project and model attribution, including an explicit "Unattributed usage" state when provider logs do not expose a readable project name
-- Local LLM discovery for Ollama, LM Studio, vLLM, llama.cpp, and Open WebUI; usage is tracked when OpenTelemetry GenAI or local logs expose it
-- Local OTLP/HTTP JSON collector for Vercel AI SDK, OpenTelemetry GenAI, LiteLLM-style telemetry, and local OpenAI-compatible runtimes
-- Metric provenance for token and cost totals so exports can distinguish exact, provider-reported, estimated, inferred, and unknown values
-- Compaction-tax visibility when provider logs or OpenTelemetry spans explicitly mark compaction work
-- Anomaly detection
-
-**Export & Notifications**
-- Export the active panel/range as CSV or JSON (timeline, hourly, weekly, utilization, windows, projects, or models)
-- Budget breach alerts via macOS notifications
-- macOS widgets (usage, history, compact, switcher)
-- CLI tool (`RunicCLI`)
-
-**Design**
-- Retro, System, Light, Dark, Daybreak, Glass, and Tactical HUD Terminal themes
-- JSON-driven theme style tokens for typography, chrome, effects, and controls
-- Liquid UI with glass materials and animated progress bars
-- Staggered entrance animations and glass shimmer effects
-- Curated font system with Mona Sans, Commit Mono, Geist, Berkeley Mono, Operator Mono, SF, New York, and theme-aware contrast rules
-- Font provenance is tracked in `Sources/Runic/Resources/Fonts/FONT_PROVENANCE.md`; add only fonts you are licensed to bundle
-- Design tokens for typography, colors, spacing, corner radius, animation
-- VoiceOver accessible
-- Sparkle auto-updates
-
-## Accuracy & Transparency
-
-Runic reports what each provider or local client exposes. Claude and Codex currently provide the richest local usage signals; API providers vary by endpoint, account tier, and whether token usage, cache usage, quota, or model inventory is returned by their APIs.
-
-Context labels are model capacity labels, not proof that every token is still semantically retained in the active conversation. When Kosha-discovery 1.2.0 is available, Runic uses its schema-v1 model/provider registry as the freshest capability source; otherwise it uses built-in static fallbacks. Provider-side summarization or compaction may reduce effective retained context even when the model's maximum window is larger. The menu distinguishes max context metadata from observed usage and labels whether the context capability came from Kosha, a model heuristic, or a built-in fallback.
-
-Compaction itself can consume tokens when the provider performs it through a model call. Runic labels those tokens as "compaction tax" only when provider logs or OpenTelemetry spans explicitly identify compaction work. It still does not estimate semantic context loss after summarization.
-
-The local OTLP collector stores sanitized metric JSONL only: provider, model, timestamps, token counts, cache counts, project/session IDs, request/message IDs, explicit cost, and explicit operation kind. Prompt and response content from upstream telemetry is not persisted.
-
-Cost and quota numbers are best-effort local calculations from logs, API responses, and pricing tables. CSV/JSON exports include token and cost provenance fields when the source is known. When a provider does not expose a metric, Runic avoids inventing precision and falls back to the nearest honest label.
-
-Usage windows and reset countdowns are provider-reported when available. A five-hour session window is published for Claude user plans and may appear in some local client surfaces, but it is not a cross-provider standard; many API providers expose minute/day rate limits, monthly spend caps, or no reset window at all.
+Local logs and CLI output can include account identity fields such as email addresses. Redact diagnostics before sharing them publicly.
 
 ## Install
 
-**Download** the latest release from [GitHub Releases](https://github.com/sriinnu/Runic/releases/latest), unzip, and drag `Runic.app` to Applications. Signed and notarized — no Gatekeeper warnings.
+Download the latest release from [GitHub Releases](https://github.com/sriinnu/Runic/releases/latest), unzip it, and move `Runic.app` to Applications.
 
-**Homebrew Cask:**
+Homebrew:
 
 ```bash
 brew install --cask sriinnu/tap/runic
 ```
 
-**Or build from source:**
+Build from source:
 
 ```bash
 git clone https://github.com/sriinnu/Runic.git
@@ -139,54 +64,48 @@ cd Runic
 ./Scripts/compile_and_run.sh
 ```
 
-## Configure
-
-Open **Preferences** from the menubar. Each provider has its own settings:
-
-- **API-based** (Groq, Mistral, z.ai, etc.): Paste your API key; provider auto-enables
-- **CLI-based** (Claude, Codex): Detected automatically from local CLI
-- **Cloud** (Bedrock, Vertex AI): Set environment variables
-- **Local LLM**: No API key; Runic probes common localhost runtimes and reads configured OpenTelemetry GenAI logs for usage
-
-API keys and locally entered secrets are stored in macOS Keychain. CLI or browser-backed providers still depend on the provider's own local session and may require re-login if that external session expires or mismatches.
-
 ## CLI
 
-Runic bundles `RunicCLI` for terminal/script usage:
+Runic bundles `RunicCLI`:
 
 ```bash
 runic --provider all --format json --pretty
-runic cost --provider claude --format json --pretty
+runic cost --provider codex
+runic cost --provider codex --rebuild
 runic insights --provider all --view compaction --json --pretty
 runic otel-collect --port 4318
-runic otel-collect --once --input ./otel-payload.json
 ```
 
-Install it from **Preferences → Advanced → Install CLI**. See [docs/cli.md](docs/cli.md) for command details and JSON fields.
+Install it from Preferences -> Advanced -> Install CLI.
 
-## Privacy
+`runic cost` refreshes today's live usage by default. `--rebuild` is the explicit historical repair path and may scan provider JSONL history.
 
-Zero telemetry. No analytics. No crash reporting. Your data, your tokens, your cost. Runic keeps usage data on this Mac unless you export it, copy diagnostics, or configure a webhook. Network requests are limited to enabled provider fetches, localhost runtime probes, status/update checks, optional web-dashboard features, and configured/test webhooks.
+## Docs
 
-API keys are stored in macOS Keychain. Browser-backed providers reuse local browser/WebKit sessions where available; Runic does not store provider passwords. Local usage logs and CLI/JSON output can include account identity fields such as email addresses, so redact diagnostics before sharing them publicly.
+- Provider behavior: [docs/providers.md](docs/providers.md)
+- CLI details: [docs/cli.md](docs/cli.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Refresh loop: [docs/refresh-loop.md](docs/refresh-loop.md)
+- UI and widgets: [docs/ui.md](docs/ui.md), [docs/widgets.md](docs/widgets.md)
+- Packaging and releases: [docs/packaging.md](docs/packaging.md), [docs/releasing.md](docs/releasing.md)
 
-## Support Runic
+## Contributors And Agents
 
-Runic is open source and sponsorship is optional. If it saves you time, helps you catch runaway AI spend, or makes provider limits less opaque, you can support ongoing maintenance through [Buy Me a Coffee](https://buymeacoffee.com/sriinnu) or GitHub Sponsors.
+Start with [SKILL.md](SKILL.md), [docs/architecture.md](docs/architecture.md), [docs/provider.md](docs/provider.md), and [docs/providers.md](docs/providers.md).
 
-Sponsorship funds provider fixes, release signing, docs, CI, and privacy-first usage features. Core usage tracking, transparency, exports, and local-first behavior should stay open; Runic should never fake numbers, hide telemetry, or turn honest reporting into a dark pattern.
+Keep the root README as a statement of truth and project stance. Put detailed provider behavior, screenshots, local paths, feature matrices, research notes, and implementation reports in the right docs or ignored local notes.
 
-## For Contributors And Agents
+Do not commit keys, tokens, browser session dumps, local account screenshots, account emails, org IDs, unredacted diagnostics, or provider secrets.
 
-Start with [SKILL.md](SKILL.md), [docs/architecture.md](docs/architecture.md), [docs/provider.md](docs/provider.md), and [docs/providers.md](docs/providers.md). Keep README user-facing and keep auth internals, local paths, research notes, and generated reports out of git.
+## Support
+
+Runic is open source. Sponsorship is optional and should fund maintenance, signing, CI, docs, and privacy-first usage features without changing the core promise: honest local usage visibility should stay open.
 
 ## License
 
-AGPL-3.0-or-later. See [LICENSE](LICENSE).
+MPL-2.0. See [LICENSE](LICENSE).
 
 Historical releases published before this license change retain their original license terms.
-
----
 
 <div align="center">
 

@@ -46,7 +46,14 @@ enum RunicCLI {
                 FlagDefinition(label: "json", names: [.long("json")], help: "Output JSON format"),
                 FlagDefinition(label: "pretty", names: [.long("pretty")], help: "Pretty-print output"),
                 FlagDefinition(label: "noColor", names: [.long("no-color")], help: "Disable ANSI colors"),
-                FlagDefinition(label: "refresh", names: [.long("refresh")], help: "Force refresh cached data"),
+                FlagDefinition(
+                    label: "refresh",
+                    names: [.long("refresh")],
+                    help: "Compatibility flag; cost refreshes today's logs by default"),
+                FlagDefinition(
+                    label: "rebuild",
+                    names: [.long("rebuild")],
+                    help: "Repair the 30-day relay by scanning provider JSONL history"),
             ])
 
         let insightsSignature = CommandSignature(
@@ -238,7 +245,13 @@ enum RunicCLI {
         let isPretty = invocation.parsedValues.flags.contains("pretty")
         let noColor = invocation.parsedValues.flags.contains("noColor")
         let useColor = !noColor
-        let refresh = invocation.parsedValues.flags.contains("refresh")
+        let refreshRequested = invocation.parsedValues.flags.contains("refresh")
+        let rebuild = invocation.parsedValues.flags.contains("rebuild")
+        let mode: CostUsageLoadMode = rebuild ? .rebuildHistory : .refresh
+        if refreshRequested, !rebuild {
+            Self.printError(
+                "runic cost: --refresh is accepted for compatibility; cost refreshes today's logs by default.")
+        }
 
         let providers: [UsageProvider]
         if let providerName = providerArg?.lowercased() {
@@ -255,7 +268,7 @@ enum RunicCLI {
 
         for provider in providers {
             do {
-                let snapshot = try await fetcher.loadTokenSnapshot(provider: provider, forceRefresh: refresh)
+                let snapshot = try await fetcher.loadTokenSnapshot(provider: provider, mode: mode)
                 let text = Self.renderCostText(provider: provider, snapshot: snapshot, useColor: useColor)
                 if !output.isEmpty { output += "\n" }
                 output += text
@@ -932,7 +945,8 @@ enum RunicCLI {
             print("    --json                 Output JSON format")
             print("    --pretty               Pretty-print output")
             print("    --no-color             Disable ANSI colors")
-            print("    --refresh              Force refresh cached data")
+            print("    --refresh              Compatibility flag; cost refreshes today's logs by default")
+            print("    --rebuild              Repair the 30-day relay by scanning provider JSONL history")
         }
         if command == "insights" || command == nil {
             print("insights - Analyze local usage logs")

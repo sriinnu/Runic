@@ -1,15 +1,15 @@
 ---
-summary: "Claude provider data sources: OAuth API, web API (cookies), CLI PTY, and local cost usage."
+summary: "Claude provider data sources: OAuth API, web API (cookies), CLI PTY, and local cost relay."
 read_when:
   - Debugging Claude usage/status parsing
   - Updating Claude OAuth/web endpoints or cookie import
   - Adjusting Claude CLI PTY automation
-  - Reviewing local cost usage scanning
+  - Reviewing local cost relay behavior
 ---
 
 # Claude provider
 
-Claude supports three usage data paths plus local cost usage. Source selection is automatic unless debug override is set.
+Claude supports three usage data paths plus local cost usage relay. Source selection is automatic unless debug override is set.
 
 ## Data sources + selection order
 
@@ -70,24 +70,33 @@ Claude supports three usage data paths plus local cost usage. Source selection i
   - Parses `Account:` and `Org:` lines when present.
   - Surfaces CLI errors (e.g. token expired) directly.
 
-## Cost usage (local log scan)
+## Cost usage relay
 - Source roots:
   - `$CLAUDE_CONFIG_DIR` (comma-separated), each root uses `<root>/projects`.
   - Fallback roots:
     - `~/.config/claude/projects`
     - `~/.claude/projects`
-- Files: `**/*.jsonl` under the project roots.
+- Live files: project JSONLs touched today.
+- Historical source:
+  - Runic-owned event relay: `~/Library/Application Support/Runic/relay/claude-events.jsonl`
+  - Daily materialized cache: `~/Library/Application Support/Runic/ledger-cache/claude-daily.json`
+  - One-time seed from legacy scanner cache: `~/Library/Caches/Runic/cost-usage/claude-v1.json`
+- Refresh rule:
+  - Provider JSONLs before today are not reopened during normal refresh.
+  - `runic cost --rebuild --provider claude` is the explicit repair path that reopens Claude JSONL history for the 30-day window.
+  - Today's touched project files are parsed, line-filtered to today's timestamps, and normalized into relay events with source fingerprints and scan watermarks.
+  - Daily totals are materialized from the newest relay snapshot for each day, then merged into the 30-day token/cost view.
+  - Legacy cache days with implausible token/request totals are quarantined before any cache seeding.
 - Parsing:
   - Lines with `type: "assistant"` and `message.usage`.
   - Uses per-model token counts (input, cache read/create, output).
   - Deduplicates streaming chunks by `message.id + requestId` (usage is cumulative per chunk).
-- Cache:
-  - `~/Library/Caches/Runic/cost-usage/claude-v1.json`
 
 ## Key files
 - OAuth: `Sources/RunicCore/Providers/Claude/ClaudeOAuth/*`
 - Web API: `Sources/RunicCore/Providers/Claude/ClaudeWeb/ClaudeWebAPIFetcher.swift`
 - CLI PTY: `Sources/RunicCore/Providers/Claude/ClaudeStatusProbe.swift`,
   `Sources/RunicCore/Providers/Claude/ClaudeCLISession.swift`
-- Cost usage: `Sources/RunicCore/CostUsageFetcher.swift`,
-  `Sources/RunicCore/Vendored/CostUsage/*`
+- Cost usage relay: `Sources/RunicCore/CostUsageFetcher.swift`,
+  `Sources/RunicCore/UsageLedger/ClaudeUsageLogSource.swift`,
+  `Sources/RunicCore/UsageLedger/LedgerCache.swift`

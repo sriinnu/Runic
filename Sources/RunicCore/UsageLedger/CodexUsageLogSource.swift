@@ -21,6 +21,12 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let modifiedAt: Date?
     }
 
+    private struct SourceFileMetadata: Equatable {
+        let path: String
+        let modifiedAt: Date?
+        let sizeBytes: Int64?
+    }
+
     private struct CodexTotals {
         var input: Int
         var cached: Int
@@ -64,10 +70,10 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private let environment: [String: String]
     private let fileManager: FileManager
     private let sessionsRoot: URL?
-    private let maxAgeDays: Int?
     private let now: Date
     private let log: RunicLogger
     private let cache: LedgerCache
+    private let scanMode: UsageLedgerLogScanMode
 
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -76,116 +82,125 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         maxAgeDays: Int? = 3,
         now: Date = Date(),
         log: RunicLogger = RunicLog.logger("codex-usage-ledger"),
-        cache: LedgerCache = .shared)
+        cache: LedgerCache = .shared,
+        scanMode: UsageLedgerLogScanMode = .refreshToday)
     {
         self.environment = environment
         self.fileManager = fileManager
         self.sessionsRoot = sessionsRoot
-        self.maxAgeDays = maxAgeDays
         self.now = now
         self.log = log
         self.cache = cache
+        self.scanMode = scanMode
+        _ = maxAgeDays // Retained for source compatibility; scanMode controls history reads.
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
         let root = try self.resolveSessionsRoot()
         let todayKey = LedgerCache.dayKey(for: self.now)
-        let todayStart = Calendar.current.startOfDay(for: self.now)
+        let window = self.scanWindow(todayKey: todayKey)
 
-        // Relay scan: once the bounded window is cached, keep history frozen
-        // and scan only today's session files.
+        // Relay contract: normal refresh never reopens historical provider
+        // JSONLs. Explicit rebuild mode is the repair path that opts into
+        // historical reads and commits empty day snapshots for missing raw data.
         let cache = self.cache
-        let coveredDays = await cache.effectiveCoveredMaxAgeDays(provider: "codex") ?? 0
-        let requestedCoverageDays = self.maxAgeDays.flatMap { $0 > 0 ? $0 : nil }
-        let historyCovered = requestedCoverageDays.map { coveredDays >= $0 } ?? false
-        let needsCoverageScan = requestedCoverageDays.map { coveredDays < $0 } ?? false
-        let scanMaxAgeDays = historyCovered ? 1 : self.maxAgeDays
-        var minDate = self.minDate()
-        if historyCovered {
-            minDate = minDate.map { $0 < todayStart ? todayStart : $0 } ?? todayStart
-        }
-        let lastScan = await cache.lastScanDate(provider: "codex")
-        let incrementalCutoff: Date = if historyCovered {
-            todayStart
-        } else if needsCoverageScan {
-            minDate ?? .distantPast
-        } else {
-            lastScan ?? minDate ?? self.now.addingTimeInterval(-86400)
-        }
-        let allFiles = self.listSessionFiles(root: root, minDate: minDate, maxAgeDays: scanMaxAgeDays)
-        let filesToScan = allFiles.filter { file in
-            guard let modDate = file.modifiedAt else { return true }
-            return modDate >= incrementalCutoff
-        }
+        let filesToScan = self.listSessionFiles(
+            root: root,
+            minDate: window.minDate,
+            maxAgeDays: window.fileMaxAgeDays)
 
         if filesToScan.isEmpty {
-            await cache.markScanComplete(
+            await cache.mergeEntries(
                 provider: "codex",
+                entries: [],
                 scanDate: self.now,
-                coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
+                todayKey: window.relayTodayKey,
+                coveredMaxAgeDays: window.coveredMaxAgeDays,
+                sourceWatermarks: window.completionWatermarks)
             return []
         }
 
         var entries: [UsageLedgerEntry] = []
         var seenKeys = Set<String>()
+        var sourceWatermarks = window.completionWatermarks
+        var readFailures: [String] = []
 
         for file in filesToScan {
             do {
-                try self.parseFile(file, minDate: minDate, seenKeys: &seenKeys, entries: &entries)
+                let watermark = try self.parseFile(
+                    file,
+                    minDate: window.minDate,
+                    dayKey: window.fileWatermarkDayKey,
+                    seenKeys: &seenKeys,
+                    entries: &entries)
+                sourceWatermarks.append(watermark)
             } catch {
                 self.log.warning("Codex usage log read failed", metadata: [
                     "file": file.url.path,
                     "error": error.localizedDescription,
                 ])
+                readFailures.append(file.url.path)
             }
         }
 
-        // Aggregate into daily summaries and persist to cache.
-        let dailyFormatter = DateFormatter()
-        dailyFormatter.dateFormat = "yyyy-MM-dd"
-        dailyFormatter.timeZone = .current
-
-        var dailyBuckets: [String: (
-            input: Int,
-            output: Int,
-            cacheCreate: Int,
-            cacheRead: Int,
-            cost: Double,
-            requests: Int,
-            models: Set<String>)] = [:]
-        for entry in entries {
-            let key = dailyFormatter.string(from: entry.timestamp)
-            var bucket = dailyBuckets[key] ?? (0, 0, 0, 0, 0, 0, [])
-            bucket.input += entry.inputTokens
-            bucket.output += entry.outputTokens
-            bucket.cacheCreate += entry.cacheCreationTokens
-            bucket.cacheRead += entry.cacheReadTokens
-            bucket.cost += entry.costUSD ?? 0
-            bucket.requests += 1
-            if let model = entry.model { bucket.models.insert(model) }
-            dailyBuckets[key] = bucket
+        if !readFailures.isEmpty {
+            throw CodexUsageLogError.readFailed(readFailures.joined(separator: ", "))
         }
 
-        let cachedDailies = dailyBuckets.map { key, bucket in
-            CachedDaily(
-                dayKey: key,
-                inputTokens: bucket.input,
-                outputTokens: bucket.output,
-                cacheCreationTokens: bucket.cacheCreate,
-                cacheReadTokens: bucket.cacheRead,
-                costUSD: bucket.cost > 0 ? bucket.cost : nil,
-                requestCount: bucket.requests,
-                modelsUsed: Array(bucket.models))
-        }
-
-        await cache.mergeDailies(
+        await cache.mergeEntries(
             provider: "codex",
-            newDailies: cachedDailies,
+            entries: entries,
             scanDate: self.now,
-            todayKey: historyCovered ? todayKey : nil,
-            coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
+            todayKey: window.relayTodayKey,
+            coveredMaxAgeDays: window.coveredMaxAgeDays,
+            sourceWatermarks: sourceWatermarks)
 
         return entries
+    }
+
+    private struct ScanWindow {
+        let minDate: Date
+        let fileMaxAgeDays: Int?
+        let relayTodayKey: String?
+        let coveredMaxAgeDays: Int?
+        let completionWatermarks: [UsageRelaySourceWatermark]
+        let fileWatermarkDayKey: String?
+    }
+
+    private func scanWindow(todayKey: String) -> ScanWindow {
+        let calendar = Calendar.current
+        switch self.scanMode {
+        case .refreshToday:
+            return ScanWindow(
+                minDate: calendar.startOfDay(for: self.now),
+                fileMaxAgeDays: 1,
+                relayTodayKey: todayKey,
+                coveredMaxAgeDays: nil,
+                completionWatermarks: [],
+                fileWatermarkDayKey: todayKey)
+        case let .rebuildHistory(maxAgeDays):
+            let days = max(1, maxAgeDays)
+            let todayStart = calendar.startOfDay(for: self.now)
+            let start = calendar.date(byAdding: .day, value: -(days - 1), to: todayStart) ?? todayStart
+            let dayKeys = (0..<days).compactMap { offset -> String? in
+                guard let date = calendar.date(byAdding: .day, value: offset, to: start) else { return nil }
+                return LedgerCache.dayKey(for: date)
+            }
+            let watermarks = dayKeys.map { dayKey in
+                UsageRelaySourceWatermark(
+                    dayKey: dayKey,
+                    sourceKind: "codex-jsonl-rebuild",
+                    sourceID: "rebuild:codex:\(dayKey)",
+                    sourceFingerprint: "rebuild:codex:\(dayKey):\(Int(self.now.timeIntervalSince1970))")
+            }
+            return ScanWindow(
+                minDate: start,
+                fileMaxAgeDays: days,
+                relayTodayKey: nil,
+                coveredMaxAgeDays: days,
+                completionWatermarks: watermarks,
+                fileWatermarkDayKey: nil)
+        }
     }
 
     private func resolveSessionsRoot() throws -> URL {
@@ -269,13 +284,17 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private func parseFile(
         _ file: SessionFile,
         minDate: Date?,
+        dayKey: String?,
         seenKeys: inout Set<String>,
         entries: inout [UsageLedgerEntry]) throws
+        -> UsageRelaySourceWatermark
     {
         var currentModel: String?
         var currentProjectID: String?
         var currentProjectName: String?
         var previousTotals: CodexTotals?
+        let sourceMetadata = self.sourceMetadata(for: file.url)
+        let sourceFingerprint = self.sourceFingerprint(for: sourceMetadata)
 
         let maxLineBytes = 256 * 1024
         let prefixBytes = 32 * 1024
@@ -467,13 +486,39 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     costProvenance: cost == nil ? nil : MetricProvenance(
                         confidence: .estimated,
                         source: .pricingTable,
-                        detail: "Codex model pricing table")))
+                        detail: "Codex model pricing table"),
+                    sourceFingerprint: sourceFingerprint))
             })
+        let latestMetadata = self.sourceMetadata(for: file.url)
+        guard latestMetadata == sourceMetadata else {
+            throw CodexUsageLogError.readFailed("Codex usage log changed while scanning: \(sourceMetadata.path)")
+        }
+        return self.sourceWatermark(for: sourceMetadata, dayKey: dayKey)
     }
 
-    private func minDate() -> Date? {
-        guard let maxAgeDays, maxAgeDays > 0 else { return nil }
-        return Calendar.current.date(byAdding: .day, value: -maxAgeDays, to: self.now)
+    private func sourceWatermark(for metadata: SourceFileMetadata, dayKey: String?) -> UsageRelaySourceWatermark {
+        return UsageRelaySourceWatermark(
+            dayKey: dayKey,
+            sourceKind: "codex-jsonl",
+            sourceID: metadata.path,
+            sourceFingerprint: self.sourceFingerprint(for: metadata),
+            path: metadata.path,
+            modifiedAt: metadata.modifiedAt,
+            sizeBytes: metadata.sizeBytes)
+    }
+
+    private func sourceFingerprint(for metadata: SourceFileMetadata) -> String {
+        let modifiedMillis = metadata.modifiedAt.map { Int64($0.timeIntervalSince1970 * 1000) } ?? -1
+        return "\(metadata.path)|\(metadata.sizeBytes ?? -1)|\(modifiedMillis)"
+    }
+
+    private func sourceMetadata(for url: URL) -> SourceFileMetadata {
+        let standardized = url.standardizedFileURL
+        let values = try? standardized.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        return SourceFileMetadata(
+            path: standardized.path,
+            modifiedAt: values?.contentModificationDate,
+            sizeBytes: values?.fileSize.map { Int64($0) })
     }
 
     private func parseTimestamp(_ value: String) -> Date? {

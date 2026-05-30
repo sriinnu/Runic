@@ -40,7 +40,7 @@ Common building blocks already exist:
 - subprocess: `SubprocessRunner`
 - cookie import: `BrowserCookieImporter` (Safari/Chrome/Firefox adapters)
 - OpenAI dashboard web scrape: `OpenAIDashboardFetcher` (WKWebView + JS)
-- cost usage: local log scanner (Codex + Claude)
+- cost usage: Runic event relay history plus today's local log scan (Codex + Claude)
 - OpenTelemetry GenAI usage ingestion: `OTelGenAILedgerAdapter`, `OTelGenAIFileLedgerSource`, and sanitized `runic otel-collect`
 - local LLM discovery: `LocalLLMUsageFetcher`
 
