@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.3 — 2026-05-30
+- Preferences: make status-menu Settings and About actions open the Settings window and select the requested panel reliably.
+
 ## 2.2.2 — 2026-05-30
 - Usage: make cost refresh scan only the mutable current day by default, with `--rebuild` reserved for 30-day provider JSONL repair.
 - Usage: harden the provider relay cache so empty rebuild days clear stale snapshots and cached history stays frozen during normal refreshes.
