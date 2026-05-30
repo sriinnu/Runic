@@ -41,26 +41,6 @@ import RunicCore
 // }
 // ```
 
-#if DEBUG
-extension UsageStore {
-    func _setSnapshotForTesting(_ snapshot: UsageSnapshot?, provider: UsageProvider) {
-        self.snapshots[provider] = snapshot?.scoped(to: provider)
-    }
-
-    func _setTokenSnapshotForTesting(_ snapshot: CostUsageTokenSnapshot?, provider: UsageProvider) {
-        self.tokenSnapshots[provider] = snapshot
-    }
-
-    func _setTokenErrorForTesting(_ error: String?, provider: UsageProvider) {
-        self.tokenErrors[provider] = error
-    }
-
-    func _setErrorForTesting(_ error: String?, provider: UsageProvider) {
-        self.errors[provider] = error
-    }
-}
-#endif
-
 @MainActor
 @Observable
 final class UsageStore {
@@ -70,8 +50,8 @@ final class UsageStore {
     private(set) var lastFetchAttempts: [UsageProvider: [ProviderFetchAttempt]] = [:]
     var tokenSnapshots: [UsageProvider: CostUsageTokenSnapshot] = [:]
     // Custom provider snapshots
-    private(set) var customProviderSnapshots: [String: CustomProviderSnapshot] = [:]
-    private(set) var customProviderErrors: [String: String] = [:]
+    var customProviderSnapshots: [String: CustomProviderSnapshot] = [:]
+    var customProviderErrors: [String: String] = [:]
     var tokenErrors: [UsageProvider: String] = [:]
     var tokenRefreshInFlight: Set<UsageProvider> = []
     private(set) var ledgerDailySummaries: [UsageProvider: UsageLedgerDailySummary] = [:]
@@ -357,84 +337,6 @@ extension UsageStore {
         await self.refreshCustomProviders()
 
         self.persistWidgetSnapshot(reason: "refresh")
-    }
-
-    /// Refresh all enabled custom providers
-    func refreshCustomProviders() async {
-        let providers = CustomProviderStore.getEnabledProviders()
-        await withTaskGroup(of: Void.self) { group in
-            for provider in providers {
-                group.addTask {
-                    await self.refreshCustomProvider(id: provider.id)
-                }
-            }
-        }
-    }
-
-    /// Refresh a single custom provider
-    func refreshCustomProvider(id: String) async {
-        guard let config = CustomProviderStore.getProvider(id: id), config.enabled else {
-            return
-        }
-
-        let fetcher = GenericProviderFetcher(config: config)
-        let startTime = Date()
-        let requestID = UUID().uuidString
-        let providerLabel = Self.customProviderMetricLabel(config)
-
-        do {
-            let usageData = try await fetcher.fetchUsage()
-            let endTime = Date()
-
-            await self.trackLatency(
-                provider: .openrouter,
-                providerLabel: providerLabel,
-                requestID: requestID,
-                startTime: startTime,
-                endTime: endTime,
-                success: true)
-
-            let snapshot = CustomProviderSnapshot.from(usageData: usageData.toCustomUsageData(), config: config)
-            await MainActor.run {
-                self.customProviderSnapshots[id] = snapshot
-                self.customProviderErrors.removeValue(forKey: id)
-            }
-        } catch {
-            let endTime = Date()
-
-            await self.trackLatency(
-                provider: .openrouter,
-                providerLabel: providerLabel,
-                requestID: requestID,
-                startTime: startTime,
-                endTime: endTime,
-                success: false)
-            await self.trackError(provider: .openrouter, providerLabel: providerLabel, error: error)
-
-            await MainActor.run {
-                self.customProviderErrors[id] = error.localizedDescription
-            }
-        }
-    }
-
-    /// Clear a custom provider snapshot
-    func clearCustomProviderSnapshot(id: String) {
-        self.customProviderSnapshots.removeValue(forKey: id)
-        self.customProviderErrors.removeValue(forKey: id)
-    }
-
-    /// For demo/testing: drop the snapshot so the loading animation plays, then restore the last snapshot.
-    func replayLoadingAnimation(duration: TimeInterval = 3) {
-        let current = self.preferredSnapshot
-        self.snapshots.removeAll()
-        self.debugForceAnimation = true
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(duration))
-            if let current, let provider = self.enabledProviders().first {
-                self.snapshots[provider] = current
-            }
-            self.debugForceAnimation = false
-        }
     }
 
     // MARK: - Private

@@ -85,6 +85,20 @@ extension UsageStore {
         self.pathDebugInfo = PathBuilder.debugSnapshot(purposes: [.rpc, .tty, .nodeTooling])
     }
 
+    /// For demo/testing: drop the snapshot so the loading animation plays, then restore the last snapshot.
+    func replayLoadingAnimation(duration: TimeInterval = 3) {
+        let current = self.preferredSnapshot
+        self.snapshots.removeAll()
+        self.debugForceAnimation = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(duration))
+            if let current, let provider = self.enabledProviders().first {
+                self.snapshots[provider] = current
+            }
+            self.debugForceAnimation = false
+        }
+    }
+
     nonisolated func trackLatency(
         provider: UsageProvider,
         providerLabel: String? = nil,
