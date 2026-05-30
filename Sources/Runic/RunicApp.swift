@@ -59,7 +59,7 @@ struct RunicApp: App {
         // Hidden 1×1 window to keep SwiftUI's lifecycle alive so `Settings` scene
         // shows the native toolbar tabs even though the UI is AppKit-based.
         WindowGroup("RunicLifecycleKeepalive") {
-            HiddenWindowView()
+            HiddenWindowView(selection: self.preferencesSelection)
         }
         .defaultSize(width: 20, height: 20)
         .windowStyle(.hiddenTitleBar)
@@ -89,10 +89,7 @@ struct RunicApp: App {
     }
 
     private func openSettings(tab: PreferencesTab) {
-        guard let preferencesSelection else { return }
-        preferencesSelection.tab = tab
-        NSApp.activate(ignoringOtherApps: true)
-        _ = NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        SettingsWindowBridge.open(tab: tab, selection: self.preferencesSelection)
     }
 }
 

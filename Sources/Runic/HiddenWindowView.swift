@@ -2,12 +2,16 @@ import SwiftUI
 
 struct HiddenWindowView: View {
     @Environment(\.openSettings) private var openSettings
+    let selection: PreferencesSelection?
 
     var body: some View {
         Color.clear
             .frame(width: 20, height: 20)
-            .onReceive(NotificationCenter.default.publisher(for: .runicOpenSettings)) { _ in
+            .onReceive(NotificationCenter.default.publisher(for: .runicOpenSettings)) { notification in
                 Task { @MainActor in
+                    if let tab = SettingsWindowBridge.tab(from: notification) {
+                        SettingsWindowBridge.select(tab, in: self.selection)
+                    }
                     self.openSettings()
                 }
             }
