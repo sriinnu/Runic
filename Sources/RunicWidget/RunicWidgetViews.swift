@@ -2,7 +2,6 @@ import RunicCore
 import SwiftUI
 import WidgetKit
 
-// Structural lint debt: widget rendering branches need smaller view helpers.
 struct RunicUsageWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: RunicWidgetEntry
@@ -578,65 +577,43 @@ private struct UsageHistoryChart: View {
 }
 
 enum WidgetColors {
-    static func color(for provider: UsageProvider) -> Color { // swiftlint:disable:this cyclomatic_complexity
-        switch provider {
-        case .codex:
-            Color(red: 73 / 255, green: 163 / 255, blue: 176 / 255)
-        case .claude:
-            Color(red: 204 / 255, green: 124 / 255, blue: 94 / 255)
-        case .gemini:
-            Color(red: 171 / 255, green: 135 / 255, blue: 234 / 255)
-        case .antigravity:
-            Color(red: 96 / 255, green: 186 / 255, blue: 126 / 255)
-        case .cursor:
-            Color(red: 0 / 255, green: 191 / 255, blue: 165 / 255) // #00BFA5 - Cursor teal
-        case .zai:
-            Color(red: 232 / 255, green: 90 / 255, blue: 106 / 255)
-        case .factory:
-            Color(red: 255 / 255, green: 107 / 255, blue: 53 / 255) // Factory orange
-        case .copilot:
-            Color(red: 168 / 255, green: 85 / 255, blue: 247 / 255) // Purple
-        case .minimax:
-            Color(red: 99 / 255, green: 102 / 255, blue: 241 / 255) // Indigo
-        case .openrouter:
-            Color(red: 255 / 255, green: 90 / 255, blue: 0 / 255) // OpenRouter orange
-        case .vercelai:
-            Color(red: 0 / 255, green: 0 / 255, blue: 0 / 255)
-        case .groq:
-            Color(red: 0 / 255, green: 200 / 255, blue: 150 / 255) // Groq teal
-        case .deepseek:
-            Color(red: 76 / 255, green: 110 / 255, blue: 245 / 255)
-        case .fireworks:
-            Color(red: 255 / 255, green: 115 / 255, blue: 0 / 255)
-        case .mistral:
-            Color(red: 255 / 255, green: 90 / 255, blue: 52 / 255)
-        case .perplexity:
-            Color(red: 35 / 255, green: 180 / 255, blue: 146 / 255)
-        case .kimi:
-            Color(red: 0 / 255, green: 129 / 255, blue: 255 / 255)
-        case .auggie:
-            Color(red: 255 / 255, green: 180 / 255, blue: 0 / 255)
-        case .together:
-            Color(red: 98 / 255, green: 76 / 255, blue: 245 / 255)
-        case .cohere:
-            Color(red: 58 / 255, green: 95 / 255, blue: 255 / 255)
-        case .xai:
-            Color(red: 20 / 255, green: 20 / 255, blue: 20 / 255)
-        case .cerebras:
-            Color(red: 14 / 255, green: 122 / 255, blue: 161 / 255)
-        case .sambanova:
-            Color(red: 236 / 255, green: 84 / 255, blue: 74 / 255)
-        case .azure:
-            Color(red: 0 / 255, green: 120 / 255, blue: 212 / 255)
-        case .bedrock:
-            Color(red: 255 / 255, green: 153 / 255, blue: 0 / 255)
-        case .vertexai:
-            Color(red: 66 / 255, green: 133 / 255, blue: 244 / 255)
-        case .qwen:
-            Color(red: 98 / 255, green: 52 / 255, blue: 227 / 255)
-        case .localLLM:
-            Color(red: 46 / 255, green: 204 / 255, blue: 113 / 255)
-        }
+    private static let providerColors: [UsageProvider: Color] = [
+        .codex: Self.rgb(73, 163, 176),
+        .claude: Self.rgb(204, 124, 94),
+        .gemini: Self.rgb(171, 135, 234),
+        .antigravity: Self.rgb(96, 186, 126),
+        .cursor: Self.rgb(0, 191, 165),
+        .zai: Self.rgb(232, 90, 106),
+        .factory: Self.rgb(255, 107, 53),
+        .copilot: Self.rgb(168, 85, 247),
+        .minimax: Self.rgb(99, 102, 241),
+        .openrouter: Self.rgb(255, 90, 0),
+        .vercelai: Self.rgb(0, 0, 0),
+        .groq: Self.rgb(0, 200, 150),
+        .deepseek: Self.rgb(76, 110, 245),
+        .fireworks: Self.rgb(255, 115, 0),
+        .mistral: Self.rgb(255, 90, 52),
+        .perplexity: Self.rgb(35, 180, 146),
+        .kimi: Self.rgb(0, 129, 255),
+        .auggie: Self.rgb(255, 180, 0),
+        .together: Self.rgb(98, 76, 245),
+        .cohere: Self.rgb(58, 95, 255),
+        .xai: Self.rgb(20, 20, 20),
+        .cerebras: Self.rgb(14, 122, 161),
+        .sambanova: Self.rgb(236, 84, 74),
+        .azure: Self.rgb(0, 120, 212),
+        .bedrock: Self.rgb(255, 153, 0),
+        .vertexai: Self.rgb(66, 133, 244),
+        .qwen: Self.rgb(98, 52, 227),
+        .localLLM: Self.rgb(46, 204, 113),
+    ]
+
+    static func color(for provider: UsageProvider) -> Color {
+        self.providerColors[provider] ?? Self.rgb(73, 163, 176)
+    }
+
+    private static func rgb(_ red: Double, _ green: Double, _ blue: Double) -> Color {
+        Color(red: red / 255, green: green / 255, blue: blue / 255)
     }
 }
 

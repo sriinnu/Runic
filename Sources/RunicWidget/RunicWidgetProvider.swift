@@ -2,8 +2,6 @@ import AppIntents
 import RunicCore
 import SwiftUI
 import WidgetKit
-
-// Structural lint debt: timeline provider branching should be split by data source.
 enum ProviderChoice: String, AppEnum {
     case codex
     case claude
@@ -68,69 +66,11 @@ enum ProviderChoice: String, AppEnum {
     ]
 
     var provider: UsageProvider {
-        switch self {
-        case .codex: .codex
-        case .claude: .claude
-        case .gemini: .gemini
-        case .antigravity: .antigravity
-        case .cursor: .cursor
-        case .zai: .zai
-        case .factory: .factory
-        case .copilot: .copilot
-        case .minimax: .minimax
-        case .openrouter: .openrouter
-        case .vercelai: .vercelai
-        case .groq: .groq
-        case .deepseek: .deepseek
-        case .fireworks: .fireworks
-        case .mistral: .mistral
-        case .perplexity: .perplexity
-        case .kimi: .kimi
-        case .auggie: .auggie
-        case .together: .together
-        case .cohere: .cohere
-        case .xai: .xai
-        case .cerebras: .cerebras
-        case .sambanova: .sambanova
-        case .azure: .azure
-        case .bedrock: .bedrock
-        case .vertexai: .vertexai
-        case .qwen: .qwen
-        case .localLLM: .localLLM
-        }
+        UsageProvider(rawValue: self.rawValue) ?? .localLLM
     }
 
-    init?(provider: UsageProvider) { // swiftlint:disable:this cyclomatic_complexity
-        switch provider {
-        case .codex: self = .codex
-        case .claude: self = .claude
-        case .gemini: self = .gemini
-        case .antigravity: self = .antigravity
-        case .cursor: self = .cursor
-        case .zai: self = .zai
-        case .factory: self = .factory
-        case .copilot: self = .copilot
-        case .minimax: self = .minimax
-        case .openrouter: self = .openrouter
-        case .vercelai: self = .vercelai
-        case .groq: self = .groq
-        case .deepseek: self = .deepseek
-        case .fireworks: self = .fireworks
-        case .mistral: self = .mistral
-        case .perplexity: self = .perplexity
-        case .kimi: self = .kimi
-        case .auggie: self = .auggie
-        case .together: self = .together
-        case .cohere: self = .cohere
-        case .xai: self = .xai
-        case .cerebras: self = .cerebras
-        case .sambanova: self = .sambanova
-        case .azure: self = .azure
-        case .bedrock: self = .bedrock
-        case .vertexai: self = .vertexai
-        case .qwen: self = .qwen
-        case .localLLM: self = .localLLM
-        }
+    init?(provider: UsageProvider) {
+        self.init(rawValue: provider == .localLLM ? Self.localLLM.rawValue : provider.rawValue)
     }
 }
 

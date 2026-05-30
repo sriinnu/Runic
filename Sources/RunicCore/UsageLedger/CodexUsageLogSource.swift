@@ -1,6 +1,5 @@
 import Foundation
 
-// Structural lint debt: JSONL parser needs smaller decode stages.
 public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     public enum CodexUsageLogError: LocalizedError, Sendable {
         case noSessionsDirectory
@@ -38,6 +37,42 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let input: Int
         let output: Int
         let cacheRead: Int
+    }
+
+    private struct ParseState {
+        var currentModel: String?
+        var currentProjectID: String?
+        var currentProjectName: String?
+        var previousTotals: CodexTotals?
+    }
+
+    private struct ParseContext {
+        let file: SessionFile
+        let minDate: Date?
+        let sourceFingerprint: String
+    }
+
+    private struct ParsedLine {
+        let object: [String: Any]
+        let type: String
+        let timestamp: Date
+        let payload: [String: Any]?
+    }
+
+    private struct ProjectContext {
+        let id: String?
+        let name: String?
+    }
+
+    private struct TokenRecord {
+        let timestamp: Date
+        let sessionID: String?
+        let projectID: String?
+        let projectName: String?
+        let model: String
+        let tokens: CodexTotals
+        let requestID: String?
+        let version: String?
     }
 
     private static let projectIDKeys = [
@@ -288,7 +323,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         return results
     }
 
-    private func parseFile( // swiftlint:disable:this cyclomatic_complexity function_body_length
+    private func parseFile(
         _ file: SessionFile,
         minDate: Date?,
         dayKey: String?,
@@ -296,13 +331,12 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         entries: inout [UsageLedgerEntry]) throws
         -> UsageRelaySourceWatermark
     {
-        var currentModel: String?
-        var currentProjectID: String?
-        var currentProjectName: String?
-        var previousTotals: CodexTotals?
+        var state = ParseState()
         let sourceMetadata = self.sourceMetadata(for: file.url)
-        let sourceFingerprint = self.sourceFingerprint(for: sourceMetadata)
-
+        let context = ParseContext(
+            file: file,
+            minDate: minDate,
+            sourceFingerprint: self.sourceFingerprint(for: sourceMetadata))
         let maxLineBytes = 256 * 1024
         let prefixBytes = 32 * 1024
 
@@ -312,196 +346,244 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             maxLineBytes: maxLineBytes,
             prefixBytes: prefixBytes,
             onLine: { line in
-                guard !line.bytes.isEmpty else { return }
-                guard !line.wasTruncated else { return }
-                guard
-                    line.bytes.containsAscii(#""type":"event_msg""#)
-                    || line.bytes.containsAscii(#""type":"turn_context""#)
-                else { return }
-
-                if line.bytes.containsAscii(#""type":"event_msg""#),
-                   !line.bytes.containsAscii(#""token_count""#)
-                {
-                    return
-                }
-
-                guard
-                    let obj = (try? JSONSerialization.jsonObject(with: line.bytes)) as? [String: Any],
-                    let type = obj["type"] as? String
-                else { return }
-
-                guard let tsText = obj["timestamp"] as? String else { return }
-                guard let timestamp = self.parseTimestamp(tsText) else { return }
-                if let minDate, timestamp < minDate { return }
-
-                let payload = obj["payload"] as? [String: Any]
-
-                if type == "turn_context" {
-                    if let payload {
-                        if let model = payload["model"] as? String {
-                            currentModel = model
-                        } else if let info = payload["info"] as? [String: Any],
-                                  let model = info["model"] as? String
-                        {
-                            currentModel = model
-                        }
-
-                        let payloadProject = payload["project"] as? [String: Any]
-                        let contextProjectID = self.firstString(from: payload, keys: Self.projectIDKeys)
-                            ?? self.firstString(from: payloadProject, keys: ["id"] + Self.projectIDKeys)
-                            ?? self.firstString(from: payload, keys: Self.projectPathKeys)
-                        let contextProjectName = self.firstString(from: payload, keys: Self.projectNameKeys)
-                            ?? self.firstString(from: payloadProject, keys: ["name", "title"] + Self.projectNameKeys)
-                        if let contextProjectID {
-                            currentProjectID = contextProjectID
-                        }
-                        if let contextProjectName {
-                            currentProjectName = contextProjectName
-                        }
-                    }
-                    return
-                }
-
-                guard type == "event_msg" else { return }
-                guard (payload?["type"] as? String) == "token_count" else { return }
-                guard let info = payload?["info"] as? [String: Any] else { return }
-
-                let modelFromInfo = (info["model"] as? String)
-                    ?? (info["model_name"] as? String)
-                    ?? (payload?["model"] as? String)
-                    ?? (obj["model"] as? String)
-                let model = modelFromInfo ?? currentModel ?? "gpt-5"
-
-                let total = info["total_token_usage"] as? [String: Any]
-                let last = info["last_token_usage"] as? [String: Any]
-
-                var deltaInput = 0
-                var deltaCached = 0
-                var deltaOutput = 0
-
-                if let total {
-                    let input = self.toInt(total["input_tokens"])
-                    let cached = self.toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"])
-                    let output = self.toInt(total["output_tokens"])
-
-                    let delta = Self.deltaTotals(
-                        current: CodexTotals(input: input, cached: cached, output: output),
-                        previous: previousTotals)
-                    deltaInput = delta.input
-                    deltaCached = delta.cached
-                    deltaOutput = delta.output
-                    previousTotals = CodexTotals(input: input, cached: cached, output: output)
-                } else if let last {
-                    deltaInput = max(0, self.toInt(last["input_tokens"]))
-                    deltaCached = max(0, self.toInt(last["cached_input_tokens"] ?? last["cache_read_input_tokens"]))
-                    deltaOutput = max(0, self.toInt(last["output_tokens"]))
-                } else {
-                    return
-                }
-
-                if deltaInput == 0, deltaCached == 0, deltaOutput == 0 { return }
-                let cachedClamp = min(deltaCached, deltaInput)
-
-                let sessionID = self.firstString(
-                    from: info,
-                    keys: ["session_id", "sessionId"])
-                    ?? self.firstString(from: payload, keys: ["session_id", "sessionId"])
-                    ?? self.firstString(from: obj, keys: ["session_id", "sessionId"])
-                    ?? file.sessionID
-
-                let infoProject = info["project"] as? [String: Any]
-                let payloadProject = payload?["project"] as? [String: Any]
-                let rootProject = obj["project"] as? [String: Any]
-                let workspacePath = self.firstString(from: info, keys: Self.projectPathKeys)
-                    ?? self.firstString(from: payload, keys: Self.projectPathKeys)
-                    ?? self.firstString(from: obj, keys: Self.projectPathKeys)
-                    ?? self.firstString(from: infoProject, keys: Self.projectPathKeys)
-                    ?? self.firstString(from: payloadProject, keys: Self.projectPathKeys)
-                    ?? self.firstString(from: rootProject, keys: Self.projectPathKeys)
-                let projectID = self.firstString(from: info, keys: Self.projectIDKeys)
-                    ?? self.firstString(from: payload, keys: Self.projectIDKeys)
-                    ?? self.firstString(from: obj, keys: Self.projectIDKeys)
-                    ?? self.firstString(from: infoProject, keys: ["id"] + Self.projectIDKeys)
-                    ?? self.firstString(from: payloadProject, keys: ["id"] + Self.projectIDKeys)
-                    ?? self.firstString(from: rootProject, keys: ["id"] + Self.projectIDKeys)
-                    ?? workspacePath
-                    ?? currentProjectID
-                let projectName = self.firstString(
-                    from: info,
-                    keys: Self.projectNameKeys)
-                    ?? self.firstString(
-                        from: payload,
-                        keys: Self.projectNameKeys)
-                    ?? self.firstString(
-                        from: obj,
-                        keys: Self.projectNameKeys)
-                    ?? self.firstString(from: infoProject, keys: ["name", "title"] + Self.projectNameKeys)
-                    ?? self.firstString(from: payloadProject, keys: ["name", "title"] + Self.projectNameKeys)
-                    ?? self.firstString(from: rootProject, keys: ["name", "title"] + Self.projectNameKeys)
-                    ?? currentProjectName
-
-                if let projectID {
-                    currentProjectID = projectID
-                }
-                if let projectName {
-                    currentProjectName = projectName
-                }
-                let requestID = self.firstString(
-                    from: info,
-                    keys: ["request_id", "requestId", "event_id", "eventId"])
-                    ?? self.firstString(from: payload, keys: ["request_id", "requestId"])
-                    ?? self.firstString(from: obj, keys: ["request_id", "requestId"])
-                let version = self.firstString(from: info, keys: ["client_version", "version"])
-                    ?? self.firstString(from: obj, keys: ["version"])
-
-                let key = self.dedupeKey(
-                    requestID: requestID,
-                    sessionID: sessionID,
-                    timestamp: timestamp,
-                    tokens: .init(
-                        input: deltaInput,
-                        output: deltaOutput,
-                        cacheRead: cachedClamp))
-                if seenKeys.contains(key) { return }
-                seenKeys.insert(key)
-
-                let cost = CostUsagePricing.codexCostUSD(
-                    model: model,
-                    inputTokens: deltaInput,
-                    cachedInputTokens: cachedClamp,
-                    outputTokens: deltaOutput)
-
-                entries.append(UsageLedgerEntry(
-                    provider: .codex,
-                    timestamp: timestamp,
-                    sessionID: sessionID,
-                    projectID: projectID,
-                    projectName: projectName,
-                    model: model,
-                    inputTokens: deltaInput,
-                    outputTokens: deltaOutput,
-                    cacheCreationTokens: 0,
-                    cacheReadTokens: cachedClamp,
-                    costUSD: cost,
-                    requestID: requestID,
-                    messageID: nil,
-                    version: version,
-                    source: .codexLog,
-                    tokenProvenance: MetricProvenance(
-                        confidence: .inferred,
-                        source: .localLog,
-                        detail: "Codex JSONL cumulative counters converted to deltas"),
-                    costProvenance: cost == nil ? nil : MetricProvenance(
-                        confidence: .estimated,
-                        source: .pricingTable,
-                        detail: "Codex model pricing table"),
-                    sourceFingerprint: sourceFingerprint))
+                self.consumeLine(
+                    line,
+                    context: context,
+                    state: &state,
+                    seenKeys: &seenKeys,
+                    entries: &entries)
             })
         let latestMetadata = self.sourceMetadata(for: file.url)
         guard latestMetadata == sourceMetadata else {
             throw CodexUsageLogError.readFailed("Codex usage log changed while scanning: \(sourceMetadata.path)")
         }
         return self.sourceWatermark(for: sourceMetadata, dayKey: dayKey)
+    }
+
+    private func consumeLine(
+        _ line: CostUsageJsonl.Line,
+        context: ParseContext,
+        state: inout ParseState,
+        seenKeys: inout Set<String>,
+        entries: inout [UsageLedgerEntry])
+    {
+        guard let parsed = self.parseLine(line, minDate: context.minDate) else { return }
+        if parsed.type == "turn_context" {
+            self.applyTurnContext(parsed.payload, state: &state)
+            return
+        }
+
+        guard let record = self.tokenRecord(from: parsed, context: context, state: &state) else { return }
+        let cachedClamp = min(record.tokens.cached, record.tokens.input)
+        let key = self.dedupeKey(
+            requestID: record.requestID,
+            sessionID: record.sessionID,
+            timestamp: record.timestamp,
+            tokens: .init(
+                input: record.tokens.input,
+                output: record.tokens.output,
+                cacheRead: cachedClamp))
+        if seenKeys.contains(key) { return }
+        seenKeys.insert(key)
+
+        let cost = CostUsagePricing.codexCostUSD(
+            model: record.model,
+            inputTokens: record.tokens.input,
+            cachedInputTokens: cachedClamp,
+            outputTokens: record.tokens.output)
+
+        entries.append(UsageLedgerEntry(
+            provider: .codex,
+            timestamp: record.timestamp,
+            sessionID: record.sessionID,
+            projectID: record.projectID,
+            projectName: record.projectName,
+            model: record.model,
+            inputTokens: record.tokens.input,
+            outputTokens: record.tokens.output,
+            cacheCreationTokens: 0,
+            cacheReadTokens: cachedClamp,
+            costUSD: cost,
+            requestID: record.requestID,
+            messageID: nil,
+            version: record.version,
+            source: .codexLog,
+            tokenProvenance: MetricProvenance(
+                confidence: .inferred,
+                source: .localLog,
+                detail: "Codex JSONL cumulative counters converted to deltas"),
+            costProvenance: cost == nil ? nil : MetricProvenance(
+                confidence: .estimated,
+                source: .pricingTable,
+                detail: "Codex model pricing table"),
+            sourceFingerprint: context.sourceFingerprint))
+    }
+
+    private func parseLine(_ line: CostUsageJsonl.Line, minDate: Date?) -> ParsedLine? {
+        guard self.shouldParse(line) else { return nil }
+        guard
+            let object = (try? JSONSerialization.jsonObject(with: line.bytes)) as? [String: Any],
+            let type = object["type"] as? String,
+            let tsText = object["timestamp"] as? String,
+            let timestamp = self.parseTimestamp(tsText)
+        else {
+            return nil
+        }
+        if let minDate, timestamp < minDate { return nil }
+        return ParsedLine(
+            object: object,
+            type: type,
+            timestamp: timestamp,
+            payload: object["payload"] as? [String: Any])
+    }
+
+    private func shouldParse(_ line: CostUsageJsonl.Line) -> Bool {
+        guard !line.bytes.isEmpty, !line.wasTruncated else { return false }
+        let isEvent = line.bytes.containsAscii(#""type":"event_msg""#)
+        let isContext = line.bytes.containsAscii(#""type":"turn_context""#)
+        guard isEvent || isContext else { return false }
+        return isContext || line.bytes.containsAscii(#""token_count""#)
+    }
+
+    private func applyTurnContext(_ payload: [String: Any]?, state: inout ParseState) {
+        guard let payload else { return }
+        if let model = payload["model"] as? String {
+            state.currentModel = model
+        } else if let info = payload["info"] as? [String: Any],
+                  let model = info["model"] as? String
+        {
+            state.currentModel = model
+        }
+
+        let payloadProject = payload["project"] as? [String: Any]
+        if let projectID = self.firstString(from: payload, keys: Self.projectIDKeys)
+            ?? self.firstString(from: payloadProject, keys: ["id"] + Self.projectIDKeys)
+            ?? self.firstString(from: payload, keys: Self.projectPathKeys)
+        {
+            state.currentProjectID = projectID
+        }
+        if let projectName = self.firstString(from: payload, keys: Self.projectNameKeys)
+            ?? self.firstString(from: payloadProject, keys: ["name", "title"] + Self.projectNameKeys)
+        {
+            state.currentProjectName = projectName
+        }
+    }
+
+    private func tokenRecord(
+        from parsed: ParsedLine,
+        context: ParseContext,
+        state: inout ParseState) -> TokenRecord?
+    {
+        guard parsed.type == "event_msg" else { return nil }
+        guard (parsed.payload?["type"] as? String) == "token_count" else { return nil }
+        guard let info = parsed.payload?["info"] as? [String: Any] else { return nil }
+        guard let tokens = self.tokenDeltas(from: info, previousTotals: &state.previousTotals) else { return nil }
+
+        let project = self.projectContext(info: info, payload: parsed.payload, object: parsed.object, state: state)
+        if let projectID = project.id {
+            state.currentProjectID = projectID
+        }
+        if let projectName = project.name {
+            state.currentProjectName = projectName
+        }
+
+        return TokenRecord(
+            timestamp: parsed.timestamp,
+            sessionID: self.sessionID(info: info, payload: parsed.payload, object: parsed.object)
+                ?? context.file.sessionID,
+            projectID: project.id,
+            projectName: project.name,
+            model: self.modelName(info: info, payload: parsed.payload, object: parsed.object, state: state),
+            tokens: tokens,
+            requestID: self.requestID(info: info, payload: parsed.payload, object: parsed.object),
+            version: self.firstString(from: info, keys: ["client_version", "version"])
+                ?? self.firstString(from: parsed.object, keys: ["version"]))
+    }
+
+    private func tokenDeltas(from info: [String: Any], previousTotals: inout CodexTotals?) -> CodexTotals? {
+        if let total = info["total_token_usage"] as? [String: Any] {
+            let current = CodexTotals(
+                input: self.toInt(total["input_tokens"]),
+                cached: self.toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"]),
+                output: self.toInt(total["output_tokens"]))
+            let delta = Self.deltaTotals(current: current, previous: previousTotals)
+            previousTotals = current
+            return delta.input == 0 && delta.cached == 0 && delta.output == 0 ? nil : delta
+        }
+
+        guard let last = info["last_token_usage"] as? [String: Any] else { return nil }
+        let delta = CodexTotals(
+            input: max(0, self.toInt(last["input_tokens"])),
+            cached: max(0, self.toInt(last["cached_input_tokens"] ?? last["cache_read_input_tokens"])),
+            output: max(0, self.toInt(last["output_tokens"])))
+        return delta.input == 0 && delta.cached == 0 && delta.output == 0 ? nil : delta
+    }
+
+    private func modelName(
+        info: [String: Any],
+        payload: [String: Any]?,
+        object: [String: Any],
+        state: ParseState) -> String
+    {
+        (info["model"] as? String)
+            ?? (info["model_name"] as? String)
+            ?? (payload?["model"] as? String)
+            ?? (object["model"] as? String)
+            ?? state.currentModel
+            ?? "gpt-5"
+    }
+
+    private func sessionID(
+        info: [String: Any],
+        payload: [String: Any]?,
+        object: [String: Any]) -> String?
+    {
+        self.firstString(from: info, keys: ["session_id", "sessionId"])
+            ?? self.firstString(from: payload, keys: ["session_id", "sessionId"])
+            ?? self.firstString(from: object, keys: ["session_id", "sessionId"])
+    }
+
+    private func requestID(
+        info: [String: Any],
+        payload: [String: Any]?,
+        object: [String: Any]) -> String?
+    {
+        self.firstString(from: info, keys: ["request_id", "requestId", "event_id", "eventId"])
+            ?? self.firstString(from: payload, keys: ["request_id", "requestId"])
+            ?? self.firstString(from: object, keys: ["request_id", "requestId"])
+    }
+
+    private func projectContext(
+        info: [String: Any],
+        payload: [String: Any]?,
+        object: [String: Any],
+        state: ParseState) -> ProjectContext
+    {
+        let infoProject = info["project"] as? [String: Any]
+        let payloadProject = payload?["project"] as? [String: Any]
+        let rootProject = object["project"] as? [String: Any]
+        let workspacePath = self.firstString(from: info, keys: Self.projectPathKeys)
+            ?? self.firstString(from: payload, keys: Self.projectPathKeys)
+            ?? self.firstString(from: object, keys: Self.projectPathKeys)
+            ?? self.firstString(from: infoProject, keys: Self.projectPathKeys)
+            ?? self.firstString(from: payloadProject, keys: Self.projectPathKeys)
+            ?? self.firstString(from: rootProject, keys: Self.projectPathKeys)
+        let projectID = self.firstString(from: info, keys: Self.projectIDKeys)
+            ?? self.firstString(from: payload, keys: Self.projectIDKeys)
+            ?? self.firstString(from: object, keys: Self.projectIDKeys)
+            ?? self.firstString(from: infoProject, keys: ["id"] + Self.projectIDKeys)
+            ?? self.firstString(from: payloadProject, keys: ["id"] + Self.projectIDKeys)
+            ?? self.firstString(from: rootProject, keys: ["id"] + Self.projectIDKeys)
+            ?? workspacePath
+            ?? state.currentProjectID
+        let projectName = self.firstString(from: info, keys: Self.projectNameKeys)
+            ?? self.firstString(from: payload, keys: Self.projectNameKeys)
+            ?? self.firstString(from: object, keys: Self.projectNameKeys)
+            ?? self.firstString(from: infoProject, keys: ["name", "title"] + Self.projectNameKeys)
+            ?? self.firstString(from: payloadProject, keys: ["name", "title"] + Self.projectNameKeys)
+            ?? self.firstString(from: rootProject, keys: ["name", "title"] + Self.projectNameKeys)
+            ?? state.currentProjectName
+        return ProjectContext(id: projectID, name: projectName)
     }
 
     private func sourceWatermark(for metadata: SourceFileMetadata, dayKey: String?) -> UsageRelaySourceWatermark {

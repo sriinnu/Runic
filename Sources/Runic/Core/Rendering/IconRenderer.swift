@@ -1,7 +1,6 @@
 import AppKit
 import RunicCore
 
-// Structural lint debt: renderer drawing routines need provider/style split-outs.
 // **IconRenderer** - Generates menubar status item icons with usage visualization
 //
 // **Purpose:**
@@ -47,7 +46,7 @@ enum IconDataMode {
     case used // Show used quota
 }
 
-enum IconRenderer { // swiftlint:disable:this type_body_length
+enum IconRenderer {
     private static let creditsCap: Double = 1000
     private static let baseSize = NSSize(width: 38, height: 22)
     // Render to a 38×22 pt template (76×44 px at 2×) for better visibility.
@@ -82,6 +81,37 @@ enum IconRenderer { // swiftlint:disable:this type_body_length
     }
 
     private static let grid = PixelGrid(scale: outputScale)
+    private static let styleKeys: [IconStyle: Int] = [
+        .codex: 0,
+        .claude: 1,
+        .zai: 2,
+        .gemini: 3,
+        .antigravity: 4,
+        .cursor: 5,
+        .factory: 6,
+        .copilot: 7,
+        .minimax: 8,
+        .openrouter: 9,
+        .groq: 10,
+        .deepseek: 11,
+        .fireworks: 12,
+        .mistral: 13,
+        .perplexity: 14,
+        .kimi: 15,
+        .auggie: 16,
+        .together: 17,
+        .cohere: 18,
+        .xai: 19,
+        .cerebras: 20,
+        .sambanova: 21,
+        .azure: 22,
+        .bedrock: 23,
+        .vertexai: 24,
+        .qwen: 25,
+        .vercelai: 26,
+        .localLLM: 27,
+        .combined: 99,
+    ]
 
     private struct IconCacheKey: Hashable {
         let primary: Int
@@ -169,38 +199,6 @@ enum IconRenderer { // swiftlint:disable:this type_body_length
         private static let grid = IconRenderer.grid
     }
 
-    private enum SigilStyle {
-        case codex
-        case claude
-        case gemini
-        case antigravity
-        case cursor
-        case factory
-        case copilot
-        case minimax
-        case openrouter
-        case vercelai
-        case groq
-        case deepseek
-        case fireworks
-        case mistral
-        case perplexity
-        case kimi
-        case auggie
-        case together
-        case cohere
-        case xai
-        case cerebras
-        case sambanova
-        case azure
-        case bedrock
-        case vertexai
-        case zai
-        case qwen
-        case localLLM
-        case combined
-    }
-
     static func makeIcon(
         primaryRemaining: Double?,
         weeklyRemaining: Double?,
@@ -275,40 +273,6 @@ enum IconRenderer { // swiftlint:disable:this type_body_length
         return render()
     }
 
-    private static func sigilStyle(for style: IconStyle) -> SigilStyle { // swiftlint:disable:this cyclomatic_complexity
-        switch style {
-        case .codex: .codex
-        case .claude: .claude
-        case .zai: .zai
-        case .gemini: .gemini
-        case .antigravity: .antigravity
-        case .cursor: .cursor
-        case .factory: .factory
-        case .copilot: .copilot
-        case .minimax: .minimax
-        case .openrouter: .openrouter
-        case .vercelai: .vercelai
-        case .groq: .groq
-        case .deepseek: .deepseek
-        case .fireworks: .fireworks
-        case .mistral: .mistral
-        case .perplexity: .perplexity
-        case .kimi: .kimi
-        case .auggie: .auggie
-        case .together: .together
-        case .cohere: .cohere
-        case .xai: .xai
-        case .cerebras: .cerebras
-        case .sambanova: .sambanova
-        case .azure: .azure
-        case .bedrock: .bedrock
-        case .vertexai: .vertexai
-        case .qwen: .qwen
-        case .localLLM: .localLLM
-        case .combined: .combined
-        }
-    }
-
     private static func chamferedPath(rectPx: RectPx, chamferPx: Int) -> NSBezierPath {
         let rect = rectPx.rect()
         let chamfer = Self.grid.pt(chamferPx)
@@ -327,501 +291,6 @@ enum IconRenderer { // swiftlint:disable:this type_body_length
         path.line(to: NSPoint(x: x, y: y + chamfer))
         path.close()
         return path
-    }
-
-    // swiftlint:disable:next cyclomatic_complexity function_body_length
-    private static func drawSigil(_ style: SigilStyle, in rectPx: RectPx) {
-        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
-        let centerXPx = rectPx.midXPx
-        let centerYPx = rectPx.y + rectPx.h / 2
-
-        func point(x: Int, y: Int) -> NSPoint {
-            NSPoint(x: Self.grid.pt(x), y: Self.grid.pt(y))
-        }
-
-        ctx.saveGState()
-        ctx.setBlendMode(.clear)
-        ctx.setShouldAntialias(true)
-
-        switch style {
-        case .codex:
-            let eyeSizePx = 3
-            let eyeOffsetPx = 5
-            let leftEye = Self.grid.rect(
-                x: centerXPx - eyeOffsetPx - eyeSizePx / 2,
-                y: centerYPx - eyeSizePx / 2,
-                w: eyeSizePx,
-                h: eyeSizePx)
-            let rightEye = Self.grid.rect(
-                x: centerXPx + eyeOffsetPx - eyeSizePx / 2,
-                y: centerYPx - eyeSizePx / 2,
-                w: eyeSizePx,
-                h: eyeSizePx)
-            NSBezierPath(rect: leftEye).fill()
-            NSBezierPath(rect: rightEye).fill()
-        case .claude:
-            let slitWidthPx = 2
-            let slitHeightPx = 6
-            let slitOffsetPx = 5
-            let leftSlit = Self.grid.rect(
-                x: centerXPx - slitOffsetPx - slitWidthPx / 2,
-                y: centerYPx - slitHeightPx / 2,
-                w: slitWidthPx,
-                h: slitHeightPx)
-            let rightSlit = Self.grid.rect(
-                x: centerXPx + slitOffsetPx - slitWidthPx / 2,
-                y: centerYPx - slitHeightPx / 2,
-                w: slitWidthPx,
-                h: slitHeightPx)
-            NSBezierPath(rect: leftSlit).fill()
-            NSBezierPath(rect: rightSlit).fill()
-        case .gemini:
-            let diamondRadiusPx = 4
-            let cx = Self.grid.pt(centerXPx)
-            let cy = Self.grid.pt(centerYPx)
-            let r = Self.grid.pt(diamondRadiusPx)
-            let path = NSBezierPath()
-            path.move(to: NSPoint(x: cx, y: cy + r))
-            path.line(to: NSPoint(x: cx + r, y: cy))
-            path.line(to: NSPoint(x: cx, y: cy - r))
-            path.line(to: NSPoint(x: cx - r, y: cy))
-            path.close()
-            path.fill()
-        case .antigravity:
-            let dotSizePx = 4
-            let dotRect = Self.grid.rect(
-                x: centerXPx - dotSizePx / 2,
-                y: rectPx.y + rectPx.h - dotSizePx - 1,
-                w: dotSizePx,
-                h: dotSizePx)
-            NSBezierPath(ovalIn: dotRect).fill()
-        case .cursor:
-            let tipPx = 6
-            let baseXPx = centerXPx + 4
-            let path = NSBezierPath()
-            path.move(to: point(x: baseXPx, y: centerYPx))
-            path.line(to: point(x: baseXPx - tipPx, y: centerYPx + tipPx / 2))
-            path.line(to: point(x: baseXPx - tipPx, y: centerYPx - tipPx / 2))
-            path.close()
-            path.fill()
-        case .factory:
-            let armPx = 6
-            let thicknessPx = 2
-            let vertical = Self.grid.rect(
-                x: centerXPx - thicknessPx / 2,
-                y: centerYPx - armPx / 2,
-                w: thicknessPx,
-                h: armPx)
-            let horizontal = Self.grid.rect(
-                x: centerXPx - armPx / 2,
-                y: centerYPx - thicknessPx / 2,
-                w: armPx,
-                h: thicknessPx)
-            NSBezierPath(rect: vertical).fill()
-            NSBezierPath(rect: horizontal).fill()
-        case .copilot:
-            let eyeRadiusPx = 3
-            let eyeOffsetPx = 4
-            let leftEye = Self.grid.rect(
-                x: centerXPx - eyeOffsetPx - eyeRadiusPx,
-                y: centerYPx - eyeRadiusPx,
-                w: eyeRadiusPx * 2,
-                h: eyeRadiusPx * 2)
-            let rightEye = Self.grid.rect(
-                x: centerXPx + eyeOffsetPx - eyeRadiusPx,
-                y: centerYPx - eyeRadiusPx,
-                w: eyeRadiusPx * 2,
-                h: eyeRadiusPx * 2)
-            let bridge = Self.grid.rect(
-                x: centerXPx - 2,
-                y: centerYPx - 1,
-                w: 4,
-                h: 2)
-            NSBezierPath(ovalIn: leftEye).fill()
-            NSBezierPath(ovalIn: rightEye).fill()
-            NSBezierPath(rect: bridge).fill()
-        case .minimax:
-            let triWidthPx = 6
-            let triHeightPx = 5
-            let leftCx = centerXPx - 4
-            let rightCx = centerXPx + 4
-            let leftPath = NSBezierPath()
-            leftPath.move(to: point(x: leftCx, y: centerYPx + triHeightPx / 2))
-            leftPath.line(to: point(x: leftCx - triWidthPx / 2, y: centerYPx - triHeightPx / 2))
-            leftPath.line(to: point(x: leftCx + triWidthPx / 2, y: centerYPx - triHeightPx / 2))
-            leftPath.close()
-            let rightPath = NSBezierPath()
-            rightPath.move(to: point(x: rightCx, y: centerYPx + triHeightPx / 2))
-            rightPath.line(to: point(x: rightCx - triWidthPx / 2, y: centerYPx - triHeightPx / 2))
-            rightPath.line(to: point(x: rightCx + triWidthPx / 2, y: centerYPx - triHeightPx / 2))
-            rightPath.close()
-            leftPath.fill()
-            rightPath.fill()
-        case .openrouter:
-            let outerRadiusPx = 4
-            let innerRadiusPx = 2
-            let outerRect = Self.grid.rect(
-                x: centerXPx - outerRadiusPx,
-                y: centerYPx - outerRadiusPx,
-                w: outerRadiusPx * 2,
-                h: outerRadiusPx * 2)
-            let innerRect = Self.grid.rect(
-                x: centerXPx - innerRadiusPx,
-                y: centerYPx - innerRadiusPx,
-                w: innerRadiusPx * 2,
-                h: innerRadiusPx * 2)
-            let ring = NSBezierPath()
-            ring.appendOval(in: outerRect)
-            ring.appendOval(in: innerRect)
-            ring.windingRule = .evenOdd
-            ring.fill()
-        case .groq:
-            let slashWidthPx = 2
-            let slashHeightPx = 8
-            let path = NSBezierPath()
-            path.move(to: point(x: centerXPx - slashWidthPx, y: centerYPx - slashHeightPx / 2))
-            path.line(to: point(x: centerXPx, y: centerYPx - slashHeightPx / 2))
-            path.line(to: point(x: centerXPx + slashWidthPx, y: centerYPx + slashHeightPx / 2))
-            path.line(to: point(x: centerXPx, y: centerYPx + slashHeightPx / 2))
-            path.close()
-            path.fill()
-        case .deepseek:
-            let radiusPx = 4
-            let dotPx = 2
-            let outerRect = Self.grid.rect(
-                x: centerXPx - radiusPx,
-                y: centerYPx - radiusPx,
-                w: radiusPx * 2,
-                h: radiusPx * 2)
-            NSBezierPath(ovalIn: outerRect).fill()
-            let innerRect = Self.grid.rect(
-                x: centerXPx - dotPx / 2,
-                y: centerYPx - dotPx / 2,
-                w: dotPx,
-                h: dotPx)
-            NSBezierPath(ovalIn: innerRect).fill()
-        case .fireworks:
-            let armPx = 5
-            let armWidthPx = 2
-            let vertical = Self.grid.rect(
-                x: centerXPx - armWidthPx / 2,
-                y: centerYPx - armPx,
-                w: armWidthPx,
-                h: armPx * 2)
-            let horizontal = Self.grid.rect(
-                x: centerXPx - armPx,
-                y: centerYPx - armWidthPx / 2,
-                w: armPx * 2,
-                h: armWidthPx)
-            NSBezierPath(rect: vertical).fill()
-            NSBezierPath(rect: horizontal).fill()
-            let diag = NSBezierPath()
-            diag.move(to: point(x: centerXPx - 3, y: centerYPx - 3))
-            diag.line(to: point(x: centerXPx - 1, y: centerYPx - 3))
-            diag.line(to: point(x: centerXPx + 3, y: centerYPx + 1))
-            diag.line(to: point(x: centerXPx + 3, y: centerYPx + 3))
-            diag.line(to: point(x: centerXPx + 1, y: centerYPx + 3))
-            diag.line(to: point(x: centerXPx - 3, y: centerYPx - 1))
-            diag.close()
-            diag.fill()
-        case .mistral:
-            let barWidthPx = 2
-            let barGapPx = 1
-            let barHeightPx = 6
-            let totalWidth = barWidthPx * 3 + barGapPx * 2
-            let startX = centerXPx - totalWidth / 2
-            for idx in 0..<3 {
-                let x = startX + idx * (barWidthPx + barGapPx)
-                let rect = Self.grid.rect(
-                    x: x,
-                    y: centerYPx - barHeightPx / 2 + (idx == 1 ? 1 : 0),
-                    w: barWidthPx,
-                    h: barHeightPx - (idx == 1 ? 2 : 0))
-                NSBezierPath(rect: rect).fill()
-            }
-        case .perplexity:
-            let loopRadiusPx = 4
-            let stemWidthPx = 2
-            let stemHeightPx = 5
-            let loopRect = Self.grid.rect(
-                x: centerXPx - loopRadiusPx,
-                y: centerYPx - loopRadiusPx,
-                w: loopRadiusPx * 2,
-                h: loopRadiusPx * 2)
-            let innerRect = Self.grid.rect(
-                x: centerXPx - 1,
-                y: centerYPx - 1,
-                w: 2,
-                h: 2)
-            let loop = NSBezierPath()
-            loop.appendOval(in: loopRect)
-            loop.appendOval(in: innerRect)
-            loop.windingRule = .evenOdd
-            loop.fill()
-            let stemRect = Self.grid.rect(
-                x: centerXPx + 1,
-                y: centerYPx - loopRadiusPx - stemHeightPx + 1,
-                w: stemWidthPx,
-                h: stemHeightPx)
-            NSBezierPath(rect: stemRect).fill()
-        case .kimi:
-            let ringRect = Self.grid.rect(
-                x: centerXPx - 4,
-                y: centerYPx - 4,
-                w: 8,
-                h: 8)
-            let coreRect = Self.grid.rect(
-                x: centerXPx - 1,
-                y: centerYPx - 1,
-                w: 2,
-                h: 2)
-            let ring = NSBezierPath()
-            ring.appendOval(in: ringRect)
-            ring.appendOval(in: coreRect)
-            ring.windingRule = .evenOdd
-            ring.fill()
-        case .auggie:
-            let armPx = 5
-            let left = NSBezierPath()
-            left.move(to: point(x: centerXPx - armPx, y: centerYPx - 3))
-            left.line(to: point(x: centerXPx - 1, y: centerYPx + 4))
-            left.line(to: point(x: centerXPx + 1, y: centerYPx + 4))
-            left.line(to: point(x: centerXPx - 3, y: centerYPx - 3))
-            left.close()
-            left.fill()
-            let right = NSBezierPath()
-            right.move(to: point(x: centerXPx + armPx, y: centerYPx - 3))
-            right.line(to: point(x: centerXPx + 1, y: centerYPx + 4))
-            right.line(to: point(x: centerXPx - 1, y: centerYPx + 4))
-            right.line(to: point(x: centerXPx + 3, y: centerYPx - 3))
-            right.close()
-            right.fill()
-        case .together:
-            let topRect = Self.grid.rect(
-                x: centerXPx - 4,
-                y: centerYPx + 1,
-                w: 8,
-                h: 2)
-            let bottomRect = Self.grid.rect(
-                x: centerXPx - 4,
-                y: centerYPx - 3,
-                w: 8,
-                h: 2)
-            let joinRect = Self.grid.rect(
-                x: centerXPx - 1,
-                y: centerYPx - 3,
-                w: 2,
-                h: 6)
-            NSBezierPath(rect: topRect).fill()
-            NSBezierPath(rect: bottomRect).fill()
-            NSBezierPath(rect: joinRect).fill()
-        case .cohere:
-            let outerRect = Self.grid.rect(
-                x: centerXPx - 4,
-                y: centerYPx - 4,
-                w: 8,
-                h: 8)
-            let innerRect = Self.grid.rect(
-                x: centerXPx - 2,
-                y: centerYPx - 2,
-                w: 4,
-                h: 4)
-            let cPath = NSBezierPath()
-            cPath.appendOval(in: outerRect)
-            cPath.appendOval(in: innerRect)
-            cPath.windingRule = .evenOdd
-            cPath.fill()
-            let cutRect = Self.grid.rect(
-                x: centerXPx + 1,
-                y: centerYPx - 4,
-                w: 4,
-                h: 8)
-            NSBezierPath(rect: cutRect).fill()
-        case .xai:
-            let left = NSBezierPath()
-            left.move(to: point(x: centerXPx - 4, y: centerYPx - 4))
-            left.line(to: point(x: centerXPx - 1, y: centerYPx - 1))
-            left.line(to: point(x: centerXPx - 4, y: centerYPx + 4))
-            left.line(to: point(x: centerXPx - 2, y: centerYPx + 4))
-            left.line(to: point(x: centerXPx + 1, y: centerYPx + 1))
-            left.line(to: point(x: centerXPx + 4, y: centerYPx + 4))
-            left.line(to: point(x: centerXPx + 4, y: centerYPx + 2))
-            left.line(to: point(x: centerXPx + 1, y: centerYPx - 1))
-            left.line(to: point(x: centerXPx + 4, y: centerYPx - 4))
-            left.line(to: point(x: centerXPx + 2, y: centerYPx - 4))
-            left.line(to: point(x: centerXPx - 1, y: centerYPx - 1))
-            left.line(to: point(x: centerXPx - 4, y: centerYPx - 4))
-            left.close()
-            left.fill()
-        case .cerebras:
-            let outerRect = Self.grid.rect(
-                x: centerXPx - 4,
-                y: centerYPx - 4,
-                w: 8,
-                h: 8)
-            let innerRect = Self.grid.rect(
-                x: centerXPx - 2,
-                y: centerYPx - 2,
-                w: 4,
-                h: 4)
-            let ring = NSBezierPath()
-            ring.appendOval(in: outerRect)
-            ring.appendOval(in: innerRect)
-            ring.windingRule = .evenOdd
-            ring.fill()
-            let notchRect = Self.grid.rect(
-                x: centerXPx + 1,
-                y: centerYPx - 2,
-                w: 4,
-                h: 4)
-            NSBezierPath(rect: notchRect).fill()
-        case .sambanova:
-            let topArc = NSBezierPath()
-            topArc.move(to: point(x: centerXPx - 4, y: centerYPx + 3))
-            topArc.curve(
-                to: point(x: centerXPx + 4, y: centerYPx + 3),
-                controlPoint1: point(x: centerXPx - 1, y: centerYPx + 6),
-                controlPoint2: point(x: centerXPx + 1, y: centerYPx + 6))
-            topArc.line(to: point(x: centerXPx + 4, y: centerYPx + 1))
-            topArc.curve(
-                to: point(x: centerXPx - 4, y: centerYPx + 1),
-                controlPoint1: point(x: centerXPx + 1, y: centerYPx + 4),
-                controlPoint2: point(x: centerXPx - 1, y: centerYPx + 4))
-            topArc.close()
-            topArc.fill()
-            let bottomArc = NSBezierPath()
-            bottomArc.move(to: point(x: centerXPx + 4, y: centerYPx - 3))
-            bottomArc.curve(
-                to: point(x: centerXPx - 4, y: centerYPx - 3),
-                controlPoint1: point(x: centerXPx + 1, y: centerYPx - 6),
-                controlPoint2: point(x: centerXPx - 1, y: centerYPx - 6))
-            bottomArc.line(to: point(x: centerXPx - 4, y: centerYPx - 1))
-            bottomArc.curve(
-                to: point(x: centerXPx + 4, y: centerYPx - 1),
-                controlPoint1: point(x: centerXPx - 1, y: centerYPx - 4),
-                controlPoint2: point(x: centerXPx + 1, y: centerYPx - 4))
-            bottomArc.close()
-            bottomArc.fill()
-        case .azure:
-            let outerRect = Self.grid.rect(
-                x: centerXPx - 4,
-                y: centerYPx - 4,
-                w: 8,
-                h: 8)
-            let innerRect = Self.grid.rect(
-                x: centerXPx - 2,
-                y: centerYPx - 2,
-                w: 4,
-                h: 4)
-            let ring = NSBezierPath()
-            ring.appendOval(in: outerRect)
-            ring.appendOval(in: innerRect)
-            ring.windingRule = .evenOdd
-            ring.fill()
-            let slash = NSBezierPath()
-            slash.move(to: point(x: centerXPx - 5, y: centerYPx - 1))
-            slash.line(to: point(x: centerXPx - 3, y: centerYPx - 3))
-            slash.line(to: point(x: centerXPx + 5, y: centerYPx + 5))
-            slash.line(to: point(x: centerXPx + 3, y: centerYPx + 7))
-            slash.close()
-            slash.fill()
-        case .bedrock:
-            let top = NSBezierPath()
-            top.move(to: point(x: centerXPx - 4, y: centerYPx + 2))
-            top.line(to: point(x: centerXPx, y: centerYPx + 6))
-            top.line(to: point(x: centerXPx + 4, y: centerYPx + 2))
-            top.line(to: point(x: centerXPx + 2, y: centerYPx))
-            top.line(to: point(x: centerXPx, y: centerYPx + 2))
-            top.line(to: point(x: centerXPx - 2, y: centerYPx))
-            top.close()
-            top.fill()
-            let bottom = NSBezierPath()
-            bottom.move(to: point(x: centerXPx - 4, y: centerYPx - 2))
-            bottom.line(to: point(x: centerXPx, y: centerYPx - 6))
-            bottom.line(to: point(x: centerXPx + 4, y: centerYPx - 2))
-            bottom.line(to: point(x: centerXPx + 2, y: centerYPx))
-            bottom.line(to: point(x: centerXPx, y: centerYPx - 2))
-            bottom.line(to: point(x: centerXPx - 2, y: centerYPx))
-            bottom.close()
-            bottom.fill()
-        case .vertexai:
-            let diamond = NSBezierPath()
-            diamond.move(to: point(x: centerXPx, y: centerYPx + 6))
-            diamond.line(to: point(x: centerXPx + 5, y: centerYPx))
-            diamond.line(to: point(x: centerXPx, y: centerYPx - 6))
-            diamond.line(to: point(x: centerXPx - 5, y: centerYPx))
-            diamond.close()
-            diamond.fill()
-        case .zai:
-            let slashGapPx = 3
-            let slashWidthPx = 2
-            let slashHeightPx = 7
-            let leftPath = NSBezierPath()
-            leftPath.move(to: point(x: centerXPx - slashGapPx, y: centerYPx - slashHeightPx / 2))
-            leftPath.line(to: point(x: centerXPx - slashGapPx + slashWidthPx, y: centerYPx - slashHeightPx / 2))
-            leftPath.line(to: point(x: centerXPx - slashGapPx + slashWidthPx + 2, y: centerYPx + slashHeightPx / 2))
-            leftPath.line(to: point(x: centerXPx - slashGapPx + 2, y: centerYPx + slashHeightPx / 2))
-            leftPath.close()
-            let rightPath = NSBezierPath()
-            rightPath.move(to: point(x: centerXPx + slashGapPx, y: centerYPx - slashHeightPx / 2))
-            rightPath.line(to: point(x: centerXPx + slashGapPx + slashWidthPx, y: centerYPx - slashHeightPx / 2))
-            rightPath.line(to: point(x: centerXPx + slashGapPx + slashWidthPx + 2, y: centerYPx + slashHeightPx / 2))
-            rightPath.line(to: point(x: centerXPx + slashGapPx + 2, y: centerYPx + slashHeightPx / 2))
-            rightPath.close()
-            leftPath.fill()
-            rightPath.fill()
-        case .qwen:
-            // Stylised "Q" ring -- outer circle punch with inner cutout.
-            let ringOuter = 5
-            let ringInner = 3
-            let outerRect = Self.grid.rect(
-                x: centerXPx - ringOuter,
-                y: centerYPx - ringOuter,
-                w: ringOuter * 2,
-                h: ringOuter * 2)
-            let innerRect = Self.grid.rect(
-                x: centerXPx - ringInner,
-                y: centerYPx - ringInner,
-                w: ringInner * 2,
-                h: ringInner * 2)
-            NSBezierPath(ovalIn: outerRect).fill()
-            ctx.setBlendMode(.normal)
-            NSGraphicsContext.current?.cgContext.setFillColor(NSColor.clear.cgColor)
-            ctx.setBlendMode(.clear)
-            NSBezierPath(ovalIn: innerRect).fill()
-        case .localLLM:
-            let prompt = NSBezierPath()
-            prompt.move(to: point(x: centerXPx - 5, y: centerYPx + 4))
-            prompt.line(to: point(x: centerXPx - 1, y: centerYPx))
-            prompt.line(to: point(x: centerXPx - 5, y: centerYPx - 4))
-            prompt.line(to: point(x: centerXPx - 3, y: centerYPx - 4))
-            prompt.line(to: point(x: centerXPx + 1, y: centerYPx))
-            prompt.line(to: point(x: centerXPx - 3, y: centerYPx + 4))
-            prompt.close()
-            prompt.fill()
-            NSBezierPath(rect: Self.grid.rect(x: centerXPx + 2, y: centerYPx - 4, w: 5, h: 2)).fill()
-        case .vercelai:
-            let path = NSBezierPath()
-            path.move(to: point(x: centerXPx, y: centerYPx + 6))
-            path.line(to: point(x: centerXPx + 6, y: centerYPx - 5))
-            path.line(to: point(x: centerXPx - 6, y: centerYPx - 5))
-            path.close()
-            path.fill()
-        case .combined:
-            let diamondRadiusPx = 4
-            let cx = Self.grid.pt(centerXPx)
-            let cy = Self.grid.pt(centerYPx)
-            let r = Self.grid.pt(diamondRadiusPx)
-            let path = NSBezierPath()
-            path.move(to: NSPoint(x: cx, y: cy + r))
-            path.line(to: NSPoint(x: cx + r, y: cy))
-            path.line(to: NSPoint(x: cx, y: cy - r))
-            path.line(to: NSPoint(x: cx - r, y: cy))
-            path.close()
-            path.fill()
-        }
-
-        ctx.restoreGState()
     }
 
     /// Morph helper: unbraids a simplified knot into our bar icon.
@@ -983,38 +452,8 @@ enum IconRenderer { // swiftlint:disable:this type_body_length
         return Int((clamped * 10).rounded())
     }
 
-    private static func styleKey(_ style: IconStyle) -> Int { // swiftlint:disable:this cyclomatic_complexity
-        switch style {
-        case .codex: 0
-        case .claude: 1
-        case .zai: 2
-        case .gemini: 3
-        case .antigravity: 4
-        case .cursor: 5
-        case .factory: 6
-        case .copilot: 7
-        case .minimax: 8
-        case .openrouter: 9
-        case .vercelai: 26
-        case .groq: 10
-        case .deepseek: 11
-        case .fireworks: 12
-        case .mistral: 13
-        case .perplexity: 14
-        case .kimi: 15
-        case .auggie: 16
-        case .together: 17
-        case .cohere: 18
-        case .xai: 19
-        case .cerebras: 20
-        case .sambanova: 21
-        case .azure: 22
-        case .bedrock: 23
-        case .vertexai: 24
-        case .qwen: 25
-        case .localLLM: 27
-        case .combined: 99
-        }
+    private static func styleKey(_ style: IconStyle) -> Int {
+        self.styleKeys[style] ?? Self.styleKeys[.combined] ?? 99
     }
 
     private static func indicatorKey(_ indicator: ProviderStatusIndicator) -> Int {

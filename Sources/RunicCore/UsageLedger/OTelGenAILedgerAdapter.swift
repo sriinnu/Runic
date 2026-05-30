@@ -1,6 +1,5 @@
 import Foundation
 
-// Structural lint debt: OTel mapping needs parser/normalizer split-outs.
 public struct OTelGenAIIngestionOptions: Sendable, Codable, Hashable {
     public var enabled: Bool
     public var allowExperimentalSemanticConventions: Bool
@@ -41,6 +40,85 @@ public enum OTelGenAILedgerAdapterError: LocalizedError, Sendable, Equatable {
 }
 
 public enum OTelGenAILedgerAdapter {
+    private struct EntryMetadata {
+        let timestamp: Date
+        let projectID: String?
+        let projectName: String?
+        let sessionID: String?
+        let requestID: String?
+        let messageID: String?
+        let version: String?
+    }
+
+    private struct TokenCounts {
+        let input: Int
+        let output: Int
+        let cacheCreation: Int
+        let cacheRead: Int
+    }
+
+    private static let providerAliases: [String: UsageProvider] = [
+        "openai": .codex,
+        "codex": .codex,
+        "anthropic": .claude,
+        "claude": .claude,
+        "google": .gemini,
+        "googlegemini": .gemini,
+        "gemini": .gemini,
+        "vertexai": .vertexai,
+        "googlevertexai": .vertexai,
+        "vertex": .vertexai,
+        "zai": .zai,
+        "zaiapi": .zai,
+        "zhipu": .zai,
+        "zhipuai": .zai,
+        "github": .copilot,
+        "githubcopilot": .copilot,
+        "copilot": .copilot,
+        "cursor": .cursor,
+        "factory": .factory,
+        "factoryai": .factory,
+        "antigravity": .antigravity,
+        "minimax": .minimax,
+        "openrouter": .openrouter,
+        "vercel": .vercelai,
+        "vercelai": .vercelai,
+        "vercelaigateway": .vercelai,
+        "aigateway": .vercelai,
+        "groq": .groq,
+        "deepseek": .deepseek,
+        "fireworks": .fireworks,
+        "fireworksai": .fireworks,
+        "bedrock": .bedrock,
+        "awsbedrock": .bedrock,
+        "amazonbedrock": .bedrock,
+        "azure": .azure,
+        "azureopenai": .azure,
+        "mistral": .mistral,
+        "perplexity": .perplexity,
+        "kimi": .kimi,
+        "moonshot": .kimi,
+        "moonshotai": .kimi,
+        "auggie": .auggie,
+        "cohere": .cohere,
+        "xai": .xai,
+        "together": .together,
+        "cerebras": .cerebras,
+        "sambanova": .sambanova,
+        "qwen": .qwen,
+        "dashscope": .qwen,
+        "alibabacloud": .qwen,
+        "local": .localLLM,
+        "localllm": .localLLM,
+        "locallanguage": .localLLM,
+        "locallanguagemodel": .localLLM,
+        "ollama": .localLLM,
+        "lmstudio": .localLLM,
+        "llamacpp": .localLLM,
+        "vllm": .localLLM,
+        "openwebui": .localLLM,
+    ]
+
     public static func parseData(
         _ data: Data,
         options: OTelGenAIIngestionOptions = .disabled) throws -> [UsageLedgerEntry]
@@ -166,7 +244,6 @@ public enum OTelGenAILedgerAdapter {
         return self.makeLedgerEntry(from: attributes, options: options)
     }
 
-    // swiftlint:disable:next function_body_length
     private static func makeLedgerEntry(
         from attributes: [String: Any],
         options: OTelGenAIIngestionOptions) -> UsageLedgerEntry?
@@ -181,164 +258,11 @@ public enum OTelGenAILedgerAdapter {
             ],
             in: attributes)
 
-        let provider: UsageProvider? = {
-            if let rawSystem = self.stringValue(
-                for: [
-                    "gen_ai.system",
-                    "llm.provider",
-                    "provider",
-                ],
-                in: attributes),
-                let mapped = self.mapProvider(rawSystem)
-            {
-                return mapped
-            }
-            if let model, let inferred = self.inferProvider(fromModel: model) {
-                return inferred
-            }
-            return options.defaultProvider
-        }()
-
+        let provider = self.resolvedProvider(model: model, attributes: attributes, options: options)
         guard let provider else { return nil }
 
-        let inputTokens = max(0, self.intValue(
-            for: [
-                "gen_ai.usage.input_tokens",
-                "gen_ai.usage.prompt_tokens",
-                "gen_ai.usage.promptTokens",
-                "ai.usage.promptTokens",
-                "ai.usage.prompt_tokens",
-                "llm.usage.prompt_tokens",
-                "usage.prompt_tokens",
-                "usage.input_tokens",
-                "usage.promptTokens",
-                "prompt_eval_count",
-                "input_tokens",
-                "prompt_tokens",
-            ],
-            in: attributes) ?? 0)
-
-        let parsedOutputTokens = self.intValue(
-            for: [
-                "gen_ai.usage.output_tokens",
-                "gen_ai.usage.completion_tokens",
-                "gen_ai.usage.completionTokens",
-                "ai.usage.completionTokens",
-                "ai.usage.completion_tokens",
-                "llm.usage.completion_tokens",
-                "usage.completion_tokens",
-                "usage.output_tokens",
-                "usage.completionTokens",
-                "eval_count",
-                "output_tokens",
-                "completion_tokens",
-            ],
-            in: attributes)
-        let parsedTotalTokens = self.intValue(
-            for: [
-                "gen_ai.usage.total_tokens",
-                "gen_ai.usage.totalTokens",
-                "ai.usage.totalTokens",
-                "ai.usage.total_tokens",
-                "llm.usage.total_tokens",
-                "usage.total_tokens",
-                "usage.totalTokens",
-                "total_tokens",
-            ],
-            in: attributes)
-        let outputTokens = max(
-            0,
-            parsedOutputTokens
-                ?? parsedTotalTokens.map { max(0, $0 - inputTokens) }
-                ?? 0)
-
-        let cacheCreationTokens = max(0, self.intValue(
-            for: [
-                "gen_ai.usage.cache_creation_input_tokens",
-                "gen_ai.usage.cache_write_tokens",
-                "gen_ai.usage.cacheWriteTokens",
-                "ai.usage.cacheWriteTokens",
-                "usage.cache_write_tokens",
-                "usage.cache_creation_input_tokens",
-                "prompt_cache_miss_tokens",
-                "cache_creation_tokens",
-            ],
-            in: attributes) ?? 0)
-
-        let cacheReadTokens = max(0, self.intValue(
-            for: [
-                "gen_ai.usage.cache_read_input_tokens",
-                "gen_ai.usage.cache_read_tokens",
-                "gen_ai.usage.cacheReadTokens",
-                "ai.usage.cacheReadTokens",
-                "usage.cache_read_tokens",
-                "usage.cache_read_input_tokens",
-                "prompt_cache_hit_tokens",
-                "cache_read_tokens",
-            ],
-            in: attributes) ?? 0)
-
-        let timestamp = self.dateValue(
-            for: [
-                "endTimeUnixNano",
-                "end_time_unix_nano",
-                "time_unix_nano",
-                "timeUnixNano",
-                "timestamp",
-                "time",
-            ],
-            in: attributes) ?? Date()
-
-        let projectID = self.stringValue(
-            for: [
-                "gen_ai.project.id",
-                "project.id",
-                "project_id",
-            ],
-            in: attributes)
-
-        let projectName = self.stringValue(
-            for: [
-                "gen_ai.project.name",
-                "project.name",
-                "project_name",
-            ],
-            in: attributes)
-
-        let sessionID = self.stringValue(
-            for: [
-                "gen_ai.conversation.id",
-                "session.id",
-                "session_id",
-                "thread.id",
-            ],
-            in: attributes)
-
-        let requestID = self.stringValue(
-            for: [
-                "gen_ai.request.id",
-                "request.id",
-                "request_id",
-                "span.id",
-            ],
-            in: attributes)
-
-        let messageID = self.stringValue(
-            for: [
-                "gen_ai.message.id",
-                "message.id",
-                "message_id",
-            ],
-            in: attributes)
-
-        let version = self.stringValue(
-            for: [
-                "gen_ai.system.version",
-                "library.version",
-                "sdk.version",
-            ],
-            in: attributes)
-
+        let tokens = self.tokenCounts(from: attributes)
+        let metadata = self.entryMetadata(from: attributes)
         let costUSD = self.doubleValue(
             for: [
                 "gen_ai.usage.cost",
@@ -358,19 +282,19 @@ public enum OTelGenAILedgerAdapter {
 
         return UsageLedgerEntry(
             provider: provider,
-            timestamp: timestamp,
-            sessionID: sessionID,
-            projectID: projectID,
-            projectName: projectName,
+            timestamp: metadata.timestamp,
+            sessionID: metadata.sessionID,
+            projectID: metadata.projectID,
+            projectName: metadata.projectName,
             model: model,
-            inputTokens: inputTokens,
-            outputTokens: outputTokens,
-            cacheCreationTokens: cacheCreationTokens,
-            cacheReadTokens: cacheReadTokens,
+            inputTokens: tokens.input,
+            outputTokens: tokens.output,
+            cacheCreationTokens: tokens.cacheCreation,
+            cacheReadTokens: tokens.cacheRead,
             costUSD: costUSD,
-            requestID: requestID,
-            messageID: messageID,
-            version: version,
+            requestID: metadata.requestID,
+            messageID: metadata.messageID,
+            version: metadata.version,
             source: options.source,
             operationKind: operationKind,
             tokenProvenance: MetricProvenance(
@@ -381,6 +305,119 @@ public enum OTelGenAILedgerAdapter {
                 confidence: .providerReported,
                 source: .openTelemetry,
                 detail: "GenAI cost attribute"))
+    }
+
+    private static func resolvedProvider(
+        model: String?,
+        attributes: [String: Any],
+        options: OTelGenAIIngestionOptions) -> UsageProvider?
+    {
+        if let rawSystem = self.stringValue(for: ["gen_ai.system", "llm.provider", "provider"], in: attributes),
+           let mapped = self.mapProvider(rawSystem)
+        {
+            return mapped
+        }
+        if let model, let inferred = self.inferProvider(fromModel: model) {
+            return inferred
+        }
+        return options.defaultProvider
+    }
+
+    private static func tokenCounts(from attributes: [String: Any]) -> TokenCounts {
+        let input = max(0, self.intValue(
+            for: [
+                "gen_ai.usage.input_tokens",
+                "gen_ai.usage.prompt_tokens",
+                "gen_ai.usage.promptTokens",
+                "ai.usage.promptTokens",
+                "ai.usage.prompt_tokens",
+                "llm.usage.prompt_tokens",
+                "usage.prompt_tokens",
+                "usage.input_tokens",
+                "usage.promptTokens",
+                "prompt_eval_count",
+                "input_tokens",
+                "prompt_tokens",
+            ],
+            in: attributes) ?? 0)
+        let parsedOutput = self.intValue(
+            for: [
+                "gen_ai.usage.output_tokens",
+                "gen_ai.usage.completion_tokens",
+                "gen_ai.usage.completionTokens",
+                "ai.usage.completionTokens",
+                "ai.usage.completion_tokens",
+                "llm.usage.completion_tokens",
+                "usage.completion_tokens",
+                "usage.output_tokens",
+                "usage.completionTokens",
+                "eval_count",
+                "output_tokens",
+                "completion_tokens",
+            ],
+            in: attributes)
+        let parsedTotal = self.intValue(
+            for: [
+                "gen_ai.usage.total_tokens",
+                "gen_ai.usage.totalTokens",
+                "ai.usage.totalTokens",
+                "ai.usage.total_tokens",
+                "llm.usage.total_tokens",
+                "usage.total_tokens",
+                "usage.totalTokens",
+                "total_tokens",
+            ],
+            in: attributes)
+        let output = max(0, parsedOutput ?? parsedTotal.map { max(0, $0 - input) } ?? 0)
+        let cacheCreation = max(0, self.intValue(
+            for: [
+                "gen_ai.usage.cache_creation_input_tokens",
+                "gen_ai.usage.cache_write_tokens",
+                "gen_ai.usage.cacheWriteTokens",
+                "ai.usage.cacheWriteTokens",
+                "usage.cache_write_tokens",
+                "usage.cache_creation_input_tokens",
+                "prompt_cache_miss_tokens",
+                "cache_creation_tokens",
+            ],
+            in: attributes) ?? 0)
+        let cacheRead = max(0, self.intValue(
+            for: [
+                "gen_ai.usage.cache_read_input_tokens",
+                "gen_ai.usage.cache_read_tokens",
+                "gen_ai.usage.cacheReadTokens",
+                "ai.usage.cacheReadTokens",
+                "usage.cache_read_tokens",
+                "usage.cache_read_input_tokens",
+                "prompt_cache_hit_tokens",
+                "cache_read_tokens",
+            ],
+            in: attributes) ?? 0)
+        return TokenCounts(input: input, output: output, cacheCreation: cacheCreation, cacheRead: cacheRead)
+    }
+
+    private static func entryMetadata(from attributes: [String: Any]) -> EntryMetadata {
+        EntryMetadata(
+            timestamp: self.dateValue(
+                for: [
+                    "endTimeUnixNano",
+                    "end_time_unix_nano",
+                    "time_unix_nano",
+                    "timeUnixNano",
+                    "timestamp",
+                    "time",
+                ],
+                in: attributes) ?? Date(),
+            projectID: self.stringValue(for: ["gen_ai.project.id", "project.id", "project_id"], in: attributes),
+            projectName: self.stringValue(
+                for: ["gen_ai.project.name", "project.name", "project_name"],
+                in: attributes),
+            sessionID: self.stringValue(
+                for: ["gen_ai.conversation.id", "session.id", "session_id", "thread.id"],
+                in: attributes),
+            requestID: self.stringValue(for: ["gen_ai.request.id", "request.id", "request_id", "span.id"], in: attributes),
+            messageID: self.stringValue(for: ["gen_ai.message.id", "message.id", "message_id"], in: attributes),
+            version: self.stringValue(for: ["gen_ai.system.version", "library.version", "sdk.version"], in: attributes))
     }
 
     private static func operationKind(from attributes: [String: Any]) -> UsageLedgerOperationKind {
@@ -467,7 +504,6 @@ public enum OTelGenAILedgerAdapter {
         return nil
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
     private static func mapProvider(_ rawValue: String) -> UsageProvider? {
         let normalized = rawValue
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -479,67 +515,7 @@ public enum OTelGenAILedgerAdapter {
             .replacingOccurrences(of: " ", with: "")
             .replacingOccurrences(of: ".", with: "")
 
-        switch compact {
-        case "openai", "codex":
-            return .codex
-        case "anthropic", "claude":
-            return .claude
-        case "google", "googlegemini", "gemini":
-            return .gemini
-        case "vertexai", "googlevertexai", "vertex":
-            return .vertexai
-        case "zai", "zaiapi", "zhipu", "zhipuai":
-            return .zai
-        case "github", "githubcopilot", "copilot":
-            return .copilot
-        case "cursor":
-            return .cursor
-        case "factory", "factoryai":
-            return .factory
-        case "antigravity":
-            return .antigravity
-        case "minimax":
-            return .minimax
-        case "openrouter":
-            return .openrouter
-        case "vercel", "vercelai", "vercelaigateway", "aigateway":
-            return .vercelai
-        case "groq":
-            return .groq
-        case "deepseek":
-            return .deepseek
-        case "fireworks", "fireworksai":
-            return .fireworks
-        case "bedrock", "awsbedrock", "amazonbedrock":
-            return .bedrock
-        case "azure", "azureopenai":
-            return .azure
-        case "mistral":
-            return .mistral
-        case "perplexity":
-            return .perplexity
-        case "kimi", "moonshot", "moonshotai":
-            return .kimi
-        case "auggie":
-            return .auggie
-        case "cohere":
-            return .cohere
-        case "xai":
-            return .xai
-        case "together":
-            return .together
-        case "cerebras":
-            return .cerebras
-        case "sambanova":
-            return .sambanova
-        case "qwen", "dashscope", "alibabacloud":
-            return .qwen
-        case "local", "localllm", "locallanguage", "locallanguagemodel",
-             "ollama", "lmstudio", "llamacpp", "vllm", "openwebui":
-            return .localLLM
-        default:
-            return UsageProvider(rawValue: normalized)
-        }
+        return self.providerAliases[compact] ?? UsageProvider(rawValue: normalized)
     }
 
     private static func inferProvider(fromModel model: String) -> UsageProvider? {

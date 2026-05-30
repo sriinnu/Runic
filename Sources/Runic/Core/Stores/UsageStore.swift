@@ -796,7 +796,7 @@ final class UsageStore { // swiftlint:disable:this type_body_length
         return subscriptionIndicators.contains { method.contains($0) }
     }
 
-    func version(for provider: UsageProvider) -> String? { // swiftlint:disable:this cyclomatic_complexity
+    func version(for provider: UsageProvider) -> String? {
         switch provider {
         case .codex: self.codexVersion
         case .claude: self.claudeVersion
@@ -804,28 +804,7 @@ final class UsageStore { // swiftlint:disable:this type_body_length
         case .gemini: self.geminiVersion
         case .antigravity: self.antigravityVersion
         case .cursor: self.cursorVersion
-        case .factory: nil
-        case .copilot: nil
-        case .minimax: nil
-        case .openrouter: nil
-        case .vercelai: nil
-        case .groq: nil
-        case .deepseek: nil
-        case .fireworks: nil
-        case .mistral: nil
-        case .perplexity: nil
-        case .kimi: nil
-        case .auggie: nil
-        case .together: nil
-        case .cohere: nil
-        case .xai: nil
-        case .cerebras: nil
-        case .sambanova: nil
-        case .azure: nil
-        case .bedrock: nil
-        case .vertexai: nil
-        case .qwen: nil
-        case .localLLM: nil
+        default: nil
         }
     }
 

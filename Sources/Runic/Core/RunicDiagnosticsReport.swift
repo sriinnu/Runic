@@ -1,7 +1,6 @@
 import Foundation
 import RunicCore
 
-// Structural lint debt: report assembly should be split into section renderers.
 struct RunicProviderHealthRow: Identifiable, Hashable {
     enum CredentialState: String, Hashable {
         case connected
@@ -41,6 +40,39 @@ struct RunicActionRecommendation: Identifiable, Hashable {
 
 @MainActor
 enum RunicDiagnosticsReport {
+    private typealias CredentialResult = (state: RunicProviderHealthRow.CredentialState, detail: String)
+    private typealias TokenCredential = (keyPath: KeyPath<SettingsStore, String>, label: String)
+
+    private static let localCredentialDetails: [UsageProvider: String] = [
+        .codex: "OAuth or local Codex session",
+        .claude: "OAuth, web, or Claude CLI session",
+        .cursor: "local CLI/browser session",
+        .factory: "local CLI/browser session",
+        .gemini: "local CLI/browser session",
+        .antigravity: "local CLI/browser session",
+        .localLLM: "localhost runtime or OpenTelemetry logs",
+    ]
+
+    private static let tokenCredentials: [UsageProvider: TokenCredential] = [
+        .zai: (\.zaiAPIToken, "API key"),
+        .copilot: (\.copilotAPIToken, "API token"),
+        .openrouter: (\.openRouterAPIToken, "API key"),
+        .vercelai: (\.vercelAIAPIToken, "Gateway API key"),
+        .groq: (\.groqAPIToken, "API key"),
+        .deepseek: (\.deepSeekAPIToken, "API key"),
+        .fireworks: (\.fireworksAPIToken, "API key"),
+        .mistral: (\.mistralAPIToken, "API key"),
+        .perplexity: (\.perplexityAPIToken, "API key"),
+        .kimi: (\.kimiAPIToken, "API key"),
+        .auggie: (\.auggieAPIToken, "API token"),
+        .together: (\.togetherAPIToken, "API key"),
+        .cohere: (\.cohereAPIToken, "API key"),
+        .xai: (\.xaiAPIToken, "API key"),
+        .cerebras: (\.cerebrasAPIToken, "API key"),
+        .qwen: (\.qwenAPIToken, "API key"),
+        .sambanova: (\.sambaNovaAPIToken, "API key"),
+    ]
+
     static func providerHealthRows(settings: SettingsStore, store: UsageStore) -> [RunicProviderHealthRow] {
         let enabled = store.enabledProviders()
         let providers = enabled.isEmpty ? Array(settings.orderedProviders().prefix(8)) : enabled
@@ -222,27 +254,25 @@ enum RunicDiagnosticsReport {
         return "waiting for first sample"
     }
 
-    private static func credentialState( // swiftlint:disable:this cyclomatic_complexity
+    private static func credentialState(
         provider: UsageProvider,
         settings: SettingsStore,
-        snapshot: UsageSnapshot?) -> (state: RunicProviderHealthRow.CredentialState, detail: String)
+        snapshot: UsageSnapshot?) -> CredentialResult
     {
         if let identity = snapshot?.identity(for: provider) ?? snapshot?.identity {
             let account = identity.accountEmail ?? identity.accountOrganization ?? identity.loginMethod
             return (.connected, account.map { "account \(self.redacted($0))" } ?? "identity detected")
         }
 
+        if let detail = self.localCredentialDetails[provider] {
+            return (.local, detail)
+        }
+
+        if let credential = self.tokenCredentials[provider] {
+            return self.tokenState(settings[keyPath: credential.keyPath], label: credential.label)
+        }
+
         switch provider {
-        case .codex:
-            return (.local, "OAuth or local Codex session")
-        case .claude:
-            return (.local, "OAuth, web, or Claude CLI session")
-        case .cursor, .factory, .gemini, .antigravity:
-            return (.local, "local CLI/browser session")
-        case .localLLM:
-            return (.local, "localhost runtime or OpenTelemetry logs")
-        case .zai:
-            return self.tokenState(settings.zaiAPIToken, label: "API key")
         case .minimax:
             if !settings.minimaxAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return (.configured, "API token saved")
@@ -251,38 +281,6 @@ enum RunicDiagnosticsReport {
                 return (.configured, "web cookie header saved")
             }
             return (.missing, "API token or web cookie missing")
-        case .copilot:
-            return self.tokenState(settings.copilotAPIToken, label: "API token")
-        case .openrouter:
-            return self.tokenState(settings.openRouterAPIToken, label: "API key")
-        case .vercelai:
-            return self.tokenState(settings.vercelAIAPIToken, label: "Gateway API key")
-        case .groq:
-            return self.tokenState(settings.groqAPIToken, label: "API key")
-        case .deepseek:
-            return self.tokenState(settings.deepSeekAPIToken, label: "API key")
-        case .fireworks:
-            return self.tokenState(settings.fireworksAPIToken, label: "API key")
-        case .mistral:
-            return self.tokenState(settings.mistralAPIToken, label: "API key")
-        case .perplexity:
-            return self.tokenState(settings.perplexityAPIToken, label: "API key")
-        case .kimi:
-            return self.tokenState(settings.kimiAPIToken, label: "API key")
-        case .auggie:
-            return self.tokenState(settings.auggieAPIToken, label: "API token")
-        case .together:
-            return self.tokenState(settings.togetherAPIToken, label: "API key")
-        case .cohere:
-            return self.tokenState(settings.cohereAPIToken, label: "API key")
-        case .xai:
-            return self.tokenState(settings.xaiAPIToken, label: "API key")
-        case .cerebras:
-            return self.tokenState(settings.cerebrasAPIToken, label: "API key")
-        case .qwen:
-            return self.tokenState(settings.qwenAPIToken, label: "API key")
-        case .sambanova:
-            return self.tokenState(settings.sambaNovaAPIToken, label: "API key")
         case .azure:
             let hasEndpoint = !settings.azureOpenAIEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let hasDeployment = !settings.azureOpenAIDeployment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -302,12 +300,14 @@ enum RunicDiagnosticsReport {
             return hasProject && hasLocation
                 ? (.configured, "project and location configured")
                 : (.missing, "project or location missing")
+        default:
+            return (.missing, "credential source not configured")
         }
     }
 
     private static func tokenState(
         _ token: String,
-        label: String) -> (state: RunicProviderHealthRow.CredentialState, detail: String)
+        label: String) -> CredentialResult
     {
         token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? (.missing, "\(label) missing")
