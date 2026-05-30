@@ -167,34 +167,141 @@ public struct TTYCommandRunner {
         return nil
     }
 
-    // swiftlint:disable function_body_length
-    // swiftlint:disable:next cyclomatic_complexity
     public func run(
         binary: String,
         send script: String,
         options: Options = Options(),
         onURLDetected: (@Sendable () -> Void)? = nil) throws -> Result
     {
-        let resolved: String
+        let resolved = try Self.resolveExecutable(binary)
+        let context = try PTYRunContext(resolved: resolved, options: options)
+        defer { context.cleanup() }
+
+        try context.launch()
+
+        let deadline = Date().addingTimeInterval(options.timeout)
+        let trimmed = script.trimmingCharacters(in: .whitespacesAndNewlines)
+        usleep(UInt32(options.initialDelay * 1_000_000))
+
+        if binary != "codex" {
+            return try Self.captureGeneric(
+                GenericCaptureRequest(
+                    context: context,
+                    trimmedScript: trimmed,
+                    options: options,
+                    deadline: deadline),
+                onURLDetected: onURLDetected)
+        }
+
+        return try Self.captureCodex(CodexCaptureRequest(
+            context: context,
+            script: script,
+            deadline: deadline,
+            delayInitialSend: trimmed == "/status"))
+    }
+
+    private static func resolveExecutable(_ binary: String) throws -> String {
         if FileManager.default.isExecutableFile(atPath: binary) {
-            resolved = binary
-        } else if let hit = Self.which(binary) {
-            resolved = hit
-        } else {
-            throw Error.binaryNotFound(binary)
+            return binary
+        }
+        if let hit = Self.which(binary) {
+            return hit
+        }
+        throw Error.binaryNotFound(binary)
+    }
+
+    private final class PTYRunContext {
+        let primaryFD: Int32
+        let secondaryFD: Int32
+        let primaryHandle: FileHandle
+        let secondaryHandle: FileHandle
+        let proc: Process
+        var buffer = Data()
+
+        private var cleanedUp = false
+        private var didLaunch = false
+        private var processGroup: pid_t?
+
+        init(resolved: String, options: Options) throws {
+            var primaryFD: Int32 = -1
+            var secondaryFD: Int32 = -1
+            var win = winsize(ws_row: options.rows, ws_col: options.cols, ws_xpixel: 0, ws_ypixel: 0)
+            guard openpty(&primaryFD, &secondaryFD, nil, nil, &win) == 0 else {
+                throw Error.launchFailed("openpty failed")
+            }
+            _ = fcntl(primaryFD, F_SETFL, O_NONBLOCK)
+
+            self.primaryFD = primaryFD
+            self.secondaryFD = secondaryFD
+            self.primaryHandle = FileHandle(fileDescriptor: primaryFD, closeOnDealloc: true)
+            self.secondaryHandle = FileHandle(fileDescriptor: secondaryFD, closeOnDealloc: true)
+            self.proc = Process()
+
+            self.configureProcess(resolved: resolved, options: options)
         }
 
-        var primaryFD: Int32 = -1
-        var secondaryFD: Int32 = -1
-        var win = winsize(ws_row: options.rows, ws_col: options.cols, ws_xpixel: 0, ws_ypixel: 0)
-        guard openpty(&primaryFD, &secondaryFD, nil, nil, &win) == 0 else {
-            throw Error.launchFailed("openpty failed")
-        }
-        // Make primary side non-blocking so read loops don't hang when no data is available.
-        _ = fcntl(primaryFD, F_SETFL, O_NONBLOCK)
+        func launch() throws {
+            try self.proc.run()
+            self.didLaunch = true
 
-        let primaryHandle = FileHandle(fileDescriptor: primaryFD, closeOnDealloc: true)
-        let secondaryHandle = FileHandle(fileDescriptor: secondaryFD, closeOnDealloc: true)
+            let pid = self.proc.processIdentifier
+            if setpgid(pid, pid) == 0 {
+                self.processGroup = pid
+            }
+        }
+
+        func cleanup() {
+            guard !self.cleanedUp else { return }
+            self.cleanedUp = true
+
+            if self.didLaunch, self.proc.isRunning {
+                try? self.writeAllToPrimary(Data("/exit\n".utf8))
+            }
+
+            try? self.primaryHandle.close()
+            try? self.secondaryHandle.close()
+            guard self.didLaunch else { return }
+
+            if self.proc.isRunning {
+                self.proc.terminate()
+            }
+            if let pgid = self.processGroup {
+                kill(-pgid, SIGTERM)
+            }
+
+            let waitDeadline = Date().addingTimeInterval(2.0)
+            while self.proc.isRunning, Date() < waitDeadline {
+                usleep(100_000)
+            }
+            if self.proc.isRunning {
+                if let pgid = self.processGroup {
+                    kill(-pgid, SIGKILL)
+                }
+                kill(self.proc.processIdentifier, SIGKILL)
+            }
+            self.proc.waitUntilExit()
+        }
+
+        func send(_ text: String) throws {
+            guard let data = text.data(using: .utf8) else { return }
+            try self.writeAllToPrimary(data)
+        }
+
+        func readChunk() -> Data {
+            var appended = Data()
+            while true {
+                var tmp = [UInt8](repeating: 0, count: 8192)
+                let n = read(self.primaryFD, &tmp, tmp.count)
+                if n > 0 {
+                    let slice = tmp.prefix(n)
+                    self.buffer.append(contentsOf: slice)
+                    appended.append(contentsOf: slice)
+                    continue
+                }
+                break
+            }
+            return appended
+        }
 
         func writeAllToPrimary(_ data: Data) throws {
             try data.withUnsafeBytes { rawBytes in
@@ -202,7 +309,7 @@ public struct TTYCommandRunner {
                 var offset = 0
                 var retries = 0
                 while offset < rawBytes.count {
-                    let written = write(primaryFD, baseAddress.advanced(by: offset), rawBytes.count - offset)
+                    let written = write(self.primaryFD, baseAddress.advanced(by: offset), rawBytes.count - offset)
                     if written > 0 {
                         offset += written
                         retries = 0
@@ -224,401 +331,441 @@ public struct TTYCommandRunner {
             }
         }
 
-        let proc = Process()
-        let resolvedURL = URL(fileURLWithPath: resolved)
-        if resolvedURL.lastPathComponent == "claude",
-           let watchdog = Self.locateBundledHelper("RunicClaudeWatchdog")
-        {
-            proc.executableURL = URL(fileURLWithPath: watchdog)
-            proc.arguments = ["--", resolved] + options.extraArgs
-        } else {
-            proc.executableURL = resolvedURL
-            proc.arguments = options.extraArgs
+        private func configureProcess(resolved: String, options: Options) {
+            let resolvedURL = URL(fileURLWithPath: resolved)
+            if resolvedURL.lastPathComponent == "claude",
+               let watchdog = TTYCommandRunner.locateBundledHelper("RunicClaudeWatchdog")
+            {
+                self.proc.executableURL = URL(fileURLWithPath: watchdog)
+                self.proc.arguments = ["--", resolved] + options.extraArgs
+            } else {
+                self.proc.executableURL = resolvedURL
+                self.proc.arguments = options.extraArgs
+            }
+            self.proc.standardInput = self.secondaryHandle
+            self.proc.standardOutput = self.secondaryHandle
+            self.proc.standardError = self.secondaryHandle
+
+            var env = TTYCommandRunner.enrichedEnvironment()
+            if let workingDirectory = options.workingDirectory {
+                self.proc.currentDirectoryURL = workingDirectory
+                env["PWD"] = workingDirectory.path
+            }
+            self.proc.environment = env
         }
-        proc.standardInput = secondaryHandle
-        proc.standardOutput = secondaryHandle
-        proc.standardError = secondaryHandle
-        // Use login-shell PATH when available, but keep the caller’s environment (HOME, LANG, etc.) so
-        // the CLIs can find their auth/config files.
-        var env = Self.enrichedEnvironment()
-        if let workingDirectory = options.workingDirectory {
-            proc.currentDirectoryURL = workingDirectory
-            env["PWD"] = workingDirectory.path
+    }
+
+    private struct GenericCaptureRequest {
+        let context: PTYRunContext
+        let trimmedScript: String
+        let options: Options
+        let deadline: Date
+    }
+
+    private struct GenericSendNeedle {
+        let needle: Data
+        let needleString: String
+        let keys: Data
+    }
+
+    private struct GenericCaptureState {
+        var scanBuffer: RollingBuffer
+        var nextCursorCheckAt = Date(timeIntervalSince1970: 0)
+        var lastEnter = Date()
+        var stoppedEarly = false
+        var urlSeen = false
+        var triggeredSends = Set<Data>()
+        var recentText = ""
+        var lastOutputAt = Date()
+
+        init(maxNeedle: Int) {
+            self.scanBuffer = RollingBuffer(maxNeedle: maxNeedle)
         }
-        proc.environment = env
+    }
 
-        var cleanedUp = false
-        var didLaunch = false
-        var processGroup: pid_t?
-        /// Always tear down the PTY child (and its process group) even if we throw early
-        /// while bootstrapping the CLI (e.g. when it prompts for login/telemetry).
-        func cleanup() {
-            guard !cleanedUp else { return }
-            cleanedUp = true
+    private static let cursorQuery = Data([0x1B, 0x5B, 0x36, 0x6E])
 
-            if didLaunch, proc.isRunning {
-                let exitData = Data("/exit\n".utf8)
-                try? writeAllToPrimary(exitData)
-            }
-
-            try? primaryHandle.close()
-            try? secondaryHandle.close()
-
-            guard didLaunch else { return }
-
-            if proc.isRunning {
-                proc.terminate()
-            }
-            if let pgid = processGroup {
-                kill(-pgid, SIGTERM)
-            }
-            let waitDeadline = Date().addingTimeInterval(2.0)
-            while proc.isRunning, Date() < waitDeadline {
-                usleep(100_000)
-            }
-            if proc.isRunning {
-                if let pgid = processGroup {
-                    kill(-pgid, SIGKILL)
-                }
-                kill(proc.processIdentifier, SIGKILL)
-            }
-            if didLaunch {
-                proc.waitUntilExit()
-            }
-        }
-
-        // Ensure the PTY process is always torn down, even when we throw early (e.g. login prompt).
-        defer { cleanup() }
-
-        try proc.run()
-        didLaunch = true
-
-        // Isolate the child into its own process group so descendant helpers can be
-        // terminated together. If this fails (e.g. process already exec'ed), we
-        // continue and fall back to single-PID termination.
-        let pid = proc.processIdentifier
-        if setpgid(pid, pid) == 0 {
-            processGroup = pid
+    private static func captureGeneric(
+        _ request: GenericCaptureRequest,
+        onURLDetected: (@Sendable () -> Void)?) throws -> Result
+    {
+        let context = request.context
+        if !request.trimmedScript.isEmpty {
+            try context.send(request.trimmedScript)
+            try context.send("\r")
         }
 
-        func send(_ text: String) throws {
-            guard let data = text.data(using: .utf8) else { return }
-            try writeAllToPrimary(data)
+        let stopNeedles = request.options.stopOnSubstrings.map { Data($0.utf8) }
+        let sendNeedles = request.options.sendOnSubstrings.map {
+            GenericSendNeedle(needle: Data($0.key.utf8), needleString: $0.key, keys: Data($0.value.utf8))
         }
+        let urlNeedles = [Data("https://".utf8), Data("http://".utf8)]
+        var state = GenericCaptureState(maxNeedle: Self.genericMaxNeedle(
+            stopNeedles: stopNeedles,
+            sendNeedles: sendNeedles,
+            urlNeedles: urlNeedles))
 
-        let deadline = Date().addingTimeInterval(options.timeout)
-        let trimmed = script.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isCodex = (binary == "codex")
-        let isCodexStatus = isCodex && trimmed == "/status"
+        while Date() < request.deadline {
+            let newData = context.readChunk()
+            Self.updateRecentText(newData, state: &state)
+            let scanData = state.scanBuffer.append(newData)
+            Self.respondToCursorQuery(context: context, scanData: scanData, nextCheckAt: &state.nextCursorCheckAt)
+            Self.triggerConfiguredSends(context: context, sendNeedles: sendNeedles, scanData: scanData, state: &state)
 
-        var buffer = Data()
-        func readChunk() -> Data {
-            var appended = Data()
-            while true {
-                var tmp = [UInt8](repeating: 0, count: 8192)
-                let n = read(primaryFD, &tmp, tmp.count)
-                if n > 0 {
-                    let slice = tmp.prefix(n)
-                    buffer.append(contentsOf: slice)
-                    appended.append(contentsOf: slice)
-                    continue
-                }
+            if Self.updateURLState(
+                scanData: scanData,
+                urlNeedles: urlNeedles,
+                stopOnURL: request.options.stopOnURL,
+                state: &state,
+                onURLDetected: onURLDetected)
+            {
                 break
             }
-            return appended
-        }
-
-        func firstLink(in data: Data) -> String? {
-            guard let s = String(data: data, encoding: .utf8) else { return nil }
-            let pattern = #"https?://[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+"#
-            guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
-            let range = NSRange(s.startIndex..<s.endIndex, in: s)
-            guard let match = regex.firstMatch(in: s, range: range), let r = Range(match.range, in: s) else {
-                return nil
-            }
-            var url = String(s[r])
-            while let last = url.unicodeScalars.last,
-                  CharacterSet(charactersIn: ".,;:)]}>\"'").contains(last)
+            if Self.shouldStopGeneric(
+                scanData: scanData,
+                stopNeedles: stopNeedles,
+                idleTimeout: request.options.idleTimeout,
+                context: context,
+                state: &state)
             {
-                url.unicodeScalars.removeLast()
+                break
             }
-            return url
+            Self.sendEnterIfNeeded(context: context, options: request.options, state: &state)
+            if !context.proc.isRunning { break }
+            usleep(60000)
         }
 
-        let cursorQuery = Data([0x1B, 0x5B, 0x36, 0x6E])
-
-        usleep(UInt32(options.initialDelay * 1_000_000))
-
-        // Generic path for non-Codex (e.g. Claude /login)
-        if !isCodex {
-            if !trimmed.isEmpty {
-                try send(trimmed)
-                try send("\r")
-            }
-
-            let stopNeedles = options.stopOnSubstrings.map { Data($0.utf8) }
-            let sendNeedles = options.sendOnSubstrings.map { (
-                needle: Data($0.key.utf8),
-                needleString: $0.key,
-                keys: Data($0.value.utf8)) }
-            let urlNeedles = [Data("https://".utf8), Data("http://".utf8)]
-            let needleLengths =
-                stopNeedles.map(\.count) +
-                sendNeedles.map(\.needle.count) +
-                urlNeedles.map(\.count) +
-                [cursorQuery.count]
-            let maxNeedle = needleLengths.max() ?? cursorQuery.count
-            var scanBuffer = RollingBuffer(maxNeedle: maxNeedle)
-            var nextCursorCheckAt = Date(timeIntervalSince1970: 0)
-            var lastEnter = Date()
-            var stoppedEarly = false
-            var urlSeen = false
-            var triggeredSends = Set<Data>()
-            var recentText = ""
-            var lastOutputAt = Date()
-
-            while Date() < deadline {
-                let newData = readChunk()
-                if !newData.isEmpty {
-                    lastOutputAt = Date()
-                    if let chunkText = String(bytes: newData, encoding: .utf8) {
-                        recentText += chunkText
-                        if recentText.count > 8192 {
-                            recentText.removeFirst(recentText.count - 8192)
-                        }
-                    }
-                }
-                let scanData = scanBuffer.append(newData)
-                if Date() >= nextCursorCheckAt,
-                   !scanData.isEmpty,
-                   scanData.range(of: cursorQuery) != nil
-                {
-                    try? send("\u{1b}[1;1R")
-                    nextCursorCheckAt = Date().addingTimeInterval(1.0)
-                }
-
-                if !sendNeedles.isEmpty {
-                    let recentTextCollapsed = recentText.replacingOccurrences(of: "\r", with: "")
-                    for item in sendNeedles where !triggeredSends.contains(item.needle) {
-                        let matched = scanData.range(of: item.needle) != nil ||
-                            recentText.contains(item.needleString) ||
-                            recentTextCollapsed.contains(item.needleString)
-                        if matched {
-                            if let keysString = String(data: item.keys, encoding: .utf8) {
-                                try? send(keysString)
-                            } else {
-                                try? writeAllToPrimary(item.keys)
-                            }
-                            triggeredSends.insert(item.needle)
-                        }
-                    }
-                }
-
-                if urlNeedles.contains(where: { scanData.range(of: $0) != nil }) {
-                    urlSeen = true
-                    if urlSeen {
-                        onURLDetected?()
-                    }
-                    if options.stopOnURL {
-                        stoppedEarly = true
-                        break
-                    }
-                }
-                if !stopNeedles.isEmpty, stopNeedles.contains(where: { scanData.range(of: $0) != nil }) {
-                    stoppedEarly = true
-                    break
-                }
-                if let idleTimeout = options.idleTimeout,
-                   !buffer.isEmpty,
-                   Date().timeIntervalSince(lastOutputAt) >= idleTimeout
-                {
-                    stoppedEarly = true
-                    break
-                }
-
-                if !urlSeen, let every = options.sendEnterEvery, Date().timeIntervalSince(lastEnter) >= every {
-                    try? send("\r")
-                    lastEnter = Date()
-                }
-
-                if !proc.isRunning { break }
-                usleep(60000)
-            }
-
-            // A fast child can print its final line and exit between read cycles.
-            // Drain once more so prompt responses are not lost on process exit.
-            _ = readChunk()
-
-            if stoppedEarly {
-                let settle = max(0, min(options.settleAfterStop, deadline.timeIntervalSinceNow))
-                if settle > 0 {
-                    let settleDeadline = Date().addingTimeInterval(settle)
-                    while Date() < settleDeadline {
-                        let newData = readChunk()
-                        let scanData = scanBuffer.append(newData)
-                        if Date() >= nextCursorCheckAt,
-                           !scanData.isEmpty,
-                           scanData.range(of: cursorQuery) != nil
-                        {
-                            try? send("\u{1b}[1;1R")
-                            nextCursorCheckAt = Date().addingTimeInterval(1.0)
-                        }
-                        usleep(50000)
-                    }
-                }
-            }
-
-            let text = String(data: buffer, encoding: .utf8) ?? ""
-            guard !text.isEmpty else { throw Error.timedOut }
-            return Result(text: text)
+        _ = context.readChunk()
+        if state.stoppedEarly {
+            Self.settleGenericCapture(context: context, state: &state, request: request)
         }
 
-        // Codex-specific behavior (/status and update handling)
-        let delayInitialSend = isCodexStatus
-        if !delayInitialSend {
-            try send(script)
-            try send("\r")
-            usleep(150_000)
-            try send("\r")
-            try send("\u{1b}")
-        }
+        let text = String(data: context.buffer, encoding: .utf8) ?? ""
+        guard !text.isEmpty else { throw Error.timedOut }
+        return Result(text: text)
+    }
 
-        var skippedCodexUpdate = false
-        var sentScript = !delayInitialSend
+    private static func genericMaxNeedle(
+        stopNeedles: [Data],
+        sendNeedles: [GenericSendNeedle],
+        urlNeedles: [Data]) -> Int
+    {
+        let needleLengths =
+            stopNeedles.map(\.count) +
+            sendNeedles.map(\.needle.count) +
+            urlNeedles.map(\.count) +
+            [Self.cursorQuery.count]
+        return needleLengths.max() ?? Self.cursorQuery.count
+    }
+
+    private static func updateRecentText(_ newData: Data, state: inout GenericCaptureState) {
+        guard !newData.isEmpty else { return }
+        state.lastOutputAt = Date()
+        if let chunkText = String(bytes: newData, encoding: .utf8) {
+            state.recentText += chunkText
+            if state.recentText.count > 8192 {
+                state.recentText.removeFirst(state.recentText.count - 8192)
+            }
+        }
+    }
+
+    private static func respondToCursorQuery(
+        context: PTYRunContext,
+        scanData: Data,
+        nextCheckAt: inout Date,
+        interval: TimeInterval = 1.0)
+    {
+        guard Date() >= nextCheckAt,
+              !scanData.isEmpty,
+              scanData.range(of: Self.cursorQuery) != nil else { return }
+        try? context.send("\u{1b}[1;1R")
+        nextCheckAt = Date().addingTimeInterval(interval)
+    }
+
+    private static func triggerConfiguredSends(
+        context: PTYRunContext,
+        sendNeedles: [GenericSendNeedle],
+        scanData: Data,
+        state: inout GenericCaptureState)
+    {
+        guard !sendNeedles.isEmpty else { return }
+        let recentTextCollapsed = state.recentText.replacingOccurrences(of: "\r", with: "")
+        for item in sendNeedles where !state.triggeredSends.contains(item.needle) {
+            let matched = scanData.range(of: item.needle) != nil ||
+                state.recentText.contains(item.needleString) ||
+                recentTextCollapsed.contains(item.needleString)
+            guard matched else { continue }
+            if let keysString = String(data: item.keys, encoding: .utf8) {
+                try? context.send(keysString)
+            } else {
+                try? context.writeAllToPrimary(item.keys)
+            }
+            state.triggeredSends.insert(item.needle)
+        }
+    }
+
+    private static func updateURLState(
+        scanData: Data,
+        urlNeedles: [Data],
+        stopOnURL: Bool,
+        state: inout GenericCaptureState,
+        onURLDetected: (@Sendable () -> Void)?) -> Bool
+    {
+        guard urlNeedles.contains(where: { scanData.range(of: $0) != nil }) else { return false }
+        state.urlSeen = true
+        onURLDetected?()
+        guard stopOnURL else { return false }
+        state.stoppedEarly = true
+        return true
+    }
+
+    private static func shouldStopGeneric(
+        scanData: Data,
+        stopNeedles: [Data],
+        idleTimeout: TimeInterval?,
+        context: PTYRunContext,
+        state: inout GenericCaptureState) -> Bool
+    {
+        if !stopNeedles.isEmpty, stopNeedles.contains(where: { scanData.range(of: $0) != nil }) {
+            state.stoppedEarly = true
+            return true
+        }
+        if let idleTimeout,
+           !context.buffer.isEmpty,
+           Date().timeIntervalSince(state.lastOutputAt) >= idleTimeout
+        {
+            state.stoppedEarly = true
+            return true
+        }
+        return false
+    }
+
+    private static func sendEnterIfNeeded(context: PTYRunContext, options: Options, state: inout GenericCaptureState) {
+        guard !state.urlSeen,
+              let every = options.sendEnterEvery,
+              Date().timeIntervalSince(state.lastEnter) >= every else { return }
+        try? context.send("\r")
+        state.lastEnter = Date()
+    }
+
+    private static func settleGenericCapture(
+        context: PTYRunContext,
+        state: inout GenericCaptureState,
+        request: GenericCaptureRequest)
+    {
+        let settle = max(0, min(request.options.settleAfterStop, request.deadline.timeIntervalSinceNow))
+        guard settle > 0 else { return }
+        let settleDeadline = Date().addingTimeInterval(settle)
+        while Date() < settleDeadline {
+            let scanData = state.scanBuffer.append(context.readChunk())
+            Self.respondToCursorQuery(context: context, scanData: scanData, nextCheckAt: &state.nextCursorCheckAt)
+            usleep(50000)
+        }
+    }
+
+    private struct CodexCaptureRequest {
+        let context: PTYRunContext
+        let script: String
+        let deadline: Date
+        let delayInitialSend: Bool
+    }
+
+    private struct CodexCaptureState {
+        var skippedUpdate = false
+        var sentScript: Bool
         var updateSkipAttempts = 0
         var lastEnter = Date(timeIntervalSince1970: 0)
-        var scriptSentAt: Date? = sentScript ? Date() : nil
+        var scriptSentAt: Date?
         var resendStatusRetries = 0
         var enterRetries = 0
-        var sawCodexStatus = false
-        var sawCodexUpdatePrompt = false
-        let statusMarkers = [
+        var sawStatus = false
+        var sawUpdatePrompt = false
+        var statusScanBuffer: RollingBuffer
+        var updateScanBuffer: RollingBuffer
+        var nextCursorCheckAt = Date(timeIntervalSince1970: 0)
+
+        init(sentScript: Bool, statusMaxNeedle: Int, updateMaxNeedle: Int) {
+            self.sentScript = sentScript
+            self.scriptSentAt = sentScript ? Date() : nil
+            self.statusScanBuffer = RollingBuffer(maxNeedle: statusMaxNeedle)
+            self.updateScanBuffer = RollingBuffer(maxNeedle: updateMaxNeedle)
+        }
+    }
+
+    private static func captureCodex(_ request: CodexCaptureRequest) throws -> Result {
+        let context = request.context
+        if !request.delayInitialSend {
+            try Self.sendInitialCodexScript(context: context, script: request.script)
+        }
+
+        let statusMarkers = Self.codexStatusMarkers()
+        let updateNeedlesLower = Self.codexUpdateNeedles()
+        var state = CodexCaptureState(
+            sentScript: !request.delayInitialSend,
+            statusMaxNeedle: Self.statusMaxNeedle(statusMarkers),
+            updateMaxNeedle: Self.updateMaxNeedle(updateNeedlesLower))
+
+        while Date() < request.deadline {
+            let newData = context.readChunk()
+            let scanData = state.statusScanBuffer.append(newData)
+            Self.respondToCursorQuery(context: context, scanData: scanData, nextCheckAt: &state.nextCursorCheckAt)
+            Self.detectCodexStatus(scanData: scanData, statusMarkers: statusMarkers, state: &state)
+            Self.detectCodexUpdatePrompt(newData: newData, needles: updateNeedlesLower, state: &state)
+            Self.skipCodexUpdatePromptIfNeeded(context: context, state: &state)
+
+            if Self.sendCodexScriptIfNeeded(context: context, request: request, state: &state) { continue }
+            if Self.nudgeCodexStatusIfNeeded(context: context, request: request, state: &state) { continue }
+            if state.sawStatus { break }
+            usleep(120_000)
+        }
+
+        if state.sawStatus {
+            Self.settleCodexStatus(context: context, state: &state)
+        }
+
+        guard let text = String(data: context.buffer, encoding: .utf8), !text.isEmpty else {
+            throw Error.timedOut
+        }
+        return Result(text: text)
+    }
+
+    private static func sendInitialCodexScript(context: PTYRunContext, script: String) throws {
+        try context.send(script)
+        try context.send("\r")
+        usleep(150_000)
+        try context.send("\r")
+        try context.send("\u{1b}")
+    }
+
+    private static func codexStatusMarkers() -> [Data] {
+        [
             "Credits:",
             "5h limit",
             "5-hour limit",
             "Weekly limit",
         ].map { Data($0.utf8) }
-        let updateNeedles = ["Update available!", "Run bun install -g @openai/codex", "0.60.1 ->"]
-        let updateNeedlesLower = updateNeedles.map { Data($0.lowercased().utf8) }
-        let statusNeedleLengths = statusMarkers.map(\.count)
-        let updateNeedleLengths = updateNeedlesLower.map(\.count)
-        let statusMaxNeedle = ([cursorQuery.count] + statusNeedleLengths).max() ?? cursorQuery.count
-        let updateMaxNeedle = updateNeedleLengths.max() ?? 0
-        var statusScanBuffer = RollingBuffer(maxNeedle: statusMaxNeedle)
-        var updateScanBuffer = RollingBuffer(maxNeedle: updateMaxNeedle)
-        var nextCursorCheckAt = Date(timeIntervalSince1970: 0)
-
-        while Date() < deadline {
-            let newData = readChunk()
-            let scanData = statusScanBuffer.append(newData)
-            if Date() >= nextCursorCheckAt,
-               !scanData.isEmpty,
-               scanData.range(of: cursorQuery) != nil
-            {
-                try? send("\u{1b}[1;1R")
-                nextCursorCheckAt = Date().addingTimeInterval(1.0)
-            }
-            if !scanData.isEmpty, !sawCodexStatus {
-                if statusMarkers.contains(where: { scanData.range(of: $0) != nil }) {
-                    sawCodexStatus = true
-                }
-            }
-
-            if !skippedCodexUpdate, !sawCodexUpdatePrompt, !newData.isEmpty {
-                let lowerData = Self.lowercasedASCII(newData)
-                let lowerScan = updateScanBuffer.append(lowerData)
-                if !sawCodexUpdatePrompt {
-                    if updateNeedlesLower.contains(where: { lowerScan.range(of: $0) != nil }) {
-                        sawCodexUpdatePrompt = true
-                    }
-                }
-            }
-
-            if !skippedCodexUpdate, sawCodexUpdatePrompt {
-                // Prompt shows options: 1) Update now, 2) Skip, 3) Skip until next version.
-                // Users report one Down + Enter is enough; follow with an extra Enter for safety, then re-run
-                // /status.
-                try? send("\u{1b}[B") // highlight option 2 (Skip)
-                usleep(120_000)
-                try? send("\r")
-                usleep(150_000)
-                try? send("\r") // if still focused on prompt, confirm again
-                try? send("/status")
-                try? send("\r")
-                updateSkipAttempts += 1
-                if updateSkipAttempts >= 1 {
-                    skippedCodexUpdate = true
-                    sentScript = false // re-send /status after dismissing
-                    scriptSentAt = nil
-                    buffer.removeAll()
-                    statusScanBuffer.reset()
-                    updateScanBuffer.reset()
-                    sawCodexStatus = false
-                }
-                usleep(300_000)
-            }
-            if !sentScript, !sawCodexUpdatePrompt || skippedCodexUpdate {
-                try? send(script)
-                try? send("\r")
-                sentScript = true
-                scriptSentAt = Date()
-                lastEnter = Date()
-                usleep(200_000)
-                continue
-            }
-            if sentScript, !sawCodexStatus {
-                if Date().timeIntervalSince(lastEnter) >= 1.2, enterRetries < 6 {
-                    try? send("\r")
-                    enterRetries += 1
-                    lastEnter = Date()
-                    usleep(120_000)
-                    continue
-                }
-                if let sentAt = scriptSentAt,
-                   Date().timeIntervalSince(sentAt) >= 3.0,
-                   resendStatusRetries < 2
-                {
-                    try? send("/status")
-                    try? send("\r")
-                    resendStatusRetries += 1
-                    buffer.removeAll()
-                    statusScanBuffer.reset()
-                    updateScanBuffer.reset()
-                    sawCodexStatus = false
-                    scriptSentAt = Date()
-                    lastEnter = Date()
-                    usleep(220_000)
-                    continue
-                }
-            }
-            if sawCodexStatus { break }
-            usleep(120_000)
-        }
-
-        if sawCodexStatus {
-            let settleDeadline = Date().addingTimeInterval(2.0)
-            while Date() < settleDeadline {
-                let newData = readChunk()
-                let scanData = statusScanBuffer.append(newData)
-                if Date() >= nextCursorCheckAt,
-                   !scanData.isEmpty,
-                   scanData.range(of: cursorQuery) != nil
-                {
-                    try? send("\u{1b}[1;1R")
-                    nextCursorCheckAt = Date().addingTimeInterval(1.0)
-                }
-                usleep(100_000)
-            }
-        }
-
-        guard let text = String(data: buffer, encoding: .utf8), !text.isEmpty else {
-            throw Error.timedOut
-        }
-
-        return Result(text: text)
     }
 
-    // swiftlint:enable function_body_length
+    private static func codexUpdateNeedles() -> [Data] {
+        ["Update available!", "Run bun install -g @openai/codex", "0.60.1 ->"]
+            .map { Data($0.lowercased().utf8) }
+    }
+
+    private static func statusMaxNeedle(_ markers: [Data]) -> Int {
+        ([Self.cursorQuery.count] + markers.map(\.count)).max() ?? Self.cursorQuery.count
+    }
+
+    private static func updateMaxNeedle(_ needles: [Data]) -> Int {
+        needles.map(\.count).max() ?? 0
+    }
+
+    private static func detectCodexStatus(
+        scanData: Data,
+        statusMarkers: [Data],
+        state: inout CodexCaptureState)
+    {
+        guard !scanData.isEmpty, !state.sawStatus else { return }
+        if statusMarkers.contains(where: { scanData.range(of: $0) != nil }) {
+            state.sawStatus = true
+        }
+    }
+
+    private static func detectCodexUpdatePrompt(
+        newData: Data,
+        needles: [Data],
+        state: inout CodexCaptureState)
+    {
+        guard !state.skippedUpdate, !state.sawUpdatePrompt, !newData.isEmpty else { return }
+        let lowerScan = state.updateScanBuffer.append(Self.lowercasedASCII(newData))
+        if needles.contains(where: { lowerScan.range(of: $0) != nil }) {
+            state.sawUpdatePrompt = true
+        }
+    }
+
+    private static func skipCodexUpdatePromptIfNeeded(context: PTYRunContext, state: inout CodexCaptureState) {
+        guard !state.skippedUpdate, state.sawUpdatePrompt else { return }
+        try? context.send("\u{1b}[B")
+        usleep(120_000)
+        try? context.send("\r")
+        usleep(150_000)
+        try? context.send("\r")
+        try? context.send("/status")
+        try? context.send("\r")
+        state.updateSkipAttempts += 1
+
+        guard state.updateSkipAttempts >= 1 else { return }
+        state.skippedUpdate = true
+        state.sentScript = false
+        state.scriptSentAt = nil
+        context.buffer.removeAll()
+        state.statusScanBuffer.reset()
+        state.updateScanBuffer.reset()
+        state.sawStatus = false
+        usleep(300_000)
+    }
+
+    private static func sendCodexScriptIfNeeded(
+        context: PTYRunContext,
+        request: CodexCaptureRequest,
+        state: inout CodexCaptureState) -> Bool
+    {
+        guard !state.sentScript, !state.sawUpdatePrompt || state.skippedUpdate else { return false }
+        try? context.send(request.script)
+        try? context.send("\r")
+        state.sentScript = true
+        state.scriptSentAt = Date()
+        state.lastEnter = Date()
+        usleep(200_000)
+        return true
+    }
+
+    private static func nudgeCodexStatusIfNeeded(
+        context: PTYRunContext,
+        request: CodexCaptureRequest,
+        state: inout CodexCaptureState) -> Bool
+    {
+        guard state.sentScript, !state.sawStatus else { return false }
+        if Date().timeIntervalSince(state.lastEnter) >= 1.2, state.enterRetries < 6 {
+            try? context.send("\r")
+            state.enterRetries += 1
+            state.lastEnter = Date()
+            usleep(120_000)
+            return true
+        }
+        if Self.resendCodexStatusIfNeeded(context: context, state: &state) {
+            return true
+        }
+        return false
+    }
+
+    private static func resendCodexStatusIfNeeded(
+        context: PTYRunContext,
+        state: inout CodexCaptureState) -> Bool
+    {
+        guard let sentAt = state.scriptSentAt,
+              Date().timeIntervalSince(sentAt) >= 3.0,
+              state.resendStatusRetries < 2 else { return false }
+        try? context.send("/status")
+        try? context.send("\r")
+        state.resendStatusRetries += 1
+        context.buffer.removeAll()
+        state.statusScanBuffer.reset()
+        state.updateScanBuffer.reset()
+        state.sawStatus = false
+        state.scriptSentAt = Date()
+        state.lastEnter = Date()
+        usleep(220_000)
+        return true
+    }
+
+    private static func settleCodexStatus(context: PTYRunContext, state: inout CodexCaptureState) {
+        let settleDeadline = Date().addingTimeInterval(2.0)
+        while Date() < settleDeadline {
+            let scanData = state.statusScanBuffer.append(context.readChunk())
+            Self.respondToCursorQuery(context: context, scanData: scanData, nextCheckAt: &state.nextCursorCheckAt)
+            usleep(100_000)
+        }
+    }
 
     public static func which(_ tool: String) -> String? {
         if tool == "codex", let located = BinaryLocator.resolveCodexBinary() { return located }
