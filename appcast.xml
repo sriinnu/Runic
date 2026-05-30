@@ -3,6 +3,24 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.2.2</title>
+            <pubDate>Sat, 30 May 2026 15:14:15 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>62</sparkle:version>
+            <sparkle:shortVersionString>2.2.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.2.2</h2>
+<ul>
+<li>Usage: make cost refresh scan only the mutable current day by default, with <code>--rebuild</code> reserved for 30-day provider JSONL repair.</li>
+<li>Usage: harden the provider relay cache so empty rebuild days clear stale snapshots and cached history stays frozen during normal refreshes.</li>
+<li>Docs: rewrite the README as a direct local-first project statement and document refresh versus rebuild behavior.</li>
+<li>Governance: switch current development licensing from AGPL-3.0-or-later to MPL-2.0.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.2/Runic-2.2.2.zip" length="32736403" type="application/octet-stream" sparkle:edSignature="k52QMbI1eD0YOzgMUmkdFWx8JnTgUZN7buDFEO9wkgs6o/BR8uwCfp/09LbVkJEe3QjR7s65HH6M9lHZbAaNCg=="/>
+        </item>
+        <item>
             <title>2.1.4</title>
             <pubDate>Wed, 13 May 2026 18:07:31 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
