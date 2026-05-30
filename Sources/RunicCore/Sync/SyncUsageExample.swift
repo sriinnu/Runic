@@ -11,7 +11,7 @@ import Foundation
 
 func setupSyncExample() async {
     // Initialize sync engine with default CloudKit container
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
 
     // Create background sync manager with default configuration
     let syncManager = BackgroundSyncManager(
@@ -41,7 +41,7 @@ func customConfigurationExample() async {
             timeout: 30.0,
             encryptSensitiveData: true))
 
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
     let syncManager = BackgroundSyncManager(syncEngine: syncEngine, config: config)
 
     await syncManager.start()
@@ -50,7 +50,7 @@ func customConfigurationExample() async {
 // MARK: - Syncing Usage Data Example
 
 func syncUsageDataExample() async {
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
 
     // Create usage snapshot record
     let usageRecord = UsageSnapshotSyncRecord(
@@ -82,7 +82,7 @@ func syncUsageDataExample() async {
 // MARK: - Syncing Preferences Example
 
 func syncPreferencesExample() async {
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
 
     // Create user preferences record
     let preferences = UserPreferencesSyncRecord(
@@ -107,7 +107,7 @@ func syncPreferencesExample() async {
 // MARK: - Syncing Alert Configuration Example
 
 func syncAlertConfigExample() async {
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
 
     // Create alert configuration for Claude
     let alertConfig = AlertConfigurationSyncRecord(
@@ -123,7 +123,7 @@ func syncAlertConfigExample() async {
 // MARK: - Manual Sync Example
 
 func manualSyncExample() async {
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
     let syncManager = BackgroundSyncManager(syncEngine: syncEngine)
 
     // Perform manual sync with custom options
@@ -202,7 +202,7 @@ final class SyncProgressObserver: SyncObserver {
 }
 
 func observerExample() async {
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
     let syncManager = BackgroundSyncManager(syncEngine: syncEngine)
 
     let observer = SyncProgressObserver()
@@ -214,7 +214,7 @@ func observerExample() async {
 // MARK: - Statistics and Monitoring Example
 
 func statisticsExample() async {
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
     let syncManager = BackgroundSyncManager(syncEngine: syncEngine)
 
     await syncManager.start()
@@ -244,7 +244,7 @@ func statisticsExample() async {
 // MARK: - Error Handling Example
 
 func errorHandlingExample() async {
-    let syncEngine = iCloudSyncEngine()
+    let syncEngine = ICloudSyncEngine()
 
     let result = await syncEngine.sync(options: SyncOptions())
 
