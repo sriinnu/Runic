@@ -106,7 +106,7 @@ final class UsageStore {
     private(set) var refreshingProviders: Set<UsageProvider> = []
     var debugForceAnimation = false
     var pathDebugInfo: PathDebugSnapshot = .empty
-    private(set) var statuses: [UsageProvider: ProviderStatus] = [:]
+    var statuses: [UsageProvider: ProviderStatus] = [:]
     var probeLogs: [UsageProvider: String] = [:]
     @ObservationIgnored var lastCreditsSnapshot: CreditsSnapshot?
     @ObservationIgnored var creditsFailureStreak: Int = 0
@@ -143,7 +143,7 @@ final class UsageStore {
     @ObservationIgnored var failureGates: [UsageProvider: ConsecutiveFailureGate] = [:]
     @ObservationIgnored var tokenFailureGates: [UsageProvider: ConsecutiveFailureGate] = [:]
     @ObservationIgnored private var providerSpecs: [UsageProvider: ProviderSpec] = [:]
-    @ObservationIgnored private let providerMetadata: [UsageProvider: ProviderMetadata]
+    @ObservationIgnored let providerMetadata: [UsageProvider: ProviderMetadata]
     @ObservationIgnored var timerTask: Task<Void, Never>?
     @ObservationIgnored var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored var tokenRefreshSequenceTask: Task<Void, Never>?
@@ -722,74 +722,5 @@ extension UsageStore {
         self.sessionQuotaLogger.info(message)
 
         self.sessionQuotaNotifier.post(transition: transition, provider: provider)
-    }
-
-    private func refreshStatus(_ provider: UsageProvider, trigger _: RefreshTrigger) async {
-        guard self.isEnabled(provider) else { return }
-        guard self.settings.statusChecksEnabled else { return }
-        guard self.settings.refreshFrequency != .manual else { return }
-        guard let meta = self.providerMetadata[provider] else { return }
-
-        do {
-            let status: ProviderStatus
-            if let urlString = meta.statusPageURL, let baseURL = URL(string: urlString) {
-                status = try await Self.fetchStatus(from: baseURL)
-            } else if let productID = meta.statusWorkspaceProductID {
-                status = try await Self.fetchWorkspaceStatus(productID: productID)
-            } else {
-                return
-            }
-            await MainActor.run { self.statuses[provider] = status }
-        } catch {
-            // Keep the previous status to avoid flapping when the API hiccups.
-            await MainActor.run {
-                if self.statuses[provider] == nil {
-                    self.statuses[provider] = ProviderStatus(
-                        indicator: .unknown,
-                        description: error.localizedDescription,
-                        updatedAt: nil)
-                }
-            }
-        }
-    }
-
-    private func refreshCreditsIfNeeded() async {
-        guard self.isEnabled(.codex) else { return }
-        do {
-            let credits = try await self.codexFetcher.loadLatestCredits()
-            await MainActor.run {
-                self.credits = credits
-                self.lastCreditsError = nil
-                self.lastCreditsSnapshot = credits
-                self.creditsFailureStreak = 0
-            }
-        } catch {
-            let message = error.localizedDescription
-            if message.localizedCaseInsensitiveContains("data not available yet") {
-                await MainActor.run {
-                    if let cached = self.lastCreditsSnapshot {
-                        self.credits = cached
-                        self.lastCreditsError = nil
-                    } else {
-                        self.credits = nil
-                        self.lastCreditsError = "Codex credits are still loading; will retry shortly."
-                    }
-                }
-                return
-            }
-
-            await MainActor.run {
-                self.creditsFailureStreak += 1
-                if let cached = self.lastCreditsSnapshot {
-                    self.credits = cached
-                    let stamp = cached.updatedAt.formatted(date: .abbreviated, time: .shortened)
-                    self.lastCreditsError =
-                        "Last Codex credits refresh failed: \(message). Cached values from \(stamp)."
-                } else {
-                    self.lastCreditsError = message
-                    self.credits = nil
-                }
-            }
-        }
     }
 }

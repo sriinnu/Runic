@@ -1,6 +1,36 @@
 import Foundation
+import RunicCore
 
 extension UsageStore {
+    func refreshStatus(_ provider: UsageProvider, trigger _: RefreshTrigger) async {
+        guard self.isEnabled(provider) else { return }
+        guard self.settings.statusChecksEnabled else { return }
+        guard self.settings.refreshFrequency != .manual else { return }
+        guard let meta = self.providerMetadata[provider] else { return }
+
+        do {
+            let status: ProviderStatus
+            if let urlString = meta.statusPageURL, let baseURL = URL(string: urlString) {
+                status = try await Self.fetchStatus(from: baseURL)
+            } else if let productID = meta.statusWorkspaceProductID {
+                status = try await Self.fetchWorkspaceStatus(productID: productID)
+            } else {
+                return
+            }
+            await MainActor.run { self.statuses[provider] = status }
+        } catch {
+            // Keep the previous status to avoid flapping when the API hiccups.
+            await MainActor.run {
+                if self.statuses[provider] == nil {
+                    self.statuses[provider] = ProviderStatus(
+                        indicator: .unknown,
+                        description: error.localizedDescription,
+                        updatedAt: nil)
+                }
+            }
+        }
+    }
+
     static func fetchStatus(from baseURL: URL) async throws -> ProviderStatus {
         let apiURL = baseURL.appendingPathComponent("api/v2/status.json")
         var request = URLRequest(url: apiURL)

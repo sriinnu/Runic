@@ -7,6 +7,46 @@ extension UsageStore {
         self.metadata(for: .codex).browserCookieOrder ?? Browser.defaultImportOrder
     }
 
+    func refreshCreditsIfNeeded() async {
+        guard self.isEnabled(.codex) else { return }
+        do {
+            let credits = try await self.codexFetcher.loadLatestCredits()
+            await MainActor.run {
+                self.credits = credits
+                self.lastCreditsError = nil
+                self.lastCreditsSnapshot = credits
+                self.creditsFailureStreak = 0
+            }
+        } catch {
+            let message = error.localizedDescription
+            if message.localizedCaseInsensitiveContains("data not available yet") {
+                await MainActor.run {
+                    if let cached = self.lastCreditsSnapshot {
+                        self.credits = cached
+                        self.lastCreditsError = nil
+                    } else {
+                        self.credits = nil
+                        self.lastCreditsError = "Codex credits are still loading; will retry shortly."
+                    }
+                }
+                return
+            }
+
+            await MainActor.run {
+                self.creditsFailureStreak += 1
+                if let cached = self.lastCreditsSnapshot {
+                    self.credits = cached
+                    let stamp = cached.updatedAt.formatted(date: .abbreviated, time: .shortened)
+                    self.lastCreditsError =
+                        "Last Codex credits refresh failed: \(message). Cached values from \(stamp)."
+                } else {
+                    self.lastCreditsError = message
+                    self.credits = nil
+                }
+            }
+        }
+    }
+
     private func openAIDashboardFriendlyError(
         body: String,
         targetEmail: String?,
