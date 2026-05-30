@@ -153,7 +153,9 @@ extension StatusItemController {
         self.removePopoverDismissMonitors()
         let eventMask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
 
-        self.popoverLocalEventMonitor = NSEvent.addLocalMonitorForEvents(matching: eventMask) { [weak self, weak button] event in
+        self.popoverLocalEventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: eventMask)
+        { [weak self, weak button] event in
             guard let self else { return event }
             guard self.popover?.isShown == true else { return event }
             guard !self.eventIsInsidePopoverOrAnchor(event, anchor: button) else { return event }

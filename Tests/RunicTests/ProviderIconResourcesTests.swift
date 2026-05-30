@@ -19,9 +19,11 @@ struct ProviderIconResourcesTests {
 
             let data = try Data(contentsOf: url)
             #expect(data.count < 32_768, "Provider SVG is too large for menu rendering: \(descriptor.id.rawValue)")
-            let source = String(decoding: data, as: UTF8.self)
+            let source = try #require(String(data: data, encoding: .utf8))
             #expect(source.contains("<svg"), "Provider SVG must contain an SVG root: \(descriptor.id.rawValue)")
-            #expect(source.contains("viewBox=\"0 0 24 24\""), "Provider SVG must use the brand-mark icon grid: \(descriptor.id.rawValue)")
+            #expect(
+                source.contains("viewBox=\"0 0 24 24\""),
+                "Provider SVG must use the brand-mark icon grid: \(descriptor.id.rawValue)")
             #expect(
                 !source.contains("<rect x=\"0\"") && !source.contains("viewBox=\"0 0 64 64\""),
                 "Provider SVG must not include an outer icon plate: \(descriptor.id.rawValue)")
@@ -47,10 +49,8 @@ struct ProviderIconResourcesTests {
         let rep = try #require(NSBitmapImageRep(data: tiff))
         var visiblePixels = 0
         for y in 0..<rep.pixelsHigh {
-            for x in 0..<rep.pixelsWide {
-                if (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.15 {
-                    visiblePixels += 1
-                }
+            for x in 0..<rep.pixelsWide where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.15 {
+                visiblePixels += 1
             }
         }
 

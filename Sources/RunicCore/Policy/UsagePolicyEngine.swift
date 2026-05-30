@@ -153,13 +153,15 @@ public enum UsagePolicyEngine {
             let overrunPercent = overrunUSD / budget
             guard overrunPercent >= max(0, minimumPercent) else { return nil }
             let percentText = "\(Int((overrunPercent * 100).rounded()))%"
-            return "Projected spend \(UsageFormatter.usdString(projected)) is \(percentText) over budget \(UsageFormatter.usdString(budget))."
+            return "Projected spend \(UsageFormatter.usdString(projected)) is " +
+                "\(percentText) over budget \(UsageFormatter.usdString(budget))."
 
         case .actualBudgetOverrun:
             guard let budget = context.budgetLimitUSD, budget > 0 else { return nil }
             guard let observed = context.observedSpendUSD, observed.isFinite else { return nil }
             guard observed >= budget else { return nil }
-            return "Observed spend \(UsageFormatter.usdString(observed)) reached budget \(UsageFormatter.usdString(budget))."
+            return "Observed spend \(UsageFormatter.usdString(observed)) reached " +
+                "budget \(UsageFormatter.usdString(budget))."
 
         case let .anomalySeverityAtLeast(required):
             guard let observed = context.anomalySeverity else { return nil }

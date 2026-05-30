@@ -156,7 +156,8 @@ struct InlineUsageChartView: View {
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "Usage \(self.chartStyle.label.lowercased()) chart, \(self.selectedRange.rawValue) range, \(points.count) data points")
+            "Usage \(self.chartStyle.label.lowercased()) chart, " +
+                "\(self.selectedRange.rawValue) range, \(points.count) data points")
     }
 
     private var xAxisFormat: Date.FormatStyle {

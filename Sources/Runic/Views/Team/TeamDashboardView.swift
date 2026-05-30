@@ -204,7 +204,9 @@ struct TeamDashboardView: View {
             Text("Local Planning Mode")
                 .font(self.fonts.headline)
 
-            Text("Member usage values here are manually entered planning numbers. Ledger-backed team showback is not active yet.")
+            Text(
+                "Member usage values here are manually entered planning numbers. " +
+                    "Ledger-backed team showback is not active yet.")
                 .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.72))
                 .fixedSize(horizontal: false, vertical: true)

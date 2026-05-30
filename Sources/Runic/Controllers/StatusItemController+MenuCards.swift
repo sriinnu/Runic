@@ -5,6 +5,14 @@ import SwiftUI
 // MARK: - Menu card construction
 
 extension StatusItemController {
+    struct MenuCardSectionsRequest {
+        let model: UsageMenuCardView.Model
+        let provider: UsageProvider
+        let width: CGFloat
+        let sidebar: MenuCardSidebarConfig?
+        let webItems: OpenAIWebMenuItems
+    }
+
     func makeMenuCardItem(
         _ view: some View,
         id: String,
@@ -59,12 +67,13 @@ extension StatusItemController {
 
     func addMenuCardSections(
         to menu: NSMenu,
-        model: UsageMenuCardView.Model,
-        provider: UsageProvider,
-        width: CGFloat,
-        sidebar: MenuCardSidebarConfig?,
-        webItems: OpenAIWebMenuItems)
+        request: MenuCardSectionsRequest)
     {
+        let model = request.model
+        let provider = request.provider
+        let width = request.width
+        let sidebar = request.sidebar
+        let webItems = request.webItems
         let menuMode = self.settings.menuMode
         let includeSummarySections = menuMode != .glance
         let includeInsights = menuMode == .operator

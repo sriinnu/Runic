@@ -1,6 +1,7 @@
 import AppKit
 import RunicCore
 
+// Structural lint debt: renderer drawing routines need provider/style split-outs.
 // **IconRenderer** - Generates menubar status item icons with usage visualization
 //
 // **Purpose:**
@@ -46,7 +47,7 @@ enum IconDataMode {
     case used // Show used quota
 }
 
-enum IconRenderer {
+enum IconRenderer { // swiftlint:disable:this type_body_length
     private static let creditsCap: Double = 1000
     private static let baseSize = NSSize(width: 38, height: 22)
     // Render to a 38×22 pt template (76×44 px at 2×) for better visibility.
@@ -200,7 +201,6 @@ enum IconRenderer {
         case combined
     }
 
-    // swiftlint:disable function_body_length
     static func makeIcon(
         primaryRemaining: Double?,
         weeklyRemaining: Double?,
@@ -275,9 +275,7 @@ enum IconRenderer {
         return render()
     }
 
-    // swiftlint:enable function_body_length
-
-    private static func sigilStyle(for style: IconStyle) -> SigilStyle {
+    private static func sigilStyle(for style: IconStyle) -> SigilStyle { // swiftlint:disable:this cyclomatic_complexity
         switch style {
         case .codex: .codex
         case .claude: .claude
@@ -331,6 +329,7 @@ enum IconRenderer {
         return path
     }
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private static func drawSigil(_ style: SigilStyle, in rectPx: RectPx) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let centerXPx = rectPx.midXPx
@@ -984,7 +983,7 @@ enum IconRenderer {
         return Int((clamped * 10).rounded())
     }
 
-    private static func styleKey(_ style: IconStyle) -> Int {
+    private static func styleKey(_ style: IconStyle) -> Int { // swiftlint:disable:this cyclomatic_complexity
         switch style {
         case .codex: 0
         case .claude: 1

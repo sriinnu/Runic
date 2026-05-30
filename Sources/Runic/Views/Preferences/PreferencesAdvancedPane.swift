@@ -37,7 +37,9 @@ struct AdvancedPane: View {
                         .padding(.horizontal, RunicSpacing.xs)
                         .padding(.vertical, RunicSpacing.xxs)
                         .background(Capsule(style: .continuous).fill(self.runicTheme.menuSubtleFill))
-                        .overlay(Capsule(style: .continuous).stroke(self.runicTheme.menuSeparatorColor.opacity(0.55), lineWidth: 0.7))
+                        .overlay(Capsule(style: .continuous).stroke(
+                            self.runicTheme.menuSeparatorColor.opacity(0.55),
+                            lineWidth: 0.7))
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
                 Text("Auto-refresh can switch to Manual when your Mac is idle or sleeps/locks. Adjust below.")

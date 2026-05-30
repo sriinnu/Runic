@@ -544,14 +544,16 @@ extension StatusItemController {
     }
 
     private func appendReliabilitySection(to lines: inout [String], data: InsightsReportData) {
-        let reliability = UsageLedgerInsightsAdvisor.reliabilityScore(
+        let reliability = UsageLedgerInsightsAdvisor.reliabilityScore(.init(
             provider: data.provider,
             daily: data.daily,
             activeBlock: data.activeBlock,
-            modelBreakdown: data.modelBreakdown,
-            projectBreakdown: data.projectBreakdown,
-            providerError: self.store.error(for: data.provider),
-            ledgerError: data.loadError)
+            breakdowns: .init(
+                models: data.modelBreakdown,
+                projects: data.projectBreakdown),
+            errors: .init(
+                provider: self.store.error(for: data.provider),
+                ledger: data.loadError)))
         guard let reliability else { return }
 
         lines.append("")

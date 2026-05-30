@@ -19,22 +19,18 @@ struct UsageLedgerInsightsAdvisorTests {
                 costUSD: 2.5),
             modelsUsed: ["gpt-5"])
 
-        let scoreWithoutErrors = UsageLedgerInsightsAdvisor.reliabilityScore(
+        let scoreWithoutErrors = UsageLedgerInsightsAdvisor.reliabilityScore(.init(
             provider: .codex,
             daily: daily,
             activeBlock: nil,
-            modelBreakdown: [],
-            projectBreakdown: [],
-            providerError: nil,
-            ledgerError: nil)
-        let scoreWithErrors = UsageLedgerInsightsAdvisor.reliabilityScore(
+            breakdowns: .init(models: [], projects: []),
+            errors: .init(provider: nil, ledger: nil)))
+        let scoreWithErrors = UsageLedgerInsightsAdvisor.reliabilityScore(.init(
             provider: .codex,
             daily: daily,
             activeBlock: nil,
-            modelBreakdown: [],
-            projectBreakdown: [],
-            providerError: "fetch failed",
-            ledgerError: "parse failed")
+            breakdowns: .init(models: [], projects: []),
+            errors: .init(provider: "fetch failed", ledger: "parse failed")))
 
         #expect(scoreWithoutErrors != nil)
         #expect(scoreWithErrors != nil)

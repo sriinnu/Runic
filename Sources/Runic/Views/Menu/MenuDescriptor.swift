@@ -369,7 +369,7 @@ extension MenuDescriptor.MenuAction {
         case .dashboard: MenuDescriptor.MenuActionSystemImage.dashboard.rawValue
         case .statusPage: MenuDescriptor.MenuActionSystemImage.statusPage.rawValue
         case .switchAccount: MenuDescriptor.MenuActionSystemImage.switchAccount.rawValue
-            case .copyError: MenuDescriptor.MenuActionSystemImage.copyError.rawValue
+        case .copyError: MenuDescriptor.MenuActionSystemImage.copyError.rawValue
         }
     }
 

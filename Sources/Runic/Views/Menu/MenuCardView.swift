@@ -2,6 +2,7 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+// Structural lint debt: menu card presentation needs more focused subviews/files.
 /// **Menu Card Layout Metrics**
 /// Defines all spacing and padding constants for the menu card UI.
 /// These values are carefully tuned for readability and visual hierarchy.
@@ -265,13 +266,17 @@ struct UsageMenuCardView: View {
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
                                         .font(self.fonts.footnote)
-                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
+                                        .foregroundStyle(MenuHighlightStyle.error(
+                                            self.isHighlighted,
+                                            theme: self.runicTheme))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .padding(RunicSpacing.xs)
                                 .background(
-                                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                                    RoundedRectangle(
+                                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                        style: .continuous)
                                         .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
                                 .overlay {
                                     ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)
@@ -690,7 +695,9 @@ private struct CopyIconButtonStyle: ButtonStyle {
         configuration.label
             .padding(RunicSpacing.xxs)
             .background {
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                    style: .continuous)
                     .fill(self.runicTheme.secondaryText.opacity(configuration.isPressed ? 0.18 : 0))
             }
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
@@ -883,13 +890,17 @@ private struct InsightsContent: View {
                         .foregroundStyle(RunicColors.error)
                     Text(error)
                         .font(self.fonts.footnote)
-                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
+                        .foregroundStyle(MenuHighlightStyle.error(
+                            self.isHighlighted,
+                            theme: self.runicTheme))
                         .lineLimit(4)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(RunicSpacing.xs)
                 .background(
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                        style: .continuous)
                         .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
             }
         }
@@ -1183,13 +1194,17 @@ struct UsageMenuCardCostSectionView: View {
                                         .foregroundStyle(RunicColors.error)
                                     Text(error)
                                         .font(self.fonts.footnote)
-                                        .foregroundStyle(MenuHighlightStyle.error(self.isHighlighted, theme: self.runicTheme))
+                                        .foregroundStyle(MenuHighlightStyle.error(
+                                            self.isHighlighted,
+                                            theme: self.runicTheme))
                                         .lineLimit(4)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .padding(RunicSpacing.xs)
                                 .background(
-                                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                                    RoundedRectangle(
+                                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                        style: .continuous)
                                         .fill(RunicColors.error.opacity(RunicColors.Opacity.subtle)))
                                 .overlay {
                                     ClickToCopyOverlay(copyText: tokenUsage.errorCopyText ?? error)
@@ -1627,6 +1642,7 @@ extension UsageMenuCardView.Model {
             spendLine: "This month: \(used) / \(limit)")
     }
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private static func insightsSection(input: Input) -> InsightsSection? {
         let error = input.ledgerError?.trimmingCharacters(in: .whitespacesAndNewlines)
         let daily = input.ledgerDaily?.provider == input.provider ? input.ledgerDaily : nil
@@ -1818,7 +1834,8 @@ extension UsageMenuCardView.Model {
             let to = UsageFormatter.modelDisplayName(routing.toModel)
             routingLine = "Routing advisor: shift \(routing.shiftPercent)% \(from) -> \(to)"
             let confidenceText = "\(Int((routing.confidence * 100).rounded()))%"
-            routingDetail = "Estimated savings: \(UsageFormatter.usdString(routing.estimatedSavingsUSD)) · confidence \(confidenceText)"
+            let savings = UsageFormatter.usdString(routing.estimatedSavingsUSD)
+            routingDetail = "Estimated savings: \(savings) · confidence \(confidenceText)"
         }
 
         let updatedLine = input.ledgerUpdatedAt.map { UsageFormatter.updatedString(from: $0, now: input.now) }
@@ -1928,7 +1945,8 @@ extension UsageMenuCardView.Model {
 
         var details: [String] = []
         if let status {
-            details.append("Capability source: \(Self.contextSourceText(status.source))\(status.isStale ? " (stale)" : "")")
+            let staleText = status.isStale ? " (stale)" : ""
+            details.append("Capability source: \(Self.contextSourceText(status.source))\(staleText)")
         } else {
             details.append("Capability source: unavailable")
         }
@@ -2137,3 +2155,5 @@ private final class ClickToCopyView: NSView {
         pb.setString(self.copyText, forType: .string)
     }
 }
+
+// swiftlint:disable:this file_length

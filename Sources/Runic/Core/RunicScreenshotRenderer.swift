@@ -8,6 +8,14 @@ enum RunicScreenshotRenderer {
     private static let preferencesSize = CGSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
     private static var keepAliveWindow: NSWindow?
 
+    private struct RenderContext {
+        let store: UsageStore
+        let settings: SettingsStore
+        let account: AccountInfo
+        let updater: UpdaterProviding
+        let selection: PreferencesSelection
+    }
+
     static var isRequested: Bool {
         Self.request != nil
     }
@@ -24,7 +32,13 @@ enum RunicScreenshotRenderer {
         Task { @MainActor in
             do {
                 try await Task.sleep(nanoseconds: 600_000_000)
-                try self.render(request, store: store, settings: settings, account: account, updater: updater, selection: selection)
+                let context = RenderContext(
+                    store: store,
+                    settings: settings,
+                    account: account,
+                    updater: updater,
+                    selection: selection)
+                try self.render(request, context: context)
                 self.keepAliveWindow = nil
                 NSApp.terminate(nil)
             } catch {
@@ -60,12 +74,13 @@ enum RunicScreenshotRenderer {
 
     private static func render(
         _ request: RenderRequest,
-        store: UsageStore,
-        settings: SettingsStore,
-        account: AccountInfo,
-        updater: UpdaterProviding,
-        selection: PreferencesSelection) throws
+        context: RenderContext) throws
     {
+        let store = context.store
+        let settings = context.settings
+        let account = context.account
+        let updater = context.updater
+        let selection = context.selection
         let previousTheme = settings.theme
         if let theme = Self.themeOverride {
             settings.theme = theme
@@ -93,10 +108,20 @@ enum RunicScreenshotRenderer {
                 to: request.outputURL)
         case "prefs-general":
             selection.tab = .general
-            try Self.writePreferences(store: store, settings: settings, updater: updater, selection: selection, to: request.outputURL)
+            try Self.writePreferences(
+                store: store,
+                settings: settings,
+                updater: updater,
+                selection: selection,
+                to: request.outputURL)
         case "prefs-providers":
             selection.tab = .providers
-            try Self.writePreferences(store: store, settings: settings, updater: updater, selection: selection, to: request.outputURL)
+            try Self.writePreferences(
+                store: store,
+                settings: settings,
+                updater: updater,
+                selection: selection,
+                to: request.outputURL)
         default:
             throw RendererError.unsupportedKind(request.kind)
         }

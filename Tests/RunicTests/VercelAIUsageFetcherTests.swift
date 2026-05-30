@@ -5,7 +5,7 @@ import Testing
 struct VercelAIUsageFetcherTests {
     @Test
     func `credits response decodes string amounts`() throws {
-        let data = #"{"balance":"95.50","total_used":"4.50"}"#.data(using: .utf8)!
+        let data = Data(#"{"balance":"95.50","total_used":"4.50"}"#.utf8)
 
         let decoded = try JSONDecoder().decode(VercelAICreditsResponse.self, from: data)
 
@@ -20,7 +20,7 @@ struct VercelAIUsageFetcherTests {
 
     @Test
     func `models response decodes gateway model format`() throws {
-        let data = """
+        let data = Data("""
         {
           "object": "list",
           "data": [
@@ -34,7 +34,7 @@ struct VercelAIUsageFetcherTests {
             }
           ]
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoded = try JSONDecoder().decode(VercelAIModelsResponse.self, from: data)
 

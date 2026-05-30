@@ -31,7 +31,9 @@ struct TeamManagementView: View {
     var body: some View {
         PreferencesPane {
             SettingsSection(title: "Local Teams", contentSpacing: RunicSpacing.md) {
-                Text("Sketch local member and quota plans on this Mac. These plans do not sync or feed showback exports yet.")
+                Text(
+                    "Sketch local member and quota plans on this Mac. " +
+                        "These plans do not sync or feed showback exports yet.")
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
@@ -442,8 +444,7 @@ private struct TeamRowView: View {
                         .font(self.fonts.body.weight(.semibold))
                 }
 
-                Text(
-                    "\(self.team.members.count) member\(self.team.members.count == 1 ? "" : "s") · \(self.team.usedQuota, format: .number) / \(self.team.totalQuota, format: .number) credits")
+                Text(self.teamQuotaSummary)
                     .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             }
@@ -492,6 +493,14 @@ private struct TeamRowView: View {
         .contentShape(Rectangle())
         .onTapGesture { self.onSelect() }
         .onHover { hovering in self.isHovering = hovering }
+    }
+
+    private var teamQuotaSummary: String {
+        let memberSuffix = self.team.members.count == 1 ? "" : "s"
+        let usedQuota = self.team.usedQuota.formatted()
+        let totalQuota = self.team.totalQuota.formatted()
+        return "\(self.team.members.count) member\(memberSuffix) · " +
+            "\(usedQuota) / \(totalQuota) credits"
     }
 }
 

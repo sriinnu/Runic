@@ -1,5 +1,6 @@
 import Foundation
 
+// Structural lint debt: vendored scanner logic stays isolated until refreshed upstream.
 enum CostUsageScanner {
     struct Options {
         var codexSessionsRoot: URL?
@@ -34,7 +35,7 @@ enum CostUsageScanner {
         let parsedBytes: Int64
     }
 
-    static func loadDailyReport(
+    static func loadDailyReport( // swiftlint:disable:this cyclomatic_complexity
         provider: UsageProvider,
         since: Date,
         until: Date,

@@ -3,6 +3,7 @@ import Observation
 import RunicCore
 import ServiceManagement
 
+// Structural lint debt: settings storage still needs smaller persistence domains.
 enum RefreshFrequency: String, CaseIterable, Identifiable {
     case manual
     case oneMinute
@@ -210,7 +211,7 @@ enum ProviderSwitcherIconSize: String, CaseIterable, Identifiable {
 
 @MainActor
 @Observable
-final class SettingsStore {
+final class SettingsStore { // swiftlint:disable:this type_body_length
     /// Persisted provider display order.
     ///
     /// Stored as raw `UsageProvider` strings so new providers can be appended automatically without breaking.
@@ -896,7 +897,7 @@ final class SettingsStore {
     @ObservationIgnored private var cachedProviderOrderRaw: [String] = []
     private var providerToggleRevision: Int = 0
 
-    init(
+    init( // swiftlint:disable:this function_body_length
         userDefaults: UserDefaults = .standard,
         zaiTokenStore: any ZaiTokenStoring = KeychainZaiTokenStore(),
         minimaxTokenStore: any MiniMaxTokenStoring = KeychainMiniMaxTokenStore(),
@@ -1048,7 +1049,8 @@ final class SettingsStore {
             let failed = credentialMigration.failedAccounts.count
             self.providerCredentialMigrationNotice =
                 "Some saved provider keys need a one-time re-save after keychain hardening " +
-                "(\(blocked) blocked, \(failed) failed). Re-save affected API keys below; Runic will not prompt in the background."
+                "(\(blocked) blocked, \(failed) failed). Re-save affected API keys below; " +
+                "Runic will not prompt in the background."
         }
         // Keep secrets cold at startup; provider fetchers read keychain values
         // only when needed so relaunch never summons SecurityAgent.
@@ -1883,3 +1885,5 @@ enum LaunchAtLoginManager {
         try? service.register()
     }
 }
+
+// swiftlint:disable:this file_length

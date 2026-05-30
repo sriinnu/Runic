@@ -22,6 +22,48 @@ public struct UsageLedgerReliabilityScore: Sendable, Codable, Hashable {
     }
 }
 
+public struct UsageLedgerReliabilityBreakdowns: Sendable, Hashable {
+    public let models: [UsageLedgerModelSummary]
+    public let projects: [UsageLedgerProjectSummary]
+
+    public init(models: [UsageLedgerModelSummary], projects: [UsageLedgerProjectSummary]) {
+        self.models = models
+        self.projects = projects
+    }
+}
+
+public struct UsageLedgerReliabilityErrors: Sendable, Hashable {
+    public let provider: String?
+    public let ledger: String?
+
+    public init(provider: String?, ledger: String?) {
+        self.provider = provider
+        self.ledger = ledger
+    }
+}
+
+public struct UsageLedgerReliabilityInput: Sendable, Hashable {
+    public let provider: UsageProvider
+    public let daily: UsageLedgerDailySummary?
+    public let activeBlock: UsageLedgerBlockSummary?
+    public let breakdowns: UsageLedgerReliabilityBreakdowns
+    public let errors: UsageLedgerReliabilityErrors
+
+    public init(
+        provider: UsageProvider,
+        daily: UsageLedgerDailySummary?,
+        activeBlock: UsageLedgerBlockSummary?,
+        breakdowns: UsageLedgerReliabilityBreakdowns,
+        errors: UsageLedgerReliabilityErrors)
+    {
+        self.provider = provider
+        self.daily = daily
+        self.activeBlock = activeBlock
+        self.breakdowns = breakdowns
+        self.errors = errors
+    }
+}
+
 public struct UsageLedgerRoutingRecommendation: Sendable, Codable, Hashable {
     public let fromModel: String
     public let toModel: String
@@ -54,15 +96,14 @@ public struct UsageLedgerRoutingRecommendation: Sendable, Codable, Hashable {
 }
 
 public enum UsageLedgerInsightsAdvisor {
-    public static func reliabilityScore(
-        provider _: UsageProvider,
-        daily: UsageLedgerDailySummary?,
-        activeBlock: UsageLedgerBlockSummary?,
-        modelBreakdown: [UsageLedgerModelSummary],
-        projectBreakdown: [UsageLedgerProjectSummary],
-        providerError: String?,
-        ledgerError: String?) -> UsageLedgerReliabilityScore?
+    public static func reliabilityScore(_ input: UsageLedgerReliabilityInput) -> UsageLedgerReliabilityScore?
     {
+        let daily = input.daily
+        let activeBlock = input.activeBlock
+        let modelBreakdown = input.breakdowns.models
+        let projectBreakdown = input.breakdowns.projects
+        let providerError = input.errors.provider
+        let ledgerError = input.errors.ledger
         let hasAnyData = daily != nil || activeBlock != nil || !modelBreakdown.isEmpty || !projectBreakdown.isEmpty
         let hasProviderError = !(providerError?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
         let hasLedgerError = !(ledgerError?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
@@ -195,7 +236,8 @@ public enum UsageLedgerInsightsAdvisor {
         let confidence = max(0.30, min(0.95, 0.40 + (coverage * 0.55)))
         let shiftLabel = Int((effectiveShift * 100).rounded())
 
-        let rationale = "Shift \(shiftLabel)% of \(mostExpensive.model) volume to \(cheapest.model) based on observed cost-per-1K."
+        let rationale = "Shift \(shiftLabel)% of \(mostExpensive.model) volume to \(cheapest.model) " +
+            "based on observed cost-per-1K."
         return UsageLedgerRoutingRecommendation(
             fromModel: mostExpensive.model,
             toModel: cheapest.model,

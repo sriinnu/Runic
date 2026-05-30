@@ -830,11 +830,9 @@ private enum MiniMaxLocalStorageImporter {
         }
 
         let jwtCandidates = self.extractJWTs(from: contents)
-        for token in jwtCandidates {
-            if self.isMiniMaxJWT(token) {
-                let groupID = self.extractGroupID(from: contents) ?? self.groupID(from: token)
-                return TokenMatch(accessToken: token, groupID: groupID)
-            }
+        for token in jwtCandidates where self.isMiniMaxJWT(token) {
+            let groupID = self.extractGroupID(from: contents) ?? self.groupID(from: token)
+            return TokenMatch(accessToken: token, groupID: groupID)
         }
 
         return nil

@@ -3,6 +3,8 @@ import Foundation
 
 // MARK: - iCloud CloudKit Sync Engine
 
+// swiftlint:disable type_name
+
 /// CloudKit-based synchronization engine for iCloud sync
 ///
 /// This engine handles bidirectional synchronization of Runic data using
@@ -13,6 +15,8 @@ import Foundation
 /// - Privacy-first encryption for sensitive data
 /// - Retry logic with exponential backoff
 public actor iCloudSyncEngine: SyncEngine {
+    // swiftlint:enable type_name
+
     // MARK: - Properties
 
     /// CloudKit container for sync operations
@@ -117,7 +121,8 @@ public actor iCloudSyncEngine: SyncEngine {
             for record in records {
                 if let conflict = await detectConflict(record) {
                     let resolved = await conflictResolver.resolve(
-                        local: conflict.local, remote: conflict.remote,
+                        local: conflict.local,
+                        remote: conflict.remote,
                         strategy: options.conflictStrategy)
                     await self.applyResolvedRecord(resolved)
                     conflictsResolved += 1

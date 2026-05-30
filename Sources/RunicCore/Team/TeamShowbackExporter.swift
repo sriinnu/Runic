@@ -303,7 +303,12 @@ public enum TeamShowbackExporter {
         }
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(report)
-        return String(decoding: data, as: UTF8.self)
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw EncodingError.invalidValue(report, .init(
+                codingPath: [],
+                debugDescription: "Encoded showback report was not valid UTF-8"))
+        }
+        return json
     }
 
     public static func encodeCSV(_ report: TeamShowbackReport) -> String {

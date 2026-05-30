@@ -2,6 +2,7 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+// Structural lint debt: split the large chart submenu builder before removing this.
 // MARK: - Chart submenu builders
 
 extension StatusItemController {
@@ -49,7 +50,7 @@ extension StatusItemController {
         return nil
     }
 
-    func makeInsightsSubmenu(provider: UsageProvider) -> NSMenu? {
+    func makeInsightsSubmenu(provider: UsageProvider) -> NSMenu? { // swiftlint:disable:this function_body_length
         let daily = self.store.ledgerDailySummary(for: provider)
         let activeBlock = self.store.ledgerActiveBlock(for: provider)
         let modelBreakdown = self.store.ledgerModelBreakdown(for: provider)
@@ -442,7 +443,9 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(HourlyActivityChartMenuView(hourlySummaries: hourlySummaries, width: width))
+        let chartView = self.themedHostedMenuRoot(HourlyActivityChartMenuView(
+            hourlySummaries: hourlySummaries,
+            width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -469,7 +472,9 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         let submenu = NSMenu()
         submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(WeeklyActivityChartMenuView(dailySummaries: dailySummaries, width: width))
+        let chartView = self.themedHostedMenuRoot(WeeklyActivityChartMenuView(
+            dailySummaries: dailySummaries,
+            width: width))
         let hosting = MenuHostingView(rootView: chartView)
         let controller = NSHostingController(rootView: chartView)
         let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
@@ -710,7 +715,8 @@ extension StatusItemController {
                 ? String(format: " · ~$%.2f", modelUsage.totalEstimatedCostUSD) : ""
             let summaryItem = NSMenuItem(
                 title: "\(totalTokensStr) tokens · \(totalPromptsStr)\(totalCostStr)",
-                action: nil, keyEquivalent: "")
+                action: nil,
+                keyEquivalent: "")
             summaryItem.isEnabled = false
             let summaryFont = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
             summaryItem.attributedTitle = NSAttributedString(
@@ -748,7 +754,8 @@ extension StatusItemController {
 
             let totalItem = NSMenuItem(
                 title: "\(toolUsage.totalCalls) total calls",
-                action: nil, keyEquivalent: "")
+                action: nil,
+                keyEquivalent: "")
             totalItem.isEnabled = false
             let totalFont = RunicFont.nsFont(size: NSFont.smallSystemFontSize)
             totalItem.attributedTitle = NSAttributedString(
@@ -761,7 +768,8 @@ extension StatusItemController {
                 let displayName = self.displayToolName(entry.toolName)
                 let item = NSMenuItem(
                     title: "\(displayName): \(entry.count) calls",
-                    action: nil, keyEquivalent: "")
+                    action: nil,
+                    keyEquivalent: "")
                 submenu.addItem(item)
             }
 

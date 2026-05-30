@@ -1,6 +1,7 @@
 import Foundation
 import RunicCore
 
+// Structural lint debt: report assembly should be split into section renderers.
 struct RunicProviderHealthRow: Identifiable, Hashable {
     enum CredentialState: String, Hashable {
         case connected
@@ -162,7 +163,8 @@ enum RunicDiagnosticsReport {
         lines.append("refresh: \(settings.refreshFrequency.label)")
         lines.append("menuMode: \(settings.menuMode.label)")
         lines.append("costUsage: \(settings.costUsageEnabled ? "enabled" : "disabled")")
-        lines.append("otelPaths: \(settings.otelGenAILogPaths.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "none" : "configured")")
+        let otelPaths = settings.otelGenAILogPaths.trimmingCharacters(in: .whitespacesAndNewlines)
+        lines.append("otelPaths: \(otelPaths.isEmpty ? "none" : "configured")")
         lines.append("")
         lines.append("providers:")
 
@@ -220,7 +222,7 @@ enum RunicDiagnosticsReport {
         return "waiting for first sample"
     }
 
-    private static func credentialState(
+    private static func credentialState( // swiftlint:disable:this cyclomatic_complexity
         provider: UsageProvider,
         settings: SettingsStore,
         snapshot: UsageSnapshot?) -> (state: RunicProviderHealthRow.CredentialState, detail: String)

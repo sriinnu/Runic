@@ -46,7 +46,9 @@ struct GlassShimmerModifier: ViewModifier {
                             .allowsHitTesting(false)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)))
+                .clipShape(RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg),
+                    style: .continuous)))
             .onAppear {
                 guard !self.runicTheme.isTerminalHUD, !self.reduceMotion, self.runicTheme.id == "glass" else { return }
                 withAnimation(.easeInOut(duration: 2.0).delay(0.5)) {

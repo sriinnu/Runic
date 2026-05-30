@@ -58,15 +58,23 @@ extension RunicThemePalette {
 
         switch intent {
         case .action:
-            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.neutralIconColor
+            return selected || hovered
+                ? self.stateIconColor(selected: selected, hovered: hovered)
+                : self.neutralIconColor
         case .data:
-            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.semanticIconColor(self.secondary)
+            return selected || hovered
+                ? self.stateIconColor(selected: selected, hovered: hovered)
+                : self.semanticIconColor(self.secondary)
         case .destructive:
             return self.semanticIconColor(self.warm)
         case .info:
-            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.semanticIconColor(self.secondary)
+            return selected || hovered
+                ? self.stateIconColor(selected: selected, hovered: hovered)
+                : self.semanticIconColor(self.secondary)
         case .navigation:
-            return selected || hovered ? self.stateIconColor(selected: selected, hovered: hovered) : self.neutralIconColor
+            return selected || hovered
+                ? self.stateIconColor(selected: selected, hovered: hovered)
+                : self.neutralIconColor
         case .statusGood:
             return self.semanticIconColor(self.tertiary)
         case .statusWarning:
@@ -103,7 +111,9 @@ extension RunicThemePalette {
         -> Color
     {
         let surface = Self.opaqueRGB(self.nsColor(self.surface, fallback: .windowBackgroundColor))
-        let background = Self.composite(Self.rgba(self.nsColor(backgroundColor, fallback: .windowBackgroundColor)), over: surface)
+        let background = Self.composite(
+            Self.rgba(self.nsColor(backgroundColor, fallback: .windowBackgroundColor)),
+            over: surface)
         let original = self.nsColor(color, fallback: .controlAccentColor)
         let candidate = Self.composite(Self.rgba(original), over: background)
         let adjusted = Self.adjustedRGB(candidate, against: background, minimumContrast: minimumContrast)

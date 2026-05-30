@@ -233,7 +233,9 @@ private struct ProviderRow: View {
             // Percentage
             Text("\(Int(self.summary.usedPercent))%")
                 .font(self.fonts.system(size: 9, weight: .semibold))
-                .foregroundStyle(self.summary.usedPercent > 80 ? self.runicTheme.primaryText : self.runicTheme.secondaryText)
+                .foregroundStyle(self.summary.usedPercent > 80
+                    ? self.runicTheme.primaryText
+                    : self.runicTheme.secondaryText)
                 .frame(width: 28, alignment: .trailing)
 
             // Today's tokens (if any)

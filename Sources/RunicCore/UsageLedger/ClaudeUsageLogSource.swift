@@ -23,6 +23,13 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private let cache: LedgerCache
     private let scanMode: UsageLedgerLogScanMode
 
+    private struct DedupeTokens {
+        let input: Int
+        let output: Int
+        let cacheCreation: Int
+        let cacheRead: Int
+    }
+
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         fileManager: FileManager = .default,
@@ -125,10 +132,11 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 messageID: entry.messageID,
                 sessionID: entry.sessionID,
                 timestamp: entry.timestamp,
-                inputTokens: entry.inputTokens,
-                outputTokens: entry.outputTokens,
-                cacheCreationTokens: entry.cacheCreationTokens,
-                cacheReadTokens: entry.cacheReadTokens)
+                tokens: .init(
+                    input: entry.inputTokens,
+                    output: entry.outputTokens,
+                    cacheCreation: entry.cacheCreationTokens,
+                    cacheRead: entry.cacheReadTokens))
             if seenKeys.insert(key).inserted {
                 entries.append(entry)
             }
@@ -399,10 +407,11 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 messageID: payload.message.id,
                 sessionID: sessionID,
                 timestamp: timestamp,
-                inputTokens: input,
-                outputTokens: output,
-                cacheCreationTokens: cacheCreation,
-                cacheReadTokens: cacheRead)
+                tokens: .init(
+                    input: input,
+                    output: output,
+                    cacheCreation: cacheCreation,
+                    cacheRead: cacheRead))
             if seenKeys.contains(key) { return nil }
             seenKeys.insert(key)
 
@@ -438,10 +447,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         messageID: String?,
         sessionID: String?,
         timestamp: Date,
-        inputTokens: Int,
-        outputTokens: Int,
-        cacheCreationTokens: Int,
-        cacheReadTokens: Int) -> String
+        tokens: DedupeTokens) -> String
     {
         if let requestID, !requestID.isEmpty {
             return "req:\(requestID)"
@@ -449,7 +455,14 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         if let messageID, !messageID.isEmpty {
             return "msg:\(messageID)"
         }
-        return "ts:\(timestamp.timeIntervalSince1970)|\(sessionID ?? "-")|\(inputTokens)|\(outputTokens)|\(cacheCreationTokens)|\(cacheReadTokens)"
+        return [
+            "ts:\(timestamp.timeIntervalSince1970)",
+            sessionID ?? "-",
+            "\(tokens.input)",
+            "\(tokens.output)",
+            "\(tokens.cacheCreation)",
+            "\(tokens.cacheRead)",
+        ].joined(separator: "|")
     }
 
     private func parseTimestamp(_ value: String) -> Date? {

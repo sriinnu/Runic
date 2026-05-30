@@ -2,8 +2,9 @@ import Foundation
 import Helix
 import RunicCore
 
+// Structural lint debt: legacy CLI entrypoint still needs command-specific files.
 @main
-enum RunicCLI {
+enum RunicCLI { // swiftlint:disable:this type_body_length
     static func main() async {
         let rawArgv = Array(CommandLine.arguments.dropFirst())
         let argv = Self.effectiveArgv(rawArgv)
@@ -178,7 +179,9 @@ enum RunicCLI {
 
         let providers: [UsageProvider]
         if let providerName = providerArg?.lowercased() {
-            providers = Self.resolveProviderList(providerName, defaultProviders: ProviderDescriptorRegistry.all.map(\.id))
+            providers = Self.resolveProviderList(
+                providerName,
+                defaultProviders: ProviderDescriptorRegistry.all.map(\.id))
         } else {
             providers = ProviderDescriptorRegistry.all.map(\.id)
         }
@@ -659,7 +662,11 @@ enum RunicCLI {
         }
     }
 
-    private static func renderInsightsOutput(_ payload: some Encodable, isJson: Bool, isPretty: Bool) {
+    private static func renderInsightsOutput( // swiftlint:disable:this cyclomatic_complexity function_body_length
+        _ payload: some Encodable,
+        isJson: Bool,
+        isPretty: Bool)
+    {
         if isJson {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -680,8 +687,13 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print(
-                    "\(summary.dayKey) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                Self.printInsightLine([
+                    summary.dayKey,
+                    summary.provider.rawValue,
+                    project,
+                    "\(summary.totals.totalTokens) tokens",
+                    costText,
+                ])
             }
             return
         }
@@ -690,8 +702,13 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print(
-                    "\(summary.sessionID) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                Self.printInsightLine([
+                    summary.sessionID,
+                    summary.provider.rawValue,
+                    project,
+                    "\(summary.totals.totalTokens) tokens",
+                    costText,
+                ])
             }
             return
         }
@@ -700,8 +717,13 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print(
-                    "\(summary.start) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                Self.printInsightLine([
+                    "\(summary.start)",
+                    summary.provider.rawValue,
+                    project,
+                    "\(summary.totals.totalTokens) tokens",
+                    costText,
+                ])
             }
             return
         }
@@ -710,8 +732,13 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print(
-                    "\(summary.model) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText)")
+                Self.printInsightLine([
+                    summary.model,
+                    summary.provider.rawValue,
+                    project,
+                    "\(summary.totals.totalTokens) tokens",
+                    costText,
+                ])
             }
             return
         }
@@ -721,8 +748,13 @@ enum RunicCLI {
                 let project = summary.projectID ?? "unknown"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
                 let models = summary.modelsUsed.isEmpty ? "no models" : summary.modelsUsed.joined(separator: ", ")
-                print(
-                    "\(project) - \(summary.provider.rawValue) - \(summary.totals.totalTokens) tokens - \(costText) - \(models)")
+                Self.printInsightLine([
+                    project,
+                    summary.provider.rawValue,
+                    "\(summary.totals.totalTokens) tokens",
+                    costText,
+                    models,
+                ])
             }
             return
         }
@@ -731,8 +763,14 @@ enum RunicCLI {
             for summary in summaries {
                 let project = summary.projectID ?? "all"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print(
-                    "\(summary.hourKey) - \(summary.provider.rawValue) - \(project) - \(summary.totals.totalTokens) tokens - \(costText) - \(summary.requestCount) requests")
+                Self.printInsightLine([
+                    summary.hourKey,
+                    summary.provider.rawValue,
+                    project,
+                    "\(summary.totals.totalTokens) tokens",
+                    costText,
+                    "\(summary.requestCount) requests",
+                ])
             }
             return
         }
@@ -742,11 +780,17 @@ enum RunicCLI {
                 let project = summary.projectID ?? "unknown"
                 let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
                 let models = summary.modelsUsed.isEmpty ? "no models" : summary.modelsUsed.joined(separator: ", ")
-                var line = "\(project) - \(summary.provider.rawValue) - \(summary.totals.totalTokens) tokens - \(costText) - \(models)"
+                var parts = [
+                    project,
+                    summary.provider.rawValue,
+                    "\(summary.totals.totalTokens) tokens",
+                    costText,
+                    models,
+                ]
                 if let budget = summary.budgetInfo {
-                    line += " - Budget: \(String(format: "$%.2f", budget.spent))/\(String(format: "$%.2f", budget.limit)) (\(String(format: "%.1f", budget.percentage))%) [\(budget.status.rawValue)]"
+                    parts.append(Self.budgetInsightText(budget))
                 }
-                print(line)
+                Self.printInsightLine(parts)
             }
             return
         }
@@ -755,8 +799,13 @@ enum RunicCLI {
             for comparison in comparisons {
                 let costPerToken = String(format: "$%.6f", comparison.costPerToken)
                 let totalCost = String(format: "$%.2f", comparison.totalCost)
-                print(
-                    "#\(comparison.rank ?? 0) \(comparison.model) - \(costPerToken)/token - Total: \(totalCost) - Tokens: \(comparison.totalTokens) - Requests: \(comparison.requestCount)")
+                Self.printInsightLine([
+                    "#\(comparison.rank ?? 0) \(comparison.model)",
+                    "\(costPerToken)/token",
+                    "Total: \(totalCost)",
+                    "Tokens: \(comparison.totalTokens)",
+                    "Requests: \(comparison.requestCount)",
+                ])
             }
             return
         }
@@ -767,13 +816,30 @@ enum RunicCLI {
                 let costPerReq = metric.costPerRequest.map { String(format: "$%.4f", $0) } ?? "n/a"
                 let cacheHit = String(format: "%.1f%%", metric.cacheHitRate)
                 let totalCost = metric.totalCost.map { String(format: "$%.2f", $0) } ?? "n/a"
-                print(
-                    "\(metric.model) - \(metric.requestCount) reqs - \(tokensPerReq) tok/req - \(costPerReq)/req - Cache: \(cacheHit) - Total: \(totalCost)")
+                Self.printInsightLine([
+                    metric.model,
+                    "\(metric.requestCount) reqs",
+                    "\(tokensPerReq) tok/req",
+                    "\(costPerReq)/req",
+                    "Cache: \(cacheHit)",
+                    "Total: \(totalCost)",
+                ])
             }
             return
         }
 
         print("No insights available.")
+    }
+
+    private static func printInsightLine(_ parts: [String]) {
+        print(parts.joined(separator: " - "))
+    }
+
+    private static func budgetInsightText(_ budget: BudgetInfo) -> String {
+        let spent = String(format: "$%.2f", budget.spent)
+        let limit = String(format: "$%.2f", budget.limit)
+        let percentage = String(format: "%.1f", budget.percentage)
+        return "Budget: \(spent)/\(limit) (\(percentage)%) [\(budget.status.rawValue)]"
     }
 
     // MARK: - Rendering
@@ -952,8 +1018,8 @@ enum RunicCLI {
             print("insights - Analyze local usage logs")
             print("  Options:")
             print("    --provider PROVIDER      Provider to analyze (provider, comma-list, both, all)")
-            print(
-                "    --view VIEW              daily | session | blocks | models | projects | compaction | comparative | efficiency")
+            print("    --view VIEW              daily | session | blocks | models | projects")
+            print("                             compaction | comparative | efficiency")
             print("    --project PROJECT        Filter to a specific project")
             print("    --timezone TZ            Timezone identifier (defaults to local)")
             print("    --granularity GRAN       Time granularity: hourly (for daily view)")

@@ -425,8 +425,18 @@ struct CodexUsageLogSourceTests {
 
         let now = Date(timeIntervalSince1970: 1_767_252_000)
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
-        try Self.writeSession(root: root, date: yesterday, input: 900, modifiedAt: now.addingTimeInterval(-7200), fileManager: fm)
-        try Self.writeSession(root: root, date: now, input: 40, modifiedAt: now.addingTimeInterval(-7200), fileManager: fm)
+        try Self.writeSession(
+            root: root,
+            date: yesterday,
+            input: 900,
+            modifiedAt: now.addingTimeInterval(-7200),
+            fileManager: fm)
+        try Self.writeSession(
+            root: root,
+            date: now,
+            input: 40,
+            modifiedAt: now.addingTimeInterval(-7200),
+            fileManager: fm)
 
         let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
         await cache.markScanComplete(provider: "codex", scanDate: now, coveredMaxAgeDays: 1)
@@ -455,7 +465,12 @@ struct CodexUsageLogSourceTests {
 
         let now = Date(timeIntervalSince1970: 1_767_252_000)
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
-        try Self.writeSession(root: root, date: yesterday, input: 900, modifiedAt: now.addingTimeInterval(-7200), fileManager: fm)
+        try Self.writeSession(
+            root: root,
+            date: yesterday,
+            input: 900,
+            modifiedAt: now.addingTimeInterval(-7200),
+            fileManager: fm)
 
         let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
         await cache.mergeDailies(

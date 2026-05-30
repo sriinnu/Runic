@@ -313,6 +313,8 @@ extension QualityRating {
 }
 
 extension LatencyMetric {
+    // swiftlint:disable function_parameter_count
+
     /// Creates a new latency metric with a generated UUID
     public static func create(
         requestID: String,
@@ -334,6 +336,8 @@ extension LatencyMetric {
             success: success,
             createdAt: Date())
     }
+
+    // swiftlint:enable function_parameter_count
 
     /// Computed duration in seconds
     public var durationSeconds: Double {

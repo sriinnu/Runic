@@ -3,6 +3,7 @@ import Observation
 import RunicCore
 import SwiftUI
 
+// Structural lint debt: menu assembly still needs smaller builder phases.
 // MARK: - NSMenu construction
 
 extension StatusItemController {
@@ -87,6 +88,7 @@ extension StatusItemController {
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     func populateMenu(_ menu: NSMenu, provider: UsageProvider?) {
         menu.removeAllItems()
         self.applyRunicAppearance(to: menu)
@@ -199,11 +201,12 @@ extension StatusItemController {
                     hasCostHistory: hasCostHistory)
                 self.addMenuCardSections(
                     to: menu,
-                    model: model,
-                    provider: currentProvider,
-                    width: menuWidth,
-                    sidebar: sidebarConfig,
-                    webItems: webItems)
+                    request: .init(
+                        model: model,
+                        provider: currentProvider,
+                        width: menuWidth,
+                        sidebar: sidebarConfig,
+                        webItems: webItems))
                 addedOpenAIWebItems = true
             } else {
                 let cardView = self.menuCardContent(width: menuWidth, sidebar: sidebarConfig, showIcons: true) {

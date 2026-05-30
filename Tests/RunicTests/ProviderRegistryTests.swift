@@ -45,6 +45,8 @@ final class ProviderRegistryTests: XCTestCase {
             let label = entry.label?.trimmingCharacters(in: .whitespacesAndNewlines)
             return entry.contextK == nil && (label?.isEmpty ?? true)
         }
-        XCTAssertTrue(invalid.isEmpty, "Context fallback entries need either contextK or label: \(invalid.keys.sorted()).")
+        XCTAssertTrue(
+            invalid.isEmpty,
+            "Context fallback entries need either contextK or label: \(invalid.keys.sorted()).")
     }
 }

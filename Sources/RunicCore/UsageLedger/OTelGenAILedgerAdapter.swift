@@ -1,5 +1,6 @@
 import Foundation
 
+// Structural lint debt: OTel mapping needs parser/normalizer split-outs.
 public struct OTelGenAIIngestionOptions: Sendable, Codable, Hashable {
     public var enabled: Bool
     public var allowExperimentalSemanticConventions: Bool
@@ -165,6 +166,7 @@ public enum OTelGenAILedgerAdapter {
         return self.makeLedgerEntry(from: attributes, options: options)
     }
 
+    // swiftlint:disable:next function_body_length
     private static func makeLedgerEntry(
         from attributes: [String: Any],
         options: OTelGenAIIngestionOptions) -> UsageLedgerEntry?
@@ -465,6 +467,7 @@ public enum OTelGenAILedgerAdapter {
         return nil
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     private static func mapProvider(_ rawValue: String) -> UsageProvider? {
         let normalized = rawValue
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -531,7 +534,8 @@ public enum OTelGenAILedgerAdapter {
             return .sambanova
         case "qwen", "dashscope", "alibabacloud":
             return .qwen
-        case "local", "localllm", "locallanguage", "locallanguagemodel", "ollama", "lmstudio", "llamacpp", "vllm", "openwebui":
+        case "local", "localllm", "locallanguage", "locallanguagemodel",
+             "ollama", "lmstudio", "llamacpp", "vllm", "openwebui":
             return .localLLM
         default:
             return UsageProvider(rawValue: normalized)

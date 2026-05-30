@@ -15,7 +15,9 @@ public enum CopilotVSCodeTokenReader {
         let safeStorageService: String
     }
 
-    private static let githubAuthSecretKey = "secret://{\"extensionId\":\"vscode.github-authentication\",\"key\":\"github.auth\"}"
+    private static let githubAuthSecretKey =
+        "secret://{\"extensionId\":\"vscode.github-authentication\"," +
+        "\"key\":\"github.auth\"}"
     private static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     private static let pbkdf2Salt = Data("saltysalt".utf8)
     private static let pbkdf2Iterations: UInt32 = 1003
