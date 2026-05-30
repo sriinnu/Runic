@@ -1,217 +1,11 @@
-import AppKit
+import Foundation
 import Observation
 import RunicCore
-import ServiceManagement
 
 // Structural lint debt: settings storage still needs smaller persistence domains.
-enum RefreshFrequency: String, CaseIterable, Identifiable {
-    case manual
-    case oneMinute
-    case twoMinutes
-    case fiveMinutes
-    case fifteenMinutes
-
-    var id: String {
-        self.rawValue
-    }
-
-    var seconds: TimeInterval? {
-        switch self {
-        case .manual: nil
-        case .oneMinute: 60
-        case .twoMinutes: 120
-        case .fiveMinutes: 300
-        case .fifteenMinutes: 900
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .manual: "Manual"
-        case .oneMinute: "1 min"
-        case .twoMinutes: "2 min"
-        case .fiveMinutes: "5 min"
-        case .fifteenMinutes: "15 min"
-        }
-    }
-}
-
-enum UsageMetricDisplayMode: String, CaseIterable, Identifiable {
-    case barsAndPercent
-    case barsOnly
-    case percentOnly
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .barsAndPercent: "Bars + %"
-        case .barsOnly: "Bars"
-        case .percentOnly: "%"
-        }
-    }
-
-    var showsBars: Bool {
-        switch self {
-        case .barsAndPercent, .barsOnly:
-            true
-        case .percentOnly:
-            false
-        }
-    }
-
-    var showsPercent: Bool {
-        switch self {
-        case .barsAndPercent, .percentOnly:
-            true
-        case .barsOnly:
-            false
-        }
-    }
-}
-
-enum MenuMode: String, CaseIterable, Identifiable {
-    case glance
-    case analyst
-    case `operator`
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .glance:
-            "Glance"
-        case .analyst:
-            "Analyst"
-        case .operator:
-            "Operator"
-        }
-    }
-}
-
-enum ChartStyle: String, CaseIterable, Identifiable {
-    case line
-    case area
-    case bar
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .line: "Line"
-        case .area: "Area"
-        case .bar: "Bar"
-        }
-    }
-}
-
-enum NumberFormat: String, CaseIterable, Identifiable {
-    case abbreviated
-    case full
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .abbreviated: "Abbreviated"
-        case .full: "Full"
-        }
-    }
-}
-
-enum DateFormat: String, CaseIterable, Identifiable {
-    case relative
-    case absolute
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .relative: "Relative"
-        case .absolute: "Absolute"
-        }
-    }
-}
-
-enum Theme: String, CaseIterable, Identifiable {
-    case retro
-    case system
-    case light
-    case dark
-    case daybreak
-    case glass
-    case terminal
-
-    /// The signature look — parchment + navy bevels, System-7 chrome with
-    /// modern info architecture. New installs land here.
-    static let `default`: Theme = .retro
-
-    /// Raw values that used to exist and are now retired. Migration code in
-    /// `SettingsStore.normalizeStoredTheme` rewrites these on load.
-    static let retiredRawValues: Set<String> = ["pine", "nocturne", "prism"]
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .retro: "Retro"
-        case .system: "System"
-        case .light: "Light"
-        case .dark: "Dark"
-        case .daybreak: "Daybreak"
-        case .glass: "Glass"
-        case .terminal: "Terminal"
-        }
-    }
-}
-
-enum ProviderSwitcherLayout: String, CaseIterable, Identifiable {
-    case top
-    case sidebar
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .top: "Top"
-        case .sidebar: "Sidebar"
-        }
-    }
-}
-
-enum ProviderSwitcherIconSize: String, CaseIterable, Identifiable {
-    case small
-    case medium
-
-    var id: String {
-        self.rawValue
-    }
-
-    var label: String {
-        switch self {
-        case .small: "Small"
-        case .medium: "Medium"
-        }
-    }
-}
-
 @MainActor
 @Observable
-final class SettingsStore { // swiftlint:disable:this type_body_length
+final class SettingsStore {
     /// Persisted provider display order.
     ///
     /// Stored as raw `UsageProvider` strings so new providers can be appended automatically without breaking.
@@ -471,8 +265,9 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
         didSet { self.userDefaults.set(self.providersPaneSidebar, forKey: "providersPaneSidebar") }
     }
 
+    // Keep secret fields cold at startup; provider fetchers read keychain values only when needed.
     /// z.ai API token (stored in Keychain).
-    var zaiAPIToken: String {
+    var zaiAPIToken = "" {
         didSet {
             self.schedulePersistZaiAPIToken()
             if !self.zaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -482,7 +277,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// MiniMax API token (stored in Keychain).
-    var minimaxAPIToken: String {
+    var minimaxAPIToken = "" {
         didSet {
             self.schedulePersistMiniMaxAPIToken()
             if !self.minimaxAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -492,7 +287,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// MiniMax manual Cookie header (stored in Keychain).
-    var minimaxCookieHeader: String {
+    var minimaxCookieHeader = "" {
         didSet {
             self.schedulePersistMiniMaxCookieHeader()
             if !self.minimaxCookieHeader.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -502,12 +297,12 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// MiniMax Group ID (stored in Keychain).
-    var minimaxGroupID: String {
+    var minimaxGroupID = "" {
         didSet { self.schedulePersistMiniMaxGroupID() }
     }
 
     /// Copilot API token (stored in Keychain).
-    var copilotAPIToken: String {
+    var copilotAPIToken = "" {
         didSet {
             self.schedulePersistCopilotAPIToken()
             if !self.copilotAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -517,7 +312,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// OpenRouter API key (stored in Keychain).
-    var openRouterAPIToken: String {
+    var openRouterAPIToken = "" {
         didSet {
             self.schedulePersistOpenRouterAPIToken()
             if !self.openRouterAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -527,7 +322,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Vercel AI Gateway API key (stored in Keychain).
-    var vercelAIAPIToken: String {
+    var vercelAIAPIToken = "" {
         didSet {
             self.schedulePersistVercelAIAPIToken()
             if !self.vercelAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -537,7 +332,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Groq API key (stored in Keychain).
-    var groqAPIToken: String {
+    var groqAPIToken = "" {
         didSet {
             self.schedulePersistGroqAPIToken()
             if !self.groqAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -547,7 +342,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// DeepSeek API key (stored in Keychain).
-    var deepSeekAPIToken: String {
+    var deepSeekAPIToken = "" {
         didSet {
             self.schedulePersistDeepSeekAPIToken()
             if !self.deepSeekAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -557,7 +352,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Fireworks API key (stored in Keychain).
-    var fireworksAPIToken: String {
+    var fireworksAPIToken = "" {
         didSet {
             self.schedulePersistFireworksAPIToken()
             if !self.fireworksAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -567,7 +362,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Mistral API key (stored in Keychain).
-    var mistralAPIToken: String {
+    var mistralAPIToken = "" {
         didSet {
             self.schedulePersistMistralAPIToken()
             if !self.mistralAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -577,7 +372,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Perplexity API key (stored in Keychain).
-    var perplexityAPIToken: String {
+    var perplexityAPIToken = "" {
         didSet {
             self.schedulePersistPerplexityAPIToken()
             if !self.perplexityAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -587,7 +382,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Kimi API key (stored in Keychain).
-    var kimiAPIToken: String {
+    var kimiAPIToken = "" {
         didSet {
             self.schedulePersistKimiAPIToken()
             if !self.kimiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -597,7 +392,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Auggie API token (stored in Keychain).
-    var auggieAPIToken: String {
+    var auggieAPIToken = "" {
         didSet {
             self.schedulePersistAuggieAPIToken()
             if !self.auggieAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -607,7 +402,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Together API key (stored in Keychain).
-    var togetherAPIToken: String {
+    var togetherAPIToken = "" {
         didSet {
             self.schedulePersistTogetherAPIToken()
             if !self.togetherAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -617,7 +412,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Cohere API key (stored in Keychain).
-    var cohereAPIToken: String {
+    var cohereAPIToken = "" {
         didSet {
             self.schedulePersistCohereAPIToken()
             if !self.cohereAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -627,7 +422,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// xAI API key (stored in Keychain).
-    var xaiAPIToken: String {
+    var xaiAPIToken = "" {
         didSet {
             self.schedulePersistXAiAPIToken()
             if !self.xaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -637,7 +432,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Cerebras API key (stored in Keychain).
-    var cerebrasAPIToken: String {
+    var cerebrasAPIToken = "" {
         didSet {
             self.schedulePersistCerebrasAPIToken()
             if !self.cerebrasAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -647,7 +442,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Qwen DashScope API key (stored in Keychain).
-    var qwenAPIToken: String {
+    var qwenAPIToken = "" {
         didSet {
             self.schedulePersistQwenAPIToken()
             if !self.qwenAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -657,7 +452,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// SambaNova API key (stored in Keychain).
-    var sambaNovaAPIToken: String {
+    var sambaNovaAPIToken = "" {
         didSet {
             self.schedulePersistSambaNovaAPIToken()
             if !self.sambaNovaAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -682,7 +477,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     }
 
     /// Azure OpenAI API key (stored in Keychain).
-    var azureOpenAIAPIToken: String {
+    var azureOpenAIAPIToken = "" {
         didSet {
             self.schedulePersistAzureOpenAIAPIToken()
             if !self.azureOpenAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -724,118 +519,6 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
                 self.userDefaults.removeObject(forKey: "selectedMenuProvider")
             }
         }
-    }
-
-    /// Optional override for the loading animation pattern, exposed via the Debug tab.
-    var debugLoadingPattern: LoadingPattern? {
-        get { self.debugLoadingPatternRaw.flatMap(LoadingPattern.init(rawValue:)) }
-        set {
-            self.debugLoadingPatternRaw = newValue?.rawValue
-        }
-    }
-
-    var selectedMenuProvider: UsageProvider? {
-        get { self.selectedMenuProviderRaw.flatMap(UsageProvider.init(rawValue:)) }
-        set {
-            self.selectedMenuProviderRaw = newValue?.rawValue
-        }
-    }
-
-    var codexUsageDataSource: CodexUsageDataSource {
-        get { CodexUsageDataSource(rawValue: self.codexUsageDataSourceRaw ?? "") ?? .oauth }
-        set {
-            self.codexUsageDataSourceRaw = newValue.rawValue
-        }
-    }
-
-    var claudeUsageDataSource: ClaudeUsageDataSource {
-        get { ClaudeUsageDataSource(rawValue: self.claudeUsageDataSourceRaw ?? "") ?? .oauth }
-        set {
-            self.claudeUsageDataSourceRaw = newValue.rawValue
-            if newValue != .cli {
-                self.claudeWebExtrasEnabled = false
-            }
-        }
-    }
-
-    var menuObservationToken: Int {
-        _ = self.providerOrderRaw
-        _ = self.refreshFrequency
-        _ = self.autoDisableRefreshWhenIdleEnabled
-        _ = self.autoDisableRefreshWhenIdleMinutes
-        _ = self.autoDisableRefreshOnSleepEnabled
-        _ = self.autoRefreshWarningEnabled
-        _ = self.autoRefreshWarningThreshold
-        _ = self.autoSuspendInactiveProvidersEnabled
-        _ = self.autoSuspendInactiveProvidersMinutes
-        _ = self.launchAtLogin
-        _ = self.debugMenuEnabled
-        _ = self.statusChecksEnabled
-        _ = self.sessionQuotaNotificationsEnabled
-        _ = self.usageBarsShowUsed
-        _ = self.usageMetricDisplayMode
-        _ = self.menuMode
-        _ = self.chartStyle
-        _ = self.numberFormat
-        _ = self.dateFormat
-        _ = self.theme
-        _ = self.selectedFontFamily
-        _ = self.visualSettingsRevision
-        _ = self.menuBarShowsBrandIconWithPercent
-        _ = self.menuBarVibrantIconEnabled
-        _ = self.costUsageEnabled
-        _ = self.otelGenAILogPaths
-        _ = self.insightsMenuMaxItems
-        _ = self.insightsReportDays
-        _ = self.ledgerMaxAgeDays
-        _ = self.randomBlinkEnabled
-        _ = self.claudeWebExtrasEnabled
-        _ = self.showOptionalCreditsAndExtraUsage
-        _ = self.openAIWebAccessEnabled
-        _ = self.providerCredentialMigrationNotice
-        _ = self.codexUsageDataSource
-        _ = self.claudeUsageDataSource
-        _ = self.mergeIcons
-        _ = self.switcherShowsIcons
-        _ = self.providerSwitcherLayout
-        _ = self.providerSwitcherIconSize
-        _ = self.zaiAPIToken
-        _ = self.minimaxAPIToken
-        _ = self.minimaxCookieHeader
-        _ = self.minimaxGroupID
-        _ = self.copilotAPIToken
-        _ = self.openRouterAPIToken
-        _ = self.vercelAIAPIToken
-        _ = self.groqAPIToken
-        _ = self.deepSeekAPIToken
-        _ = self.fireworksAPIToken
-        _ = self.mistralAPIToken
-        _ = self.perplexityAPIToken
-        _ = self.kimiAPIToken
-        _ = self.auggieAPIToken
-        _ = self.togetherAPIToken
-        _ = self.cohereAPIToken
-        _ = self.xaiAPIToken
-        _ = self.cerebrasAPIToken
-        _ = self.qwenAPIToken
-        _ = self.sambaNovaAPIToken
-        _ = self.azureOpenAIEndpoint
-        _ = self.azureOpenAIDeployment
-        _ = self.azureOpenAIAPIVersion
-        _ = self.azureOpenAIAPIToken
-        _ = self.bedrockRegion
-        _ = self.bedrockAWSProfile
-        _ = self.bedrockModelID
-        _ = self.vertexaiProject
-        _ = self.vertexaiLocation
-        _ = self.debugLoadingPattern
-        _ = self.selectedMenuProvider
-        _ = self.providerToggleRevision
-        return 0
-    }
-
-    private func bumpVisualSettingsRevision() {
-        self.visualSettingsRevision &+= 1
     }
 
     private var providerDetectionCompleted: Bool {
@@ -897,7 +580,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
     @ObservationIgnored private var cachedProviderOrderRaw: [String] = []
     private var providerToggleRevision: Int = 0
 
-    init( // swiftlint:disable:this function_body_length
+    init(
         userDefaults: UserDefaults = .standard,
         zaiTokenStore: any ZaiTokenStoring = KeychainZaiTokenStore(),
         minimaxTokenStore: any MiniMaxTokenStoring = KeychainMiniMaxTokenStore(),
@@ -1052,29 +735,6 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
                 "(\(blocked) blocked, \(failed) failed). Re-save affected API keys below; " +
                 "Runic will not prompt in the background."
         }
-        // Keep secrets cold at startup; provider fetchers read keychain values
-        // only when needed so relaunch never summons SecurityAgent.
-        self.zaiAPIToken = ""
-        self.minimaxAPIToken = ""
-        self.minimaxCookieHeader = ""
-        self.minimaxGroupID = ""
-        self.copilotAPIToken = ""
-        self.openRouterAPIToken = ""
-        self.vercelAIAPIToken = ""
-        self.groqAPIToken = ""
-        self.deepSeekAPIToken = ""
-        self.fireworksAPIToken = ""
-        self.mistralAPIToken = ""
-        self.perplexityAPIToken = ""
-        self.kimiAPIToken = ""
-        self.auggieAPIToken = ""
-        self.togetherAPIToken = ""
-        self.cohereAPIToken = ""
-        self.xaiAPIToken = ""
-        self.cerebrasAPIToken = ""
-        self.sambaNovaAPIToken = ""
-        self.qwenAPIToken = ""
-        self.azureOpenAIAPIToken = ""
         let selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
         self.selectedMenuProviderRaw = selectedMenuProviderRaw.flatMap { UsageProvider(rawValue: $0)?.rawValue }
         self.providerDetectionCompleted = userDefaults.object(
@@ -1091,6 +751,120 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
         RunicFont.family = self.selectedFontFamily
         RunicFont.applyTheme(self.theme.palette)
         IconRenderer.themePalette = self.theme.palette
+    }
+}
+
+extension SettingsStore {
+    /// Optional override for the loading animation pattern, exposed via the Debug tab.
+    var debugLoadingPattern: LoadingPattern? {
+        get { self.debugLoadingPatternRaw.flatMap(LoadingPattern.init(rawValue:)) }
+        set {
+            self.debugLoadingPatternRaw = newValue?.rawValue
+        }
+    }
+
+    var selectedMenuProvider: UsageProvider? {
+        get { self.selectedMenuProviderRaw.flatMap(UsageProvider.init(rawValue:)) }
+        set {
+            self.selectedMenuProviderRaw = newValue?.rawValue
+        }
+    }
+
+    var codexUsageDataSource: CodexUsageDataSource {
+        get { CodexUsageDataSource(rawValue: self.codexUsageDataSourceRaw ?? "") ?? .oauth }
+        set {
+            self.codexUsageDataSourceRaw = newValue.rawValue
+        }
+    }
+
+    var claudeUsageDataSource: ClaudeUsageDataSource {
+        get { ClaudeUsageDataSource(rawValue: self.claudeUsageDataSourceRaw ?? "") ?? .oauth }
+        set {
+            self.claudeUsageDataSourceRaw = newValue.rawValue
+            if newValue != .cli {
+                self.claudeWebExtrasEnabled = false
+            }
+        }
+    }
+
+    var menuObservationToken: Int {
+        _ = self.providerOrderRaw
+        _ = self.refreshFrequency
+        _ = self.autoDisableRefreshWhenIdleEnabled
+        _ = self.autoDisableRefreshWhenIdleMinutes
+        _ = self.autoDisableRefreshOnSleepEnabled
+        _ = self.autoRefreshWarningEnabled
+        _ = self.autoRefreshWarningThreshold
+        _ = self.autoSuspendInactiveProvidersEnabled
+        _ = self.autoSuspendInactiveProvidersMinutes
+        _ = self.launchAtLogin
+        _ = self.debugMenuEnabled
+        _ = self.statusChecksEnabled
+        _ = self.sessionQuotaNotificationsEnabled
+        _ = self.usageBarsShowUsed
+        _ = self.usageMetricDisplayMode
+        _ = self.menuMode
+        _ = self.chartStyle
+        _ = self.numberFormat
+        _ = self.dateFormat
+        _ = self.theme
+        _ = self.selectedFontFamily
+        _ = self.visualSettingsRevision
+        _ = self.menuBarShowsBrandIconWithPercent
+        _ = self.menuBarVibrantIconEnabled
+        _ = self.costUsageEnabled
+        _ = self.otelGenAILogPaths
+        _ = self.insightsMenuMaxItems
+        _ = self.insightsReportDays
+        _ = self.ledgerMaxAgeDays
+        _ = self.randomBlinkEnabled
+        _ = self.claudeWebExtrasEnabled
+        _ = self.showOptionalCreditsAndExtraUsage
+        _ = self.openAIWebAccessEnabled
+        _ = self.providerCredentialMigrationNotice
+        _ = self.codexUsageDataSource
+        _ = self.claudeUsageDataSource
+        _ = self.mergeIcons
+        _ = self.switcherShowsIcons
+        _ = self.providerSwitcherLayout
+        _ = self.providerSwitcherIconSize
+        _ = self.zaiAPIToken
+        _ = self.minimaxAPIToken
+        _ = self.minimaxCookieHeader
+        _ = self.minimaxGroupID
+        _ = self.copilotAPIToken
+        _ = self.openRouterAPIToken
+        _ = self.vercelAIAPIToken
+        _ = self.groqAPIToken
+        _ = self.deepSeekAPIToken
+        _ = self.fireworksAPIToken
+        _ = self.mistralAPIToken
+        _ = self.perplexityAPIToken
+        _ = self.kimiAPIToken
+        _ = self.auggieAPIToken
+        _ = self.togetherAPIToken
+        _ = self.cohereAPIToken
+        _ = self.xaiAPIToken
+        _ = self.cerebrasAPIToken
+        _ = self.qwenAPIToken
+        _ = self.sambaNovaAPIToken
+        _ = self.azureOpenAIEndpoint
+        _ = self.azureOpenAIDeployment
+        _ = self.azureOpenAIAPIVersion
+        _ = self.azureOpenAIAPIToken
+        _ = self.bedrockRegion
+        _ = self.bedrockAWSProfile
+        _ = self.bedrockModelID
+        _ = self.vertexaiProject
+        _ = self.vertexaiLocation
+        _ = self.debugLoadingPattern
+        _ = self.selectedMenuProvider
+        _ = self.providerToggleRevision
+        return 0
+    }
+
+    private func bumpVisualSettingsRevision() {
+        self.visualSettingsRevision &+= 1
     }
 
     func orderedProviders() -> [UsageProvider] {
@@ -1327,11 +1101,13 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
         return claudeRoots.contains(where: hasAnyJsonl(in:))
     }
 
-    private func schedulePersistZaiAPIToken() {
-        self.zaiTokenPersistTask?.cancel()
-        let token = self.zaiAPIToken
-        let tokenStore = self.zaiTokenStore
-        self.zaiTokenPersistTask = Task { @MainActor in
+    private func makeCredentialPersistTask(
+        value: String,
+        loggerName: String,
+        failureMessage: String,
+        persist: @escaping @Sendable (String) throws -> Void) -> Task<Void, Never>
+    {
+        Task { @MainActor in
             do {
                 try await Task.sleep(nanoseconds: 350_000_000)
             } catch {
@@ -1340,7 +1116,7 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
             guard !Task.isCancelled else { return }
             let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
                 do {
-                    try tokenStore.storeToken(token)
+                    try persist(value)
                     return nil
                 } catch {
                     return error
@@ -1348,542 +1124,239 @@ final class SettingsStore { // swiftlint:disable:this type_body_length
             }.value
             if let error {
                 // Keep value in memory; persist best-effort.
-                RunicLog.logger("zai-token-store").error("Failed to persist z.ai token: \(error)")
+                RunicLog.logger(loggerName).error("\(failureMessage): \(error)")
             }
         }
+    }
+
+    private func schedulePersistZaiAPIToken() {
+        self.zaiTokenPersistTask?.cancel()
+        let tokenStore = self.zaiTokenStore
+        self.zaiTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.zaiAPIToken,
+            loggerName: "zai-token-store",
+            failureMessage: "Failed to persist z.ai token") { token in
+                try tokenStore.storeToken(token)
+            }
     }
 
     private func schedulePersistMiniMaxAPIToken() {
         self.minimaxTokenPersistTask?.cancel()
-        let token = self.minimaxAPIToken
         let tokenStore = self.minimaxTokenStore
-        self.minimaxTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.minimaxTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.minimaxAPIToken,
+            loggerName: "minimax-token-store",
+            failureMessage: "Failed to persist MiniMax token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("minimax-token-store").error("Failed to persist MiniMax token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistMiniMaxCookieHeader() {
         self.minimaxCookieHeaderPersistTask?.cancel()
-        let header = self.minimaxCookieHeader
         let store = self.minimaxCookieHeaderStore
-        self.minimaxCookieHeaderPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.minimaxCookieHeaderPersistTask = self.makeCredentialPersistTask(
+            value: self.minimaxCookieHeader,
+            loggerName: "minimax-cookie-store",
+            failureMessage: "Failed to persist MiniMax cookie header") { header in
+                try store.storeHeader(header)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try store.storeHeader(header)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("minimax-cookie-store").error("Failed to persist MiniMax cookie header: \(error)")
-            }
-        }
     }
 
     private func schedulePersistMiniMaxGroupID() {
         self.minimaxGroupIDPersistTask?.cancel()
-        let groupID = self.minimaxGroupID
         let groupStore = self.minimaxGroupIDStore
-        self.minimaxGroupIDPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.minimaxGroupIDPersistTask = self.makeCredentialPersistTask(
+            value: self.minimaxGroupID,
+            loggerName: "minimax-groupid-store",
+            failureMessage: "Failed to persist MiniMax Group ID") { groupID in
+                try groupStore.storeGroupID(groupID)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try groupStore.storeGroupID(groupID)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("minimax-groupid-store").error("Failed to persist MiniMax Group ID: \(error)")
-            }
-        }
     }
 
     private func schedulePersistCopilotAPIToken() {
         self.copilotTokenPersistTask?.cancel()
-        let token = self.copilotAPIToken
         let tokenStore = self.copilotTokenStore
-        self.copilotTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.copilotTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.copilotAPIToken,
+            loggerName: "copilot-token-store",
+            failureMessage: "Failed to persist Copilot token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("copilot-token-store").error("Failed to persist Copilot token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistOpenRouterAPIToken() {
         self.openRouterTokenPersistTask?.cancel()
-        let token = self.openRouterAPIToken
         let tokenStore = self.openRouterTokenStore
-        self.openRouterTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.openRouterTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.openRouterAPIToken,
+            loggerName: "openrouter-token-store",
+            failureMessage: "Failed to persist OpenRouter token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("openrouter-token-store").error("Failed to persist OpenRouter token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistVercelAIAPIToken() {
         self.vercelAITokenPersistTask?.cancel()
-        let token = self.vercelAIAPIToken
         let tokenStore = self.vercelAITokenStore
-        self.vercelAITokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.vercelAITokenPersistTask = self.makeCredentialPersistTask(
+            value: self.vercelAIAPIToken,
+            loggerName: "vercelai-token-store",
+            failureMessage: "Failed to persist Vercel AI token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("vercelai-token-store").error("Failed to persist Vercel AI token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistGroqAPIToken() {
         self.groqTokenPersistTask?.cancel()
-        let token = self.groqAPIToken
         let tokenStore = self.groqTokenStore
-        self.groqTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.groqTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.groqAPIToken,
+            loggerName: "groq-token-store",
+            failureMessage: "Failed to persist Groq token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("groq-token-store").error("Failed to persist Groq token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistDeepSeekAPIToken() {
         self.deepSeekTokenPersistTask?.cancel()
-        let token = self.deepSeekAPIToken
         let tokenStore = self.deepSeekTokenStore
-        self.deepSeekTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.deepSeekTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.deepSeekAPIToken,
+            loggerName: "deepseek-token-store",
+            failureMessage: "Failed to persist DeepSeek token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("deepseek-token-store").error("Failed to persist DeepSeek token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistFireworksAPIToken() {
         self.fireworksTokenPersistTask?.cancel()
-        let token = self.fireworksAPIToken
         let tokenStore = self.fireworksTokenStore
-        self.fireworksTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.fireworksTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.fireworksAPIToken,
+            loggerName: "fireworks-token-store",
+            failureMessage: "Failed to persist Fireworks token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("fireworks-token-store").error("Failed to persist Fireworks token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistMistralAPIToken() {
         self.mistralTokenPersistTask?.cancel()
-        let token = self.mistralAPIToken
         let tokenStore = self.mistralTokenStore
-        self.mistralTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.mistralTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.mistralAPIToken,
+            loggerName: "mistral-token-store",
+            failureMessage: "Failed to persist Mistral token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("mistral-token-store").error("Failed to persist Mistral token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistPerplexityAPIToken() {
         self.perplexityTokenPersistTask?.cancel()
-        let token = self.perplexityAPIToken
         let tokenStore = self.perplexityTokenStore
-        self.perplexityTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.perplexityTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.perplexityAPIToken,
+            loggerName: "perplexity-token-store",
+            failureMessage: "Failed to persist Perplexity token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("perplexity-token-store").error("Failed to persist Perplexity token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistKimiAPIToken() {
         self.kimiTokenPersistTask?.cancel()
-        let token = self.kimiAPIToken
         let tokenStore = self.kimiTokenStore
-        self.kimiTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.kimiTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.kimiAPIToken,
+            loggerName: "kimi-token-store",
+            failureMessage: "Failed to persist Kimi token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("kimi-token-store").error("Failed to persist Kimi token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistAuggieAPIToken() {
         self.auggieTokenPersistTask?.cancel()
-        let token = self.auggieAPIToken
         let tokenStore = self.auggieTokenStore
-        self.auggieTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.auggieTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.auggieAPIToken,
+            loggerName: "auggie-token-store",
+            failureMessage: "Failed to persist Auggie token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("auggie-token-store").error("Failed to persist Auggie token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistTogetherAPIToken() {
         self.togetherTokenPersistTask?.cancel()
-        let token = self.togetherAPIToken
         let tokenStore = self.togetherTokenStore
-        self.togetherTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.togetherTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.togetherAPIToken,
+            loggerName: "together-token-store",
+            failureMessage: "Failed to persist Together token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("together-token-store").error("Failed to persist Together token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistCohereAPIToken() {
         self.cohereTokenPersistTask?.cancel()
-        let token = self.cohereAPIToken
         let tokenStore = self.cohereTokenStore
-        self.cohereTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.cohereTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.cohereAPIToken,
+            loggerName: "cohere-token-store",
+            failureMessage: "Failed to persist Cohere token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("cohere-token-store").error("Failed to persist Cohere token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistXAiAPIToken() {
         self.xaiTokenPersistTask?.cancel()
-        let token = self.xaiAPIToken
         let tokenStore = self.xaiTokenStore
-        self.xaiTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.xaiTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.xaiAPIToken,
+            loggerName: "xai-token-store",
+            failureMessage: "Failed to persist xAI token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("xai-token-store").error("Failed to persist xAI token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistCerebrasAPIToken() {
         self.cerebrasTokenPersistTask?.cancel()
-        let token = self.cerebrasAPIToken
         let tokenStore = self.cerebrasTokenStore
-        self.cerebrasTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.cerebrasTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.cerebrasAPIToken,
+            loggerName: "cerebras-token-store",
+            failureMessage: "Failed to persist Cerebras token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("cerebras-token-store").error("Failed to persist Cerebras token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistSambaNovaAPIToken() {
         self.sambaNovaTokenPersistTask?.cancel()
-        let token = self.sambaNovaAPIToken
         let tokenStore = self.sambaNovaTokenStore
-        self.sambaNovaTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.sambaNovaTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.sambaNovaAPIToken,
+            loggerName: "sambanova-token-store",
+            failureMessage: "Failed to persist SambaNova token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("sambanova-token-store").error("Failed to persist SambaNova token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistAzureOpenAIAPIToken() {
         self.azureOpenAITokenPersistTask?.cancel()
-        let token = self.azureOpenAIAPIToken
         let tokenStore = self.azureOpenAITokenStore
-        self.azureOpenAITokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.azureOpenAITokenPersistTask = self.makeCredentialPersistTask(
+            value: self.azureOpenAIAPIToken,
+            loggerName: "azure-openai-token-store",
+            failureMessage: "Failed to persist Azure OpenAI token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("azure-openai-token-store")
-                    .error("Failed to persist Azure OpenAI token: \(error)")
-            }
-        }
     }
 
     private func schedulePersistQwenAPIToken() {
         self.qwenTokenPersistTask?.cancel()
-        let token = self.qwenAPIToken
         let tokenStore = self.qwenTokenStore
-        self.qwenTokenPersistTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 350_000_000)
-            } catch {
-                return
+        self.qwenTokenPersistTask = self.makeCredentialPersistTask(
+            value: self.qwenAPIToken,
+            loggerName: "qwen-token-store",
+            failureMessage: "Failed to persist Qwen token") { token in
+                try tokenStore.storeToken(token)
             }
-            guard !Task.isCancelled else { return }
-            let error: (any Error)? = await Task.detached(priority: .utility) { () -> (any Error)? in
-                do {
-                    try tokenStore.storeToken(token)
-                    return nil
-                } catch {
-                    return error
-                }
-            }.value
-            if let error {
-                RunicLog.logger("qwen-token-store").error("Failed to persist Qwen token: \(error)")
-            }
-        }
     }
 }
-
-enum LaunchAtLoginManager {
-    @MainActor
-    static func setEnabled(_ enabled: Bool) {
-        guard #available(macOS 13, *) else { return }
-        let service = SMAppService.mainApp
-        if enabled {
-            // SMAppService keys login items by *file path*, not bundle id, so
-            // calling register() from a different copy of Runic.app silently
-            // adds a second login item alongside the first. Skip if we're
-            // already enabled — the existing registration is fine, even if it
-            // points to a different bundle path (the user can fix that from
-            // System Settings > Login Items).
-            if service.status == .enabled { return }
-            try? service.register()
-        } else {
-            if service.status != .enabled { return }
-            try? service.unregister()
-        }
-    }
-
-    /// Reset the login-item registration to point at the *current* bundle.
-    /// Useful when promoting a dev build to be the canonical install.
-    @MainActor
-    static func reregister() {
-        guard #available(macOS 13, *) else { return }
-        let service = SMAppService.mainApp
-        try? service.unregister()
-        try? service.register()
-    }
-}
-
-// swiftlint:disable:this file_length
