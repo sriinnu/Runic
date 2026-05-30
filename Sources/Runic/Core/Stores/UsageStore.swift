@@ -619,6 +619,72 @@ struct ProviderHistoryMonthSnapshot: Hashable {
     let error: String?
 }
 
+private struct UsageDebugCredentialSource: Sendable {
+    let label: String
+    let resolution: @Sendable () -> ProviderTokenResolution?
+}
+
+private enum UsageDebugCredentialCatalog {
+    static let tokenSourcesByProvider: [UsageProvider: [UsageDebugCredentialSource]] = [
+        .zai: [
+            .init(label: "zai", resolution: { ProviderTokenResolver.zaiResolution() }),
+        ],
+        .copilot: [
+            .init(label: "copilot", resolution: { ProviderTokenResolver.copilotResolution() }),
+        ],
+        .minimax: [
+            .init(label: "minimax.api", resolution: { ProviderTokenResolver.minimaxApiKeyResolution() }),
+            .init(label: "minimax.cookie", resolution: { ProviderTokenResolver.minimaxCookieHeaderResolution() }),
+            .init(label: "minimax.group", resolution: { ProviderTokenResolver.minimaxGroupResolution() }),
+        ],
+        .openrouter: [
+            .init(label: "openrouter", resolution: { ProviderTokenResolver.openRouterResolution() }),
+        ],
+        .vercelai: [
+            .init(label: "vercelai", resolution: { ProviderTokenResolver.vercelAIResolution() }),
+        ],
+        .groq: [
+            .init(label: "groq", resolution: { ProviderTokenResolver.groqResolution() }),
+        ],
+        .deepseek: [
+            .init(label: "deepseek", resolution: { ProviderTokenResolver.deepSeekResolution() }),
+        ],
+        .fireworks: [
+            .init(label: "fireworks", resolution: { ProviderTokenResolver.fireworksResolution() }),
+        ],
+        .mistral: [
+            .init(label: "mistral", resolution: { ProviderTokenResolver.mistralResolution() }),
+        ],
+        .perplexity: [
+            .init(label: "perplexity", resolution: { ProviderTokenResolver.perplexityResolution() }),
+        ],
+        .kimi: [
+            .init(label: "kimi", resolution: { ProviderTokenResolver.kimiResolution() }),
+        ],
+        .auggie: [
+            .init(label: "auggie", resolution: { ProviderTokenResolver.auggieResolution() }),
+        ],
+        .together: [
+            .init(label: "together", resolution: { ProviderTokenResolver.togetherResolution() }),
+        ],
+        .cohere: [
+            .init(label: "cohere", resolution: { ProviderTokenResolver.cohereResolution() }),
+        ],
+        .xai: [
+            .init(label: "xai", resolution: { ProviderTokenResolver.xaiResolution() }),
+        ],
+        .cerebras: [
+            .init(label: "cerebras", resolution: { ProviderTokenResolver.cerebrasResolution() }),
+        ],
+        .sambanova: [
+            .init(label: "sambanova", resolution: { ProviderTokenResolver.sambaNovaResolution() }),
+        ],
+        .qwen: [
+            .init(label: "qwen", resolution: { ProviderTokenResolver.qwenResolution() }),
+        ],
+    ]
+}
+
 @MainActor
 @Observable
 final class UsageStore { // swiftlint:disable:this type_body_length
@@ -3120,50 +3186,69 @@ extension UsageStore {
         await ClaudeStatusProbe.latestDumps()
     }
 
-    // swiftlint:disable:next cyclomatic_complexity function_body_length
     func debugLog(for provider: UsageProvider) async -> String {
         if let cached = self.probeLogs[provider], !cached.isEmpty {
             return cached
         }
 
-        let settingsSnapshot = await MainActor.run {
-            ProviderSettingsSnapshot(
-                debugMenuEnabled: self.settings.debugMenuEnabled,
-                codex: ProviderSettingsSnapshot.CodexProviderSettings(
-                    usageDataSource: self.settings.codexUsageDataSource),
-                claude: ProviderSettingsSnapshot.ClaudeProviderSettings(
-                    usageDataSource: self.settings.claudeUsageDataSource,
-                    webExtrasEnabled: self.settings.claudeWebExtrasEnabled),
-                zai: ProviderSettingsSnapshot.ZaiProviderSettings(),
-                copilot: ProviderSettingsSnapshot.CopilotProviderSettings(
-                    apiToken: self.settings.copilotAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.copilotAPIToken),
-                azure: ProviderSettingsSnapshot.AzureProviderSettings(
-                    apiToken: self.settings.azureOpenAIAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.azureOpenAIAPIToken,
-                    endpoint: self.settings.azureOpenAIEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.azureOpenAIEndpoint,
-                    deployment: self.settings.azureOpenAIDeployment.trimmingCharacters(in: .whitespacesAndNewlines)
-                        .isEmpty
-                        ? nil : self.settings.azureOpenAIDeployment,
-                    apiVersion: self.settings.azureOpenAIAPIVersion.trimmingCharacters(in: .whitespacesAndNewlines)
-                        .isEmpty
-                        ? nil : self.settings.azureOpenAIAPIVersion),
-                bedrock: ProviderSettingsSnapshot.BedrockProviderSettings(
-                    region: self.settings.bedrockRegion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.bedrockRegion,
-                    profile: self.settings.bedrockAWSProfile.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.bedrockAWSProfile,
-                    modelID: self.settings.bedrockModelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.bedrockModelID),
-                vertexai: ProviderSettingsSnapshot.VertexAIProviderSettings(
-                    project: self.settings.vertexaiProject.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.vertexaiProject,
-                    location: self.settings.vertexaiLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? nil : self.settings.vertexaiLocation))
-        }
+        let settingsSnapshot = self.providerSettingsSnapshot()
+        let debugContext = self.providerDebugContext(settings: settingsSnapshot)
+        let claudeWebExtrasEnabled = self.settings.claudeWebExtrasEnabled
+        let claudeUsageDataSource = self.settings.claudeUsageDataSource
+        let claudeDebugMenuEnabled = self.settings.debugMenuEnabled
 
-        let debugContext = ProviderFetchContext(
+        return await Task.detached(priority: .utility) { () -> String in
+            if provider == .codex {
+                return await self.debugCodexLog()
+            }
+            if provider == .claude {
+                return await self.debugClaudeLog(
+                    debugMenuEnabled: claudeDebugMenuEnabled,
+                    selectedDataSource: claudeUsageDataSource,
+                    webExtrasEnabled: claudeWebExtrasEnabled)
+            }
+            if provider == .zai {
+                return await self.debugZaiTokenLog()
+            }
+            return await self.debugProviderProbeLog(
+                provider: provider,
+                context: debugContext,
+                settings: settingsSnapshot)
+        }.value
+    }
+
+    private func providerSettingsSnapshot() -> ProviderSettingsSnapshot {
+        ProviderSettingsSnapshot(
+            debugMenuEnabled: self.settings.debugMenuEnabled,
+            codex: ProviderSettingsSnapshot.CodexProviderSettings(
+                usageDataSource: self.settings.codexUsageDataSource),
+            claude: ProviderSettingsSnapshot.ClaudeProviderSettings(
+                usageDataSource: self.settings.claudeUsageDataSource,
+                webExtrasEnabled: self.settings.claudeWebExtrasEnabled),
+            zai: ProviderSettingsSnapshot.ZaiProviderSettings(),
+            copilot: ProviderSettingsSnapshot.CopilotProviderSettings(
+                apiToken: self.providerSettingValue(self.settings.copilotAPIToken)),
+            azure: ProviderSettingsSnapshot.AzureProviderSettings(
+                apiToken: self.providerSettingValue(self.settings.azureOpenAIAPIToken),
+                endpoint: self.providerSettingValue(self.settings.azureOpenAIEndpoint),
+                deployment: self.providerSettingValue(self.settings.azureOpenAIDeployment),
+                apiVersion: self.providerSettingValue(self.settings.azureOpenAIAPIVersion)),
+            bedrock: ProviderSettingsSnapshot.BedrockProviderSettings(
+                region: self.providerSettingValue(self.settings.bedrockRegion),
+                profile: self.providerSettingValue(self.settings.bedrockAWSProfile),
+                modelID: self.providerSettingValue(self.settings.bedrockModelID)),
+            vertexai: ProviderSettingsSnapshot.VertexAIProviderSettings(
+                project: self.providerSettingValue(self.settings.vertexaiProject),
+                location: self.providerSettingValue(self.settings.vertexaiLocation)))
+    }
+
+    private func providerSettingValue(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : value
+    }
+
+    private func providerDebugContext(settings: ProviderSettingsSnapshot) -> ProviderFetchContext {
+        ProviderFetchContext(
             runtime: .app,
             sourceMode: .auto,
             includeCredits: true,
@@ -3171,336 +3256,140 @@ extension UsageStore {
             webDebugDumpHTML: false,
             verbose: false,
             env: ProcessInfo.processInfo.environment,
-            settings: settingsSnapshot,
+            settings: settings,
             fetcher: self.codexFetcher,
             claudeFetcher: self.claudeFetcher)
+    }
 
-        let claudeWebExtrasEnabled = self.settings.claudeWebExtrasEnabled
-        let claudeUsageDataSource = self.settings.claudeUsageDataSource
-        let claudeDebugMenuEnabled = self.settings.debugMenuEnabled
-        return await Task.detached(priority: .utility) { () -> String in
-            switch provider {
-            case .codex:
-                let raw = await self.codexFetcher.debugRawRateLimits()
-                await MainActor.run { self.probeLogs[.codex] = raw }
-                return raw
-            case .claude:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    var lines: [String] = []
-                    let hasKey = ClaudeWebAPIFetcher.hasSessionKey { msg in lines.append(msg) }
-                    let hasOAuthCredentials = (try? ClaudeOAuthCredentialsStore.load()) != nil
+    private nonisolated func debugCodexLog() async -> String {
+        let raw = await self.codexFetcher.debugRawRateLimits()
+        await self.cacheProbeLog(raw, for: .codex)
+        return raw
+    }
 
-                    let strategy = ClaudeProviderDescriptor.resolveUsageStrategy(
-                        debugMenuEnabled: claudeDebugMenuEnabled,
-                        selectedDataSource: claudeUsageDataSource,
-                        webExtrasEnabled: claudeWebExtrasEnabled,
-                        hasWebSession: hasKey,
-                        hasOAuthCredentials: hasOAuthCredentials)
-                    let automaticCLIFallbackSkipped = strategy.dataSource == .cli && !claudeDebugMenuEnabled
+    private nonisolated func debugClaudeLog(
+        debugMenuEnabled: Bool,
+        selectedDataSource: ClaudeUsageDataSource,
+        webExtrasEnabled: Bool) async -> String
+    {
+        let text = await self.runWithTimeout(seconds: 15) {
+            var lines: [String] = []
+            let hasKey = ClaudeWebAPIFetcher.hasSessionKey { msg in lines.append(msg) }
+            let hasOAuthCredentials = (try? ClaudeOAuthCredentialsStore.load()) != nil
 
-                    if !automaticCLIFallbackSkipped {
-                        await MainActor.run {
-                            if self.settings.claudeUsageDataSource != strategy.dataSource {
-                                self.settings.claudeUsageDataSource = strategy.dataSource
-                            }
-                        }
-                    }
+            let strategy = ClaudeProviderDescriptor.resolveUsageStrategy(
+                debugMenuEnabled: debugMenuEnabled,
+                selectedDataSource: selectedDataSource,
+                webExtrasEnabled: webExtrasEnabled,
+                hasWebSession: hasKey,
+                hasOAuthCredentials: hasOAuthCredentials)
+            let automaticCLIFallbackSkipped = strategy.dataSource == .cli && !debugMenuEnabled
 
-                    lines.append("strategy=\(strategy.dataSource.rawValue)")
-                    lines.append("hasSessionKey=\(hasKey)")
-                    lines.append("hasOAuthCredentials=\(hasOAuthCredentials)")
-                    if strategy.useWebExtras {
-                        lines.append("web_extras=enabled")
-                    }
-                    if automaticCLIFallbackSkipped {
-                        lines.append("cli_auto_fallback=skipped_to_avoid_password_prompt")
-                        lines.append("")
-                        lines.append(
-                            "Enable the Debug menu and choose Claude CLI source only " +
-                                "when you want Runic to launch the Claude CLI explicitly.")
-                        return lines.joined(separator: "\n")
-                    }
-                    lines.append("")
-
-                    switch strategy.dataSource {
-                    case .web:
-                        do {
-                            let web = try await ClaudeWebAPIFetcher.fetchUsage { msg in lines.append(msg) }
-                            lines.append("")
-                            lines.append("Web API summary:")
-
-                            let sessionReset = web.sessionResetsAt?.description ?? "nil"
-                            lines.append("session_used=\(web.sessionPercentUsed)% resetsAt=\(sessionReset)")
-
-                            if let weekly = web.weeklyPercentUsed {
-                                let weeklyReset = web.weeklyResetsAt?.description ?? "nil"
-                                lines.append("weekly_used=\(weekly)% resetsAt=\(weeklyReset)")
-                            } else {
-                                lines.append("weekly_used=nil")
-                            }
-
-                            lines.append("opus_used=\(web.opusPercentUsed?.description ?? "nil")")
-
-                            if let extra = web.extraUsageCost {
-                                let resetsAt = extra.resetsAt?.description ?? "nil"
-                                let period = extra.period ?? "nil"
-                                let line =
-                                    "extra_usage used=\(extra.used) limit=\(extra.limit) " +
-                                    "currency=\(extra.currencyCode) period=\(period) resetsAt=\(resetsAt)"
-                                lines.append(line)
-                            } else {
-                                lines.append("extra_usage=nil")
-                            }
-
-                            return lines.joined(separator: "\n")
-                        } catch {
-                            lines.append("Web API failed: \(error.localizedDescription)")
-                            return lines.joined(separator: "\n")
-                        }
-                    case .cli:
-                        let cli = await self.claudeFetcher.debugRawProbe(model: "sonnet")
-                        lines.append(cli)
-                        return lines.joined(separator: "\n")
-                    case .oauth:
-                        lines.append("OAuth source selected.")
-                        return lines.joined(separator: "\n")
+            if !automaticCLIFallbackSkipped {
+                await MainActor.run {
+                    if self.settings.claudeUsageDataSource != strategy.dataSource {
+                        self.settings.claudeUsageDataSource = strategy.dataSource
                     }
                 }
-                await MainActor.run { self.probeLogs[.claude] = text }
-                return text
-            case .zai:
-                let text = self.debugTokenSummary(
-                    provider: "zai",
-                    resolution: ProviderTokenResolver.zaiResolution())
-                await MainActor.run { self.probeLogs[.zai] = text }
-                return text
-            case .gemini:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .gemini,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.gemini] = text }
-                return text
-            case .antigravity:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .antigravity,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.antigravity] = text }
-                return text
-            case .cursor:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .cursor,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.cursor] = text }
-                return text
-            case .factory:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .factory,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.factory] = text }
-                return text
-            case .copilot:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .copilot,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.copilot] = text }
-                return text
-            case .minimax:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .minimax,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.minimax] = text }
-                return text
-            case .openrouter:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .openrouter,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.openrouter] = text }
-                return text
-            case .vercelai:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .vercelai,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.vercelai] = text }
-                return text
-            case .groq:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .groq,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.groq] = text }
-                return text
-            case .deepseek:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .deepseek,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.deepseek] = text }
-                return text
-            case .fireworks:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .fireworks,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.fireworks] = text }
-                return text
-            case .mistral:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .mistral,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.mistral] = text }
-                return text
-            case .perplexity:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .perplexity,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.perplexity] = text }
-                return text
-            case .kimi:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .kimi,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.kimi] = text }
-                return text
-            case .auggie:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .auggie,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.auggie] = text }
-                return text
-            case .together:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .together,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.together] = text }
-                return text
-            case .cohere:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .cohere,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.cohere] = text }
-                return text
-            case .xai:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .xai,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.xai] = text }
-                return text
-            case .cerebras:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .cerebras,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.cerebras] = text }
-                return text
-            case .sambanova:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .sambanova,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.sambanova] = text }
-                return text
-            case .azure:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .azure,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.azure] = text }
-                return text
-            case .bedrock:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .bedrock,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.bedrock] = text }
-                return text
-            case .vertexai:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .vertexai,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.vertexai] = text }
-                return text
-            case .qwen:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .qwen,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.qwen] = text }
-                return text
-            case .localLLM:
-                let text = await self.runWithTimeout(seconds: 15) {
-                    await self.debugProviderProbe(
-                        provider: .localLLM,
-                        context: debugContext,
-                        settings: settingsSnapshot)
-                }
-                await MainActor.run { self.probeLogs[.localLLM] = text }
-                return text
             }
-        }.value
+
+            lines.append("strategy=\(strategy.dataSource.rawValue)")
+            lines.append("hasSessionKey=\(hasKey)")
+            lines.append("hasOAuthCredentials=\(hasOAuthCredentials)")
+            if strategy.useWebExtras {
+                lines.append("web_extras=enabled")
+            }
+            if automaticCLIFallbackSkipped {
+                lines.append("cli_auto_fallback=skipped_to_avoid_password_prompt")
+                lines.append("")
+                lines.append(
+                    "Enable the Debug menu and choose Claude CLI source only " +
+                        "when you want Runic to launch the Claude CLI explicitly.")
+                return lines.joined(separator: "\n")
+            }
+            lines.append("")
+
+            return await self.debugClaudeSelectedSourceLines(
+                strategy: strategy,
+                existingLines: lines)
+        }
+        await self.cacheProbeLog(text, for: .claude)
+        return text
+    }
+
+    private nonisolated func debugClaudeSelectedSourceLines(
+        strategy: ClaudeUsageStrategy,
+        existingLines: [String]) async -> String
+    {
+        var lines = existingLines
+        switch strategy.dataSource {
+        case .web:
+            do {
+                let web = try await ClaudeWebAPIFetcher.fetchUsage { msg in lines.append(msg) }
+                lines.append("")
+                lines.append("Web API summary:")
+
+                let sessionReset = web.sessionResetsAt?.description ?? "nil"
+                lines.append("session_used=\(web.sessionPercentUsed)% resetsAt=\(sessionReset)")
+
+                if let weekly = web.weeklyPercentUsed {
+                    let weeklyReset = web.weeklyResetsAt?.description ?? "nil"
+                    lines.append("weekly_used=\(weekly)% resetsAt=\(weeklyReset)")
+                } else {
+                    lines.append("weekly_used=nil")
+                }
+
+                lines.append("opus_used=\(web.opusPercentUsed?.description ?? "nil")")
+
+                if let extra = web.extraUsageCost {
+                    let resetsAt = extra.resetsAt?.description ?? "nil"
+                    let period = extra.period ?? "nil"
+                    let line =
+                        "extra_usage used=\(extra.used) limit=\(extra.limit) " +
+                            "currency=\(extra.currencyCode) period=\(period) resetsAt=\(resetsAt)"
+                    lines.append(line)
+                } else {
+                    lines.append("extra_usage=nil")
+                }
+            } catch {
+                lines.append("Web API failed: \(error.localizedDescription)")
+            }
+        case .cli:
+            let cli = await self.claudeFetcher.debugRawProbe(model: "sonnet")
+            lines.append(cli)
+        case .oauth:
+            lines.append("OAuth source selected.")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private nonisolated func debugZaiTokenLog() async -> String {
+        let text = self.debugTokenSummary(
+            provider: "zai",
+            resolution: ProviderTokenResolver.zaiResolution())
+        await self.cacheProbeLog(text, for: .zai)
+        return text
+    }
+
+    private nonisolated func debugProviderProbeLog(
+        provider: UsageProvider,
+        context: ProviderFetchContext,
+        settings: ProviderSettingsSnapshot) async -> String
+    {
+        let text = await self.runWithTimeout(seconds: 15) {
+            await self.debugProviderProbe(
+                provider: provider,
+                context: context,
+                settings: settings)
+        }
+        await self.cacheProbeLog(text, for: provider)
+        return text
+    }
+
+    private nonisolated func cacheProbeLog(_ text: String, for provider: UsageProvider) async {
+        await MainActor.run {
+            self.probeLogs[provider] = text
+        }
     }
 
     private nonisolated func debugProviderProbe(
@@ -3532,71 +3421,23 @@ extension UsageStore {
         return lines.joined(separator: "\n")
     }
 
-    private nonisolated func debugCredentialLines( // swiftlint:disable:this cyclomatic_complexity
+    private nonisolated func debugCredentialLines(
+        for provider: UsageProvider,
+        settings: ProviderSettingsSnapshot) -> [String]
+    {
+        if let tokenSources = UsageDebugCredentialCatalog.tokenSourcesByProvider[provider] {
+            return tokenSources.map { source in
+                self.debugTokenSummary(provider: source.label, resolution: source.resolution())
+            }
+        }
+        return self.debugProviderSettingLines(for: provider, settings: settings)
+    }
+
+    private nonisolated func debugProviderSettingLines(
         for provider: UsageProvider,
         settings: ProviderSettingsSnapshot) -> [String]
     {
         switch provider {
-        case .zai:
-            return [self.debugTokenSummary(provider: "zai", resolution: ProviderTokenResolver.zaiResolution())]
-        case .copilot:
-            return [self.debugTokenSummary(provider: "copilot", resolution: ProviderTokenResolver.copilotResolution())]
-        case .minimax:
-            return [
-                self.debugTokenSummary(
-                    provider: "minimax.api",
-                    resolution: ProviderTokenResolver.minimaxApiKeyResolution()),
-                self.debugTokenSummary(
-                    provider: "minimax.cookie",
-                    resolution: ProviderTokenResolver.minimaxCookieHeaderResolution()),
-                self.debugTokenSummary(
-                    provider: "minimax.group",
-                    resolution: ProviderTokenResolver.minimaxGroupResolution()),
-            ]
-        case .openrouter:
-            return [self.debugTokenSummary(
-                provider: "openrouter",
-                resolution: ProviderTokenResolver.openRouterResolution())]
-        case .vercelai:
-            return [self.debugTokenSummary(
-                provider: "vercelai",
-                resolution: ProviderTokenResolver.vercelAIResolution())]
-        case .groq:
-            return [self.debugTokenSummary(provider: "groq", resolution: ProviderTokenResolver.groqResolution())]
-        case .deepseek:
-            return [self.debugTokenSummary(
-                provider: "deepseek",
-                resolution: ProviderTokenResolver.deepSeekResolution())]
-        case .fireworks:
-            return [self.debugTokenSummary(
-                provider: "fireworks",
-                resolution: ProviderTokenResolver.fireworksResolution())]
-        case .mistral:
-            return [self.debugTokenSummary(provider: "mistral", resolution: ProviderTokenResolver.mistralResolution())]
-        case .perplexity:
-            return [self.debugTokenSummary(
-                provider: "perplexity",
-                resolution: ProviderTokenResolver.perplexityResolution())]
-        case .kimi:
-            return [self.debugTokenSummary(provider: "kimi", resolution: ProviderTokenResolver.kimiResolution())]
-        case .auggie:
-            return [self.debugTokenSummary(provider: "auggie", resolution: ProviderTokenResolver.auggieResolution())]
-        case .together:
-            return [self.debugTokenSummary(
-                provider: "together",
-                resolution: ProviderTokenResolver.togetherResolution())]
-        case .cohere:
-            return [self.debugTokenSummary(provider: "cohere", resolution: ProviderTokenResolver.cohereResolution())]
-        case .xai:
-            return [self.debugTokenSummary(provider: "xai", resolution: ProviderTokenResolver.xaiResolution())]
-        case .cerebras:
-            return [self.debugTokenSummary(
-                provider: "cerebras",
-                resolution: ProviderTokenResolver.cerebrasResolution())]
-        case .sambanova:
-            return [self.debugTokenSummary(
-                provider: "sambanova",
-                resolution: ProviderTokenResolver.sambaNovaResolution())]
         case .azure:
             var lines: [String] = [
                 "azure.endpoint=\(self.debugFieldValue(settings.azure?.endpoint))",
@@ -3618,8 +3459,6 @@ extension UsageStore {
                 "vertexai.project=\(self.debugFieldValue(settings.vertexai?.project))",
                 "vertexai.location=\(self.debugFieldValue(settings.vertexai?.location))",
             ]
-        case .qwen:
-            return [self.debugTokenSummary(provider: "qwen", resolution: ProviderTokenResolver.qwenResolution())]
         case .gemini:
             return [
                 "gemini.authType=\(GeminiStatusProbe.currentAuthType().rawValue)",
@@ -3631,7 +3470,7 @@ extension UsageStore {
             ]
         case .antigravity, .cursor, .factory:
             return ["credentials=provider_internal"]
-        case .codex, .claude:
+        default:
             return []
         }
     }
