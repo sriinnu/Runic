@@ -115,6 +115,16 @@ public struct LatencyMetric: Codable, Sendable, Identifiable {
     }
 }
 
+public struct LatencyMetricTiming: Sendable {
+    public let startTime: Date
+    public let endTime: Date
+
+    public init(startTime: Date, endTime: Date) {
+        self.startTime = startTime
+        self.endTime = endTime
+    }
+}
+
 // MARK: - Error Event
 
 /// API failure tracking
@@ -313,31 +323,26 @@ extension QualityRating {
 }
 
 extension LatencyMetric {
-    // swiftlint:disable function_parameter_count
-
     /// Creates a new latency metric with a generated UUID
     public static func create(
         requestID: String,
         provider: UsageProvider,
         model: String?,
-        startTime: Date,
-        endTime: Date,
+        timing: LatencyMetricTiming,
         success: Bool) -> LatencyMetric
     {
-        let duration = Int(endTime.timeIntervalSince(startTime) * 1000)
+        let duration = Int(timing.endTime.timeIntervalSince(timing.startTime) * 1000)
         return LatencyMetric(
             id: UUID().uuidString,
             requestID: requestID,
             provider: provider,
             model: model,
-            startTime: startTime,
-            endTime: endTime,
+            startTime: timing.startTime,
+            endTime: timing.endTime,
             durationMs: duration,
             success: success,
             createdAt: Date())
     }
-
-    // swiftlint:enable function_parameter_count
 
     /// Computed duration in seconds
     public var durationSeconds: Double {
