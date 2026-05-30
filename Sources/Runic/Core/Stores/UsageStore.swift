@@ -2152,6 +2152,60 @@ final class UsageStore { // swiftlint:disable:this type_body_length
         let updatedAt: Date
         let scanDays: Int
         let providers: [UsageProvider]
+
+        static func empty(updatedAt: Date, scanDays: Int) -> Self {
+            Self(
+                dailyByProvider: [:],
+                allDailySummariesByProvider: [:],
+                hourlySummariesByProvider: [:],
+                activeBlocksByProvider: [:],
+                topModelsByProvider: [:],
+                topProjectsByProvider: [:],
+                modelBreakdownsByProvider: [:],
+                projectBreakdownsByProvider: [:],
+                spendForecastsByProvider: [:],
+                projectSpendForecastsByProvider: [:],
+                topProjectSpendForecastsByProvider: [:],
+                anomaliesByProvider: [:],
+                compactionsByProvider: [:],
+                errorsByProvider: [:],
+                lastActivityByProvider: [:],
+                updatedAt: updatedAt,
+                scanDays: scanDays,
+                providers: [])
+        }
+    }
+
+    private struct LedgerEntryLoad {
+        let providers: [UsageProvider]
+        let entries: [UsageLedgerEntry]
+        let errors: [UsageProvider: String]
+    }
+
+    private struct LedgerDailyBuckets {
+        let dailyByProvider: [UsageProvider: UsageLedgerDailySummary]
+        let allDailySummariesByProvider: [UsageProvider: [UsageLedgerDailySummary]]
+        let mergedDailySummaries: [UsageLedgerDailySummary]
+    }
+
+    private struct LedgerUsageBreakdowns {
+        let topModelsByProvider: [UsageProvider: UsageLedgerModelSummary]
+        let topProjectsByProvider: [UsageProvider: UsageLedgerProjectSummary]
+        let modelBreakdownsByProvider: [UsageProvider: [UsageLedgerModelSummary]]
+        let projectBreakdownsByProvider: [UsageProvider: [UsageLedgerProjectSummary]]
+    }
+
+    private struct LedgerForecastBuckets {
+        let spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
+        let projectSpendForecastsByProvider: [UsageProvider: [UsageLedgerSpendForecast]]
+        let topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
+    }
+
+    private struct LedgerForecastContext {
+        let budgetProjectNames: [String: String]
+        let now: Date
+        let calendar: Calendar
+        let timeZone: TimeZone
     }
 
     private struct ProviderHistoryMonthCacheEntry {
@@ -2174,33 +2228,69 @@ final class UsageStore { // swiftlint:disable:this type_body_length
         }
     }
 
-    private func loadLedgerInsights( // swiftlint:disable:this cyclomatic_complexity function_body_length
+    private func loadLedgerInsights(
         sources: [(UsageProvider, any UsageLedgerSource)],
         now: Date,
         scanDays: Int) async -> LedgerRefreshResult
     {
         guard !sources.isEmpty else {
-            return LedgerRefreshResult(
-                dailyByProvider: [:],
-                allDailySummariesByProvider: [:],
-                hourlySummariesByProvider: [:],
-                activeBlocksByProvider: [:],
-                topModelsByProvider: [:],
-                topProjectsByProvider: [:],
-                modelBreakdownsByProvider: [:],
-                projectBreakdownsByProvider: [:],
-                spendForecastsByProvider: [:],
-                projectSpendForecastsByProvider: [:],
-                topProjectSpendForecastsByProvider: [:],
-                anomaliesByProvider: [:],
-                compactionsByProvider: [:],
-                errorsByProvider: [:],
-                lastActivityByProvider: [:],
-                updatedAt: now,
-                scanDays: scanDays,
-                providers: [])
+            return .empty(updatedAt: now, scanDays: scanDays)
         }
 
+        let load = await self.loadLedgerEntries(from: sources)
+        let timeZone = TimeZone.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+
+        let dailyBuckets = await self.ledgerDailyBuckets(
+            entries: load.entries,
+            providers: load.providers,
+            now: now,
+            calendar: calendar,
+            timeZone: timeZone)
+        let budgetProjectNames = self.projectNameOverridesFromBudgets()
+        let todayEntries = load.entries.filter { calendar.isDate($0.timestamp, inSameDayAs: now) }
+        let usageBreakdowns = self.ledgerUsageBreakdowns(
+            todayEntries: todayEntries,
+            budgetProjectNames: budgetProjectNames)
+        let forecastBuckets = self.ledgerForecastBuckets(
+            entries: load.entries,
+            mergedDailySummaries: dailyBuckets.mergedDailySummaries,
+            topProjectsByProvider: usageBreakdowns.topProjectsByProvider,
+            context: LedgerForecastContext(
+                budgetProjectNames: budgetProjectNames,
+                now: now,
+                calendar: calendar,
+                timeZone: timeZone))
+        let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
+            dailySummaries: dailyBuckets.mergedDailySummaries,
+            now: now,
+            calendar: calendar)
+
+        return LedgerRefreshResult(
+            dailyByProvider: dailyBuckets.dailyByProvider,
+            allDailySummariesByProvider: dailyBuckets.allDailySummariesByProvider,
+            hourlySummariesByProvider: self.hourlySummariesByProvider(entries: load.entries, timeZone: timeZone),
+            activeBlocksByProvider: self.activeBlocksByProvider(entries: load.entries, now: now),
+            topModelsByProvider: usageBreakdowns.topModelsByProvider,
+            topProjectsByProvider: usageBreakdowns.topProjectsByProvider,
+            modelBreakdownsByProvider: usageBreakdowns.modelBreakdownsByProvider,
+            projectBreakdownsByProvider: usageBreakdowns.projectBreakdownsByProvider,
+            spendForecastsByProvider: forecastBuckets.spendForecastsByProvider,
+            projectSpendForecastsByProvider: forecastBuckets.projectSpendForecastsByProvider,
+            topProjectSpendForecastsByProvider: forecastBuckets.topProjectSpendForecastsByProvider,
+            anomaliesByProvider: anomaliesByProvider,
+            compactionsByProvider: self.compactionsByProvider(entries: load.entries),
+            errorsByProvider: load.errors,
+            lastActivityByProvider: self.lastActivityByProvider(entries: load.entries),
+            updatedAt: now,
+            scanDays: scanDays,
+            providers: load.providers)
+    }
+
+    private func loadLedgerEntries(
+        from sources: [(UsageProvider, any UsageLedgerSource)]) async -> LedgerEntryLoad
+    {
         let providers = sources.map(\.0)
         var entries: [UsageLedgerEntry] = []
         var errors: [UsageProvider: String] = [:]
@@ -2227,32 +2317,33 @@ final class UsageStore { // swiftlint:disable:this type_body_length
             }
         }
 
-        var lastActivityByProvider: [UsageProvider: Date] = [:]
-        for entry in entries {
-            if let current = lastActivityByProvider[entry.provider] {
-                if entry.timestamp > current { lastActivityByProvider[entry.provider] = entry.timestamp }
-            } else {
-                lastActivityByProvider[entry.provider] = entry.timestamp
-            }
-        }
+        return LedgerEntryLoad(
+            providers: providers,
+            entries: entries,
+            errors: errors)
+    }
 
-        let timeZone = TimeZone.current
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
+    private func ledgerDailyBuckets(
+        entries: [UsageLedgerEntry],
+        providers: [UsageProvider],
+        now: Date,
+        calendar: Calendar,
+        timeZone: TimeZone) async -> LedgerDailyBuckets
+    {
         let todayStart = calendar.startOfDay(for: now)
-
-        let dailySummaries = UsageLedgerAggregator.dailySummaries(
+        var dailyByProvider: [UsageProvider: UsageLedgerDailySummary] = [:]
+        var allDailySummariesByProvider: [UsageProvider: [UsageLedgerDailySummary]] = [:]
+        for summary in UsageLedgerAggregator.dailySummaries(
             entries: entries,
             timeZone: timeZone,
             groupByProject: false)
-        var dailyByProvider: [UsageProvider: UsageLedgerDailySummary] = [:]
-        var allDailySummariesByProvider: [UsageProvider: [UsageLedgerDailySummary]] = [:]
-        for summary in dailySummaries {
+        {
             allDailySummariesByProvider[summary.provider, default: []].append(summary)
             if summary.dayStart == todayStart {
                 dailyByProvider[summary.provider] = summary
             }
         }
+
         for provider in providers {
             guard let cached = await LedgerCache.shared.loadCachedDailies(provider: provider.rawValue) else { continue }
             let summaries = cached.dailies.compactMap { $0.toLedgerDailySummary(provider: provider) }
@@ -2266,27 +2357,46 @@ final class UsageStore { // swiftlint:disable:this type_body_length
                 dailyByProvider[provider] = byDay.values.first { $0.dayStart == todayStart }
             }
         }
-        let mergedDailySummaries = allDailySummariesByProvider.values.flatMap { $0 }
 
-        let hourlySummaries = UsageLedgerAggregator.hourlySummaries(
+        return LedgerDailyBuckets(
+            dailyByProvider: dailyByProvider,
+            allDailySummariesByProvider: allDailySummariesByProvider,
+            mergedDailySummaries: allDailySummariesByProvider.values.flatMap { $0 })
+    }
+
+    private func hourlySummariesByProvider(
+        entries: [UsageLedgerEntry],
+        timeZone: TimeZone) -> [UsageProvider: [UsageLedgerHourlySummary]]
+    {
+        var hourlySummariesByProvider: [UsageProvider: [UsageLedgerHourlySummary]] = [:]
+        for summary in UsageLedgerAggregator.hourlySummaries(
             entries: entries,
             timeZone: timeZone,
             groupByProject: false)
-        var hourlySummariesByProvider: [UsageProvider: [UsageLedgerHourlySummary]] = [:]
-        for summary in hourlySummaries {
+        {
             hourlySummariesByProvider[summary.provider, default: []].append(summary)
         }
+        return hourlySummariesByProvider
+    }
 
-        let blocks = UsageLedgerAggregator.blockSummaries(entries: entries, blockHours: 5, now: now)
+    private func activeBlocksByProvider(
+        entries: [UsageLedgerEntry],
+        now: Date) -> [UsageProvider: UsageLedgerBlockSummary]
+    {
         var activeByProvider: [UsageProvider: UsageLedgerBlockSummary] = [:]
+        let blocks = UsageLedgerAggregator.blockSummaries(entries: entries, blockHours: 5, now: now)
         for block in blocks where block.isActive {
             if activeByProvider[block.provider] == nil {
                 activeByProvider[block.provider] = block
             }
         }
+        return activeByProvider
+    }
 
-        let todayEntries = entries.filter { calendar.isDate($0.timestamp, inSameDayAs: now) }
-        let budgetProjectNames = self.projectNameOverridesFromBudgets()
+    private func ledgerUsageBreakdowns(
+        todayEntries: [UsageLedgerEntry],
+        budgetProjectNames: [String: String]) -> LedgerUsageBreakdowns
+    {
         let modelSummaries = UsageLedgerAggregator.modelSummaries(entries: todayEntries)
         var topModelsByProvider: [UsageProvider: UsageLedgerModelSummary] = [:]
         for summary in modelSummaries where topModelsByProvider[summary.provider] == nil {
@@ -2300,8 +2410,9 @@ final class UsageStore { // swiftlint:disable:this type_body_length
             topProjectsByProvider[summary.provider] = summary
         }
 
-        let modelBreakdowns = UsageLedgerAggregator.modelSummaries(entries: todayEntries)
-            .map { self.resolvedModelSummary($0, budgetProjectNames: budgetProjectNames) }
+        let modelBreakdowns = modelSummaries.map {
+            self.resolvedModelSummary($0, budgetProjectNames: budgetProjectNames)
+        }
         var modelBreakdownsByProvider: [UsageProvider: [UsageLedgerModelSummary]] = [:]
         for summary in modelBreakdowns {
             modelBreakdownsByProvider[summary.provider, default: []].append(summary)
@@ -2312,15 +2423,59 @@ final class UsageStore { // swiftlint:disable:this type_body_length
             projectBreakdownsByProvider[summary.provider, default: []].append(summary)
         }
 
-        let providerForecasts = self.providerSpendForecasts(
+        return LedgerUsageBreakdowns(
+            topModelsByProvider: topModelsByProvider,
+            topProjectsByProvider: topProjectsByProvider,
+            modelBreakdownsByProvider: modelBreakdownsByProvider,
+            projectBreakdownsByProvider: projectBreakdownsByProvider)
+    }
+
+    private func ledgerForecastBuckets(
+        entries: [UsageLedgerEntry],
+        mergedDailySummaries: [UsageLedgerDailySummary],
+        topProjectsByProvider: [UsageProvider: UsageLedgerProjectSummary],
+        context: LedgerForecastContext) -> LedgerForecastBuckets
+    {
+        let spendForecastsByProvider = self.topSpendForecastsByProvider(
             from: mergedDailySummaries,
+            now: context.now,
+            calendar: context.calendar)
+        let projectSpendForecastsByProvider = self.projectSpendForecastsByProvider(
+            entries: entries,
+            budgetProjectNames: context.budgetProjectNames,
+            now: context.now,
+            timeZone: context.timeZone)
+
+        return LedgerForecastBuckets(
+            spendForecastsByProvider: spendForecastsByProvider,
+            projectSpendForecastsByProvider: projectSpendForecastsByProvider,
+            topProjectSpendForecastsByProvider: self.topProjectSpendForecastsByProvider(
+                topProjectsByProvider: topProjectsByProvider,
+                projectSpendForecastsByProvider: projectSpendForecastsByProvider))
+    }
+
+    private func topSpendForecastsByProvider(
+        from dailySummaries: [UsageLedgerDailySummary],
+        now: Date,
+        calendar: Calendar) -> [UsageProvider: UsageLedgerSpendForecast]
+    {
+        let providerForecasts = self.providerSpendForecasts(
+            from: dailySummaries,
             now: now,
             calendar: calendar)
         var spendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
         for forecast in providerForecasts where spendForecastsByProvider[forecast.provider] == nil {
             spendForecastsByProvider[forecast.provider] = forecast
         }
+        return spendForecastsByProvider
+    }
 
+    private func projectSpendForecastsByProvider(
+        entries: [UsageLedgerEntry],
+        budgetProjectNames: [String: String],
+        now: Date,
+        timeZone: TimeZone) -> [UsageProvider: [UsageLedgerSpendForecast]]
+    {
         let budgetLimitsByProjectID = self.activeBudgetLimitsByProjectID()
         let projectForecasts = UsageLedgerAggregator.projectSpendForecasts(
             entries: entries,
@@ -2336,7 +2491,14 @@ final class UsageStore { // swiftlint:disable:this type_body_length
         for forecast in projectForecasts {
             projectSpendForecastsByProvider[forecast.provider, default: []].append(forecast)
         }
+        return projectSpendForecastsByProvider
+    }
 
+    private func topProjectSpendForecastsByProvider(
+        topProjectsByProvider: [UsageProvider: UsageLedgerProjectSummary],
+        projectSpendForecastsByProvider: [UsageProvider: [UsageLedgerSpendForecast]])
+        -> [UsageProvider: UsageLedgerSpendForecast]
+    {
         var topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast] = [:]
         for (provider, summary) in topProjectsByProvider {
             guard let forecasts = projectSpendForecastsByProvider[provider] else { continue }
@@ -2344,34 +2506,27 @@ final class UsageStore { // swiftlint:disable:this type_body_length
                 topProjectSpendForecastsByProvider[provider] = matched
             }
         }
-        let anomaliesByProvider = UsageLedgerAnomalyDetector.summaries(
-            dailySummaries: mergedDailySummaries,
-            now: now,
-            calendar: calendar)
+        return topProjectSpendForecastsByProvider
+    }
+
+    private func compactionsByProvider(entries: [UsageLedgerEntry]) -> [UsageProvider: UsageLedgerCompactionSummary] {
         var compactionsByProvider: [UsageProvider: UsageLedgerCompactionSummary] = [:]
         for summary in UsageLedgerAggregator.compactionSummaries(entries: entries) {
             compactionsByProvider[summary.provider] = summary
         }
+        return compactionsByProvider
+    }
 
-        return LedgerRefreshResult(
-            dailyByProvider: dailyByProvider,
-            allDailySummariesByProvider: allDailySummariesByProvider,
-            hourlySummariesByProvider: hourlySummariesByProvider,
-            activeBlocksByProvider: activeByProvider,
-            topModelsByProvider: topModelsByProvider,
-            topProjectsByProvider: topProjectsByProvider,
-            modelBreakdownsByProvider: modelBreakdownsByProvider,
-            projectBreakdownsByProvider: projectBreakdownsByProvider,
-            spendForecastsByProvider: spendForecastsByProvider,
-            projectSpendForecastsByProvider: projectSpendForecastsByProvider,
-            topProjectSpendForecastsByProvider: topProjectSpendForecastsByProvider,
-            anomaliesByProvider: anomaliesByProvider,
-            compactionsByProvider: compactionsByProvider,
-            errorsByProvider: errors,
-            lastActivityByProvider: lastActivityByProvider,
-            updatedAt: now,
-            scanDays: scanDays,
-            providers: providers)
+    private func lastActivityByProvider(entries: [UsageLedgerEntry]) -> [UsageProvider: Date] {
+        var lastActivityByProvider: [UsageProvider: Date] = [:]
+        for entry in entries {
+            if let current = lastActivityByProvider[entry.provider] {
+                if entry.timestamp > current { lastActivityByProvider[entry.provider] = entry.timestamp }
+            } else {
+                lastActivityByProvider[entry.provider] = entry.timestamp
+            }
+        }
+        return lastActivityByProvider
     }
 
     private func projectNameOverridesFromBudgets() -> [String: String] {
