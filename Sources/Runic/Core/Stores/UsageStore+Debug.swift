@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import RunicCore
 
@@ -35,6 +36,108 @@ extension UsageStore {
                 context: debugContext,
                 settings: settingsSnapshot)
         }.value
+    }
+
+    func debugDumpClaude() async {
+        let output = await self.claudeFetcher.debugRawProbe(model: "sonnet")
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("runic-claude-probe.txt")
+        try? output.write(to: url, atomically: true, encoding: .utf8)
+        await MainActor.run {
+            let snippet = String(output.prefix(180)).replacingOccurrences(of: "\n", with: " ")
+            self.errors[.claude] = "[Claude] \(snippet) (saved: \(url.path))"
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func dumpLog(toFileFor provider: UsageProvider) async -> URL? {
+        let text = await self.debugLog(for: provider)
+        let filename = "runic-\(provider.rawValue)-probe.txt"
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            _ = await MainActor.run { NSWorkspace.shared.open(url) }
+            return url
+        } catch {
+            await MainActor.run {
+                self.errors[provider] = "Failed to save log: \(error.localizedDescription)"
+            }
+            return nil
+        }
+    }
+
+    func detectVersions() {
+        Task.detached { [claudeFetcher] in
+            let codexVer = Self.readCLI("codex", args: ["-s", "read-only", "-a", "untrusted", "--version"])
+            let claudeVer = claudeFetcher.detectVersion()
+            let geminiVer = Self.readCLI("gemini", args: ["--version"])
+            let antigravityVer = await AntigravityStatusProbe.detectVersion()
+            await MainActor.run {
+                self.codexVersion = codexVer
+                self.claudeVersion = claudeVer
+                self.geminiVersion = geminiVer
+                self.zaiVersion = nil
+                self.antigravityVersion = antigravityVer
+            }
+        }
+    }
+
+    func refreshPathDebugInfo() {
+        self.pathDebugInfo = PathBuilder.debugSnapshot(purposes: [.rpc, .tty, .nodeTooling])
+    }
+
+    nonisolated func trackLatency(
+        provider: UsageProvider,
+        providerLabel: String? = nil,
+        requestID: String,
+        startTime: Date,
+        endTime: Date,
+        success: Bool) async
+    {
+        guard let storage = self.performanceStorage else { return }
+        guard Self.localPerformanceTrackingEnabled() else { return }
+
+        let metric = LatencyMetric(
+            id: UUID().uuidString,
+            requestID: requestID,
+            provider: provider,
+            providerLabel: providerLabel,
+            model: nil,
+            startTime: startTime,
+            endTime: endTime,
+            durationMs: Int(endTime.timeIntervalSince(startTime) * 1000),
+            success: success,
+            createdAt: Date())
+
+        try? await storage.save(latency: metric)
+    }
+
+    nonisolated func trackError(provider: UsageProvider, providerLabel: String? = nil, error: Error) async {
+        guard let storage = self.performanceStorage else { return }
+        guard Self.localPerformanceTrackingEnabled() else { return }
+
+        let errorType = self.classifyError(error)
+        let errorEvent = ErrorEvent(
+            id: UUID().uuidString,
+            provider: provider,
+            providerLabel: providerLabel,
+            errorType: errorType,
+            errorMessage: error.localizedDescription,
+            retryCount: 0,
+            timestamp: Date())
+
+        try? await storage.save(error: errorEvent)
+    }
+
+    nonisolated static func customProviderMetricLabel(_ config: CustomProviderConfig) -> String {
+        let raw = config.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? config.id
+            : config.name
+        let normalized = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: #"[^\p{L}\p{N}._-]+"#, with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-._"))
+        return "custom:\(normalized.isEmpty ? config.id : normalized)"
     }
 
     private func providerSettingsSnapshot() -> ProviderSettingsSnapshot {
@@ -383,6 +486,75 @@ extension UsageStore {
         case .localProbe: "localProbe"
         case .webDashboard: "webDashboard"
         }
+    }
+
+    private nonisolated static func readCLI(_ cmd: String, args: [String]) -> String? {
+        let env = ProcessInfo.processInfo.environment
+        var pathEnv = env
+        pathEnv["PATH"] = PathBuilder.effectivePATH(purposes: [.rpc, .tty, .nodeTooling], env: env)
+        let loginPATH = LoginShellPathCache.shared.current
+
+        let resolved: String = switch cmd {
+        case "codex":
+            BinaryLocator.resolveCodexBinary(env: env, loginPATH: loginPATH) ?? cmd
+        case "gemini":
+            BinaryLocator.resolveGeminiBinary(env: env, loginPATH: loginPATH) ?? cmd
+        default:
+            cmd
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = [resolved] + args
+        process.environment = pathEnv
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try? process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let text = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !text.isEmpty else { return nil }
+        return text
+    }
+
+    private nonisolated static func localPerformanceTrackingEnabled() -> Bool {
+        (UserDefaults.standard.object(forKey: "performanceTrackingEnabled") as? Bool) ?? true
+    }
+
+    private nonisolated func classifyError(_ error: Error) -> ErrorType {
+        let message = error.localizedDescription.lowercased()
+
+        if message.contains("timed out") || message.contains("timeout") {
+            return .timeout
+        }
+
+        if message.contains("quota") || message.contains("rate limit") || message.contains("429") {
+            return .quota
+        }
+
+        if message.contains("auth") || message.contains("unauthorized") ||
+            message.contains("401") || message.contains("403")
+        {
+            return .auth
+        }
+
+        if message.contains("network") || message.contains("connection") ||
+            message.contains("offline") || message.contains("no internet")
+        {
+            return .network
+        }
+
+        if message.contains("json") || message.contains("decode") || message.contains("parse") {
+            return .parsing
+        }
+
+        if message.contains("api") || message.contains("server") {
+            return .apiError
+        }
+
+        return .unknown
     }
 
     private func runWithTimeout(seconds: Double, operation: @escaping @Sendable () async -> String) async -> String {
