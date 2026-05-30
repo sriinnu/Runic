@@ -3,6 +3,21 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.2.3</title>
+            <pubDate>Sat, 30 May 2026 16:04:53 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>63</sparkle:version>
+            <sparkle:shortVersionString>2.2.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.2.3</h2>
+<ul>
+<li>Preferences: make status-menu Settings and About actions open the Settings window and select the requested panel reliably.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.3/Runic-2.2.3.zip" length="32743788" type="application/octet-stream" sparkle:edSignature="/BH9D7a46lEdxWQerx/wkk+353uWFXoHWcGRWfSdJ6fvF3qUjhNI7Ej2U3/cAXMaMSD/hfaRgdv0Fm7Q2qZ1Dw=="/>
+        </item>
+        <item>
             <title>2.2.2</title>
             <pubDate>Sat, 30 May 2026 15:14:15 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
