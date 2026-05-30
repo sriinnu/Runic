@@ -1642,7 +1642,6 @@ extension UsageMenuCardView.Model {
             spendLine: "This month: \(used) / \(limit)")
     }
 
-    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private static func insightsSection(input: Input) -> InsightsSection? {
         let error = input.ledgerError?.trimmingCharacters(in: .whitespacesAndNewlines)
         let daily = input.ledgerDaily?.provider == input.provider ? input.ledgerDaily : nil
@@ -1664,180 +1663,14 @@ extension UsageMenuCardView.Model {
             return nil
         }
 
-        var todayLine: String?
-        var todayDetail: String?
-        if let daily {
-            let tokens = UsageFormatter.tokenCountString(daily.totals.totalTokens)
-            todayLine = "Today: \(tokens) tokens"
-            var details: [String] = []
-            let input = UsageFormatter.tokenCountString(daily.totals.inputTokens)
-            let output = UsageFormatter.tokenCountString(daily.totals.outputTokens)
-            var flowParts = ["In \(input)", "Out \(output)"]
-            if daily.totals.cacheReadTokens > 0 {
-                let cacheRead = UsageFormatter.tokenCountString(daily.totals.cacheReadTokens)
-                flowParts.append("Cache read \(cacheRead)")
-            }
-            if daily.totals.cacheCreationTokens > 0 {
-                let cacheWrite = UsageFormatter.tokenCountString(daily.totals.cacheCreationTokens)
-                flowParts.append("Cache write \(cacheWrite)")
-            }
-            details.append(flowParts.joined(separator: " · "))
-            if let cost = daily.totals.costUSD {
-                var spendParts = ["Spend \(UsageFormatter.usdString(cost))"]
-                if let per1K = UsageFormatter.usdPer1KTokensString(
-                    costUSD: cost,
-                    tokenCount: daily.totals.totalTokens)
-                {
-                    spendParts.append(per1K)
-                }
-                details.append(spendParts.joined(separator: " · "))
-            }
-            if !details.isEmpty {
-                todayDetail = details.joined(separator: "\n")
-            }
-        }
-
-        var forecastLine: String?
-        if let spendForecast {
-            let projected = UsageFormatter.usdString(spendForecast.projected30DayCostUSD)
-            let observedDayLabel = spendForecast.observedDays == 1 ? "day" : "days"
-            var parts = ["Month-end forecast: \(projected)"]
-            if let p50 = spendForecast.projectedCostP50USD,
-               let p80 = spendForecast.projectedCostP80USD,
-               let p95 = spendForecast.projectedCostP95USD
-            {
-                let p50Text = UsageFormatter.usdString(p50)
-                let p80Text = UsageFormatter.usdString(p80)
-                let p95Text = UsageFormatter.usdString(p95)
-                parts.append("p50 \(p50Text) · p80 \(p80Text) · p95 \(p95Text)")
-            }
-            parts.append("\(spendForecast.observedDays) observed \(observedDayLabel)")
-            forecastLine = parts.joined(separator: " · ")
-        }
-
-        var blockLine: String?
-        var blockDetail: String?
-        if let block, block.isActive {
-            let tokens = UsageFormatter.tokenCountString(block.totals.totalTokens)
-            blockLine = "Active block: \(tokens) tokens · \(block.entryCount) req"
-            var details: [String] = []
-            details.append("Ends \(UsageFormatter.resetCountdownDescription(from: block.end, now: input.now))")
-            if let rate = block.tokensPerMinute {
-                let rateText = UsageFormatter.tokenCountString(Int(rate.rounded()))
-                details.append("\(rateText) tok/min")
-            }
-            if let projected = block.projectedTotalTokens {
-                details.append("Proj \(UsageFormatter.tokenCountString(projected))")
-            }
-            let inputTokens = UsageFormatter.tokenCountString(block.totals.inputTokens)
-            let outputTokens = UsageFormatter.tokenCountString(block.totals.outputTokens)
-            details.append("In \(inputTokens) · Out \(outputTokens)")
-            if let cost = block.totals.costUSD {
-                var spendParts = ["Spend \(UsageFormatter.usdString(cost))"]
-                if let per1K = UsageFormatter.usdPer1KTokensString(
-                    costUSD: cost,
-                    tokenCount: block.totals.totalTokens)
-                {
-                    spendParts.append(per1K)
-                }
-                if let perRequest = UsageFormatter.usdPerRequestString(
-                    costUSD: cost,
-                    requestCount: block.entryCount)
-                {
-                    spendParts.append(perRequest)
-                }
-                if let burnPerHour = UsageFormatter.usdPerHourFromTokensString(
-                    costUSD: cost,
-                    tokenCount: block.totals.totalTokens,
-                    tokensPerMinute: block.tokensPerMinute)
-                {
-                    spendParts.append("Burn \(burnPerHour)")
-                }
-                details.append(spendParts.joined(separator: " · "))
-            }
-            blockDetail = details.joined(separator: "\n")
-        }
-
-        var modelLine: String?
-        if let topModel {
-            let tokens = UsageFormatter.tokenCountString(topModel.totals.totalTokens)
-            let modelName = UsageFormatter.modelDisplayName(topModel.model)
-            var parts = ["Top model: \(modelName) · \(tokens) tokens · \(topModel.entryCount) req"]
-            if let contextLabel = input.ledgerTopModelContextLabel {
-                parts.append(contextLabel)
-            }
-            if let cost = topModel.totals.costUSD {
-                parts.append(UsageFormatter.usdString(cost))
-                if let per1K = UsageFormatter.usdPer1KTokensString(
-                    costUSD: cost,
-                    tokenCount: topModel.totals.totalTokens)
-                {
-                    parts.append(per1K)
-                }
-            }
-            modelLine = parts.joined(separator: " · ")
-        }
-
-        var projectLine: String?
-        var projectDetail: String?
-        if let topProject {
-            let name = Self.insightsProjectDisplayName(topProject)
-            let tokens = UsageFormatter.tokenCountString(topProject.totals.totalTokens)
-            var parts = ["Top project: \(name) · \(tokens) tokens · \(topProject.entryCount) req"]
-            if let cost = topProject.totals.costUSD {
-                parts.append(UsageFormatter.usdString(cost))
-                if let per1K = UsageFormatter.usdPer1KTokensString(
-                    costUSD: cost,
-                    tokenCount: topProject.totals.totalTokens)
-                {
-                    parts.append(per1K)
-                }
-            }
-            projectLine = parts.joined(separator: " · ")
-
-            if let projectForecast = topProjectSpendForecast {
-                var detailParts = ["30d forecast \(UsageFormatter.usdString(projectForecast.projected30DayCostUSD))"]
-                if let budgetLimit = projectForecast.budgetLimitUSD {
-                    detailParts.append("Budget \(UsageFormatter.usdString(budgetLimit))")
-                    if let budgetETAInDays = projectForecast.budgetETAInDays {
-                        detailParts.append(Self.budgetBreachETAText(days: budgetETAInDays, now: input.now))
-                    } else if !projectForecast.budgetWillBreach {
-                        detailParts.append("No breach at current pace")
-                    }
-                }
-                projectDetail = detailParts.joined(separator: " · ")
-            }
-        }
-
-        var anomalyLine: String?
-        var anomalyDetail: String?
-        if let anomaly, let primary = anomaly.primaryAnomaly {
-            anomalyLine = "Anomaly: \(primary.severity.label) \(primary.metric.label) spike"
-            var details = [Self.anomalyMetricDetail(primary, baselineDays: anomaly.baselineDays)]
-            if let secondary = anomaly.secondaryAnomaly(excluding: primary.metric) {
-                details.append(Self.anomalyMetricDetail(secondary, baselineDays: anomaly.baselineDays))
-            }
-            anomalyDetail = details.joined(separator: "\n")
-        }
-
-        var reliabilityLine: String?
-        var reliabilityDetail: String?
-        if let reliability = input.ledgerReliability {
-            reliabilityLine = "Reliability: \(reliability.score)/100 · \(reliability.grade)"
-            reliabilityDetail = reliability.primarySignal ?? reliability.summary
-        }
-
-        var routingLine: String?
-        var routingDetail: String?
-        if let routing = input.ledgerRouting {
-            let from = UsageFormatter.modelDisplayName(routing.fromModel)
-            let to = UsageFormatter.modelDisplayName(routing.toModel)
-            routingLine = "Routing advisor: shift \(routing.shiftPercent)% \(from) -> \(to)"
-            let confidenceText = "\(Int((routing.confidence * 100).rounded()))%"
-            let savings = UsageFormatter.usdString(routing.estimatedSavingsUSD)
-            routingDetail = "Estimated savings: \(savings) · confidence \(confidenceText)"
-        }
-
+        let today = Self.todayInsightLines(daily)
+        let forecastLine = Self.forecastInsightLine(spendForecast)
+        let activeBlock = Self.activeBlockInsightLines(block, now: input.now)
+        let modelLine = Self.modelInsightLine(topModel, contextLabel: input.ledgerTopModelContextLabel)
+        let project = Self.projectInsightLines(topProject, forecast: topProjectSpendForecast, now: input.now)
+        let anomalyLines = Self.anomalyInsightLines(anomaly)
+        let reliability = Self.reliabilityInsightLines(input.ledgerReliability)
+        let routing = Self.routingInsightLines(input.ledgerRouting)
         let updatedLine = input.ledgerUpdatedAt.map { UsageFormatter.updatedString(from: $0, now: input.now) }
 
         return InsightsSection(
@@ -1848,22 +1681,197 @@ extension UsageMenuCardView.Model {
             contextDetail: context.detail,
             compactionLine: compactionLines.line,
             compactionDetail: compactionLines.detail,
-            todayLine: todayLine,
-            todayDetail: todayDetail,
+            todayLine: today.line,
+            todayDetail: today.detail,
             forecastLine: forecastLine,
-            blockLine: blockLine,
-            blockDetail: blockDetail,
+            blockLine: activeBlock.line,
+            blockDetail: activeBlock.detail,
             modelLine: modelLine,
-            projectLine: projectLine,
-            projectDetail: projectDetail,
-            anomalyLine: anomalyLine,
-            anomalyDetail: anomalyDetail,
-            reliabilityLine: reliabilityLine,
-            reliabilityDetail: reliabilityDetail,
-            routingLine: routingLine,
-            routingDetail: routingDetail,
+            projectLine: project.line,
+            projectDetail: project.detail,
+            anomalyLine: anomalyLines.line,
+            anomalyDetail: anomalyLines.detail,
+            reliabilityLine: reliability.line,
+            reliabilityDetail: reliability.detail,
+            routingLine: routing.line,
+            routingDetail: routing.detail,
             updatedLine: updatedLine,
             errorLine: (error?.isEmpty ?? true) ? nil : error)
+    }
+
+    private static func todayInsightLines(_ daily: UsageLedgerDailySummary?) -> (line: String?, detail: String?) {
+        guard let daily else { return (nil, nil) }
+        let tokens = UsageFormatter.tokenCountString(daily.totals.totalTokens)
+        let line = "Today: \(tokens) tokens"
+        var details: [String] = []
+        let input = UsageFormatter.tokenCountString(daily.totals.inputTokens)
+        let output = UsageFormatter.tokenCountString(daily.totals.outputTokens)
+        var flowParts = ["In \(input)", "Out \(output)"]
+        if daily.totals.cacheReadTokens > 0 {
+            let cacheRead = UsageFormatter.tokenCountString(daily.totals.cacheReadTokens)
+            flowParts.append("Cache read \(cacheRead)")
+        }
+        if daily.totals.cacheCreationTokens > 0 {
+            let cacheWrite = UsageFormatter.tokenCountString(daily.totals.cacheCreationTokens)
+            flowParts.append("Cache write \(cacheWrite)")
+        }
+        details.append(flowParts.joined(separator: " · "))
+        if let cost = daily.totals.costUSD {
+            details.append(Self.spendDetailLine(cost: cost, tokens: daily.totals.totalTokens))
+        }
+        return (line, details.isEmpty ? nil : details.joined(separator: "\n"))
+    }
+
+    private static func forecastInsightLine(_ forecast: UsageLedgerSpendForecast?) -> String? {
+        guard let forecast else { return nil }
+        let projected = UsageFormatter.usdString(forecast.projected30DayCostUSD)
+        let observedDayLabel = forecast.observedDays == 1 ? "day" : "days"
+        var parts = ["Month-end forecast: \(projected)"]
+        if let p50 = forecast.projectedCostP50USD,
+           let p80 = forecast.projectedCostP80USD,
+           let p95 = forecast.projectedCostP95USD
+        {
+            let p50Text = UsageFormatter.usdString(p50)
+            let p80Text = UsageFormatter.usdString(p80)
+            let p95Text = UsageFormatter.usdString(p95)
+            parts.append("p50 \(p50Text) · p80 \(p80Text) · p95 \(p95Text)")
+        }
+        parts.append("\(forecast.observedDays) observed \(observedDayLabel)")
+        return parts.joined(separator: " · ")
+    }
+
+    private static func activeBlockInsightLines(
+        _ block: UsageLedgerBlockSummary?,
+        now: Date) -> (line: String?, detail: String?)
+    {
+        guard let block, block.isActive else { return (nil, nil) }
+        let tokens = UsageFormatter.tokenCountString(block.totals.totalTokens)
+        let line = "Active block: \(tokens) tokens · \(block.entryCount) req"
+        var details: [String] = []
+        details.append("Ends \(UsageFormatter.resetCountdownDescription(from: block.end, now: now))")
+        if let rate = block.tokensPerMinute {
+            let rateText = UsageFormatter.tokenCountString(Int(rate.rounded()))
+            details.append("\(rateText) tok/min")
+        }
+        if let projected = block.projectedTotalTokens {
+            details.append("Proj \(UsageFormatter.tokenCountString(projected))")
+        }
+        let inputTokens = UsageFormatter.tokenCountString(block.totals.inputTokens)
+        let outputTokens = UsageFormatter.tokenCountString(block.totals.outputTokens)
+        details.append("In \(inputTokens) · Out \(outputTokens)")
+        if let cost = block.totals.costUSD {
+            var spendParts = Self.spendDetailParts(cost: cost, tokens: block.totals.totalTokens)
+            if let perRequest = UsageFormatter.usdPerRequestString(costUSD: cost, requestCount: block.entryCount) {
+                spendParts.append(perRequest)
+            }
+            if let burnPerHour = UsageFormatter.usdPerHourFromTokensString(
+                costUSD: cost,
+                tokenCount: block.totals.totalTokens,
+                tokensPerMinute: block.tokensPerMinute)
+            {
+                spendParts.append("Burn \(burnPerHour)")
+            }
+            details.append(spendParts.joined(separator: " · "))
+        }
+        return (line, details.joined(separator: "\n"))
+    }
+
+    private static func modelInsightLine(
+        _ summary: UsageLedgerModelSummary?,
+        contextLabel: String?) -> String?
+    {
+        guard let summary else { return nil }
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let modelName = UsageFormatter.modelDisplayName(summary.model)
+        var parts = ["Top model: \(modelName) · \(tokens) tokens · \(summary.entryCount) req"]
+        if let contextLabel {
+            parts.append(contextLabel)
+        }
+        if let cost = summary.totals.costUSD {
+            parts.append(contentsOf: Self.costInsightParts(cost: cost, tokens: summary.totals.totalTokens))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func projectInsightLines(
+        _ summary: UsageLedgerProjectSummary?,
+        forecast: UsageLedgerSpendForecast?,
+        now: Date) -> (line: String?, detail: String?)
+    {
+        guard let summary else { return (nil, nil) }
+        let name = Self.insightsProjectDisplayName(summary)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        var parts = ["Top project: \(name) · \(tokens) tokens · \(summary.entryCount) req"]
+        if let cost = summary.totals.costUSD {
+            parts.append(contentsOf: Self.costInsightParts(cost: cost, tokens: summary.totals.totalTokens))
+        }
+        let detail = forecast.flatMap { Self.projectForecastDetail($0, now: now) }
+        return (parts.joined(separator: " · "), detail)
+    }
+
+    private static func projectForecastDetail(_ forecast: UsageLedgerSpendForecast, now: Date) -> String {
+        var parts = ["30d forecast \(UsageFormatter.usdString(forecast.projected30DayCostUSD))"]
+        if let budgetLimit = forecast.budgetLimitUSD {
+            parts.append("Budget \(UsageFormatter.usdString(budgetLimit))")
+            if let budgetETAInDays = forecast.budgetETAInDays {
+                parts.append(Self.budgetBreachETAText(days: budgetETAInDays, now: now))
+            } else if !forecast.budgetWillBreach {
+                parts.append("No breach at current pace")
+            }
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private static func anomalyInsightLines(
+        _ anomaly: UsageLedgerAnomalySummary?) -> (line: String?, detail: String?)
+    {
+        guard let anomaly, let primary = anomaly.primaryAnomaly else { return (nil, nil) }
+        let line = "Anomaly: \(primary.severity.label) \(primary.metric.label) spike"
+        var details = [Self.anomalyMetricDetail(primary, baselineDays: anomaly.baselineDays)]
+        if let secondary = anomaly.secondaryAnomaly(excluding: primary.metric) {
+            details.append(Self.anomalyMetricDetail(secondary, baselineDays: anomaly.baselineDays))
+        }
+        return (line, details.joined(separator: "\n"))
+    }
+
+    private static func reliabilityInsightLines(
+        _ reliability: UsageLedgerReliabilityScore?) -> (line: String?, detail: String?)
+    {
+        guard let reliability else { return (nil, nil) }
+        let line = "Reliability: \(reliability.score)/100 · \(reliability.grade)"
+        return (line, reliability.primarySignal ?? reliability.summary)
+    }
+
+    private static func routingInsightLines(
+        _ routing: UsageLedgerRoutingRecommendation?) -> (line: String?, detail: String?)
+    {
+        guard let routing else { return (nil, nil) }
+        let from = UsageFormatter.modelDisplayName(routing.fromModel)
+        let to = UsageFormatter.modelDisplayName(routing.toModel)
+        let line = "Routing advisor: shift \(routing.shiftPercent)% \(from) -> \(to)"
+        let confidenceText = "\(Int((routing.confidence * 100).rounded()))%"
+        let savings = UsageFormatter.usdString(routing.estimatedSavingsUSD)
+        return (line, "Estimated savings: \(savings) · confidence \(confidenceText)")
+    }
+
+    private static func spendDetailLine(cost: Double, tokens: Int) -> String {
+        Self.spendDetailParts(cost: cost, tokens: tokens).joined(separator: " · ")
+    }
+
+    private static func spendDetailParts(cost: Double, tokens: Int) -> [String] {
+        var parts = ["Spend \(UsageFormatter.usdString(cost))"]
+        if let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: tokens) {
+            parts.append(per1K)
+        }
+        return parts
+    }
+
+    private static func costInsightParts(cost: Double, tokens: Int) -> [String] {
+        var parts = [UsageFormatter.usdString(cost)]
+        if let per1K = UsageFormatter.usdPer1KTokensString(costUSD: cost, tokenCount: tokens) {
+            parts.append(per1K)
+        }
+        return parts
     }
 
     private static func anomalyMetricDetail(
