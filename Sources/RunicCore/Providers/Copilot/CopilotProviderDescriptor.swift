@@ -94,7 +94,8 @@ struct CopilotAPIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func missingTokenGuidance() -> String {
-        "Add one of COPILOT_API_TOKEN/GITHUB_TOKEN/GH_TOKEN, configure GitHub CLI token storage (`~/.config/gh/hosts.yml`), " +
+        "Add one of COPILOT_API_TOKEN/GITHUB_TOKEN/GH_TOKEN, " +
+            "configure GitHub CLI token storage (`~/.config/gh/hosts.yml`), " +
             "or sign in / re-import from VS Code in Runic settings."
     }
 }

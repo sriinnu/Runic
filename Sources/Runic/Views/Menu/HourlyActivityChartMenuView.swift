@@ -76,7 +76,8 @@ struct HourlyActivityChartMenuView: View {
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(
-                                        RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
+                                        RoundedRectangle(
+                                            cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
                                             .fill(self.runicTheme.menuSubtleFill))
                             }
                     }

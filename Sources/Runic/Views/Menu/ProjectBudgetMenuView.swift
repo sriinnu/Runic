@@ -216,7 +216,9 @@ private struct ProjectBudgetRow: View {
     }
 
     private var budgetText: String {
-        "\(UsageFormatter.usdString(self.project.spent)) / \(UsageFormatter.usdString(self.project.budget.monthlyLimit))"
+        let spent = UsageFormatter.usdString(self.project.spent)
+        let limit = UsageFormatter.usdString(self.project.budget.monthlyLimit)
+        return "\(spent) / \(limit)"
     }
 
     private var statusTextColor: Color {

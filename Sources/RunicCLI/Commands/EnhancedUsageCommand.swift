@@ -271,7 +271,7 @@ public enum EnhancedUsageCommand {
         includeCost: Bool) async throws -> EnhancedUsageData
     {
         let fetcher = UsageFetcher()
-        let _ = includeCost ? CostUsageFetcher() : nil
+        _ = includeCost ? CostUsageFetcher() : nil
         var providerData: [ProviderUsageData] = []
 
         for provider in providers {

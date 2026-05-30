@@ -115,12 +115,15 @@ public enum ProviderFetchError: LocalizedError, Sendable {
         switch self {
         case let .noAvailableStrategy(provider):
             if provider == .copilot {
-                return "No available fetch strategy for copilot. Add `COPILOT_API_TOKEN`, `GITHUB_TOKEN`, or `GH_TOKEN`, " +
+                return "No available fetch strategy for copilot. Add `COPILOT_API_TOKEN`, " +
+                    "`GITHUB_TOKEN`, or `GH_TOKEN`, " +
                     "or configure GitHub CLI (`GH_CONFIG_DIR` / `~/.config/gh`). " +
-                    "You can also sign in from Runic Copilot settings or keep VS Code signed in with accessible keychain secrets."
+                    "You can also sign in from Runic Copilot settings or keep VS Code signed in " +
+                    "with accessible keychain secrets."
             }
             if provider == .claude {
-                return "No non-interactive Claude credentials found. Runic skipped automatic Claude CLI probing because it can trigger macOS password prompts."
+                return "No non-interactive Claude credentials found. " +
+                    "Runic skipped automatic Claude CLI probing because it can trigger macOS password prompts."
             }
             return "No available fetch strategy for \(provider.rawValue)."
         case .missingCredentials:

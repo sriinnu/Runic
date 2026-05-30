@@ -34,7 +34,8 @@ public enum QwenProviderDescriptor {
             tokenCost: ProviderTokenCostConfig(
                 supportsTokenCost: false,
                 noDataMessage: {
-                    "Qwen cost estimates are shown per-model in the details submenu (based on public DashScope pricing)."
+                    "Qwen cost estimates are shown per-model in the details submenu " +
+                        "(based on public DashScope pricing)."
                 }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],

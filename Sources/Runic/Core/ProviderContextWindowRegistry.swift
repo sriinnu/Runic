@@ -87,9 +87,15 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
             return nil
         }
 
-        let providerRecord = Self.providerRecord(for: provider, snapshot: snapshot, includingModelBridges: true)
+        let providerRecord = Self.providerRecord(
+            for: provider,
+            snapshot: snapshot,
+            includingModelBridges: true)
         return ProviderContextWindowLabel(
-            text: Self.contextText(tokens: match.contextWindow, exactModel: true, stale: self.isStale(model: match, provider: providerRecord)),
+            text: Self.contextText(
+                tokens: match.contextWindow,
+                exactModel: true,
+                stale: self.isStale(model: match, provider: providerRecord)),
             maxTokens: match.contextWindow,
             source: .kosha,
             isStale: self.isStale(model: match, provider: providerRecord))
@@ -367,7 +373,10 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
         case .qwen:
             ids = ["qwen", "dashscope", "alibaba"]
         case .localLLM:
-            ids = ["local-llm", "local", "ollama", "lmstudio", "lm-studio", "llamacpp", "llama-cpp", "vllm", "openwebui"]
+            ids = [
+                "local-llm", "local", "ollama", "lmstudio", "lm-studio",
+                "llamacpp", "llama-cpp", "vllm", "openwebui",
+            ]
         case .sambanova:
             ids = ["sambanova", "samba"]
         case .bedrock:

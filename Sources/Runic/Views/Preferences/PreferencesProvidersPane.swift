@@ -2,6 +2,7 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+// Structural lint debt: provider settings/history sidebar needs file-level split.
 private struct ProviderUsageStatus {
     let text: String
     let style: Style
@@ -115,13 +116,14 @@ private enum ProviderInsightsComposer {
         let projectBreakdown = store.ledgerProjectBreakdown(for: provider)
         let coverage = Self.effectiveCoverage(
             provider: provider,
-            metadataCoverage: store.metadata(for: provider).usageCoverage,
-            topModel: topModel,
-            topProject: topProject,
-            modelBreakdown: modelBreakdown,
-            projectBreakdown: projectBreakdown,
-            snapshot: snapshot,
-            tokenSnapshot: tokenSnapshot)
+            evidence: .init(
+                metadataCoverage: store.metadata(for: provider).usageCoverage,
+                topModel: topModel,
+                topProject: topProject,
+                modelBreakdown: modelBreakdown,
+                projectBreakdown: projectBreakdown,
+                snapshot: snapshot,
+                tokenSnapshot: tokenSnapshot))
         let hasModelBreakdown = coverage.supportsModelBreakdown
         let hasProjectAttribution = coverage.supportsProjectAttribution
 
@@ -258,25 +260,37 @@ private enum ProviderInsightsComposer {
     {
         self.effectiveCoverage(
             provider: provider,
-            metadataCoverage: store.metadata(for: provider).usageCoverage,
-            topModel: store.ledgerTopModel(for: provider),
-            topProject: store.ledgerTopProject(for: provider),
-            modelBreakdown: store.ledgerModelBreakdown(for: provider),
-            projectBreakdown: store.ledgerProjectBreakdown(for: provider),
-            snapshot: store.snapshot(for: provider),
-            tokenSnapshot: store.tokenSnapshot(for: provider))
+            evidence: .init(
+                metadataCoverage: store.metadata(for: provider).usageCoverage,
+                topModel: store.ledgerTopModel(for: provider),
+                topProject: store.ledgerTopProject(for: provider),
+                modelBreakdown: store.ledgerModelBreakdown(for: provider),
+                projectBreakdown: store.ledgerProjectBreakdown(for: provider),
+                snapshot: store.snapshot(for: provider),
+                tokenSnapshot: store.tokenSnapshot(for: provider)))
+    }
+
+    private struct ProviderUsageCoverageEvidence {
+        let metadataCoverage: ProviderUsageCoverage
+        let topModel: UsageLedgerModelSummary?
+        let topProject: UsageLedgerProjectSummary?
+        let modelBreakdown: [UsageLedgerModelSummary]
+        let projectBreakdown: [UsageLedgerProjectSummary]
+        let snapshot: UsageSnapshot?
+        let tokenSnapshot: CostUsageTokenSnapshot?
     }
 
     private static func effectiveCoverage(
         provider: UsageProvider,
-        metadataCoverage: ProviderUsageCoverage,
-        topModel: UsageLedgerModelSummary?,
-        topProject: UsageLedgerProjectSummary?,
-        modelBreakdown: [UsageLedgerModelSummary],
-        projectBreakdown: [UsageLedgerProjectSummary],
-        snapshot: UsageSnapshot?,
-        tokenSnapshot: CostUsageTokenSnapshot?) -> ProviderUsageCoverage
+        evidence: ProviderUsageCoverageEvidence) -> ProviderUsageCoverage
     {
+        let metadataCoverage = evidence.metadataCoverage
+        let topModel = evidence.topModel
+        let topProject = evidence.topProject
+        let modelBreakdown = evidence.modelBreakdown
+        let projectBreakdown = evidence.projectBreakdown
+        let snapshot = evidence.snapshot
+        let tokenSnapshot = evidence.tokenSnapshot
         let hasModelBreakdown =
             metadataCoverage.supportsModelBreakdown
                 || (topModel?.provider == provider)
@@ -1070,7 +1084,8 @@ struct ProvidersPane: View {
         ProviderSettingsFieldDescriptor(
             id: "\(provider.rawValue)-otel-genai-log-paths",
             title: "Usage log paths",
-            subtitle: "JSON/JSONL OpenTelemetry GenAI files or folders. The local collector ledger is read automatically.",
+            subtitle: "JSON/JSONL OpenTelemetry GenAI files or folders. " +
+                "The local collector ledger is read automatically.",
             kind: .plain,
             placeholder: "~/Library/Logs/ai-usage.jsonl, /path/to/otel-logs",
             binding: context.stringBinding(\.otelGenAILogPaths),
@@ -1299,7 +1314,9 @@ private struct ProviderListBrandIcon: View {
                     green: Double(descriptor.branding.color.green),
                     blue: Double(descriptor.branding.color.blue))
                 ZStack {
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                        style: .continuous)
                         .fill(brandColor.opacity(0.18))
                     Text(initial)
                         .font(self.fonts.system(size: ProviderListMetrics.iconSize * 0.5, weight: .bold))
@@ -1631,10 +1648,14 @@ private struct ProviderListToggleRowView: View {
                             .padding(RunicSpacing.xs)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                                RoundedRectangle(
+                                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                    style: .continuous)
                                     .fill(self.runicTheme.menuSubtleFill))
                             .overlay {
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                                RoundedRectangle(
+                                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                    style: .continuous)
                                     .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.38), lineWidth: 1)
                             }
                     }
@@ -1980,7 +2001,8 @@ private struct ProviderSidebarSectionCard<Content: View>: View {
                 RoundedRectangle(
                     cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
                     style: .continuous)
-                    .fill(self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.sidebarCardBackgroundOpacity + 0.16)))
+                    .fill(self.runicTheme.menuSubtleFill.opacity(
+                        ProviderListMetrics.sidebarCardBackgroundOpacity + 0.16)))
             .overlay(
                 RoundedRectangle(
                     cornerRadius: ProviderListMetrics.sidebarCardCornerRadius,
@@ -2167,10 +2189,14 @@ private struct ProviderHistoryCalendarDayCell: View {
             .padding(RunicSpacing.xs)
             .frame(maxWidth: .infinity, minHeight: 46, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                    style: .continuous)
                     .fill(self.backgroundColor))
             .overlay(
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                    style: .continuous)
                     .strokeBorder(self.borderColor, lineWidth: self.isSelected ? 1.5 : 1))
             .opacity(self.isInMonth ? 1 : 0.52)
         }
@@ -2196,7 +2222,7 @@ private struct ProviderHistoryCalendarDayCell: View {
 }
 
 @MainActor
-private struct ProviderSidebarDetailView: View {
+private struct ProviderSidebarDetailView: View { // swiftlint:disable:this type_body_length
     @Environment(\.runicFonts) private var fonts
     let provider: UsageProvider
     @Bindable var store: UsageStore
@@ -2533,7 +2559,8 @@ private struct ProviderSidebarDetailView: View {
                                 RoundedRectangle(
                                     cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
                                     style: .continuous)
-                                    .fill(self.runicTheme.menuSubtleFill.opacity(ProviderListMetrics.sidebarCardBackgroundOpacity + 0.10)))
+                                    .fill(self.runicTheme.menuSubtleFill.opacity(
+                                        ProviderListMetrics.sidebarCardBackgroundOpacity + 0.10)))
                     } else {
                         if let note = snapshot.note, !note.isEmpty {
                             Text(note)
@@ -2690,8 +2717,7 @@ private struct ProviderSidebarDetailView: View {
                         }
 
                         if self.hasModelBreakdown, let topModel = selected.topModel {
-                            Text(
-                                "Top model: \(self.usageLine(title: UsageFormatter.modelDisplayName(topModel.model), totals: topModel.totals, requests: topModel.entryCount, model: topModel.model))")
+                            Text("Top model: \(self.historyModelLine(topModel))")
                                 .font(self.fonts.caption)
                                 .foregroundStyle(self.runicTheme.secondaryText)
                                 .textSelection(.enabled)
@@ -2872,7 +2898,8 @@ private struct ProviderSidebarDetailView: View {
         if self.hasModelBreakdown, !summary.modelSummaries.isEmpty {
             let modelCount = min(3, summary.modelSummaries.count)
             for summary in summary.modelSummaries.prefix(modelCount) {
-                var line = "Model: \(UsageFormatter.modelDisplayName(summary.model)) · \(UsageFormatter.tokenCountString(summary.totals.totalTokens)) tok"
+                let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+                var line = "Model: \(UsageFormatter.modelDisplayName(summary.model)) · \(tokens) tok"
                 if let context = UsageFormatter.modelContextLabel(for: summary.model) {
                     line += " · \(context)"
                 }
@@ -3453,13 +3480,11 @@ private struct ProviderSidebarDetailView: View {
                 lines.append("- primary_resets_at: \(iso.string(from: reset))")
             }
             if let cost = snapshot.providerCost {
-                lines
-                    .append(
-                        "- provider_spend_used: \(UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode))")
+                let used = UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode)
+                lines.append("- provider_spend_used: \(used)")
                 if cost.limit > 0 {
-                    lines
-                        .append(
-                            "- provider_spend_limit: \(UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode))")
+                    let limit = UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode)
+                    lines.append("- provider_spend_limit: \(limit)")
                 }
                 if let period = self.trimmed(cost.period) {
                     lines.append("- provider_spend_period: \(period)")
@@ -3568,3 +3593,5 @@ private struct ProviderSidebarDetailView: View {
         return "Breach \(countdown)"
     }
 }
+
+// swiftlint:disable:this file_length

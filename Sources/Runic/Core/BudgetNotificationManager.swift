@@ -133,7 +133,9 @@ final class BudgetNotificationManager {
                     notificationKey: notificationKey,
                     idPrefix: idPrefix,
                     title: "Budget Watch: \(projectName)",
-                    body: "Projected to reach \(UsageFormatter.usdString(projected)) of \(UsageFormatter.usdString(budgetLimit)) limit (\(thresholdKey)% alert threshold)",
+                    body: "Projected to reach \(UsageFormatter.usdString(projected)) " +
+                        "of \(UsageFormatter.usdString(budgetLimit)) limit " +
+                        "(\(thresholdKey)% alert threshold)",
                     provider: provider,
                     projectKey: projectKey,
                     limitUSD: budgetLimit,

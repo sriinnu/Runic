@@ -172,7 +172,10 @@ struct RunicTests {
             let hoveredIcon = palette.iconColor(for: .navigation, hovered: true)
 
             #expect(
-                self.contrast(selectedIcon, against: self.providerTabSelectedFill(for: palette), palette: palette) >= 3.0,
+                self.contrast(
+                    selectedIcon,
+                    against: self.providerTabSelectedFill(for: palette),
+                    palette: palette) >= 3.0,
                 "\(theme.rawValue) selected provider tab icon should read over selected tab fill")
             #expect(
                 self.contrast(hoveredIcon, against: self.popoverChipHoverFill(for: palette), palette: palette) >= 3.0,

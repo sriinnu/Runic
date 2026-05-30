@@ -2,6 +2,7 @@ import RunicCore
 import SwiftUI
 import WidgetKit
 
+// Structural lint debt: widget rendering branches need smaller view helpers.
 struct RunicUsageWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: RunicWidgetEntry
@@ -577,7 +578,7 @@ private struct UsageHistoryChart: View {
 }
 
 enum WidgetColors {
-    static func color(for provider: UsageProvider) -> Color {
+    static func color(for provider: UsageProvider) -> Color { // swiftlint:disable:this cyclomatic_complexity
         switch provider {
         case .codex:
             Color(red: 73 / 255, green: 163 / 255, blue: 176 / 255)

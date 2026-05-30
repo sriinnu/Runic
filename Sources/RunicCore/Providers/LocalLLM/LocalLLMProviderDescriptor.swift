@@ -33,7 +33,10 @@ public enum LocalLLMProviderDescriptor {
                 color: ProviderColor(red: 46 / 255, green: 204 / 255, blue: 113 / 255)),
             tokenCost: ProviderTokenCostConfig(
                 supportsTokenCost: false,
-                noDataMessage: { "Local LLM API cost is not applicable; Runic tracks local token usage when logs or telemetry expose it." }),
+                noDataMessage: {
+                    "Local LLM API cost is not applicable; " +
+                        "Runic tracks local token usage when logs or telemetry expose it."
+                }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],
                 pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [LocalLLMStatusFetchStrategy()] })),
@@ -112,7 +115,8 @@ public enum LocalLLMUsageError: LocalizedError, Sendable, Equatable {
     public var errorDescription: String? {
         switch self {
         case .noLocalRuntimeFound:
-            "No local LLM runtime found. Runic checked Ollama, LM Studio, vLLM, llama.cpp, and Open WebUI localhost endpoints."
+            "No local LLM runtime found. Runic checked Ollama, LM Studio, vLLM, " +
+                "llama.cpp, and Open WebUI localhost endpoints."
         case let .invalidResponse(runtime):
             "Local LLM runtime \(runtime) returned an unsupported models response."
         }

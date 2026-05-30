@@ -52,8 +52,12 @@ struct HeroTodayStatView: View {
         .padding(.vertical, RunicSpacing.xxs)
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            "Today usage: \(UsageFormatter.tokenCountString(self.tokenCount)) tokens\(self.costUSD.map { ", \(UsageFormatter.usdString($0))" } ?? "")")
+        .accessibilityLabel(self.accessibilitySummary)
+    }
+
+    private var accessibilitySummary: String {
+        let cost = self.costUSD.map { ", \(UsageFormatter.usdString($0))" } ?? ""
+        return "Today usage: \(UsageFormatter.tokenCountString(self.tokenCount)) tokens\(cost)"
     }
 }
 
@@ -130,16 +134,22 @@ private struct GlassStatCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
-                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg),
+                    style: .continuous)
                     .fill(self.runicTheme.cardBackgroundStyle)
                 if !self.runicTheme.isTerminalHUD {
-                    RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous)
+                    RoundedRectangle(
+                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg),
+                        style: .continuous)
                         .fill(.ultraThinMaterial)
                         .opacity(0.18)
                 }
                 if self.runicTheme.isTerminalHUD {
                     RunicTerminalScanlineOverlay(opacity: 0.55)
-                        .clipShape(RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg), style: .continuous))
+                        .clipShape(RoundedRectangle(
+                            cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg),
+                            style: .continuous))
                 }
             }
         }

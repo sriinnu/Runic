@@ -60,7 +60,9 @@ struct ProjectBreakdownMenuView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                                RoundedRectangle(
+                                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                                    style: .continuous)
                                     .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
@@ -223,14 +225,18 @@ struct ProjectBreakdownMenuView: View {
             return "\(item.name) \(String(format: "%.0f", pct))%"
         }
 
-        var label = "Project breakdown: \(projectCount) project\(projectCount == 1 ? "" : "s"), \(totalTokens) tokens total"
+        let plural = projectCount == 1 ? "" : "s"
+        var label = "Project breakdown: \(projectCount) project\(plural), \(totalTokens) tokens total"
         if !topItems.isEmpty {
             label += ", \(topItems.joined(separator: ", "))"
         }
         return label
     }
 
-    private static func makeModel(from breakdown: [UsageLedgerProjectSummary], theme: RunicThemePalette) -> ProjectModel {
+    private static func makeModel(
+        from breakdown: [UsageLedgerProjectSummary],
+        theme: RunicThemePalette) -> ProjectModel
+    {
         let sorted = breakdown.sorted { lhs, rhs in
             lhs.totals.totalTokens > rhs.totals.totalTokens
         }

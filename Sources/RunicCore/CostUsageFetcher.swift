@@ -49,7 +49,10 @@ public struct CostUsageFetcher: Sendable {
         return Self.tokenSnapshot(from: daily, now: now)
     }
 
-    @available(*, deprecated, message: "Cost usage refreshes relay-backed data by default. Use mode: .rebuildHistory for explicit historical repair.")
+    @available(
+        *,
+        deprecated,
+        message: "Cost usage refreshes relay-backed data by default. Use mode: .rebuildHistory for historical repair.")
     public func loadTokenSnapshot(
         provider: UsageProvider,
         now: Date = Date(),

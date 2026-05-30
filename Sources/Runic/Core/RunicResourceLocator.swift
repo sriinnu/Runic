@@ -42,7 +42,9 @@ enum RunicResourceLocator {
             Bundle.main.resourceURL?.appendingPathComponent("Runic_Runic.bundle/Resources", isDirectory: true),
             Bundle.main.bundleURL.appendingPathComponent("Runic_Runic.bundle/Resources", isDirectory: true),
             Bundle.main.bundleURL.appendingPathComponent("Contents/Resources", isDirectory: true),
-            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Runic_Runic.bundle/Resources", isDirectory: true),
+            Bundle.main.bundleURL.appendingPathComponent(
+                "Contents/Resources/Runic_Runic.bundle/Resources",
+                isDirectory: true),
             sourceResourcesURL,
             workingDirectoryResourcesURL,
         ]

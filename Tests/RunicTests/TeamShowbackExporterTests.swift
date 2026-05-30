@@ -27,31 +27,27 @@ struct TeamShowbackExporterTests {
                 provider: .claude,
                 timestamp: self.date(year: 2026, month: 2, day: 10),
                 projectID: "proj-a",
-                inputTokens: 100,
-                outputTokens: 50,
+                tokens: (input: 100, output: 50),
                 costUSD: 0.30),
             self.entry(
                 provider: .codex,
                 timestamp: self.date(year: 2026, month: 2, day: 11),
                 projectID: "proj-b",
-                inputTokens: 140,
-                outputTokens: 60,
+                tokens: (input: 140, output: 60),
                 costUSD: 0.45),
             // Excluded: non-team project
             self.entry(
                 provider: .codex,
                 timestamp: self.date(year: 2026, month: 2, day: 12),
                 projectID: "proj-outside",
-                inputTokens: 999,
-                outputTokens: 0,
+                tokens: (input: 999, output: 0),
                 costUSD: 9.99),
             // Excluded: outside period
             self.entry(
                 provider: .claude,
                 timestamp: self.date(year: 2026, month: 3, day: 3),
                 projectID: "proj-a",
-                inputTokens: 77,
-                outputTokens: 22,
+                tokens: (input: 77, output: 22),
                 costUSD: 0.10),
         ]
 
@@ -95,8 +91,7 @@ struct TeamShowbackExporterTests {
                 provider: .codex,
                 timestamp: self.date(year: 2026, month: 2, day: 8),
                 projectID: "proj-csv",
-                inputTokens: 42,
-                outputTokens: 8,
+                tokens: (input: 42, output: 8),
                 costUSD: 0.09),
         ]
 
@@ -120,8 +115,7 @@ struct TeamShowbackExporterTests {
         provider: UsageProvider,
         timestamp: Date,
         projectID: String,
-        inputTokens: Int,
-        outputTokens: Int,
+        tokens: (input: Int, output: Int),
         costUSD: Double?) -> UsageLedgerEntry
     {
         UsageLedgerEntry(
@@ -131,8 +125,8 @@ struct TeamShowbackExporterTests {
             projectID: projectID,
             projectName: nil,
             model: "model-\(provider.rawValue)",
-            inputTokens: inputTokens,
-            outputTokens: outputTokens,
+            inputTokens: tokens.input,
+            outputTokens: tokens.output,
             cacheCreationTokens: 0,
             cacheReadTokens: 0,
             costUSD: costUSD,

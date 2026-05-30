@@ -46,7 +46,9 @@ struct CostComparativeChartMenuView: View {
                         BarMark(
                             x: .value("Cost per token", data.costPerToken * 1_000_000),
                             y: .value("Model", UsageFormatter.modelDisplayName(data.modelName)))
-                            .foregroundStyle(Self.colorForExpensiveness(data.relativeExpensiveness, theme: self.runicTheme))
+                            .foregroundStyle(Self.colorForExpensiveness(
+                                data.relativeExpensiveness,
+                                theme: self.runicTheme))
                     }
                 }
                 .chartXAxisLabel("Cost per 1M tokens (USD)")

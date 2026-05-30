@@ -38,9 +38,21 @@ final class ProviderContextWindowRegistryTests: XCTestCase {
                     self.providerJSON(id: "anthropic", timestamp: stale),
                 ],
                 models: [
-                    self.modelJSON(id: "gemini-flash", provider: "google", contextWindow: 128_000, timestamp: now),
-                    self.modelJSON(id: "gemini-pro", provider: "google", contextWindow: 1_000_000, timestamp: now),
-                    self.modelJSON(id: "claude-opus-4-6", provider: "anthropic", contextWindow: 1_000_000, timestamp: stale),
+                    self.modelJSON(
+                        id: "gemini-flash",
+                        provider: "google",
+                        contextWindow: 128_000,
+                        timestamp: now),
+                    self.modelJSON(
+                        id: "gemini-pro",
+                        provider: "google",
+                        contextWindow: 1_000_000,
+                        timestamp: now),
+                    self.modelJSON(
+                        id: "claude-opus-4-6",
+                        provider: "anthropic",
+                        contextWindow: 1_000_000,
+                        timestamp: stale),
                 ]),
             fallback: #"{"gemini":{"contextK":1000},"claude":{"contextK":1000}}"#,
             now: now)

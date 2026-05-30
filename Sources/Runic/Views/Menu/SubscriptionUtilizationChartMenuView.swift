@@ -110,7 +110,9 @@ struct SubscriptionUtilizationChartMenuView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                                RoundedRectangle(
+                                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                                    style: .continuous)
                                     .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)
@@ -180,7 +182,13 @@ struct SubscriptionUtilizationChartMenuView: View {
                 let pct = min(100, Double(tokens) * scaleFactor)
                 let label = Self.compactDateLabel(date)
                 let isToday = offset == 13
-                return UtilizationBar(id: key, label: label, date: date, tokens: tokens, usedPercent: pct, isToday: isToday)
+                return UtilizationBar(
+                    id: key,
+                    label: label,
+                    date: date,
+                    tokens: tokens,
+                    usedPercent: pct,
+                    isToday: isToday)
             }
             return UtilizationModel(bars: bars, axisLabels: Self.axisLabels(from: bars, desiredCount: 5))
 

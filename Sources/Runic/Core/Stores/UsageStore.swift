@@ -5,6 +5,7 @@ import Observation
 import RunicCore
 import Silo
 
+// Structural lint debt: UsageStore remains the largest runtime coordinator.
 // **UsageStore** - Main state management for AI provider usage tracking
 //
 // **Purpose:**
@@ -248,7 +249,11 @@ private actor UsageLedgerOTelRelay {
     private var inFlight: [Key: Task<[UsageLedgerEntry], Error>] = [:]
     private let cacheTTL: TimeInterval = 5
 
-    func loadEntries(files: [URL], options: OTelGenAIIngestionOptions, minTimestamp: Date?) async throws -> [UsageLedgerEntry] {
+    func loadEntries(
+        files: [URL],
+        options: OTelGenAIIngestionOptions,
+        minTimestamp: Date?) async throws -> [UsageLedgerEntry]
+    {
         guard !files.isEmpty else { return [] }
         let key = Key(
             files: files.map(Self.identity(for:)).sorted { $0.path < $1.path },
@@ -616,7 +621,7 @@ struct ProviderHistoryMonthSnapshot: Hashable {
 
 @MainActor
 @Observable
-final class UsageStore {
+final class UsageStore { // swiftlint:disable:this type_body_length
     private(set) var snapshots: [UsageProvider: UsageSnapshot] = [:]
     private(set) var errors: [UsageProvider: String] = [:]
     private(set) var lastSourceLabels: [UsageProvider: String] = [:]
@@ -791,7 +796,7 @@ final class UsageStore {
         return subscriptionIndicators.contains { method.contains($0) }
     }
 
-    func version(for provider: UsageProvider) -> String? {
+    func version(for provider: UsageProvider) -> String? { // swiftlint:disable:this cyclomatic_complexity
         switch provider {
         case .codex: self.codexVersion
         case .claude: self.claudeVersion
@@ -1053,14 +1058,16 @@ final class UsageStore {
     }
 
     func ledgerReliabilityScore(for provider: UsageProvider) -> UsageLedgerReliabilityScore? {
-        UsageLedgerInsightsAdvisor.reliabilityScore(
+        UsageLedgerInsightsAdvisor.reliabilityScore(.init(
             provider: provider,
             daily: self.ledgerDailySummary(for: provider),
             activeBlock: self.ledgerActiveBlock(for: provider),
-            modelBreakdown: self.ledgerModelBreakdown(for: provider),
-            projectBreakdown: self.ledgerProjectBreakdown(for: provider),
-            providerError: self.error(for: provider),
-            ledgerError: self.ledgerError(for: provider))
+            breakdowns: .init(
+                models: self.ledgerModelBreakdown(for: provider),
+                projects: self.ledgerProjectBreakdown(for: provider)),
+            errors: .init(
+                provider: self.error(for: provider),
+                ledger: self.ledgerError(for: provider))))
     }
 
     func ledgerRoutingRecommendation(for provider: UsageProvider) -> UsageLedgerRoutingRecommendation? {
@@ -1316,17 +1323,20 @@ final class UsageStore {
         }
 
         private static func cachedDailies(from entries: [UsageLedgerEntry]) -> [CachedDaily] {
-            var buckets: [String: (
-                input: Int,
-                output: Int,
-                cacheCreate: Int,
-                cacheRead: Int,
-                cost: Double,
-                requests: Int,
-                models: Set<String>)] = [:]
+            struct Bucket {
+                var input = 0
+                var output = 0
+                var cacheCreate = 0
+                var cacheRead = 0
+                var cost = 0.0
+                var requests = 0
+                var models = Set<String>()
+            }
+
+            var buckets: [String: Bucket] = [:]
             for entry in entries {
                 let key = LedgerCache.dayKey(for: entry.timestamp)
-                var bucket = buckets[key] ?? (0, 0, 0, 0, 0, 0, [])
+                var bucket = buckets[key] ?? Bucket()
                 bucket.input += entry.inputTokens
                 bucket.output += entry.outputTokens
                 bucket.cacheCreate += entry.cacheCreationTokens
@@ -1895,7 +1905,7 @@ final class UsageStore {
         }
     }
 
-    private func scheduleLedgerRefresh(
+    private func scheduleLedgerRefresh( // swiftlint:disable:this cyclomatic_complexity
         force: Bool,
         inactiveProviders: Set<UsageProvider>)
     {
@@ -2140,7 +2150,7 @@ final class UsageStore {
         }
     }
 
-    private func loadLedgerInsights(
+    private func loadLedgerInsights( // swiftlint:disable:this cyclomatic_complexity function_body_length
         sources: [(UsageProvider, any UsageLedgerSource)],
         now: Date,
         scanDays: Int) async -> LedgerRefreshResult
@@ -2255,19 +2265,15 @@ final class UsageStore {
         let budgetProjectNames = self.projectNameOverridesFromBudgets()
         let modelSummaries = UsageLedgerAggregator.modelSummaries(entries: todayEntries)
         var topModelsByProvider: [UsageProvider: UsageLedgerModelSummary] = [:]
-        for summary in modelSummaries {
-            if topModelsByProvider[summary.provider] == nil {
-                topModelsByProvider[summary.provider] = summary
-            }
+        for summary in modelSummaries where topModelsByProvider[summary.provider] == nil {
+            topModelsByProvider[summary.provider] = summary
         }
 
         let projectSummaries = UsageLedgerAggregator.projectSummaries(entries: todayEntries)
             .map { self.resolvedProjectSummary($0, budgetProjectNames: budgetProjectNames) }
         var topProjectsByProvider: [UsageProvider: UsageLedgerProjectSummary] = [:]
-        for summary in projectSummaries {
-            if topProjectsByProvider[summary.provider] == nil {
-                topProjectsByProvider[summary.provider] = summary
-            }
+        for summary in projectSummaries where topProjectsByProvider[summary.provider] == nil {
+            topProjectsByProvider[summary.provider] = summary
         }
 
         let modelBreakdowns = UsageLedgerAggregator.modelSummaries(entries: todayEntries)
@@ -2734,7 +2740,7 @@ final class UsageStore {
         }
     }
 
-    private func refreshOpenAIDashboardIfNeeded(
+    private func refreshOpenAIDashboardIfNeeded( // swiftlint:disable:this function_body_length
         force: Bool = false,
         allowBrowserCookieImport: Bool = false) async
     {
@@ -3135,6 +3141,7 @@ extension UsageStore {
         await ClaudeStatusProbe.latestDumps()
     }
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     func debugLog(for provider: UsageProvider) async -> String {
         if let cached = self.probeLogs[provider], !cached.isEmpty {
             return cached
@@ -3229,7 +3236,9 @@ extension UsageStore {
                     if automaticCLIFallbackSkipped {
                         lines.append("cli_auto_fallback=skipped_to_avoid_password_prompt")
                         lines.append("")
-                        lines.append("Enable the Debug menu and choose Claude CLI source only when you want Runic to launch the Claude CLI explicitly.")
+                        lines.append(
+                            "Enable the Debug menu and choose Claude CLI source only " +
+                                "when you want Runic to launch the Claude CLI explicitly.")
                         return lines.joined(separator: "\n")
                     }
                     lines.append("")
@@ -3544,7 +3553,7 @@ extension UsageStore {
         return lines.joined(separator: "\n")
     }
 
-    private nonisolated func debugCredentialLines(
+    private nonisolated func debugCredentialLines( // swiftlint:disable:this cyclomatic_complexity
         for provider: UsageProvider,
         settings: ProviderSettingsSnapshot) -> [String]
     {
@@ -3657,7 +3666,13 @@ extension UsageStore {
 
         let attemptSummary = attempts.enumerated().map { index, attempt in
             let error = attempt.errorDescription ?? "nil"
-            return "attempt\(index + 1): id=\(attempt.strategyID) kind=\(attempt.kind) available=\(attempt.wasAvailable) error=\(error)"
+            return [
+                "attempt\(index + 1):",
+                "id=\(attempt.strategyID)",
+                "kind=\(attempt.kind)",
+                "available=\(attempt.wasAvailable)",
+                "error=\(error)",
+            ].joined(separator: " ")
         }
         lines.append("attempts=\(attempts.count)")
         lines.append(contentsOf: attemptSummary)
@@ -3682,7 +3697,8 @@ extension UsageStore {
             let resetsAt = providerCost.resetsAt?.description ?? "nil"
             lines.append(
                 "provider_cost.used=\(providerCost.used) limit=\(providerCost.limit) " +
-                    "currency=\(providerCost.currencyCode) period=\(providerCost.period ?? "nil") resetsAt=\(resetsAt)")
+                    "currency=\(providerCost.currencyCode) " +
+                    "period=\(providerCost.period ?? "nil") resetsAt=\(resetsAt)")
         }
         return lines
     }
@@ -3694,7 +3710,14 @@ extension UsageStore {
         let windowLabel = window.label ?? "nil"
         let used = String(format: "%.2f", window.usedPercent)
         let remaining = String(format: "%.2f", window.remainingPercent)
-        return "\(label).usedPercent=\(used) remainingPercent=\(remaining) window=\(windowMinutes) resetsAt=\(resetsAt) label=\(windowLabel) desc=\(resetDescription)"
+        return [
+            "\(label).usedPercent=\(used)",
+            "remainingPercent=\(remaining)",
+            "window=\(windowMinutes)",
+            "resetsAt=\(resetsAt)",
+            "label=\(windowLabel)",
+            "desc=\(resetDescription)",
+        ].joined(separator: " ")
     }
 
     private nonisolated func debugTokenSummary(provider: String, resolution: ProviderTokenResolution?) -> String {
@@ -4029,3 +4052,5 @@ extension UsageStore {
         return .unknown
     }
 }
+
+// swiftlint:disable:this file_length

@@ -82,7 +82,7 @@ struct PreferencesView: View {
             ZStack {
                 self.settings.theme.palette.surface
                 LiquidMeshBackground()
-                    .opacity(self.settings.theme.palette.isTerminalHUD ? 1.0 : (self.settings.theme.palette.isCustom ? 0.38 : 0.12))
+                    .opacity(self.meshBackgroundOpacity)
             }
             .ignoresSafeArea()
         }
@@ -116,7 +116,7 @@ struct PreferencesView: View {
             .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
             .padding(.vertical, RunicSpacing.sm)
         }
-        .background(self.settings.theme.palette.surfaceAlt.opacity(self.settings.theme.palette.isTerminalHUD ? 0.68 : 0.82))
+        .background(self.settings.theme.palette.surfaceAlt.opacity(self.headerBackgroundOpacity))
     }
 
     @ViewBuilder
@@ -229,15 +229,30 @@ struct PreferencesView: View {
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(selected ? self.settings.theme.palette.primaryText : self.settings.theme.palette.secondaryText)
+        .foregroundStyle(selected
+            ? self.settings.theme.palette.primaryText
+            : self.settings.theme.palette.secondaryText)
         .background {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(selected ? self.settings.theme.palette.accent.opacity(self.settings.theme.palette.isTerminalHUD ? 0.18 : 0.12) : .clear)
+                .fill(selected ? self.selectedTabFill : .clear)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(selected ? self.settings.theme.palette.accent.opacity(0.45) : .clear, lineWidth: 1)
         }
+    }
+
+    private var meshBackgroundOpacity: Double {
+        if self.settings.theme.palette.isTerminalHUD { return 1.0 }
+        return self.settings.theme.palette.isCustom ? 0.38 : 0.12
+    }
+
+    private var headerBackgroundOpacity: Double {
+        self.settings.theme.palette.isTerminalHUD ? 0.68 : 0.82
+    }
+
+    private var selectedTabFill: Color {
+        self.settings.theme.palette.accent.opacity(self.settings.theme.palette.isTerminalHUD ? 0.18 : 0.12)
     }
 
     private func ensureValidTabSelection() {

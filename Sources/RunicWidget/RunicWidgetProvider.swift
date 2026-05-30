@@ -3,6 +3,7 @@ import RunicCore
 import SwiftUI
 import WidgetKit
 
+// Structural lint debt: timeline provider branching should be split by data source.
 enum ProviderChoice: String, AppEnum {
     case codex
     case claude
@@ -99,7 +100,7 @@ enum ProviderChoice: String, AppEnum {
         }
     }
 
-    init?(provider: UsageProvider) {
+    init?(provider: UsageProvider) { // swiftlint:disable:this cyclomatic_complexity
         switch provider {
         case .codex: self = .codex
         case .claude: self = .claude

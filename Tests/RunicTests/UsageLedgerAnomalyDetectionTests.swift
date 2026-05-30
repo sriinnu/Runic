@@ -4,11 +4,17 @@ import Testing
 @testable import Runic
 
 struct UsageLedgerAnomalyDetectionTests {
+    private struct SummaryClock {
+        let now: Date
+        let calendar: Calendar
+    }
+
     @Test
     func `detects token spike against seven day baseline`() {
         let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone.current
+        let clock = SummaryClock(now: now, calendar: calendar)
 
         var summaries: [UsageLedgerDailySummary] = []
         for offset in -7 ... -1 {
@@ -17,16 +23,14 @@ struct UsageLedgerAnomalyDetectionTests {
                 dayOffset: offset,
                 tokens: 1000,
                 cost: nil,
-                now: now,
-                calendar: calendar))
+                clock: clock))
         }
         summaries.append(self.dailySummary(
             provider: .codex,
             dayOffset: 0,
             tokens: 2500,
             cost: nil,
-            now: now,
-            calendar: calendar))
+            clock: clock))
 
         let anomalies = UsageLedgerAnomalyDetector.summaries(
             dailySummaries: summaries,
@@ -45,6 +49,7 @@ struct UsageLedgerAnomalyDetectionTests {
         let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone.current
+        let clock = SummaryClock(now: now, calendar: calendar)
 
         var summaries: [UsageLedgerDailySummary] = []
         for offset in -7 ... -1 {
@@ -53,16 +58,14 @@ struct UsageLedgerAnomalyDetectionTests {
                 dayOffset: offset,
                 tokens: 1000,
                 cost: 2.0,
-                now: now,
-                calendar: calendar))
+                clock: clock))
         }
         summaries.append(self.dailySummary(
             provider: .claude,
             dayOffset: 0,
             tokens: 1100,
             cost: 7.0,
-            now: now,
-            calendar: calendar))
+            clock: clock))
 
         let anomalies = UsageLedgerAnomalyDetector.summaries(
             dailySummaries: summaries,
@@ -81,6 +84,7 @@ struct UsageLedgerAnomalyDetectionTests {
         let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone.current
+        let clock = SummaryClock(now: now, calendar: calendar)
 
         var summaries: [UsageLedgerDailySummary] = []
         for offset in -3 ... -1 {
@@ -89,16 +93,14 @@ struct UsageLedgerAnomalyDetectionTests {
                 dayOffset: offset,
                 tokens: 800,
                 cost: 1.0,
-                now: now,
-                calendar: calendar))
+                clock: clock))
         }
         summaries.append(self.dailySummary(
             provider: .codex,
             dayOffset: 0,
             tokens: 4000,
             cost: 8.0,
-            now: now,
-            calendar: calendar))
+            clock: clock))
 
         let anomalies = UsageLedgerAnomalyDetector.summaries(
             dailySummaries: summaries,
@@ -149,9 +151,10 @@ struct UsageLedgerAnomalyDetectionTests {
         dayOffset: Int,
         tokens: Int,
         cost: Double?,
-        now: Date,
-        calendar: Calendar) -> UsageLedgerDailySummary
+        clock: SummaryClock) -> UsageLedgerDailySummary
     {
+        let now = clock.now
+        let calendar = clock.calendar
         let todayStart = calendar.startOfDay(for: now)
         let dayStart = calendar.date(byAdding: .day, value: dayOffset, to: todayStart) ?? todayStart
         return UsageLedgerDailySummary(

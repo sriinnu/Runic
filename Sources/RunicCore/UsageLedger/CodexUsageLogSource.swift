@@ -1,5 +1,6 @@
 import Foundation
 
+// Structural lint debt: JSONL parser needs smaller decode stages.
 public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     public enum CodexUsageLogError: LocalizedError, Sendable {
         case noSessionsDirectory
@@ -31,6 +32,12 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         var input: Int
         var cached: Int
         var output: Int
+    }
+
+    private struct DedupeTokens {
+        let input: Int
+        let output: Int
+        let cacheRead: Int
     }
 
     private static let projectIDKeys = [
@@ -281,7 +288,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         return results
     }
 
-    private func parseFile(
+    private func parseFile( // swiftlint:disable:this cyclomatic_complexity function_body_length
         _ file: SessionFile,
         minDate: Date?,
         dayKey: String?,
@@ -451,9 +458,10 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                     requestID: requestID,
                     sessionID: sessionID,
                     timestamp: timestamp,
-                    inputTokens: deltaInput,
-                    outputTokens: deltaOutput,
-                    cacheReadTokens: cachedClamp)
+                    tokens: .init(
+                        input: deltaInput,
+                        output: deltaOutput,
+                        cacheRead: cachedClamp))
                 if seenKeys.contains(key) { return }
                 seenKeys.insert(key)
 
@@ -555,14 +563,18 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         requestID: String?,
         sessionID: String?,
         timestamp: Date,
-        inputTokens: Int,
-        outputTokens: Int,
-        cacheReadTokens: Int) -> String
+        tokens: DedupeTokens) -> String
     {
         if let requestID, !requestID.isEmpty {
             return "req:\(requestID)"
         }
-        return "ts:\(timestamp.timeIntervalSince1970)|\(sessionID ?? "-")|\(inputTokens)|\(outputTokens)|\(cacheReadTokens)"
+        return [
+            "ts:\(timestamp.timeIntervalSince1970)",
+            sessionID ?? "-",
+            "\(tokens.input)",
+            "\(tokens.output)",
+            "\(tokens.cacheRead)",
+        ].joined(separator: "|")
     }
 }
 

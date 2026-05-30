@@ -275,7 +275,12 @@ public enum ModelsCommand {
 
             let line = String(
                 format: "%-\(modelWidth)s  %-12s  %15s  %12s  %10s  %-\(contextWidth)s",
-                model, provider, tokens, requests, cost, context)
+                model,
+                provider,
+                tokens,
+                requests,
+                cost,
+                context)
 
             if useColor {
                 print(self.colorizeByUsage(line, tokens: summary.totals.totalTokens))
@@ -294,8 +299,12 @@ public enum ModelsCommand {
         print(String(repeating: "-", count: modelWidth + 58))
         let totalLine = String(
             format: "%-\(modelWidth)s  %-12s  %15s  %12s  %10s  %-\(contextWidth)s",
-            "TOTAL", "", formatNumber(totalTokens), "\(totalRequests)",
-            formatCost(totalCost > 0 ? totalCost : nil), " ")
+            "TOTAL",
+            "",
+            formatNumber(totalTokens),
+            "\(totalRequests)",
+            formatCost(totalCost > 0 ? totalCost : nil),
+            " ")
 
         if useColor {
             print(self.ansi("1;36", totalLine))

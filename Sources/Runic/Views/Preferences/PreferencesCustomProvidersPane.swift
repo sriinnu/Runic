@@ -247,10 +247,13 @@ extension Date {
     fileprivate func relativeDescription() -> String {
         let now = Date()
         let interval = now.timeIntervalSince(self)
-        if interval < 60 { return "just now" }
-        else if interval < 3600 { return "\(Int(interval / 60))m ago" }
-        else if interval < 86400 { return "\(Int(interval / 3600))h ago" }
-        else { return "\(Int(interval / 86400))d ago" }
+        if interval < 60 { return "just now" } else if interval < 3600 {
+            return "\(Int(interval / 60))m ago"
+        } else if interval < 86400 {
+            return "\(Int(interval / 3600))h ago"
+        } else {
+            return "\(Int(interval / 86400))d ago"
+        }
     }
 }
 

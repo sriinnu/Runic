@@ -90,7 +90,9 @@ struct WeeklyActivityChartMenuView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .topLeading) {
                             if let rect = self.selectionBandRect(model: model, proxy: proxy, geo: geo) {
-                                RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs), style: .continuous)
+                                RoundedRectangle(
+                                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                                    style: .continuous)
                                     .fill(self.runicTheme.chartSelectionBandColor)
                                     .frame(width: rect.width, height: rect.height)
                                     .position(x: rect.midX, y: rect.midY)

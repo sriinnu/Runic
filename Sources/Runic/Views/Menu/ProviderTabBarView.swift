@@ -66,8 +66,8 @@ struct ProviderTabBarView: View {
                                     self.tabStrokeColor(selectedColor: selectedColor, isSelected: tab.isSelected),
                                     lineWidth: self.tabStrokeWidth(isSelected: tab.isSelected)))
                         .foregroundStyle(self.runicTheme.isTerminalHUD
-                            ? (tab.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText.opacity(0.68))
-                            : (tab.isSelected ? self.runicTheme.primaryText : self.runicTheme.primaryText.opacity(0.66)))
+                            ? self.terminalForegroundStyle(for: tab)
+                            : self.standardForegroundStyle(for: tab))
                         .shadow(
                             color: self.tabGlowColor(selectedColor: selectedColor, isSelected: tab.isSelected),
                             radius: self.tabGlowRadius(isSelected: tab.isSelected),
@@ -136,6 +136,14 @@ struct ProviderTabBarView: View {
         if self.runicTheme.isTerminalHUD { return 3 }
         if self.runicTheme.shape.separator == .glow { return 8 }
         return 4
+    }
+
+    private func terminalForegroundStyle(for tab: TabItem) -> Color {
+        tab.isSelected ? self.runicTheme.accent : self.runicTheme.primaryText.opacity(0.68)
+    }
+
+    private func standardForegroundStyle(for tab: TabItem) -> Color {
+        tab.isSelected ? self.runicTheme.primaryText : self.runicTheme.primaryText.opacity(0.66)
     }
 }
 

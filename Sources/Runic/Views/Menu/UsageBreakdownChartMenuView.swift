@@ -113,7 +113,9 @@ struct UsageBreakdownChartMenuView: View {
                     ForEach(Array(model.services.enumerated()), id: \.element) { index, service in
                         HStack(spacing: RunicSpacing.compact) {
                             Circle()
-                                .fill(serviceColors.indices.contains(index) ? serviceColors[index] : self.runicTheme.accent)
+                                .fill(serviceColors.indices.contains(index)
+                                    ? serviceColors[index]
+                                    : self.runicTheme.accent)
                                 .frame(width: RunicSpacing.chartLegendDot, height: RunicSpacing.chartLegendDot)
                             Text(service)
                                 .font(self.fonts.caption2)
