@@ -626,106 +626,56 @@ final class SettingsStore {
         self.sambaNovaTokenStore = sambaNovaTokenStore
         self.qwenTokenStore = qwenTokenStore
         self.azureOpenAITokenStore = azureOpenAITokenStore
-        self.providerOrderRaw = userDefaults.stringArray(forKey: "providerOrder") ?? []
-        let raw = userDefaults.string(forKey: "refreshFrequency") ?? RefreshFrequency.manual.rawValue
-        self.refreshFrequency = RefreshFrequency(rawValue: raw) ?? .manual
-        self.autoDisableRefreshWhenIdleEnabled = userDefaults.object(
-            forKey: "autoDisableRefreshWhenIdleEnabled") as? Bool ?? true
-        self.autoDisableRefreshWhenIdleMinutes = userDefaults.object(
-            forKey: "autoDisableRefreshWhenIdleMinutes") as? Int ?? 5
-        self.autoDisableRefreshOnSleepEnabled = userDefaults.object(
-            forKey: "autoDisableRefreshOnSleepEnabled") as? Bool ?? true
-        self.autoRefreshWarningEnabled = userDefaults.object(
-            forKey: "autoRefreshWarningEnabled") as? Bool ?? true
-        self.autoRefreshWarningThreshold = userDefaults.object(
-            forKey: "autoRefreshWarningThreshold") as? Int ?? 10
-        self.autoSuspendInactiveProvidersEnabled = userDefaults.object(
-            forKey: "autoSuspendInactiveProvidersEnabled") as? Bool ?? true
-        self.autoSuspendInactiveProvidersMinutes = userDefaults.object(
-            forKey: "autoSuspendInactiveProvidersMinutes") as? Int ?? 720
-        self.launchAtLogin = userDefaults.object(forKey: "launchAtLogin") as? Bool ?? false
-        self.debugMenuEnabled = userDefaults.object(forKey: "debugMenuEnabled") as? Bool ?? false
-        self.debugLoadingPatternRaw = userDefaults.string(forKey: "debugLoadingPattern")
-        self.statusChecksEnabled = userDefaults.object(forKey: "statusChecksEnabled") as? Bool ?? true
-        let sessionQuotaNotificationsDefault = userDefaults.object(
-            forKey: "sessionQuotaNotificationsEnabled") as? Bool
-        self.sessionQuotaNotificationsEnabled = sessionQuotaNotificationsDefault ?? true
-        if sessionQuotaNotificationsDefault == nil {
-            self.userDefaults.set(true, forKey: "sessionQuotaNotificationsEnabled")
-        }
-        self.budgetNotificationsEnabled = userDefaults.object(
-            forKey: "budgetNotificationsEnabled") as? Bool ?? false
-        self.usageBarsShowUsed = userDefaults.object(forKey: "usageBarsShowUsed") as? Bool ?? true
-        let metricDisplayRaw = userDefaults.string(forKey: "usageMetricDisplayMode")
-        self.usageMetricDisplayMode = UsageMetricDisplayMode(rawValue: metricDisplayRaw ?? "") ?? .barsAndPercent
-        let menuModeRaw = userDefaults.string(forKey: "menuMode")
-        self.menuMode = MenuMode(rawValue: menuModeRaw ?? "") ?? .operator
-        let chartStyleRaw = userDefaults.string(forKey: "chartStyle")
-        self.chartStyle = ChartStyle(rawValue: chartStyleRaw ?? "") ?? .line
-        let numberFormatRaw = userDefaults.string(forKey: "numberFormat")
-        self.numberFormat = NumberFormat(rawValue: numberFormatRaw ?? "") ?? .abbreviated
-        let dateFormatRaw = userDefaults.string(forKey: "dateFormat")
-        self.dateFormat = DateFormat(rawValue: dateFormatRaw ?? "") ?? .relative
-        let themeRaw = userDefaults.string(forKey: "theme") ?? ""
-        if Theme.retiredRawValues.contains(themeRaw) {
-            // Users on a retired theme (pine/nocturne/prism) land on Daybreak.
-            self.theme = .daybreak
-            userDefaults.set(Theme.daybreak.rawValue, forKey: "theme")
-        } else if let resolved = Theme(rawValue: themeRaw) {
-            self.theme = resolved
-        } else {
-            // First-launch / unrecognised value → ship the signature Retro
-            // look. Users can change to anything else from Preferences.
-            self.theme = Theme.default
-            userDefaults.set(Theme.default.rawValue, forKey: "theme")
-        }
-        let storedSelectedFont = userDefaults.string(forKey: "selectedFontFamily")
-        let migratedSelectedFont = RunicFontChoice.migratedFamily(storedSelectedFont)
-        self.selectedFontFamily = migratedSelectedFont
-        if (storedSelectedFont ?? "") != migratedSelectedFont {
-            userDefaults.set(migratedSelectedFont, forKey: "selectedFontFamily")
-        }
-        self.menuBarShowsBrandIconWithPercent = userDefaults.object(
-            forKey: "menuBarShowsBrandIconWithPercent") as? Bool ?? false
-        self.menuBarVibrantIconEnabled = userDefaults.object(
-            forKey: "menuBarVibrantIconEnabled") as? Bool ?? true
-        self.costUsageEnabled = userDefaults.object(forKey: "tokenCostUsageEnabled") as? Bool ?? true
-        self.otelGenAILogPaths = userDefaults.string(forKey: "otelGenAILogPaths") ?? ""
-        self.insightsMenuMaxItems = userDefaults.object(forKey: "insightsMenuMaxItems") as? Int ?? 4
-        self.insightsReportDays = userDefaults.object(forKey: "insightsReportDays") as? Int ?? 7
-        self.ledgerMaxAgeDays = userDefaults.object(forKey: "ledgerMaxAgeDays") as? Int ?? 30
-        self.randomBlinkEnabled = userDefaults.object(forKey: "randomBlinkEnabled") as? Bool ?? false
-        self.claudeWebExtrasEnabled = userDefaults.object(forKey: "claudeWebExtrasEnabled") as? Bool ?? false
-        let creditsExtrasDefault = userDefaults.object(forKey: "showOptionalCreditsAndExtraUsage") as? Bool
-        self.showOptionalCreditsAndExtraUsage = creditsExtrasDefault ?? true
-        if creditsExtrasDefault == nil {
-            self.userDefaults.set(true, forKey: "showOptionalCreditsAndExtraUsage")
-        }
-        let openAIWebAccessDefault = userDefaults.object(forKey: "openAIWebAccessEnabled") as? Bool
-        self.openAIWebAccessEnabled = openAIWebAccessDefault ?? true
-        if openAIWebAccessDefault == nil {
-            self.userDefaults.set(true, forKey: "openAIWebAccessEnabled")
-        }
-        let codexSourceRaw = userDefaults.string(forKey: "codexUsageDataSource")
-        self.codexUsageDataSourceRaw = codexSourceRaw ?? CodexUsageDataSource.oauth.rawValue
-        let claudeSourceRaw = userDefaults.string(forKey: "claudeUsageDataSource")
-        self.claudeUsageDataSourceRaw = claudeSourceRaw ?? ClaudeUsageDataSource.oauth.rawValue
-        self.mergeIcons = userDefaults.object(forKey: "mergeIcons") as? Bool ?? true
-        self.switcherShowsIcons = userDefaults.object(forKey: "switcherShowsIcons") as? Bool ?? true
-        let layoutRaw = userDefaults.string(forKey: "providerSwitcherLayout")
-        self.providerSwitcherLayout = ProviderSwitcherLayout(rawValue: layoutRaw ?? "") ?? .top
-        let iconSizeRaw = userDefaults.string(forKey: "providerSwitcherIconSize")
-        self.providerSwitcherIconSize = ProviderSwitcherIconSize(rawValue: iconSizeRaw ?? "") ?? .medium
-        self.providersPaneSidebar = userDefaults.object(forKey: "providersPaneSidebar") as? Bool ?? false
-        self.azureOpenAIEndpoint = userDefaults.string(forKey: "azureOpenAIEndpoint") ?? ""
-        self.azureOpenAIDeployment = userDefaults.string(forKey: "azureOpenAIDeployment") ?? ""
-        self.azureOpenAIAPIVersion = userDefaults.string(forKey: "azureOpenAIAPIVersion")
-            ?? "2024-10-21"
-        self.bedrockRegion = userDefaults.string(forKey: "bedrockRegion") ?? ""
-        self.bedrockAWSProfile = userDefaults.string(forKey: "bedrockAWSProfile") ?? ""
-        self.bedrockModelID = userDefaults.string(forKey: "bedrockModelID") ?? ""
-        self.vertexaiProject = userDefaults.string(forKey: "vertexaiProject") ?? ""
-        self.vertexaiLocation = userDefaults.string(forKey: "vertexaiLocation") ?? ""
+        let defaults = SettingsStoreDefaultsSnapshot.load(from: userDefaults)
+        self.providerOrderRaw = defaults.providerOrderRaw
+        self.refreshFrequency = defaults.refreshFrequency
+        self.autoDisableRefreshWhenIdleEnabled = defaults.autoDisableRefreshWhenIdleEnabled
+        self.autoDisableRefreshWhenIdleMinutes = defaults.autoDisableRefreshWhenIdleMinutes
+        self.autoDisableRefreshOnSleepEnabled = defaults.autoDisableRefreshOnSleepEnabled
+        self.autoRefreshWarningEnabled = defaults.autoRefreshWarningEnabled
+        self.autoRefreshWarningThreshold = defaults.autoRefreshWarningThreshold
+        self.autoSuspendInactiveProvidersEnabled = defaults.autoSuspendInactiveProvidersEnabled
+        self.autoSuspendInactiveProvidersMinutes = defaults.autoSuspendInactiveProvidersMinutes
+        self.launchAtLogin = defaults.launchAtLogin
+        self.debugMenuEnabled = defaults.debugMenuEnabled
+        self.debugLoadingPatternRaw = defaults.debugLoadingPatternRaw
+        self.statusChecksEnabled = defaults.statusChecksEnabled
+        self.sessionQuotaNotificationsEnabled = defaults.sessionQuotaNotificationsEnabled
+        self.budgetNotificationsEnabled = defaults.budgetNotificationsEnabled
+        self.usageBarsShowUsed = defaults.usageBarsShowUsed
+        self.usageMetricDisplayMode = defaults.usageMetricDisplayMode
+        self.menuMode = defaults.menuMode
+        self.chartStyle = defaults.chartStyle
+        self.numberFormat = defaults.numberFormat
+        self.dateFormat = defaults.dateFormat
+        self.theme = defaults.theme
+        self.selectedFontFamily = defaults.selectedFontFamily
+        self.menuBarShowsBrandIconWithPercent = defaults.menuBarShowsBrandIconWithPercent
+        self.menuBarVibrantIconEnabled = defaults.menuBarVibrantIconEnabled
+        self.costUsageEnabled = defaults.costUsageEnabled
+        self.otelGenAILogPaths = defaults.otelGenAILogPaths
+        self.insightsMenuMaxItems = defaults.insightsMenuMaxItems
+        self.insightsReportDays = defaults.insightsReportDays
+        self.ledgerMaxAgeDays = defaults.ledgerMaxAgeDays
+        self.randomBlinkEnabled = defaults.randomBlinkEnabled
+        self.claudeWebExtrasEnabled = defaults.claudeWebExtrasEnabled
+        self.showOptionalCreditsAndExtraUsage = defaults.showOptionalCreditsAndExtraUsage
+        self.openAIWebAccessEnabled = defaults.openAIWebAccessEnabled
+        self.codexUsageDataSourceRaw = defaults.codexUsageDataSourceRaw
+        self.claudeUsageDataSourceRaw = defaults.claudeUsageDataSourceRaw
+        self.mergeIcons = defaults.mergeIcons
+        self.switcherShowsIcons = defaults.switcherShowsIcons
+        self.providerSwitcherLayout = defaults.providerSwitcherLayout
+        self.providerSwitcherIconSize = defaults.providerSwitcherIconSize
+        self.providersPaneSidebar = defaults.providersPaneSidebar
+        self.azureOpenAIEndpoint = defaults.azureOpenAIEndpoint
+        self.azureOpenAIDeployment = defaults.azureOpenAIDeployment
+        self.azureOpenAIAPIVersion = defaults.azureOpenAIAPIVersion
+        self.bedrockRegion = defaults.bedrockRegion
+        self.bedrockAWSProfile = defaults.bedrockAWSProfile
+        self.bedrockModelID = defaults.bedrockModelID
+        self.vertexaiProject = defaults.vertexaiProject
+        self.vertexaiLocation = defaults.vertexaiLocation
         let credentialMigration = ProviderCredentialKeychainMigration.migrateKnownLegacyItems()
         if credentialMigration.needsUserRepair {
             let blocked = credentialMigration.blockedAccounts.count
@@ -735,10 +685,8 @@ final class SettingsStore {
                 "(\(blocked) blocked, \(failed) failed). Re-save affected API keys below; " +
                 "Runic will not prompt in the background."
         }
-        let selectedMenuProviderRaw = userDefaults.string(forKey: "selectedMenuProvider")
-        self.selectedMenuProviderRaw = selectedMenuProviderRaw.flatMap { UsageProvider(rawValue: $0)?.rawValue }
-        self.providerDetectionCompleted = userDefaults.object(
-            forKey: "providerDetectionCompleted") as? Bool ?? false
+        self.selectedMenuProviderRaw = defaults.selectedMenuProviderRaw
+        self.providerDetectionCompleted = defaults.providerDetectionCompleted
         self.toggleStore = ProviderToggleStore(userDefaults: userDefaults)
         self.toggleStore.purgeLegacyKeys()
         // Do not re-register login items during startup; macOS can surface a password prompt.
