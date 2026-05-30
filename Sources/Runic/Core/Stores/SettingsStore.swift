@@ -527,48 +527,8 @@ final class SettingsStore {
 
     @ObservationIgnored let userDefaults: UserDefaults
     @ObservationIgnored let toggleStore: ProviderToggleStore
-    @ObservationIgnored let zaiTokenStore: any ZaiTokenStoring
-    @ObservationIgnored var zaiTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let minimaxTokenStore: any MiniMaxTokenStoring
-    @ObservationIgnored var minimaxTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let minimaxCookieHeaderStore: any MiniMaxCookieHeaderStoring
-    @ObservationIgnored var minimaxCookieHeaderPersistTask: Task<Void, Never>?
-    @ObservationIgnored let minimaxGroupIDStore: any MiniMaxGroupIDStoring
-    @ObservationIgnored var minimaxGroupIDPersistTask: Task<Void, Never>?
-    @ObservationIgnored let copilotTokenStore: any CopilotTokenStoring
-    @ObservationIgnored var copilotTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let openRouterTokenStore: any OpenRouterTokenStoring
-    @ObservationIgnored var openRouterTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let vercelAITokenStore: any VercelAITokenStoring
-    @ObservationIgnored var vercelAITokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let groqTokenStore: any GroqTokenStoring
-    @ObservationIgnored var groqTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let deepSeekTokenStore: any DeepSeekTokenStoring
-    @ObservationIgnored var deepSeekTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let fireworksTokenStore: any FireworksTokenStoring
-    @ObservationIgnored var fireworksTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let mistralTokenStore: any MistralTokenStoring
-    @ObservationIgnored var mistralTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let perplexityTokenStore: any PerplexityTokenStoring
-    @ObservationIgnored var perplexityTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let kimiTokenStore: any KimiTokenStoring
-    @ObservationIgnored var kimiTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let auggieTokenStore: any AuggieTokenStoring
-    @ObservationIgnored var auggieTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let togetherTokenStore: any TogetherTokenStoring
-    @ObservationIgnored var togetherTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let cohereTokenStore: any CohereTokenStoring
-    @ObservationIgnored var cohereTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let xaiTokenStore: any XAITokenStoring
-    @ObservationIgnored var xaiTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let cerebrasTokenStore: any CerebrasTokenStoring
-    @ObservationIgnored var cerebrasTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let sambaNovaTokenStore: any SambaNovaTokenStoring
-    @ObservationIgnored var sambaNovaTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let qwenTokenStore: any QwenTokenStoring
-    @ObservationIgnored var qwenTokenPersistTask: Task<Void, Never>?
-    @ObservationIgnored let azureOpenAITokenStore: any AzureOpenAITokenStoring
-    @ObservationIgnored var azureOpenAITokenPersistTask: Task<Void, Never>?
+    @ObservationIgnored let credentialStores: SettingsStoreCredentialStores
+    @ObservationIgnored var credentialPersistTasks = SettingsStoreCredentialPersistTasks()
     // Cache enablement so tight UI loops (menu bar animations) don't hit UserDefaults each tick.
     @ObservationIgnored var cachedProviderEnablement: [UsageProvider: Bool] = [:]
     @ObservationIgnored var cachedProviderEnablementRevision: Int = -1
@@ -605,27 +565,28 @@ final class SettingsStore {
         azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore())
     {
         self.userDefaults = userDefaults
-        self.zaiTokenStore = zaiTokenStore
-        self.minimaxTokenStore = minimaxTokenStore
-        self.minimaxCookieHeaderStore = minimaxCookieHeaderStore
-        self.minimaxGroupIDStore = minimaxGroupIDStore
-        self.copilotTokenStore = copilotTokenStore
-        self.openRouterTokenStore = openRouterTokenStore
-        self.vercelAITokenStore = vercelAITokenStore
-        self.groqTokenStore = groqTokenStore
-        self.deepSeekTokenStore = deepSeekTokenStore
-        self.fireworksTokenStore = fireworksTokenStore
-        self.mistralTokenStore = mistralTokenStore
-        self.perplexityTokenStore = perplexityTokenStore
-        self.kimiTokenStore = kimiTokenStore
-        self.auggieTokenStore = auggieTokenStore
-        self.togetherTokenStore = togetherTokenStore
-        self.cohereTokenStore = cohereTokenStore
-        self.xaiTokenStore = xaiTokenStore
-        self.cerebrasTokenStore = cerebrasTokenStore
-        self.sambaNovaTokenStore = sambaNovaTokenStore
-        self.qwenTokenStore = qwenTokenStore
-        self.azureOpenAITokenStore = azureOpenAITokenStore
+        self.credentialStores = SettingsStoreCredentialStores(
+            zai: zaiTokenStore,
+            minimax: minimaxTokenStore,
+            minimaxCookieHeader: minimaxCookieHeaderStore,
+            minimaxGroupID: minimaxGroupIDStore,
+            copilot: copilotTokenStore,
+            openRouter: openRouterTokenStore,
+            vercelAI: vercelAITokenStore,
+            groq: groqTokenStore,
+            deepSeek: deepSeekTokenStore,
+            fireworks: fireworksTokenStore,
+            mistral: mistralTokenStore,
+            perplexity: perplexityTokenStore,
+            kimi: kimiTokenStore,
+            auggie: auggieTokenStore,
+            together: togetherTokenStore,
+            cohere: cohereTokenStore,
+            xai: xaiTokenStore,
+            cerebras: cerebrasTokenStore,
+            sambaNova: sambaNovaTokenStore,
+            qwen: qwenTokenStore,
+            azureOpenAI: azureOpenAITokenStore)
         let defaults = SettingsStoreDefaultsSnapshot.load(from: userDefaults)
         self.providerOrderRaw = defaults.providerOrderRaw
         self.refreshFrequency = defaults.refreshFrequency
