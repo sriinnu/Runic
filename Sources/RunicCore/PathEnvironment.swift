@@ -36,6 +36,15 @@ public struct PathDebugSnapshot: Equatable, Sendable {
 }
 
 public enum BinaryLocator {
+    private struct BinaryResolutionRequest {
+        let name: String
+        let overrideKey: String
+        let env: [String: String]
+        let loginPATH: [String]?
+        let fileManager: FileManager
+        let home: String
+    }
+
     public static func resolveClaudeBinary(
         env: [String: String] = ProcessInfo.processInfo.environment,
         loginPATH: [String]? = LoginShellPathCache.shared.current,
@@ -46,14 +55,15 @@ public enum BinaryLocator {
         home: String = NSHomeDirectory()) -> String?
     {
         self.resolveBinary(
-            name: "claude",
-            overrideKey: "CLAUDE_CLI_PATH",
-            env: env,
-            loginPATH: loginPATH,
+            .init(
+                name: "claude",
+                overrideKey: "CLAUDE_CLI_PATH",
+                env: env,
+                loginPATH: loginPATH,
+                fileManager: fileManager,
+                home: home),
             commandV: commandV,
-            aliasResolver: aliasResolver,
-            fileManager: fileManager,
-            home: home)
+            aliasResolver: aliasResolver)
     }
 
     public static func resolveCodexBinary(
@@ -66,14 +76,15 @@ public enum BinaryLocator {
         home: String = NSHomeDirectory()) -> String?
     {
         self.resolveBinary(
-            name: "codex",
-            overrideKey: "CODEX_CLI_PATH",
-            env: env,
-            loginPATH: loginPATH,
+            .init(
+                name: "codex",
+                overrideKey: "CODEX_CLI_PATH",
+                env: env,
+                loginPATH: loginPATH,
+                fileManager: fileManager,
+                home: home),
             commandV: commandV,
-            aliasResolver: aliasResolver,
-            fileManager: fileManager,
-            home: home)
+            aliasResolver: aliasResolver)
     }
 
     public static func resolveGeminiBinary(
@@ -86,60 +97,65 @@ public enum BinaryLocator {
         home: String = NSHomeDirectory()) -> String?
     {
         self.resolveBinary(
-            name: "gemini",
-            overrideKey: "GEMINI_CLI_PATH",
-            env: env,
-            loginPATH: loginPATH,
+            .init(
+                name: "gemini",
+                overrideKey: "GEMINI_CLI_PATH",
+                env: env,
+                loginPATH: loginPATH,
+                fileManager: fileManager,
+                home: home),
             commandV: commandV,
-            aliasResolver: aliasResolver,
-            fileManager: fileManager,
-            home: home)
+            aliasResolver: aliasResolver)
     }
 
-    // swiftlint:disable function_parameter_count
     private static func resolveBinary(
-        name: String,
-        overrideKey: String,
-        env: [String: String],
-        loginPATH: [String]?,
+        _ request: BinaryResolutionRequest,
         commandV: (String, String?, TimeInterval, FileManager) -> String?,
-        aliasResolver: (String, String?, TimeInterval, FileManager, String) -> String?,
-        fileManager: FileManager,
-        home: String) -> String?
+        aliasResolver: (String, String?, TimeInterval, FileManager, String) -> String?) -> String?
     {
-        // swiftlint:enable function_parameter_count
         // 1) Explicit override
-        if let override = env[overrideKey], fileManager.isExecutableFile(atPath: override) {
+        if let override = request.env[request.overrideKey],
+           request.fileManager.isExecutableFile(atPath: override)
+        {
             return override
         }
 
         // 2) Login-shell PATH (captured once per launch)
-        if let loginPATH,
-           let pathHit = self.find(name, in: loginPATH, fileManager: fileManager)
+        if let loginPATH = request.loginPATH,
+           let pathHit = self.find(request.name, in: loginPATH, fileManager: request.fileManager)
         {
             return pathHit
         }
 
         // 3) Existing PATH
-        if let existingPATH = env["PATH"],
+        if let existingPATH = request.env["PATH"],
            let pathHit = self.find(
-               name,
+               request.name,
                in: existingPATH.split(separator: ":").map(String.init),
-               fileManager: fileManager)
+               fileManager: request.fileManager)
         {
             return pathHit
         }
 
         // 4) Interactive login shell lookup (captures nvm/fnm/mise paths from .zshrc/.bashrc)
-        if let shellHit = commandV(name, env["SHELL"], 2.0, fileManager),
-           fileManager.isExecutableFile(atPath: shellHit)
+        if let shellHit = commandV(
+            request.name,
+            request.env["SHELL"],
+            2.0,
+            request.fileManager),
+            request.fileManager.isExecutableFile(atPath: shellHit)
         {
             return shellHit
         }
 
         // 4b) Alias fallback (login shell); only attempt after all standard lookups fail.
-        if let aliasHit = aliasResolver(name, env["SHELL"], 2.0, fileManager, home),
-           fileManager.isExecutableFile(atPath: aliasHit)
+        if let aliasHit = aliasResolver(
+            request.name,
+            request.env["SHELL"],
+            2.0,
+            request.fileManager,
+            request.home),
+            request.fileManager.isExecutableFile(atPath: aliasHit)
         {
             return aliasHit
         }
@@ -150,17 +166,17 @@ public enum BinaryLocator {
         let fallback = [
             "/opt/homebrew/bin",
             "/usr/local/bin",
-            "\(home)/.local/bin",
-            "\(home)/.bun/bin",
-            "\(home)/.volta/bin",
-            "\(home)/.asdf/shims",
-            "\(home)/.local/share/mise/shims",
+            "\(request.home)/.local/bin",
+            "\(request.home)/.bun/bin",
+            "\(request.home)/.volta/bin",
+            "\(request.home)/.asdf/shims",
+            "\(request.home)/.local/share/mise/shims",
             "/usr/bin",
             "/bin",
             "/usr/sbin",
             "/sbin",
         ]
-        if let pathHit = self.find(name, in: fallback, fileManager: fileManager) {
+        if let pathHit = self.find(request.name, in: fallback, fileManager: request.fileManager) {
             return pathHit
         }
 
