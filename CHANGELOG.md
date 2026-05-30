@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 2.2.2 — 2026-05-30
+- Usage: make cost refresh scan only the mutable current day by default, with `--rebuild` reserved for 30-day provider JSONL repair.
+- Usage: harden the provider relay cache so empty rebuild days clear stale snapshots and cached history stays frozen during normal refreshes.
+- Docs: rewrite the README as a direct local-first project statement and document refresh versus rebuild behavior.
 - Governance: switch current development licensing from AGPL-3.0-or-later to MPL-2.0.
 
 ## 2.2.1 — 2026-05-25
