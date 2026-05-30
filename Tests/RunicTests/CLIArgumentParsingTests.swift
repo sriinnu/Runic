@@ -24,19 +24,21 @@ struct CLIArgumentParsingTests {
     }
 
     @Test
-    func `cost command parses refresh flag`() throws {
+    func `cost command parses refresh and rebuild flags`() throws {
         let signature = CommandSignature(
             options: [
                 OptionDefinition(label: "provider", names: [.long("provider")], help: nil),
             ],
             flags: [
                 FlagDefinition(label: "refresh", names: [.long("refresh")], help: nil),
+                FlagDefinition(label: "rebuild", names: [.long("rebuild")], help: nil),
             ])
         let parser = CommandParser(signature: signature)
-        let parsed = try parser.parse(arguments: ["--provider", "claude", "--refresh"])
+        let parsed = try parser.parse(arguments: ["--provider", "claude", "--refresh", "--rebuild"])
 
         #expect(parsed.options["provider"] == ["claude"])
         #expect(parsed.flags.contains("refresh"))
+        #expect(parsed.flags.contains("rebuild"))
     }
 
     @Test

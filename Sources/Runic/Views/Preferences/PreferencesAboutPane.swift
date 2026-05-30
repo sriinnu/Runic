@@ -268,7 +268,7 @@ struct AboutPane: View {
     // MARK: - Footer
 
     private var footerSection: some View {
-        Text("© 2025–2026 Srinivas Pendela. AGPL-3.0-or-later.")
+        Text("© 2025–2026 Srinivas Pendela. MPL-2.0.")
             .font(self.fonts.system(size: 11))
             .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
             .frame(maxWidth: .infinity)

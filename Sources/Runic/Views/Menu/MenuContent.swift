@@ -75,9 +75,11 @@ struct MenuContent: View {
             } label: {
                 if let icon = self.iconName(for: action) {
                     HStack(spacing: 8) {
-                        Image(systemName: icon)
-                            .imageScale(.medium)
-                            .frame(width: 18, alignment: .center)
+                        RunicThemedSystemIcon(
+                            systemName: icon,
+                            intent: action.iconIntent,
+                            font: .body,
+                            width: 18)
                         Text(title)
                     }
                     .foregroundStyle(self.runicTheme.primaryText)

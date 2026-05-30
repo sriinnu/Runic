@@ -250,7 +250,7 @@ struct CodexUsageLogSourceTests {
     }
 
     @Test
-    func `codex usage skips unchanged files after cache scan date`() async throws {
+    func `codex usage recomputes todays mutable files even after cache scan date`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
             .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
@@ -304,10 +304,46 @@ struct CodexUsageLogSourceTests {
         let cached = await cache.loadCachedDailies(provider: "codex")?.dailies.first
 
         #expect(firstEntries.count == 1)
-        #expect(secondEntries.isEmpty)
+        #expect(secondEntries.count == 1)
         #expect(cached?.inputTokens == 120)
         #expect(cached?.cacheReadTokens == 20)
         #expect(cached?.outputTokens == 10)
+    }
+
+    @Test
+    func `codex empty today scan clears stale mutable day`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        try Self.writeSession(root: root, date: now, input: 40, modifiedAt: now, fileManager: fm)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+
+        _ = try await source.loadEntries()
+
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: now)
+        let dayDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        try fm.removeItem(at: dayDir)
+
+        let emptyEntries = try await source.loadEntries()
+        let cached = await cache.loadCachedDailies(provider: "codex")
+        #expect(emptyEntries.isEmpty)
+        #expect(cached?.dailies.isEmpty == true)
     }
 
     @Test
@@ -379,7 +415,7 @@ struct CodexUsageLogSourceTests {
     }
 
     @Test
-    func `codex relay backfills when requested history exceeds cache coverage`() async throws {
+    func `codex relay hot scan does not advance requested history coverage`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
             .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
@@ -404,12 +440,12 @@ struct CodexUsageLogSourceTests {
             cache: cache)
 
         let entries = try await source.loadEntries()
-        #expect(entries.map(\.inputTokens).sorted() == [40, 900])
-        #expect(await cache.loadCachedDailies(provider: "codex")?.coveredMaxAgeDays == 30)
+        #expect(entries.map(\.inputTokens).sorted() == [40])
+        #expect(await cache.loadCachedDailies(provider: "codex")?.coveredMaxAgeDays == 1)
     }
 
     @Test
-    func `codex relay repairs cached historical day during coverage backfill`() async throws {
+    func `codex relay preserves cached history instead of repairing from yesterday jsonl`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
             .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
@@ -449,8 +485,102 @@ struct CodexUsageLogSourceTests {
 
         _ = try await source.loadEntries()
         let repaired = await cache.loadCachedDailies(provider: "codex")?.dailies.first
+        #expect(repaired?.inputTokens == 10)
+        #expect(await cache.loadCachedDailies(provider: "codex")?.coveredMaxAgeDays == 1)
+    }
+
+    @Test
+    func `codex rebuild repairs cached history from historical jsonl`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+        try Self.writeSession(root: root, date: yesterday, input: 900, modifiedAt: now, fileManager: fm)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        await cache.mergeDailies(
+            provider: "codex",
+            newDailies: [
+                CachedDaily(
+                    dayKey: LedgerCache.dayKey(for: yesterday),
+                    inputTokens: 10,
+                    outputTokens: 1,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    costUSD: nil,
+                    requestCount: 1,
+                    modelsUsed: ["gpt-5"]),
+            ],
+            scanDate: now,
+            todayKey: nil,
+            coveredMaxAgeDays: 1)
+
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache,
+            scanMode: .rebuildHistory(maxAgeDays: 2))
+
+        let entries = try await source.loadEntries()
+        let repaired = await cache.loadCachedDailies(provider: "codex")?.dailies
+            .first { $0.dayKey == LedgerCache.dayKey(for: yesterday) }
+        #expect(entries.map(\.inputTokens) == [900])
         #expect(repaired?.inputTokens == 900)
-        #expect(await cache.loadCachedDailies(provider: "codex")?.coveredMaxAgeDays == 30)
+        #expect(await cache.loadCachedDailies(provider: "codex")?.coveredMaxAgeDays == 2)
+    }
+
+    @Test
+    func `codex rebuild clears stale cached days missing from raw window`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+        let yesterdayKey = LedgerCache.dayKey(for: yesterday)
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        await cache.mergeDailies(
+            provider: "codex",
+            newDailies: [
+                CachedDaily(
+                    dayKey: yesterdayKey,
+                    inputTokens: 10,
+                    outputTokens: 1,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    costUSD: nil,
+                    requestCount: 1,
+                    modelsUsed: ["gpt-5"]),
+            ],
+            scanDate: now,
+            todayKey: nil,
+            coveredMaxAgeDays: 1)
+
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache,
+            scanMode: .rebuildHistory(maxAgeDays: 2))
+
+        let entries = try await source.loadEntries()
+        let dailies = await cache.loadCachedDailies(provider: "codex")?.dailies ?? []
+        #expect(entries.isEmpty)
+        #expect(!dailies.contains { $0.dayKey == yesterdayKey })
+        #expect(await cache.loadCachedDailies(provider: "codex")?.coveredMaxAgeDays == 2)
     }
 
     private static func jsonLine(_ object: [String: Any]) throws -> String {

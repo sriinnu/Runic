@@ -27,6 +27,24 @@ extension UsageStore {
             .appendingPathComponent("cost-usage", isDirectory: true)
     }
 
+    nonisolated static func costUsageLedgerCacheDirectory(
+        fileManager: FileManager = .default) -> URL
+    {
+        let root = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return root
+            .appendingPathComponent("Runic", isDirectory: true)
+            .appendingPathComponent("ledger-cache", isDirectory: true)
+    }
+
+    nonisolated static func costUsageRelayDirectory(
+        fileManager: FileManager = .default) -> URL
+    {
+        let root = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return root
+            .appendingPathComponent("Runic", isDirectory: true)
+            .appendingPathComponent("relay", isDirectory: true)
+    }
+
     nonisolated static func tokenCostNoDataMessage(for provider: UsageProvider) -> String {
         ProviderDescriptorRegistry.descriptor(for: provider).tokenCost.noDataMessage()
     }

@@ -34,9 +34,10 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 ## Command
 - `runic` defaults to the `usage` command.
   - `--format text|json` (default: text).
-- `runic cost` prints local token cost usage (Claude + Codex) without web/CLI access.
+- `runic cost` prints local token cost usage (Claude + Codex) from Runic event relay history plus today's local logs, without web/CLI access.
   - `--format text|json` (default: text).
-  - `--refresh` ignores cached scans.
+  - `--refresh` is accepted for compatibility; `runic cost` already normalizes today's live logs by default.
+  - `--rebuild` repairs the 30-day relay by scanning provider JSONL history and rewriting touched day snapshots.
 - `--provider codex|claude|zai|gemini|antigravity|cursor|factory|copilot|vercelai|local-llm|both|all` (default: all registered providers for `usage`, Claude for `insights`, Claude+Codex for `cost`).
   - `--no-credits` (hide Codex credits in text output).
   - `--pretty` (pretty-print JSON).
@@ -91,7 +92,8 @@ runic --provider claude        # force Claude
 runic --provider all           # query all providers (honors your logins/toggles)
 runic --format json --pretty   # machine output
 runic --format json --provider both
-runic cost                     # local cost usage (last 30 days + today)
+runic cost                     # local event-relay cost usage (last 30 days + today)
+runic cost --rebuild           # explicit historical JSONL repair
 runic cost --provider claude --format json --pretty
 runic insights --provider local-llm --view models --json --pretty
 runic insights --provider all --view compaction --json --pretty

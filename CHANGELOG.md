@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Governance: switch current development licensing from AGPL-3.0-or-later to MPL-2.0.
+
 ## 2.2.1 — 2026-05-25
 - Themes: add JSON-backed typography/chrome/effects/control style tokens, with Terminal rebuilt as a calmer Tactical HUD and Retro borders softened.
 - Typography: switch the default product face to Mona Sans, add Commit Mono for Terminal/data-heavy surfaces, and migrate removed or missing saved fonts to Mona Sans.

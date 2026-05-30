@@ -3793,6 +3793,8 @@ extension UsageStore {
             let fm = FileManager.default
             let cacheDirs = [
                 Self.costUsageCacheDirectory(fileManager: fm),
+                Self.costUsageLedgerCacheDirectory(fileManager: fm),
+                Self.costUsageRelayDirectory(fileManager: fm),
             ]
 
             for cacheDir in cacheDirs {
@@ -3873,7 +3875,7 @@ extension UsageStore {
             let timeoutSeconds = self.tokenFetchTimeout
             let snapshot = try await withThrowingTaskGroup(of: CostUsageTokenSnapshot.self) { group in
                 group.addTask(priority: .utility) {
-                    try await fetcher.loadTokenSnapshot(provider: provider, now: now, forceRefresh: force)
+                    try await fetcher.loadTokenSnapshot(provider: provider, now: now)
                 }
                 group.addTask {
                     try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))

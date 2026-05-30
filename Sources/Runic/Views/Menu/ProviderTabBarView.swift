@@ -43,8 +43,12 @@ struct ProviderTabBarView: View {
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 18, height: 18)
                             } else if tab.provider == nil {
-                                Image(systemName: "square.grid.2x2")
-                                    .font(.system(size: 13, weight: .medium))
+                                RunicThemedSystemIcon(
+                                    systemName: "square.grid.2x2",
+                                    intent: .navigation,
+                                    selected: tab.isSelected,
+                                    font: .system(size: 13, weight: .medium),
+                                    width: 18)
                             }
                             Text(tab.label)
                                 .font(self.fonts.caption2)

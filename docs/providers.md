@@ -32,7 +32,7 @@ Usage fetch strategies answer "what did this account use?" Capability metadata a
 
 ## Shared usage ledger
 
-Claude and Codex have first-class local JSONL scanners. All other built-in providers, including Local LLM, can contribute model/project/token/cost history through configured OpenTelemetry GenAI JSON or JSONL files, plus Runic's default sanitized local collector ledger:
+Claude and Codex have first-class local JSONL scanners, but normal refreshes treat provider logs as a today-only live feed. Runic stores normalized usage events and scan watermarks in its own relay JSONL files under `~/Library/Application Support/Runic/relay/`, materializes daily totals from the newest snapshot for each day, then merges that view with today's live scan for menu, CLI cost, and history charts. Historical provider JSONLs are only reopened by the explicit repair path, `runic cost --rebuild`. All other built-in providers, including Local LLM, can contribute model/project/token/cost history through configured OpenTelemetry GenAI JSON or JSONL files, plus Runic's default sanitized local collector ledger:
 
 - Shared env: `RUNIC_OTEL_GENAI_LOG_PATHS` or `RUNIC_OTEL_GENAI_LOG_PATH`.
 - Provider env: `RUNIC_<PROVIDER>_OTEL_GENAI_LOG_PATHS`, `RUNIC_<PROVIDER>_OTEL_GENAI_LOG_PATH`, `RUNIC_<PROVIDER>_OTEL_LOG_PATHS`, or `RUNIC_<PROVIDER>_OTEL_LOG_PATH`.
@@ -47,7 +47,7 @@ Ledger entries carry token/cost provenance where known: exact local log, provide
 - Web dashboard (when enabled): `https://chatgpt.com/codex/settings/usage` via WebView + browser cookies.
 - CLI RPC default: `codex ... app-server` JSON-RPC (`account/read`, `account/rateLimits/read`).
 - CLI PTY fallback: `/status` scrape.
-- Local cost usage: scans `~/.codex/sessions/**/*.jsonl` (last 30 days).
+- Local cost usage: scans today's `~/.codex/sessions/YYYY/MM/DD/*.jsonl`; older days come from Runic event relay history.
 - Status: Statuspage.io (OpenAI).
 - Details: `docs/codex.md`.
 
@@ -55,7 +55,7 @@ Ledger entries carry token/cost provenance where known: exact local log, provide
 - OAuth API (preferred when CLI credentials exist).
 - Web API (browser cookies) fallback when OAuth missing.
 - CLI PTY fallback when OAuth + web are unavailable.
-- Local cost usage: scans `~/.config/claude/projects/**/*.jsonl` (last 30 days).
+- Local cost usage: scans Claude project files touched today; older days come from Runic event relay history.
 - Status: Statuspage.io (Anthropic).
 - Details: `docs/claude.md`.
 

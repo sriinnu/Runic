@@ -102,6 +102,11 @@ public enum UsageLedgerOperationKind: String, Sendable, Codable, Hashable, CaseI
     case unknown
 }
 
+public enum UsageLedgerLogScanMode: Sendable, Equatable {
+    case refreshToday
+    case rebuildHistory(maxAgeDays: Int)
+}
+
 public struct UsageLedgerEntry: Sendable, Codable, Hashable {
     public enum Source: String, Sendable, Codable {
         case claudeLog
@@ -131,6 +136,7 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
     public let operationKind: UsageLedgerOperationKind?
     public let tokenProvenance: MetricProvenance?
     public let costProvenance: MetricProvenance?
+    public let sourceFingerprint: String?
 
     public init(
         provider: UsageProvider,
@@ -150,7 +156,8 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
         source: Source,
         operationKind: UsageLedgerOperationKind? = nil,
         tokenProvenance: MetricProvenance? = nil,
-        costProvenance: MetricProvenance? = nil)
+        costProvenance: MetricProvenance? = nil,
+        sourceFingerprint: String? = nil)
     {
         self.provider = provider
         self.timestamp = timestamp
@@ -170,6 +177,7 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
         self.operationKind = operationKind
         self.tokenProvenance = tokenProvenance
         self.costProvenance = costProvenance
+        self.sourceFingerprint = sourceFingerprint
     }
 
     public var totalTokens: Int {

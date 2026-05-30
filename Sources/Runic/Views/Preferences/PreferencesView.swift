@@ -214,8 +214,11 @@ struct PreferencesView: View {
             }
         } label: {
             VStack(spacing: 3) {
-                Image(systemName: tab.symbolName)
-                    .font(.system(size: 18, weight: selected ? .semibold : .medium))
+                RunicThemedSystemIcon(
+                    systemName: tab.symbolName,
+                    intent: tab.iconIntent,
+                    selected: selected,
+                    font: .system(size: 18, weight: selected ? .semibold : .medium))
                     .frame(height: 22)
                 Text(tab.label)
                     .font(self.fonts.caption.weight(selected ? .semibold : .medium))
@@ -226,7 +229,7 @@ struct PreferencesView: View {
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
-        .foregroundStyle(selected ? self.settings.theme.palette.accent : self.settings.theme.palette.secondaryText)
+        .foregroundStyle(selected ? self.settings.theme.palette.primaryText : self.settings.theme.palette.secondaryText)
         .background {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(selected ? self.settings.theme.palette.accent.opacity(self.settings.theme.palette.isTerminalHUD ? 0.18 : 0.12) : .clear)
@@ -244,7 +247,7 @@ struct PreferencesView: View {
     }
 }
 
-private extension PreferencesTab {
+extension PreferencesTab {
     var label: String {
         switch self {
         case .general: "General"
@@ -267,5 +270,9 @@ private extension PreferencesTab {
         case .about: "info.circle"
         case .debug: "ladybug"
         }
+    }
+
+    var iconIntent: RunicIconIntent {
+        .navigation
     }
 }

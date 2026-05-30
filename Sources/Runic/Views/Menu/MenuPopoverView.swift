@@ -166,8 +166,15 @@ struct MenuPopoverView: View {
 
     private var emptyProviderState: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-            Label("No active providers", systemImage: "sparkles")
-                .font(self.fonts.subheadline.weight(.semibold))
+            HStack(spacing: RunicSpacing.xs) {
+                RunicThemedSystemIcon(
+                    systemName: "sparkles",
+                    intent: .info,
+                    font: self.fonts.subheadline.weight(.semibold),
+                    width: RunicSpacing.menuIconColumnWidth)
+                Text("No active providers")
+                    .font(self.fonts.subheadline.weight(.semibold))
+            }
             Text("Open Settings, enable a provider, then refresh.")
                 .font(self.fonts.footnote)
                 .foregroundStyle(self.settings.theme.palette.secondaryText)
@@ -282,6 +289,7 @@ struct MenuPopoverView: View {
                                 MenuPopoverChip(
                                     title: panel.title,
                                     systemImage: panel.systemImage,
+                                    iconIntent: panel.iconIntent,
                                     isSelected: panel == effectivePanel)
                                 {
                                     self.selectedPanel = panel
@@ -316,12 +324,14 @@ struct MenuPopoverView: View {
                     MenuPopoverActionButton(
                         title: "CSV",
                         systemImage: "tablecells",
+                        iconIntent: .data,
                         style: .compact,
                         action: { self.actions.exportCSV(scope) })
                         .frame(maxWidth: .infinity)
                     MenuPopoverActionButton(
                         title: "JSON",
                         systemImage: "curlybraces",
+                        iconIntent: .data,
                         style: .compact,
                         action: { self.actions.exportJSON(scope) })
                         .frame(maxWidth: .infinity)
@@ -378,6 +388,7 @@ struct MenuPopoverView: View {
                 MenuPopoverActionButton(
                     title: title,
                     systemImage: self.systemImage(for: action),
+                    iconIntent: action.iconIntent,
                     action: {
                         self.perform(action, provider: provider)
                     })
@@ -664,7 +675,7 @@ struct MenuPopoverView: View {
     }
 }
 
-private enum PopoverInsightPanel: String, CaseIterable, Identifiable {
+enum PopoverInsightPanel: String, CaseIterable, Identifiable {
     case timeline
     case hourly
     case weekly
@@ -697,6 +708,10 @@ private enum PopoverInsightPanel: String, CaseIterable, Identifiable {
         case .projects: "folder"
         case .models: "cpu"
         }
+    }
+
+    var iconIntent: RunicIconIntent {
+        .navigation
     }
 }
 
@@ -819,6 +834,7 @@ private struct MenuPopoverChip: View {
     @Environment(\.runicFonts) private var fonts
     let title: String
     let systemImage: String
+    let iconIntent: RunicIconIntent
     let isSelected: Bool
     let action: () -> Void
 
@@ -828,9 +844,13 @@ private struct MenuPopoverChip: View {
     var body: some View {
         Button(action: self.action) {
             HStack(spacing: RunicSpacing.menuControlSpacing) {
-                Image(systemName: self.systemImage)
-                    .font(self.fonts.caption.weight(.semibold))
-                    .frame(width: RunicSpacing.menuIconColumnWidth)
+                RunicThemedSystemIcon(
+                    systemName: self.systemImage,
+                    intent: self.iconIntent,
+                    selected: self.isSelected,
+                    hovered: self.isHovered,
+                    font: self.fonts.caption.weight(.semibold),
+                    width: RunicSpacing.menuIconColumnWidth)
                 Text(self.title)
                     .font(self.fonts.caption.weight(self.isSelected ? .semibold : .medium))
                     .lineLimit(1)
@@ -928,6 +948,7 @@ private struct MenuPopoverActionButton: View {
 
     let title: String
     let systemImage: String?
+    var iconIntent: RunicIconIntent = .action
     var style: Style = .normal
     let action: () -> Void
 
@@ -938,10 +959,12 @@ private struct MenuPopoverActionButton: View {
         Button(action: self.action) {
             HStack(spacing: self.iconTextSpacing) {
                 if let systemImage {
-                    Image(systemName: systemImage)
-                        .font(self.iconFont)
-                        .frame(width: self.iconColumnWidth)
-                        .foregroundStyle(self.runicTheme.secondaryText)
+                    RunicThemedSystemIcon(
+                        systemName: systemImage,
+                        intent: self.iconIntent,
+                        hovered: self.isHovered,
+                        font: self.iconFont,
+                        width: self.iconColumnWidth)
                 } else {
                     Color.clear.frame(width: self.iconColumnWidth, height: 1)
                 }

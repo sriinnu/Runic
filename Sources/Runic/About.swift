@@ -28,7 +28,7 @@ func showAbout() {
             .foregroundColor: NSColor.secondaryLabelColor,
         ])
     let credits = NSMutableAttributedString(attributedString: description)
-    credits.append(NSAttributedString(string: "AGPL-3.0-or-later\n", attributes: [
+    credits.append(NSAttributedString(string: "MPL-2.0\n", attributes: [
         .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
     ]))
     credits.append(makeLink("GitHub", urlString: "https://github.com/sriinnu/Runic"))
