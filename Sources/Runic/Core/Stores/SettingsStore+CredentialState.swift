@@ -1,3 +1,5 @@
+import Foundation
+
 struct SettingsStoreCredentialStores {
     let zai: any ZaiTokenStoring
     let minimax: any MiniMaxTokenStoring
@@ -20,6 +22,58 @@ struct SettingsStoreCredentialStores {
     let sambaNova: any SambaNovaTokenStoring
     let qwen: any QwenTokenStoring
     let azureOpenAI: any AzureOpenAITokenStoring
+}
+
+extension SettingsStore {
+    convenience init(
+        userDefaults: UserDefaults = .standard,
+        zaiTokenStore: any ZaiTokenStoring = KeychainZaiTokenStore(),
+        minimaxTokenStore: any MiniMaxTokenStoring = KeychainMiniMaxTokenStore(),
+        minimaxCookieHeaderStore: any MiniMaxCookieHeaderStoring = KeychainMiniMaxCookieHeaderStore(),
+        minimaxGroupIDStore: any MiniMaxGroupIDStoring = KeychainMiniMaxGroupIDStore(),
+        copilotTokenStore: any CopilotTokenStoring = KeychainCopilotTokenStore(),
+        openRouterTokenStore: any OpenRouterTokenStoring = KeychainOpenRouterTokenStore(),
+        vercelAITokenStore: any VercelAITokenStoring = KeychainVercelAITokenStore(),
+        groqTokenStore: any GroqTokenStoring = KeychainGroqTokenStore(),
+        deepSeekTokenStore: any DeepSeekTokenStoring = KeychainDeepSeekTokenStore(),
+        fireworksTokenStore: any FireworksTokenStoring = KeychainFireworksTokenStore(),
+        mistralTokenStore: any MistralTokenStoring = KeychainMistralTokenStore(),
+        perplexityTokenStore: any PerplexityTokenStoring = KeychainPerplexityTokenStore(),
+        kimiTokenStore: any KimiTokenStoring = KeychainKimiTokenStore(),
+        auggieTokenStore: any AuggieTokenStoring = KeychainAuggieTokenStore(),
+        togetherTokenStore: any TogetherTokenStoring = KeychainTogetherTokenStore(),
+        cohereTokenStore: any CohereTokenStoring = KeychainCohereTokenStore(),
+        xaiTokenStore: any XAITokenStoring = KeychainXAITokenStore(),
+        cerebrasTokenStore: any CerebrasTokenStoring = KeychainCerebrasTokenStore(),
+        sambaNovaTokenStore: any SambaNovaTokenStoring = KeychainSambaNovaTokenStore(),
+        qwenTokenStore: any QwenTokenStoring = KeychainQwenTokenStore(),
+        azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore())
+    {
+        self.init(
+            userDefaults: userDefaults,
+            credentialStores: SettingsStoreCredentialStores(
+                zai: zaiTokenStore,
+                minimax: minimaxTokenStore,
+                minimaxCookieHeader: minimaxCookieHeaderStore,
+                minimaxGroupID: minimaxGroupIDStore,
+                copilot: copilotTokenStore,
+                openRouter: openRouterTokenStore,
+                vercelAI: vercelAITokenStore,
+                groq: groqTokenStore,
+                deepSeek: deepSeekTokenStore,
+                fireworks: fireworksTokenStore,
+                mistral: mistralTokenStore,
+                perplexity: perplexityTokenStore,
+                kimi: kimiTokenStore,
+                auggie: auggieTokenStore,
+                together: togetherTokenStore,
+                cohere: cohereTokenStore,
+                xai: xaiTokenStore,
+                cerebras: cerebrasTokenStore,
+                sambaNova: sambaNovaTokenStore,
+                qwen: qwenTokenStore,
+                azureOpenAI: azureOpenAITokenStore))
+    }
 }
 
 struct SettingsStoreCredentialPersistTasks {
