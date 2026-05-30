@@ -2,8 +2,29 @@ import AppKit
 import RunicCore
 import SwiftUI
 
-// Structural lint debt: split the large chart submenu builder before removing this.
 // MARK: - Chart submenu builders
+
+private struct LedgerInsightsSubmenuData {
+    let daily: UsageLedgerDailySummary?
+    let activeBlock: UsageLedgerBlockSummary?
+    let modelBreakdown: [UsageLedgerModelSummary]
+    let projectBreakdown: [UsageLedgerProjectSummary]
+    let reliability: UsageLedgerReliabilityScore?
+    let routing: UsageLedgerRoutingRecommendation?
+
+    var hasContent: Bool {
+        self.daily != nil ||
+            self.activeBlock?.isActive == true ||
+            !self.modelBreakdown.isEmpty ||
+            !self.projectBreakdown.isEmpty ||
+            self.reliability != nil ||
+            self.routing != nil
+    }
+
+    func hasOverflow(limit: Int) -> Bool {
+        self.modelBreakdown.count > limit || self.projectBreakdown.count > limit
+    }
+}
 
 extension StatusItemController {
     @discardableResult
@@ -50,165 +71,156 @@ extension StatusItemController {
         return nil
     }
 
-    func makeInsightsSubmenu(provider: UsageProvider) -> NSMenu? { // swiftlint:disable:this function_body_length
-        let daily = self.store.ledgerDailySummary(for: provider)
-        let activeBlock = self.store.ledgerActiveBlock(for: provider)
-        let modelBreakdown = self.store.ledgerModelBreakdown(for: provider)
-            .filter { $0.provider == provider }
-        let projectBreakdown = self.store.ledgerProjectBreakdown(for: provider)
-            .filter { $0.provider == provider }
-        let reliability = self.store.ledgerReliabilityScore(for: provider)
-        let routing = self.store.ledgerRoutingRecommendation(for: provider)
-        let hasActiveBlock = activeBlock?.isActive == true
-        guard daily != nil || hasActiveBlock || !modelBreakdown.isEmpty || !projectBreakdown
-            .isEmpty || reliability != nil || routing != nil
-        else {
-            return nil
-        }
-
+    func makeInsightsSubmenu(provider: UsageProvider) -> NSMenu? {
+        let data = self.ledgerInsightsSubmenuData(for: provider)
+        guard data.hasContent else { return nil }
         let submenu = NSMenu()
         submenu.autoenablesItems = false
         let limit = max(1, self.settings.insightsMenuMaxItems)
         let reportDays = max(1, self.settings.insightsReportDays)
-        let hasOverflow = modelBreakdown.count > limit || projectBreakdown.count > limit
 
+        self.addInsightsTitle(to: submenu)
+        self.addDailyInsightsItem(data.daily, to: submenu)
+        self.addActiveBlockInsightsItem(data.activeBlock, to: submenu)
+        self.addReliabilityInsightsItem(data.reliability, to: submenu)
+        self.addRoutingInsightsItem(data.routing, to: submenu)
+        self.addModelBreakdownItems(data.modelBreakdown, limit: limit, to: submenu)
+        self.addProjectBreakdownItems(data.projectBreakdown, limit: limit, to: submenu)
+        self.addOpenInsightsReportItem(
+            provider: provider,
+            hasOverflow: data.hasOverflow(limit: limit),
+            reportDays: reportDays,
+            to: submenu)
+        return submenu
+    }
+
+    private func ledgerInsightsSubmenuData(for provider: UsageProvider) -> LedgerInsightsSubmenuData {
+        LedgerInsightsSubmenuData(
+            daily: self.store.ledgerDailySummary(for: provider),
+            activeBlock: self.store.ledgerActiveBlock(for: provider),
+            modelBreakdown: self.store.ledgerModelBreakdown(for: provider)
+                .filter { $0.provider == provider },
+            projectBreakdown: self.store.ledgerProjectBreakdown(for: provider)
+                .filter { $0.provider == provider },
+            reliability: self.store.ledgerReliabilityScore(for: provider),
+            routing: self.store.ledgerRoutingRecommendation(for: provider))
+    }
+
+    private func addInsightsTitle(to submenu: NSMenu) {
         let titleItem = NSMenuItem(title: "Local insights (today)", action: nil, keyEquivalent: "")
         titleItem.isEnabled = false
         submenu.addItem(titleItem)
+    }
 
-        if let daily {
-            let totalTokens = UsageFormatter.tokenCountString(daily.totals.totalTokens)
-            let inputTokens = UsageFormatter.tokenCountString(daily.totals.inputTokens)
-            let outputTokens = UsageFormatter.tokenCountString(daily.totals.outputTokens)
-            var line = "Today: \(totalTokens) tokens · in \(inputTokens) · out \(outputTokens)"
-            if let cost = daily.totals.costUSD {
-                line += " · \(UsageFormatter.usdString(cost))"
-                if let per1K = UsageFormatter.usdPer1KTokensString(
-                    costUSD: cost,
-                    tokenCount: daily.totals.totalTokens)
-                {
-                    line += " · \(per1K)"
-                }
-            }
-            let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            submenu.addItem(item)
+    private func addDailyInsightsItem(_ daily: UsageLedgerDailySummary?, to submenu: NSMenu) {
+        guard let daily else { return }
+        let totalTokens = UsageFormatter.tokenCountString(daily.totals.totalTokens)
+        let inputTokens = UsageFormatter.tokenCountString(daily.totals.inputTokens)
+        let outputTokens = UsageFormatter.tokenCountString(daily.totals.outputTokens)
+        var line = "Today: \(totalTokens) tokens · in \(inputTokens) · out \(outputTokens)"
+        if let costText = self.costDetailText(for: daily.totals) {
+            line += costText
         }
+        let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        submenu.addItem(item)
+    }
 
-        if let activeBlock, activeBlock.isActive {
-            let tokens = UsageFormatter.tokenCountString(activeBlock.totals.totalTokens)
-            var line = "Block: \(tokens) tokens · \(activeBlock.entryCount) req"
-            if let cost = activeBlock.totals.costUSD {
-                line += " · \(UsageFormatter.usdString(cost))"
-                if let perRequest = UsageFormatter.usdPerRequestString(
-                    costUSD: cost,
-                    requestCount: activeBlock.entryCount)
-                {
-                    line += " · \(perRequest)"
-                }
-            }
-            if let burn = UsageFormatter.usdPerHourFromTokensString(
-                costUSD: activeBlock.totals.costUSD,
-                tokenCount: activeBlock.totals.totalTokens,
-                tokensPerMinute: activeBlock.tokensPerMinute)
+    private func addActiveBlockInsightsItem(_ activeBlock: UsageLedgerBlockSummary?, to submenu: NSMenu) {
+        guard let activeBlock, activeBlock.isActive else { return }
+        let tokens = UsageFormatter.tokenCountString(activeBlock.totals.totalTokens)
+        var line = "Block: \(tokens) tokens · \(activeBlock.entryCount) req"
+        if let cost = activeBlock.totals.costUSD {
+            line += " · \(UsageFormatter.usdString(cost))"
+            if let perRequest = UsageFormatter.usdPerRequestString(
+                costUSD: cost,
+                requestCount: activeBlock.entryCount)
             {
-                line += " · burn \(burn)"
+                line += " · \(perRequest)"
             }
-            let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+        }
+        if let burn = UsageFormatter.usdPerHourFromTokensString(
+            costUSD: activeBlock.totals.costUSD,
+            tokenCount: activeBlock.totals.totalTokens,
+            tokensPerMinute: activeBlock.tokensPerMinute)
+        {
+            line += " · burn \(burn)"
+        }
+        let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        submenu.addItem(item)
+    }
+
+    private func addReliabilityInsightsItem(
+        _ reliability: UsageLedgerReliabilityScore?,
+        to submenu: NSMenu)
+    {
+        guard let reliability else { return }
+        let item = NSMenuItem(
+            title: "Reliability: \(reliability.score)/100 · \(reliability.grade)",
+            action: nil,
+            keyEquivalent: "")
+        item.isEnabled = false
+        submenu.addItem(item)
+    }
+
+    private func addRoutingInsightsItem(
+        _ routing: UsageLedgerRoutingRecommendation?,
+        to submenu: NSMenu)
+    {
+        guard let routing else { return }
+        let from = UsageFormatter.modelDisplayName(routing.fromModel)
+        let to = UsageFormatter.modelDisplayName(routing.toModel)
+        let savings = UsageFormatter.usdString(routing.estimatedSavingsUSD)
+        let item = NSMenuItem(
+            title: "Routing: shift \(routing.shiftPercent)% \(from) -> \(to) · save \(savings)",
+            action: nil,
+            keyEquivalent: "")
+        item.isEnabled = false
+        submenu.addItem(item)
+    }
+
+    private func addModelBreakdownItems(
+        _ modelBreakdown: [UsageLedgerModelSummary],
+        limit: Int,
+        to submenu: NSMenu)
+    {
+        guard !modelBreakdown.isEmpty else { return }
+        self.addDisabledHeader("Models by project", to: submenu)
+        for summary in modelBreakdown.prefix(limit) {
+            let item = NSMenuItem(title: self.modelBreakdownTitle(summary), action: nil, keyEquivalent: "")
             item.isEnabled = false
             submenu.addItem(item)
         }
+    }
 
-        if let reliability {
-            let item = NSMenuItem(
-                title: "Reliability: \(reliability.score)/100 · \(reliability.grade)",
-                action: nil,
-                keyEquivalent: "")
+    private func addProjectBreakdownItems(
+        _ projectBreakdown: [UsageLedgerProjectSummary],
+        limit: Int,
+        to submenu: NSMenu)
+    {
+        guard !projectBreakdown.isEmpty else { return }
+        self.addDisabledHeader("Projects", to: submenu)
+        for summary in projectBreakdown.prefix(limit) {
+            let item = NSMenuItem(title: self.projectBreakdownTitle(summary), action: nil, keyEquivalent: "")
             item.isEnabled = false
             submenu.addItem(item)
         }
-        if let routing {
-            let from = UsageFormatter.modelDisplayName(routing.fromModel)
-            let to = UsageFormatter.modelDisplayName(routing.toModel)
-            let savings = UsageFormatter.usdString(routing.estimatedSavingsUSD)
-            let item = NSMenuItem(
-                title: "Routing: shift \(routing.shiftPercent)% \(from) -> \(to) · save \(savings)",
-                action: nil,
-                keyEquivalent: "")
-            item.isEnabled = false
-            submenu.addItem(item)
-        }
+    }
 
-        if !modelBreakdown.isEmpty {
-            submenu.addItem(NSMenuItem.separator())
-            let header = NSMenuItem(title: "Models by project", action: nil, keyEquivalent: "")
-            header.isEnabled = false
-            submenu.addItem(header)
+    private func addDisabledHeader(_ title: String, to submenu: NSMenu) {
+        submenu.addItem(NSMenuItem.separator())
+        let header = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        submenu.addItem(header)
+    }
 
-            let limited = modelBreakdown.prefix(limit)
-            for summary in limited {
-                let project = self.displayProjectName(
-                    projectID: summary.projectID,
-                    projectName: summary.projectName,
-                    confidence: summary.projectNameConfidence,
-                    source: summary.projectNameSource,
-                    provenance: summary.projectNameProvenance,
-                    includeAttribution: true)
-                let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
-                let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
-                let modelName = UsageFormatter.modelDisplayName(summary.model)
-                var title = "\(project) · \(modelName): \(tokens) tokens · \(summary.entryCount) req"
-                if let context = UsageFormatter.modelContextLabel(for: summary.model) {
-                    title += " · \(context)"
-                }
-                if let costText { title += " · \(costText)" }
-                if let per1K = UsageFormatter.usdPer1KTokensString(
-                    costUSD: summary.totals.costUSD,
-                    tokenCount: summary.totals.totalTokens)
-                {
-                    title += " · \(per1K)"
-                }
-                let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                item.isEnabled = false
-                submenu.addItem(item)
-            }
-        }
-
-        if !projectBreakdown.isEmpty {
-            submenu.addItem(NSMenuItem.separator())
-            let header = NSMenuItem(title: "Projects", action: nil, keyEquivalent: "")
-            header.isEnabled = false
-            submenu.addItem(header)
-
-            let limited = projectBreakdown.prefix(limit)
-            for summary in limited {
-                let project = self.displayProjectName(
-                    projectID: summary.projectID,
-                    projectName: summary.projectName,
-                    confidence: summary.projectNameConfidence,
-                    source: summary.projectNameSource,
-                    provenance: summary.projectNameProvenance,
-                    includeAttribution: true)
-                let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
-                let costText = summary.totals.costUSD.map { UsageFormatter.usdString($0) }
-                let modelsText = summary.modelsUsed.isEmpty
-                    ? nil
-                    : Self.renderedModelsLine(for: summary.modelsUsed)
-                var title = "\(project): \(tokens) tokens · \(summary.entryCount) req"
-                if let costText { title += " · \(costText)" }
-                if let per1K = UsageFormatter.usdPer1KTokensString(
-                    costUSD: summary.totals.costUSD,
-                    tokenCount: summary.totals.totalTokens)
-                {
-                    title += " · \(per1K)"
-                }
-                if let modelsText { title += " · \(modelsText)" }
-                let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-                item.isEnabled = false
-                submenu.addItem(item)
-            }
-        }
-
+    private func addOpenInsightsReportItem(
+        provider: UsageProvider,
+        hasOverflow: Bool,
+        reportDays: Int,
+        to submenu: NSMenu)
+    {
         submenu.addItem(NSMenuItem.separator())
         let reportTitle = hasOverflow
             ? "More… (last \(reportDays) days)"
@@ -220,8 +232,58 @@ extension StatusItemController {
         openItem.target = self
         openItem.representedObject = provider.rawValue
         submenu.addItem(openItem)
+    }
 
-        return submenu
+    private func modelBreakdownTitle(_ summary: UsageLedgerModelSummary) -> String {
+        let project = self.displayProjectName(
+            projectID: summary.projectID,
+            projectName: summary.projectName,
+            confidence: summary.projectNameConfidence,
+            source: summary.projectNameSource,
+            provenance: summary.projectNameProvenance,
+            includeAttribution: true)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let modelName = UsageFormatter.modelDisplayName(summary.model)
+        var title = "\(project) · \(modelName): \(tokens) tokens · \(summary.entryCount) req"
+        if let context = UsageFormatter.modelContextLabel(for: summary.model) {
+            title += " · \(context)"
+        }
+        if let costDetail = self.costDetailText(for: summary.totals) {
+            title += costDetail
+        }
+        return title
+    }
+
+    private func projectBreakdownTitle(_ summary: UsageLedgerProjectSummary) -> String {
+        let project = self.displayProjectName(
+            projectID: summary.projectID,
+            projectName: summary.projectName,
+            confidence: summary.projectNameConfidence,
+            source: summary.projectNameSource,
+            provenance: summary.projectNameProvenance,
+            includeAttribution: true)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let modelsText = summary.modelsUsed.isEmpty
+            ? nil
+            : Self.renderedModelsLine(for: summary.modelsUsed)
+        var title = "\(project): \(tokens) tokens · \(summary.entryCount) req"
+        if let costDetail = self.costDetailText(for: summary.totals) {
+            title += costDetail
+        }
+        if let modelsText { title += " · \(modelsText)" }
+        return title
+    }
+
+    private func costDetailText(for totals: UsageLedgerTotals) -> String? {
+        guard let cost = totals.costUSD else { return nil }
+        var text = " · \(UsageFormatter.usdString(cost))"
+        if let per1K = UsageFormatter.usdPer1KTokensString(
+            costUSD: cost,
+            tokenCount: totals.totalTokens)
+        {
+            text += " · \(per1K)"
+        }
+        return text
     }
 
     func displayProjectName(

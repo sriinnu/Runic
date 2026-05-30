@@ -2,9 +2,8 @@ import Foundation
 import Helix
 import RunicCore
 
-// Structural lint debt: legacy CLI entrypoint still needs command-specific files.
 @main
-enum RunicCLI { // swiftlint:disable:this type_body_length
+enum RunicCLI {
     static func main() async {
         let rawArgv = Array(CommandLine.arguments.dropFirst())
         let argv = Self.effectiveArgv(rawArgv)
@@ -338,7 +337,7 @@ enum RunicCLI { // swiftlint:disable:this type_body_length
         if withCommits {
             let gitDirectory = gitDirectoryArg.map { URL(fileURLWithPath: $0) }
             let entriesWithCommits = GitHubIntegration.linkCommitsToUsage(entries: entries, gitDirectory: gitDirectory)
-            Self.renderInsightsWithCommits(entriesWithCommits, isJson: isJson, isPretty: isPretty)
+            RunicCLIInsightsRenderer.renderWithCommits(entriesWithCommits, isJson: isJson, isPretty: isPretty)
             return
         }
 
@@ -346,37 +345,37 @@ enum RunicCLI { // swiftlint:disable:this type_body_length
         case "daily":
             if let granularity = granularityArg, granularity == "hourly" {
                 let summaries = UsageLedgerAggregator.hourlySummaries(entries: entries, timeZone: timeZone)
-                Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+                RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
             } else {
                 let summaries = UsageLedgerAggregator.dailySummaries(entries: entries, timeZone: timeZone)
-                Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+                RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
             }
         case "session":
             let summaries = UsageLedgerAggregator.sessionSummaries(entries: entries)
-            Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
         case "blocks":
             let summaries = UsageLedgerAggregator.blockSummaries(entries: entries, blockHours: 5, now: now)
-            Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
         case "models":
             let summaries = UsageLedgerAggregator.modelSummaries(entries: entries, groupByProject: true)
-            Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
         case "projects":
             let summaries = UsageLedgerAggregator.projectSummaries(entries: entries)
             if includeBudget {
                 let budgetData = Self.enrichProjectsWithBudget(summaries)
-                Self.renderInsightsOutput(budgetData, isJson: isJson, isPretty: isPretty)
+                RunicCLIInsightsRenderer.renderOutput(budgetData, isJson: isJson, isPretty: isPretty)
             } else {
-                Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+                RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
             }
         case "compaction":
             let summaries = UsageLedgerAggregator.compactionSummaries(entries: entries)
-            Self.renderInsightsOutput(summaries, isJson: isJson, isPretty: isPretty)
+            RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
         case "comparative":
             let comparisons = Self.modelCostComparison(entries: entries)
-            Self.renderInsightsOutput(comparisons, isJson: isJson, isPretty: isPretty)
+            RunicCLIInsightsRenderer.renderOutput(comparisons, isJson: isJson, isPretty: isPretty)
         case "efficiency":
             let efficiencies = Self.modelEfficiencyMetrics(entries: entries)
-            Self.renderInsightsOutput(efficiencies, isJson: isJson, isPretty: isPretty)
+            RunicCLIInsightsRenderer.renderOutput(efficiencies, isJson: isJson, isPretty: isPretty)
         default:
             Self.exit(code: 1, message: "Unknown insights view: \(viewArg)")
         }
@@ -620,226 +619,6 @@ enum RunicCLI { // swiftlint:disable:this type_body_length
                 totalCost: stats.hasCost ? stats.totalCost : nil)
         }
         .sorted { $0.requestCount > $1.requestCount }
-    }
-
-    private static func renderInsightsWithCommits(
-        _ entriesWithCommits: [UsageWithCommit],
-        isJson: Bool,
-        isPretty: Bool)
-    {
-        if isJson {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            if isPretty {
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            }
-            if let data = try? encoder.encode(entriesWithCommits),
-               let text = String(data: data, encoding: .utf8)
-            {
-                print(text)
-            } else {
-                print("{}")
-            }
-            return
-        }
-
-        // Text output
-        for item in entriesWithCommits {
-            let entry = item.entry
-            let timestamp = ISO8601DateFormatter().string(from: entry.timestamp)
-            let provider = entry.provider.rawValue
-            let tokens = entry.totalTokens
-            let costText = entry.costUSD.map { String(format: "$%.4f", $0) } ?? "n/a"
-            var line = "\(timestamp) - \(provider) - \(tokens) tokens - \(costText)"
-
-            if let commit = item.commit {
-                line += " - [\(commit.shortSha)] \(commit.message)"
-            } else {
-                line += " - [no commit]"
-            }
-
-            print(line)
-        }
-    }
-
-    private static func renderInsightsOutput( // swiftlint:disable:this cyclomatic_complexity function_body_length
-        _ payload: some Encodable,
-        isJson: Bool,
-        isPretty: Bool)
-    {
-        if isJson {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            if isPretty {
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            }
-            if let data = try? encoder.encode(payload),
-               let text = String(data: data, encoding: .utf8)
-            {
-                print(text)
-            } else {
-                print("{}")
-            }
-            return
-        }
-
-        if let summaries = payload as? [UsageLedgerDailySummary] {
-            for summary in summaries {
-                let project = summary.projectID ?? "all"
-                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                Self.printInsightLine([
-                    summary.dayKey,
-                    summary.provider.rawValue,
-                    project,
-                    "\(summary.totals.totalTokens) tokens",
-                    costText,
-                ])
-            }
-            return
-        }
-
-        if let summaries = payload as? [UsageLedgerSessionSummary] {
-            for summary in summaries {
-                let project = summary.projectID ?? "all"
-                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                Self.printInsightLine([
-                    summary.sessionID,
-                    summary.provider.rawValue,
-                    project,
-                    "\(summary.totals.totalTokens) tokens",
-                    costText,
-                ])
-            }
-            return
-        }
-
-        if let summaries = payload as? [UsageLedgerBlockSummary] {
-            for summary in summaries {
-                let project = summary.projectID ?? "all"
-                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                Self.printInsightLine([
-                    "\(summary.start)",
-                    summary.provider.rawValue,
-                    project,
-                    "\(summary.totals.totalTokens) tokens",
-                    costText,
-                ])
-            }
-            return
-        }
-
-        if let summaries = payload as? [UsageLedgerModelSummary] {
-            for summary in summaries {
-                let project = summary.projectID ?? "all"
-                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                Self.printInsightLine([
-                    summary.model,
-                    summary.provider.rawValue,
-                    project,
-                    "\(summary.totals.totalTokens) tokens",
-                    costText,
-                ])
-            }
-            return
-        }
-
-        if let summaries = payload as? [UsageLedgerProjectSummary] {
-            for summary in summaries {
-                let project = summary.projectID ?? "unknown"
-                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                let models = summary.modelsUsed.isEmpty ? "no models" : summary.modelsUsed.joined(separator: ", ")
-                Self.printInsightLine([
-                    project,
-                    summary.provider.rawValue,
-                    "\(summary.totals.totalTokens) tokens",
-                    costText,
-                    models,
-                ])
-            }
-            return
-        }
-
-        if let summaries = payload as? [UsageLedgerHourlySummary] {
-            for summary in summaries {
-                let project = summary.projectID ?? "all"
-                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                Self.printInsightLine([
-                    summary.hourKey,
-                    summary.provider.rawValue,
-                    project,
-                    "\(summary.totals.totalTokens) tokens",
-                    costText,
-                    "\(summary.requestCount) requests",
-                ])
-            }
-            return
-        }
-
-        if let summaries = payload as? [ProjectBudgetSummary] {
-            for summary in summaries {
-                let project = summary.projectID ?? "unknown"
-                let costText = summary.totals.costUSD.map { String(format: "$%.2f", $0) } ?? "n/a"
-                let models = summary.modelsUsed.isEmpty ? "no models" : summary.modelsUsed.joined(separator: ", ")
-                var parts = [
-                    project,
-                    summary.provider.rawValue,
-                    "\(summary.totals.totalTokens) tokens",
-                    costText,
-                    models,
-                ]
-                if let budget = summary.budgetInfo {
-                    parts.append(Self.budgetInsightText(budget))
-                }
-                Self.printInsightLine(parts)
-            }
-            return
-        }
-
-        if let comparisons = payload as? [ModelCostComparison] {
-            for comparison in comparisons {
-                let costPerToken = String(format: "$%.6f", comparison.costPerToken)
-                let totalCost = String(format: "$%.2f", comparison.totalCost)
-                Self.printInsightLine([
-                    "#\(comparison.rank ?? 0) \(comparison.model)",
-                    "\(costPerToken)/token",
-                    "Total: \(totalCost)",
-                    "Tokens: \(comparison.totalTokens)",
-                    "Requests: \(comparison.requestCount)",
-                ])
-            }
-            return
-        }
-
-        if let metrics = payload as? [ModelEfficiencyMetrics] {
-            for metric in metrics {
-                let tokensPerReq = String(format: "%.0f", metric.tokensPerRequest)
-                let costPerReq = metric.costPerRequest.map { String(format: "$%.4f", $0) } ?? "n/a"
-                let cacheHit = String(format: "%.1f%%", metric.cacheHitRate)
-                let totalCost = metric.totalCost.map { String(format: "$%.2f", $0) } ?? "n/a"
-                Self.printInsightLine([
-                    metric.model,
-                    "\(metric.requestCount) reqs",
-                    "\(tokensPerReq) tok/req",
-                    "\(costPerReq)/req",
-                    "Cache: \(cacheHit)",
-                    "Total: \(totalCost)",
-                ])
-            }
-            return
-        }
-
-        print("No insights available.")
-    }
-
-    private static func printInsightLine(_ parts: [String]) {
-        print(parts.joined(separator: " - "))
-    }
-
-    private static func budgetInsightText(_ budget: BudgetInfo) -> String {
-        let spent = String(format: "$%.2f", budget.spent)
-        let limit = String(format: "$%.2f", budget.limit)
-        let percentage = String(format: "%.1f", budget.percentage)
-        return "Budget: \(spent)/\(limit) (\(percentage)%) [\(budget.status.rawValue)]"
     }
 
     // MARK: - Rendering
