@@ -69,12 +69,12 @@ final class UsageStore {
     var errors: [UsageProvider: String] = [:]
     var lastSourceLabels: [UsageProvider: String] = [:]
     private(set) var lastFetchAttempts: [UsageProvider: [ProviderFetchAttempt]] = [:]
-    private(set) var tokenSnapshots: [UsageProvider: CostUsageTokenSnapshot] = [:]
+    var tokenSnapshots: [UsageProvider: CostUsageTokenSnapshot] = [:]
     // Custom provider snapshots
     private(set) var customProviderSnapshots: [String: CustomProviderSnapshot] = [:]
     private(set) var customProviderErrors: [String: String] = [:]
-    private(set) var tokenErrors: [UsageProvider: String] = [:]
-    private(set) var tokenRefreshInFlight: Set<UsageProvider> = []
+    var tokenErrors: [UsageProvider: String] = [:]
+    var tokenRefreshInFlight: Set<UsageProvider> = []
     private(set) var ledgerDailySummaries: [UsageProvider: UsageLedgerDailySummary] = [:]
     private(set) var ledgerAllDailySummaries: [UsageProvider: [UsageLedgerDailySummary]] = [:]
     private(set) var ledgerHourlySummaries: [UsageProvider: [UsageLedgerHourlySummary]] = [:]
@@ -132,22 +132,22 @@ final class UsageStore {
 
     @ObservationIgnored let codexFetcher: UsageFetcher
     @ObservationIgnored let claudeFetcher: any ClaudeUsageFetching
-    @ObservationIgnored private let costUsageFetcher: CostUsageFetcher
+    @ObservationIgnored let costUsageFetcher: CostUsageFetcher
     @ObservationIgnored private let registry: ProviderRegistry
     @ObservationIgnored let settings: SettingsStore
     @ObservationIgnored let processEnvironment: [String: String]
     @ObservationIgnored private let sessionQuotaNotifier: SessionQuotaNotifier
     @ObservationIgnored private let sessionQuotaLogger = RunicLog.logger("sessionQuota")
     @ObservationIgnored let openAIWebLogger = RunicLog.logger("openai-web")
-    @ObservationIgnored private let tokenCostLogger = RunicLog.logger("token-cost")
+    @ObservationIgnored let tokenCostLogger = RunicLog.logger("token-cost")
     @ObservationIgnored var openAIWebDebugLines: [String] = []
     @ObservationIgnored var failureGates: [UsageProvider: ConsecutiveFailureGate] = [:]
-    @ObservationIgnored private var tokenFailureGates: [UsageProvider: ConsecutiveFailureGate] = [:]
+    @ObservationIgnored var tokenFailureGates: [UsageProvider: ConsecutiveFailureGate] = [:]
     @ObservationIgnored private var providerSpecs: [UsageProvider: ProviderSpec] = [:]
     @ObservationIgnored private let providerMetadata: [UsageProvider: ProviderMetadata]
     @ObservationIgnored var timerTask: Task<Void, Never>?
     @ObservationIgnored var tokenTimerTask: Task<Void, Never>?
-    @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
+    @ObservationIgnored var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored private var ledgerRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var runtimeStarted = false
     @ObservationIgnored private var requestedLedgerMaxAgeDays: Int?
@@ -156,9 +156,9 @@ final class UsageStore {
     ] =
         [:]
     @ObservationIgnored private var lastKnownSessionRemaining: [UsageProvider: Double] = [:]
-    @ObservationIgnored private(set) var lastTokenFetchAt: [UsageProvider: Date] = [:]
+    @ObservationIgnored var lastTokenFetchAt: [UsageProvider: Date] = [:]
     @ObservationIgnored let tokenFetchTTL: TimeInterval = 60 * 60
-    @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
+    @ObservationIgnored let tokenFetchTimeout: TimeInterval = 10 * 60
     @ObservationIgnored private let ledgerRefreshTTL: TimeInterval = 90
     @ObservationIgnored private var ledgerMaxAgeDays: Int {
         max(self.settings.ledgerMaxAgeDays, self.requestedLedgerMaxAgeDays ?? 0)
@@ -573,43 +573,6 @@ extension UsageStore {
             settings: self.settings)
     }
 
-    func scheduleTokenRefresh(
-        force: Bool,
-        trigger: RefreshTrigger,
-        inactiveProviders: Set<UsageProvider>)
-    {
-        if trigger.isAuto, !self.shouldRunAutoRefresh(trigger: trigger, now: Date()) {
-            return
-        }
-        if force {
-            self.tokenRefreshSequenceTask?.cancel()
-            self.tokenRefreshSequenceTask = nil
-        } else if self.tokenRefreshSequenceTask != nil {
-            return
-        }
-
-        self.tokenRefreshSequenceTask = Task(priority: .utility) { [weak self] in
-            guard let self else { return }
-            defer {
-                Task { @MainActor [weak self] in
-                    self?.tokenRefreshSequenceTask = nil
-                }
-            }
-            await withTaskGroup(of: Void.self) { group in
-                for provider in UsageProvider.allCases {
-                    group.addTask {
-                        guard !Task.isCancelled else { return }
-                        await self.refreshTokenUsage(
-                            provider,
-                            force: force,
-                            trigger: trigger,
-                            inactiveProviders: inactiveProviders)
-                    }
-                }
-            }
-        }
-    }
-
     struct ProviderHistoryMonthCacheEntry {
         let fetchedAt: Date
         let snapshot: ProviderHistoryMonthSnapshot
@@ -909,143 +872,6 @@ extension UsageStore {
 
     private func refreshPathDebugInfo() {
         self.pathDebugInfo = PathBuilder.debugSnapshot(purposes: [.rpc, .tty, .nodeTooling])
-    }
-
-    func clearCostUsageCache() async -> String? {
-        let errorMessage: String? = await Task.detached(priority: .utility) {
-            let fm = FileManager.default
-            let cacheDirs = [
-                Self.costUsageCacheDirectory(fileManager: fm),
-                Self.costUsageLedgerCacheDirectory(fileManager: fm),
-                Self.costUsageRelayDirectory(fileManager: fm),
-            ]
-
-            for cacheDir in cacheDirs {
-                do {
-                    try fm.removeItem(at: cacheDir)
-                } catch let error as NSError {
-                    if error.domain == NSCocoaErrorDomain, error.code == NSFileNoSuchFileError { continue }
-                    return error.localizedDescription
-                }
-            }
-            return nil
-        }.value
-
-        guard errorMessage == nil else { return errorMessage }
-
-        self.tokenSnapshots.removeAll()
-        self.tokenErrors.removeAll()
-        self.lastTokenFetchAt.removeAll()
-        self.tokenFailureGates[.codex]?.reset()
-        self.tokenFailureGates[.claude]?.reset()
-        return nil
-    }
-
-    private func refreshTokenUsage(
-        _ provider: UsageProvider,
-        force: Bool,
-        trigger: RefreshTrigger,
-        inactiveProviders: Set<UsageProvider>) async
-    {
-        guard provider == .codex || provider == .claude else {
-            self.tokenSnapshots.removeValue(forKey: provider)
-            self.tokenErrors[provider] = nil
-            self.tokenFailureGates[provider]?.reset()
-            self.lastTokenFetchAt.removeValue(forKey: provider)
-            return
-        }
-
-        guard self.settings.costUsageEnabled else {
-            self.tokenSnapshots.removeValue(forKey: provider)
-            self.tokenErrors[provider] = nil
-            self.tokenFailureGates[provider]?.reset()
-            self.lastTokenFetchAt.removeValue(forKey: provider)
-            return
-        }
-
-        guard self.isEnabled(provider) else {
-            self.tokenSnapshots.removeValue(forKey: provider)
-            self.tokenErrors[provider] = nil
-            self.tokenFailureGates[provider]?.reset()
-            self.lastTokenFetchAt.removeValue(forKey: provider)
-            return
-        }
-
-        if trigger.isAuto, inactiveProviders.contains(provider), !force {
-            return
-        }
-
-        guard !self.tokenRefreshInFlight.contains(provider) else { return }
-
-        let now = Date()
-        if !force,
-           let last = self.lastTokenFetchAt[provider],
-           now.timeIntervalSince(last) < self.tokenFetchTTL
-        {
-            return
-        }
-        self.lastTokenFetchAt[provider] = now
-        self.tokenRefreshInFlight.insert(provider)
-        defer { self.tokenRefreshInFlight.remove(provider) }
-
-        let startedAt = Date()
-        let providerText = provider.rawValue
-        self.tokenCostLogger
-            .info("cost usage start provider=\(providerText) force=\(force)")
-
-        do {
-            let fetcher = self.costUsageFetcher
-            let timeoutSeconds = self.tokenFetchTimeout
-            let snapshot = try await withThrowingTaskGroup(of: CostUsageTokenSnapshot.self) { group in
-                group.addTask(priority: .utility) {
-                    try await fetcher.loadTokenSnapshot(provider: provider, now: now)
-                }
-                group.addTask {
-                    try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
-                    throw CostUsageError.timedOut(seconds: Int(timeoutSeconds))
-                }
-                defer { group.cancelAll() }
-                guard let snapshot = try await group.next() else { throw CancellationError() }
-                return snapshot
-            }
-
-            guard !snapshot.daily.isEmpty else {
-                self.tokenSnapshots.removeValue(forKey: provider)
-                self.tokenErrors[provider] = Self.tokenCostNoDataMessage(for: provider)
-                self.tokenFailureGates[provider]?.recordSuccess()
-                return
-            }
-            let duration = Date().timeIntervalSince(startedAt)
-            let sessionCost = snapshot.sessionCostUSD.map(UsageFormatter.usdString) ?? "—"
-            let monthCost = snapshot.last30DaysCostUSD.map(UsageFormatter.usdString) ?? "—"
-            let durationText = String(format: "%.2f", duration)
-            let message =
-                "cost usage success provider=\(providerText) " +
-                "duration=\(durationText)s " +
-                "today=\(sessionCost) " +
-                "30d=\(monthCost)"
-            self.tokenCostLogger.info(message)
-            self.tokenSnapshots[provider] = snapshot
-            self.tokenErrors[provider] = nil
-            self.tokenFailureGates[provider]?.recordSuccess()
-            self.persistWidgetSnapshot(reason: "token-usage")
-        } catch {
-            if error is CancellationError { return }
-            let duration = Date().timeIntervalSince(startedAt)
-            let msg = error.localizedDescription
-            let durationText = String(format: "%.2f", duration)
-            let message = "cost usage failed provider=\(providerText) duration=\(durationText)s error=\(msg)"
-            self.tokenCostLogger.error(message)
-            let hadPriorData = self.tokenSnapshots[provider] != nil
-            let shouldSurface = self.tokenFailureGates[provider]?
-                .shouldSurfaceError(onFailureWithPriorData: hadPriorData) ?? true
-            if shouldSurface {
-                self.tokenErrors[provider] = error.localizedDescription
-                self.tokenSnapshots.removeValue(forKey: provider)
-            } else {
-                self.tokenErrors[provider] = nil
-            }
-        }
     }
 
     // MARK: - Performance Tracking
