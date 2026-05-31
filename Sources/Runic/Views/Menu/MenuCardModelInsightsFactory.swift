@@ -217,7 +217,7 @@ extension UsageMenuCardView.Model {
     }
 
     private static func spendDetailLine(cost: Double, tokens: Int) -> String {
-        Self.spendDetailParts(cost: cost, tokens: tokens).joined(separator: " · ")
+        self.spendDetailParts(cost: cost, tokens: tokens).joined(separator: " · ")
     }
 
     private static func spendDetailParts(cost: Double, tokens: Int) -> [String] {
@@ -255,7 +255,7 @@ extension UsageMenuCardView.Model {
     }
 
     private static func connectionLines(input: Input) -> (line: String?, detail: String?) {
-        let status: String = if input.isRefreshing {
+        let status = if input.isRefreshing {
             "refreshing"
         } else if let lastError = input.lastError?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !lastError.isEmpty

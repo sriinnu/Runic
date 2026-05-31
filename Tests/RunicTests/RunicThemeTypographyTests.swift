@@ -72,7 +72,7 @@ extension RunicTests {
 
         for choice in expectedChoices
             where bundledFamilies.contains(choice.id) ||
-                NSFontManager.shared.availableMembers(ofFontFamily: choice.id)?.isEmpty == false
+            NSFontManager.shared.availableMembers(ofFontFamily: choice.id)?.isEmpty == false
         {
             let rules = RunicFontRules.rules(for: choice.id)
             #expect(ids.contains(choice.id))

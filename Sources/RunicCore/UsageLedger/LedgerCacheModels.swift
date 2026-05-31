@@ -113,7 +113,7 @@ enum UsageRelayRecordType: String {
     case watermark
 }
 
-struct UsageRelayRecord: Codable, Sendable {
+struct UsageRelayRecord: Codable {
     let schemaVersion: Int
     let recordType: String
     let provider: String
@@ -122,7 +122,7 @@ struct UsageRelayRecord: Codable, Sendable {
     let watermark: UsageRelayWatermark?
 }
 
-struct UsageRelayEvent: Codable, Sendable {
+struct UsageRelayEvent: Codable {
     let eventID: String
     let snapshotID: String
     let provider: String
@@ -149,7 +149,7 @@ struct UsageRelayEvent: Codable, Sendable {
     let sourceFingerprint: String?
 }
 
-struct UsageRelayWatermark: Codable, Sendable {
+struct UsageRelayWatermark: Codable {
     let snapshotID: String
     let dayKey: String
     let sourceKind: String

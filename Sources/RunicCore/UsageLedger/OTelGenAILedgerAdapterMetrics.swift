@@ -93,7 +93,9 @@ extension OTelGenAILedgerAdapter {
             sessionID: self.stringValue(
                 for: ["gen_ai.conversation.id", "session.id", "session_id", "thread.id"],
                 in: attributes),
-            requestID: self.stringValue(for: ["gen_ai.request.id", "request.id", "request_id", "span.id"], in: attributes),
+            requestID: self.stringValue(
+                for: ["gen_ai.request.id", "request.id", "request_id", "span.id"],
+                in: attributes),
             messageID: self.stringValue(for: ["gen_ai.message.id", "message.id", "message_id"], in: attributes),
             version: self.stringValue(for: ["gen_ai.system.version", "library.version", "sdk.version"], in: attributes))
     }
@@ -119,7 +121,7 @@ extension OTelGenAILedgerAdapter {
                 ],
                 in: attributes),
         ]
-        .compactMap { $0?.lowercased() }
+            .compactMap { $0?.lowercased() }
 
         if signals.contains(where: { $0.contains("compact") || $0.contains("compaction") }) {
             return .compaction

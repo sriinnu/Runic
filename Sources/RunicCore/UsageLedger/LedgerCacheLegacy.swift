@@ -117,8 +117,8 @@ extension LedgerCache {
 
     static func isTrustedLegacyDaily(provider: String, daily: CachedDaily) -> Bool {
         guard provider == "codex" || provider == "claude" else { return true }
-        if daily.totalTokens > Self.maxTrustedLegacyDailyTokens { return false }
-        if daily.requestCount > Self.maxTrustedLegacyDailyRequests { return false }
+        if daily.totalTokens > maxTrustedLegacyDailyTokens { return false }
+        if daily.requestCount > maxTrustedLegacyDailyRequests { return false }
         return true
     }
 

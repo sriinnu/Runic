@@ -1,8 +1,8 @@
 import Foundation
 import RunicCore
 
-struct ProviderContextWindowLabel: Equatable, Sendable {
-    enum Source: Equatable, Sendable {
+struct ProviderContextWindowLabel: Equatable {
+    enum Source: Equatable {
         case kosha
         case modelHeuristic
         case staticFallback
@@ -319,7 +319,7 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
         snapshot: ProviderContextSnapshot,
         includingModelBridges: Bool) -> ContextProvider?
     {
-        for providerID in Self.koshaProviderIDs(for: provider, includingModelBridges: includingModelBridges) {
+        for providerID in self.koshaProviderIDs(for: provider, includingModelBridges: includingModelBridges) {
             if let record = snapshot.providersByID[providerID] {
                 return record
             }
@@ -328,7 +328,7 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
     }
 
     private static func model(_ candidate: ContextModel, matches rawModel: String) -> Bool {
-        guard let target = Self.normalizedModelID(rawModel) else { return false }
+        guard let target = normalizedModelID(rawModel) else { return false }
         return candidate.lookupModelIDs.contains { id in
             target == id
                 || target.hasSuffix("/\(id)")
@@ -341,48 +341,47 @@ final class ProviderContextWindowRegistry: @unchecked Sendable {
     private static func allowsProviderWideKoshaContext(_ provider: UsageProvider) -> Bool {
         switch provider {
         case .codex, .cursor, .factory, .antigravity, .copilot, .auggie, .azure:
-            return false
+            false
         default:
-            return true
+            true
         }
     }
 
     private static func koshaProviderIDs(for provider: UsageProvider, includingModelBridges: Bool) -> [String] {
-        let ids: [String]
-        switch provider {
+        let ids: [String] = switch provider {
         case .codex:
-            ids = ["openai", "codex"]
+            ["openai", "codex"]
         case .claude:
-            ids = ["anthropic", "claude"]
+            ["anthropic", "claude"]
         case .gemini:
-            ids = ["google", "gemini"]
+            ["google", "gemini"]
         case .zai:
-            ids = ["zai", "glm"]
+            ["zai", "glm"]
         case .vercelai:
-            ids = ["vercel", "vercelai", "vercel-ai-gateway", "ai-gateway"]
+            ["vercel", "vercelai", "vercel-ai-gateway", "ai-gateway"]
         case .kimi:
-            ids = ["moonshot", "kimi"]
+            ["moonshot", "kimi"]
         case .vertexai:
-            ids = ["vertex", "vertexai", "vertex-ai"]
+            ["vertex", "vertexai", "vertex-ai"]
         case .azure:
-            ids = includingModelBridges
+            includingModelBridges
                 ? ["azure", "azure-openai", "aoai", "openai"]
                 : ["azure", "azure-openai", "aoai"]
         case .xai:
-            ids = ["xai", "x-ai", "grok"]
+            ["xai", "x-ai", "grok"]
         case .qwen:
-            ids = ["qwen", "dashscope", "alibaba"]
+            ["qwen", "dashscope", "alibaba"]
         case .localLLM:
-            ids = [
+            [
                 "local-llm", "local", "ollama", "lmstudio", "lm-studio",
                 "llamacpp", "llama-cpp", "vllm", "openwebui",
             ]
         case .sambanova:
-            ids = ["sambanova", "samba"]
+            ["sambanova", "samba"]
         case .bedrock:
-            ids = ["bedrock", "aws-bedrock"]
+            ["bedrock", "aws-bedrock"]
         default:
-            ids = [provider.rawValue]
+            [provider.rawValue]
         }
 
         var seen = Set<String>()

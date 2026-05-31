@@ -11,7 +11,9 @@ enum PopoverInsightPanel: String, CaseIterable, Identifiable {
     case projects
     case models
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var title: String {
         switch self {
@@ -63,8 +65,8 @@ extension UsageExporter.Scope {
     }
 }
 
-private extension UsageTimelineChartMenuView.TimeRange {
-    var exportScope: UsageExporter.Scope {
+extension UsageTimelineChartMenuView.TimeRange {
+    fileprivate var exportScope: UsageExporter.Scope {
         switch self {
         case .threeDays: .timeline3d
         case .sevenDays: .timeline7d
@@ -102,10 +104,6 @@ struct MenuPopoverBackground: View {
 struct MenuPopoverSurfaceCard<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(\.runicTheme) private var runicTheme
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
 
     var body: some View {
         let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
@@ -244,7 +242,7 @@ struct MenuPopoverChip: View {
     }
 
     private var border: Color {
-        return self.isSelected
+        self.isSelected
             ? self.runicTheme.accent.opacity(0.64)
             : self.runicTheme.cardStroke.opacity(self.isHovered ? 0.72 : 0.42)
     }
@@ -330,7 +328,7 @@ struct MenuPopoverActionButton: View {
 
     /// Foreground colour stays readable across selected and hover states.
     private var themedForeground: Color {
-        return self.runicTheme.primaryText
+        self.runicTheme.primaryText
     }
 
     /// Per-theme hover background. Terminal uses a calm phosphor wash; glow

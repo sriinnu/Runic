@@ -3,10 +3,10 @@ import Helix
 extension RunicCLI {
     static var program: Program {
         Program(descriptors: [
-            Self.usageDescriptor,
-            Self.costDescriptor,
-            Self.insightsDescriptor,
-            Self.otelCollectDescriptor,
+            usageDescriptor,
+            costDescriptor,
+            insightsDescriptor,
+            otelCollectDescriptor,
         ])
     }
 
@@ -15,7 +15,7 @@ extension RunicCLI {
             name: "usage",
             abstract: "Print usage as text or JSON",
             discussion: nil,
-            signature: Self.usageSignature)
+            signature: usageSignature)
     }
 
     private static var costDescriptor: CommandDescriptor {
@@ -23,7 +23,7 @@ extension RunicCLI {
             name: "cost",
             abstract: "Print local cost usage as text or JSON",
             discussion: nil,
-            signature: Self.costSignature)
+            signature: costSignature)
     }
 
     private static var insightsDescriptor: CommandDescriptor {
@@ -31,7 +31,7 @@ extension RunicCLI {
             name: "insights",
             abstract: "Analyze local usage logs (daily/session/blocks)",
             discussion: nil,
-            signature: Self.insightsSignature)
+            signature: insightsSignature)
     }
 
     private static var otelCollectDescriptor: CommandDescriptor {
@@ -39,7 +39,7 @@ extension RunicCLI {
             name: "otel-collect",
             abstract: "Collect OTLP/HTTP JSON GenAI usage into Runic's sanitized local ledger",
             discussion: nil,
-            signature: Self.otelCollectSignature)
+            signature: otelCollectSignature)
     }
 
     private static var usageSignature: CommandSignature {

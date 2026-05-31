@@ -12,7 +12,7 @@ extension ClaudeUsageLogSource {
             guard !lineData.isEmpty,
                   let line = String(data: lineData, encoding: .utf8)?
                       .trimmingCharacters(in: .whitespacesAndNewlines),
-                  !line.isEmpty
+                      !line.isEmpty
             else { return }
             if let entry = self.parseLine(
                 line[...],

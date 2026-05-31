@@ -11,13 +11,12 @@ extension RunicCLI {
         let noColor = invocation.parsedValues.flags.contains("noColor")
         let useColor = !noColor
 
-        let providers: [UsageProvider]
-        if let providerName = providerArg?.lowercased() {
-            providers = Self.resolveProviderList(
+        let providers: [UsageProvider] = if let providerName = providerArg?.lowercased() {
+            Self.resolveProviderList(
                 providerName,
                 defaultProviders: ProviderDescriptorRegistry.all.map(\.id))
         } else {
-            providers = ProviderDescriptorRegistry.all.map(\.id)
+            ProviderDescriptorRegistry.all.map(\.id)
         }
 
         let fetcher = UsageFetcher()

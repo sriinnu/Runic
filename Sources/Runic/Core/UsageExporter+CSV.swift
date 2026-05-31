@@ -5,31 +5,31 @@ extension UsageExporter {
     static func exportCSV(store: UsageStore, provider: UsageProvider, scope: Scope) -> String {
         switch scope {
         case .all:
-            return self.exportDailyCSV(store: store, provider: provider)
+            self.exportDailyCSV(store: store, provider: provider)
         case .timeline:
-            return self.exportLedgerDailyCSV(store: store, provider: provider, days: nil)
+            self.exportLedgerDailyCSV(store: store, provider: provider, days: nil)
         case .timeline3d:
-            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 3)
+            self.exportLedgerDailyCSV(store: store, provider: provider, days: 3)
         case .timeline7d:
-            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 7)
+            self.exportLedgerDailyCSV(store: store, provider: provider, days: 7)
         case .timeline30d:
-            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 30)
+            self.exportLedgerDailyCSV(store: store, provider: provider, days: 30)
         case .timeline90d:
-            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 90)
+            self.exportLedgerDailyCSV(store: store, provider: provider, days: 90)
         case .timeline1y:
-            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 365)
+            self.exportLedgerDailyCSV(store: store, provider: provider, days: 365)
         case .hourly:
-            return self.exportHourlyCSV(store: store, provider: provider)
+            self.exportHourlyCSV(store: store, provider: provider)
         case .weekly:
-            return self.exportLedgerDailyCSV(store: store, provider: provider, days: 7)
+            self.exportLedgerDailyCSV(store: store, provider: provider, days: 7)
         case .utilization:
-            return self.exportUtilizationCSV(store: store, provider: provider)
+            self.exportUtilizationCSV(store: store, provider: provider)
         case .windows:
-            return self.exportWindowsCSV(store: store, provider: provider)
+            self.exportWindowsCSV(store: store, provider: provider)
         case .projects:
-            return self.exportProjectsCSV(store: store, provider: provider)
+            self.exportProjectsCSV(store: store, provider: provider)
         case .models:
-            return self.exportModelsCSV(store: store, provider: provider)
+            self.exportModelsCSV(store: store, provider: provider)
         }
     }
 
@@ -259,7 +259,7 @@ extension UsageExporter {
         costStr: String,
         modelsStr: String) -> String
     {
-        Self.csvRow([
+        self.csvRow([
             summary.dayKey,
             "\(summary.totals.inputTokens)",
             "\(summary.totals.outputTokens)",
@@ -268,12 +268,12 @@ extension UsageExporter {
             "\(summary.totals.totalTokens)",
             costStr,
             modelsStr,
-            Self.provenanceText(summary.totals.tokenProvenance),
-            Self.provenanceText(summary.totals.costProvenance),
+            self.provenanceText(summary.totals.tokenProvenance),
+            self.provenanceText(summary.totals.costProvenance),
         ])
     }
 
     private static func provenanceText(_ provenance: MetricProvenance?) -> String {
-        Self.csvEscape(provenance?.displayText ?? "")
+        self.csvEscape(provenance?.displayText ?? "")
     }
 }

@@ -207,7 +207,7 @@ struct UsageStoreProviderHistorySupport {
         ].flatMap(\.self)
 
         let commonFiles = Self.discoverOTelLedgerFiles(from: commonPaths.compactMap(Self.expandTildePath))
-        let commonPathsSeen = Set(commonFiles.map { $0.standardizedFileURL.path })
+        let commonPathsSeen = Set(commonFiles.map(\.standardizedFileURL.path))
         let providerFiles = Self.discoverOTelLedgerFiles(from: providerPaths.compactMap(Self.expandTildePath))
             .filter { !commonPathsSeen.contains($0.standardizedFileURL.path) }
         return (commonFiles, providerFiles)

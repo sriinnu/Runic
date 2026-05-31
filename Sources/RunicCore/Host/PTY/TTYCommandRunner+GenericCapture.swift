@@ -128,7 +128,7 @@ extension TTYCommandRunner {
     {
         guard Date() >= nextCheckAt,
               !scanData.isEmpty,
-              scanData.range(of: Self.cursorQuery) != nil else { return }
+              scanData.range(of: self.cursorQuery) != nil else { return }
         try? context.send("\u{1b}[1;1R")
         nextCheckAt = Date().addingTimeInterval(interval)
     }

@@ -363,5 +363,4 @@ extension ProviderInsightsComposer {
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
-
 }

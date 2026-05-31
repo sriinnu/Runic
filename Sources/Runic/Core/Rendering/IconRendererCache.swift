@@ -110,7 +110,7 @@ extension IconRenderer {
     }
 
     static func styleKey(_ style: IconStyle) -> Int {
-        self.styleKeys[style] ?? Self.styleKeys[.combined] ?? 99
+        self.styleKeys[style] ?? self.styleKeys[.combined] ?? 99
     }
 
     static func indicatorKey(_ indicator: ProviderStatusIndicator) -> Int {

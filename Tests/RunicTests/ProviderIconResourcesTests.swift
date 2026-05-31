@@ -18,7 +18,7 @@ struct ProviderIconResourcesTests {
                 "Missing SVG for \(descriptor.id.rawValue)")
 
             let data = try Data(contentsOf: url)
-            #expect(data.count < 32_768, "Provider SVG is too large for menu rendering: \(descriptor.id.rawValue)")
+            #expect(data.count < 32768, "Provider SVG is too large for menu rendering: \(descriptor.id.rawValue)")
             let source = try #require(String(data: data, encoding: .utf8))
             #expect(source.contains("<svg"), "Provider SVG must contain an SVG root: \(descriptor.id.rawValue)")
             #expect(

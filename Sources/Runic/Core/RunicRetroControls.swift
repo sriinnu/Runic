@@ -34,11 +34,15 @@ struct RetroToggleStyle: ToggleStyle {
     private func box(isOn: Bool) -> some View {
         let size: CGFloat = 16
         let radius: CGFloat = self.runicTheme.isTerminalHUD ? 3 : 2
-        let fill: Color
-        if self.runicTheme.isTerminalHUD {
-            fill = isOn ? self.runicTheme.accent.opacity(0.88) : self.runicTheme.surfaceAlt.opacity(0.88)
-        } else {
-            fill = isOn ? self.runicTheme.accent : self.runicTheme.surfaceAlt
+        let fill: Color = switch (self.runicTheme.isTerminalHUD, isOn) {
+        case (true, true):
+            self.runicTheme.accent.opacity(0.88)
+        case (true, false):
+            self.runicTheme.surfaceAlt.opacity(0.88)
+        case (false, true):
+            self.runicTheme.accent
+        case (false, false):
+            self.runicTheme.surfaceAlt
         }
         let stroke = self.runicTheme.isTerminalHUD
             ? self.runicTheme.accent.opacity(isOn ? 0.95 : 0.42)
@@ -72,7 +76,9 @@ struct RetroToggleStyle: ToggleStyle {
 extension ToggleStyle where Self == RetroToggleStyle {
     /// Use theme-owned checkbox chrome for Retro/Terminal; system toggle elsewhere.
     @MainActor
-    static var retro: RetroToggleStyle { RetroToggleStyle() }
+    static var retro: RetroToggleStyle {
+        RetroToggleStyle()
+    }
 }
 
 @MainActor

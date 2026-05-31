@@ -35,7 +35,7 @@ enum WidgetColors {
     ]
 
     static func color(for provider: UsageProvider) -> Color {
-        self.providerColors[provider] ?? Self.rgb(73, 163, 176)
+        self.providerColors[provider] ?? self.rgb(73, 163, 176)
     }
 
     private static func rgb(_ red: Double, _ green: Double, _ blue: Double) -> Color {

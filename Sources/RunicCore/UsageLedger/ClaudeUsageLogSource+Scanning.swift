@@ -100,7 +100,7 @@ extension ClaudeUsageLogSource {
     }
 
     func sourceWatermark(for metadata: SourceFileMetadata, dayKey: String?) -> UsageRelaySourceWatermark {
-        return UsageRelaySourceWatermark(
+        UsageRelaySourceWatermark(
             dayKey: dayKey,
             sourceKind: "claude-jsonl",
             sourceID: metadata.path,

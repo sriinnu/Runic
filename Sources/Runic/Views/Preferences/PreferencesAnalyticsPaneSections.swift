@@ -136,8 +136,8 @@ extension AnalyticsPane {
     }
 }
 
-private extension AnalyticsPane {
-    var usageMetricsPicker: some View {
+extension AnalyticsPane {
+    private var usageMetricsPicker: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Usage metrics")
                 .font(self.fonts.body)
@@ -154,7 +154,7 @@ private extension AnalyticsPane {
         }
     }
 
-    var menuModePicker: some View {
+    private var menuModePicker: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Menu mode")
                 .font(self.fonts.body)
@@ -171,7 +171,7 @@ private extension AnalyticsPane {
         }
     }
 
-    var providerSwitcherLayoutPicker: some View {
+    private var providerSwitcherLayoutPicker: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Provider switcher layout")
                 .font(self.fonts.body)
@@ -190,7 +190,7 @@ private extension AnalyticsPane {
         }
     }
 
-    var providerSwitcherIconSizePicker: some View {
+    private var providerSwitcherIconSizePicker: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Switcher icon size")
                 .font(self.fonts.body)
@@ -209,7 +209,7 @@ private extension AnalyticsPane {
         }
     }
 
-    var alertsHeader: some View {
+    private var alertsHeader: some View {
         HStack {
             Text(self.alertStatusLine)
                 .font(self.fonts.footnote)
@@ -238,7 +238,7 @@ private extension AnalyticsPane {
     }
 
     @ViewBuilder
-    var alertsList: some View {
+    private var alertsList: some View {
         if self.alertsData.rules.isEmpty {
             Text("No guardrail rules configured on this Mac.")
                 .font(self.fonts.footnote)
@@ -255,7 +255,7 @@ private extension AnalyticsPane {
         }
     }
 
-    var budgetsHeader: some View {
+    private var budgetsHeader: some View {
         HStack {
             Text(self.budgetStatusLine)
                 .font(self.fonts.footnote)
@@ -274,7 +274,7 @@ private extension AnalyticsPane {
     }
 
     @ViewBuilder
-    var budgetsList: some View {
+    private var budgetsList: some View {
         if self.budgets.isEmpty {
             Text("No project budgets configured on this Mac.")
                 .font(self.fonts.footnote)
@@ -291,23 +291,23 @@ private extension AnalyticsPane {
         }
     }
 
-    var alertStatusLine: String {
+    private var alertStatusLine: String {
         let enabled = self.alertsData.rules.count(where: \.enabled)
         let history = self.alertsData.history.count
         return "\(enabled) enabled · \(self.alertsData.rules.count) rules · \(history) history"
     }
 
-    var budgetStatusLine: String {
+    private var budgetStatusLine: String {
         let enabled = self.budgets.count(where: \.enabled)
         return "\(enabled) enabled · \(self.budgets.count) budgets"
     }
 
-    var missingDefaultGuardrailCount: Int {
+    private var missingDefaultGuardrailCount: Int {
         let currentIDs = Set(self.alertsData.rules.map(\.id))
         return Self.defaultGuardrailIDs.subtracting(currentIDs).count
     }
 
-    static var defaultGuardrailIDs: Set<String> {
+    fileprivate static var defaultGuardrailIDs: Set<String> {
         [
             "runic-default-quota-critical",
             "runic-default-usage-velocity",

@@ -1,12 +1,12 @@
 import Foundation
 
-struct ProviderContextSnapshot: Sendable {
+struct ProviderContextSnapshot {
     let discoveredAt: Date?
     let providersByID: [String: ContextProvider]
     let modelsByProviderID: [String: [ContextModel]]
 }
 
-struct ContextProvider: Sendable {
+struct ContextProvider {
     let providerID: String
     let canonicalProviderID: String?
     let aliases: Set<String>
@@ -22,7 +22,7 @@ struct ContextProvider: Sendable {
     }
 }
 
-struct ContextModel: Sendable {
+struct ContextModel {
     let key: String
     let modelID: String
     let name: String?
@@ -42,7 +42,7 @@ struct ContextModel: Sendable {
     }
 
     var lookupModelIDs: [String] {
-        ([self.key, self.modelID] + [self.name].compactMap { $0 } + self.aliases)
+        ([self.key, self.modelID] + [self.name].compactMap(\.self) + self.aliases)
             .filter { !$0.isEmpty }
     }
 }

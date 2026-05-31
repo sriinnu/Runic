@@ -369,6 +369,4 @@ extension ProviderSidebarDetailView {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
     }
-
-
 }

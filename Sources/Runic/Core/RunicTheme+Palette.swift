@@ -22,25 +22,25 @@ extension Theme {
             // chrome with modern info architecture. Earth-toned accents
             // (System-7 blue, coral red, warm yellow). Pixel-display
             // headers paired with Geist body via the `fonts` token.
-            return RunicThemePalette(
+            RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
                 tagline: "Retro tools. Modern intelligence.",
                 symbolName: "rectangle.connected.to.line.below",
                 isCustom: true,
                 prefersDarkAppearance: false,
-                primary: Color(red: 0.118, green: 0.133, blue: 0.220),       // deep navy ink
-                secondary: Color(red: 0.353, green: 0.302, blue: 0.243),     // sepia muted
-                accent: Color(red: 0.231, green: 0.357, blue: 0.647),        // System-7 blue
-                highlight: Color(red: 0.847, green: 0.349, blue: 0.349),     // coral red
-                warm: Color(red: 0.780, green: 0.400, blue: 0.275),          // terracotta
-                tertiary: Color(red: 0.902, green: 0.690, blue: 0.251),      // warm yellow
-                surface: Color(red: 0.945, green: 0.910, blue: 0.823),       // parchment
-                surfaceAlt: Color(red: 0.973, green: 0.949, blue: 0.898),    // highlight bevel
-                cardFill: Color(red: 0.910, green: 0.867, blue: 0.760),      // inset card body
-                cardStroke: Color(red: 0.478, green: 0.510, blue: 0.604),    // muted blue-gray bevel — NOT black
-                primaryText: Color(red: 0.180, green: 0.180, blue: 0.220),    // soft dark, not aggressive
-                secondaryText: Color(red: 0.420, green: 0.380, blue: 0.330),  // warm sepia
+                primary: Color(red: 0.118, green: 0.133, blue: 0.220), // deep navy ink
+                secondary: Color(red: 0.353, green: 0.302, blue: 0.243), // sepia muted
+                accent: Color(red: 0.231, green: 0.357, blue: 0.647), // System-7 blue
+                highlight: Color(red: 0.847, green: 0.349, blue: 0.349), // coral red
+                warm: Color(red: 0.780, green: 0.400, blue: 0.275), // terracotta
+                tertiary: Color(red: 0.902, green: 0.690, blue: 0.251), // warm yellow
+                surface: Color(red: 0.945, green: 0.910, blue: 0.823), // parchment
+                surfaceAlt: Color(red: 0.973, green: 0.949, blue: 0.898), // highlight bevel
+                cardFill: Color(red: 0.910, green: 0.867, blue: 0.760), // inset card body
+                cardStroke: Color(red: 0.478, green: 0.510, blue: 0.604), // muted blue-gray bevel — NOT black
+                primaryText: Color(red: 0.180, green: 0.180, blue: 0.220), // soft dark, not aggressive
+                secondaryText: Color(red: 0.420, green: 0.380, blue: 0.330), // warm sepia
                 fonts: RunicThemeFonts(body: .system, numeric: .mono),
                 shape: .retroBevel,
                 motion: .mechanical,
@@ -49,7 +49,7 @@ extension Theme {
             // Auto-adapts to macOS appearance. Uses native colors and standard
             // shape/motion — this is the "Runic dressed in the OS's clothes"
             // theme, intended as the default boot state, not an opinionated look.
-            return RunicThemePalette(
+            RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
                 tagline: "Follow macOS",
@@ -76,7 +76,7 @@ extension Theme {
             // Clean aqua: native macOS light feel with curated accents.
             // Standard typography + standard motion — this is the "neutral"
             // light baseline, not a personality theme.
-            return RunicThemePalette(
+            RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
                 tagline: "Clean aqua",
@@ -103,20 +103,20 @@ extension Theme {
             // Cinematic dark: deep near-black canvas, electric accents,
             // glow-style separators. High-contrast and confident. Not a
             // "dimmed light theme" — its own visual language.
-            return RunicThemePalette(
+            RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
                 tagline: "Cinematic dark",
                 symbolName: "moon.stars.fill",
                 isCustom: false,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.45, green: 0.62, blue: 1.00),         // electric blue
-                secondary: Color(red: 0.55, green: 0.80, blue: 1.00),       // sky
-                accent: Color(red: 0.55, green: 0.80, blue: 1.00),          // sky accent
-                highlight: Color(red: 1.000, green: 0.620, blue: 0.180),    // punchy amber
-                warm: Color(red: 1.000, green: 0.380, blue: 0.500),         // hot coral
-                tertiary: Color(red: 0.380, green: 0.920, blue: 0.660),     // bright mint
-                surface: Color(red: 0.025, green: 0.030, blue: 0.045),      // near-black w/ blue tint
+                primary: Color(red: 0.45, green: 0.62, blue: 1.00), // electric blue
+                secondary: Color(red: 0.55, green: 0.80, blue: 1.00), // sky
+                accent: Color(red: 0.55, green: 0.80, blue: 1.00), // sky accent
+                highlight: Color(red: 1.000, green: 0.620, blue: 0.180), // punchy amber
+                warm: Color(red: 1.000, green: 0.380, blue: 0.500), // hot coral
+                tertiary: Color(red: 0.380, green: 0.920, blue: 0.660), // bright mint
+                surface: Color(red: 0.025, green: 0.030, blue: 0.045), // near-black w/ blue tint
                 surfaceAlt: Color(red: 0.060, green: 0.080, blue: 0.115).opacity(0.95),
                 cardFill: Color.white.opacity(0.045),
                 cardStroke: Color(red: 0.55, green: 0.80, blue: 1.00).opacity(0.22),
@@ -130,20 +130,20 @@ extension Theme {
             // Warm sunrise: peach + lavender + dusty yellow. Soft rounded
             // body, gentle ease, generous spacing. The "Sunday morning notebook"
             // theme — designed to feel slow and cozy.
-            return RunicThemePalette(
+            RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
                 tagline: "Storybook daylight",
                 symbolName: "sunrise.fill",
                 isCustom: true,
                 prefersDarkAppearance: false,
-                primary: Color(red: 0.460, green: 0.250, blue: 0.520),     // soft plum
-                secondary: Color(red: 0.940, green: 0.520, blue: 0.450),   // peach
-                accent: Color(red: 0.965, green: 0.310, blue: 0.470),      // sunset pink
-                highlight: Color(red: 1.000, green: 0.740, blue: 0.290),   // warm yellow
-                warm: Color(red: 0.690, green: 0.420, blue: 0.860),        // lavender
-                tertiary: Color(red: 0.270, green: 0.680, blue: 0.620),    // muted teal
-                surface: Color(red: 0.995, green: 0.965, blue: 0.945),     // cream
+                primary: Color(red: 0.460, green: 0.250, blue: 0.520), // soft plum
+                secondary: Color(red: 0.940, green: 0.520, blue: 0.450), // peach
+                accent: Color(red: 0.965, green: 0.310, blue: 0.470), // sunset pink
+                highlight: Color(red: 1.000, green: 0.740, blue: 0.290), // warm yellow
+                warm: Color(red: 0.690, green: 0.420, blue: 0.860), // lavender
+                tertiary: Color(red: 0.270, green: 0.680, blue: 0.620), // muted teal
+                surface: Color(red: 0.995, green: 0.965, blue: 0.945), // cream
                 surfaceAlt: Color(red: 1.000, green: 0.930, blue: 0.910).opacity(0.85),
                 cardFill: Color.white.opacity(0.78),
                 cardStroke: Color(red: 0.420, green: 0.190, blue: 0.350).opacity(0.16),
@@ -157,7 +157,7 @@ extension Theme {
             // Aurora-glass: deep indigo base, neon cyan/magenta/violet accents.
             // Translucent surfaces with hairline glow strokes, springy motion.
             // The "showroom" theme — bold and kinetic without being noisy.
-            return RunicThemePalette(
+            RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
                 tagline: "Aurora glass",
@@ -165,11 +165,11 @@ extension Theme {
                 isCustom: true,
                 prefersDarkAppearance: true,
                 primary: Color(red: 0.040, green: 0.060, blue: 0.170),
-                secondary: Color(red: 0.240, green: 0.880, blue: 1.000),    // cyan
-                accent: Color(red: 0.540, green: 0.380, blue: 1.000),       // violet
-                highlight: Color(red: 1.000, green: 0.420, blue: 0.760),    // magenta
-                warm: Color(red: 1.000, green: 0.560, blue: 0.230),         // amber
-                tertiary: Color(red: 0.180, green: 0.980, blue: 0.620),     // mint
+                secondary: Color(red: 0.240, green: 0.880, blue: 1.000), // cyan
+                accent: Color(red: 0.540, green: 0.380, blue: 1.000), // violet
+                highlight: Color(red: 1.000, green: 0.420, blue: 0.760), // magenta
+                warm: Color(red: 1.000, green: 0.560, blue: 0.230), // amber
+                tertiary: Color(red: 0.180, green: 0.980, blue: 0.620), // mint
                 surface: Color(red: 0.020, green: 0.028, blue: 0.060),
                 surfaceAlt: Color(red: 0.080, green: 0.140, blue: 0.260).opacity(0.46),
                 cardFill: Color.white.opacity(0.10),
@@ -183,7 +183,7 @@ extension Theme {
         case .terminal:
             // Tactical HUD: phosphor green on near-black with calmer scanlines,
             // fewer frames, and Commit Mono for dense operational data.
-            return RunicThemePalette(
+            RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
                 tagline: "Tactical HUD",

@@ -162,7 +162,7 @@ extension UsageStore {
                     let period = extra.period ?? "nil"
                     let line =
                         "extra_usage used=\(extra.used) limit=\(extra.limit) " +
-                            "currency=\(extra.currencyCode) period=\(period) resetsAt=\(resetsAt)"
+                        "currency=\(extra.currencyCode) period=\(period) resetsAt=\(resetsAt)"
                     lines.append(line)
                 } else {
                     lines.append("extra_usage=nil")

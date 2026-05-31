@@ -92,5 +92,4 @@ extension UsageStore {
             snapshot: snapshot)
         return snapshot
     }
-
 }

@@ -284,5 +284,4 @@ struct RunicTests {
         let b: Double
         let a: Double
     }
-
 }

@@ -20,11 +20,10 @@ extension RunicCLI {
         if invocation.parsedValues.flags.contains("once") {
             let input = invocation.parsedValues.options["input"]?.first
             do {
-                let data: Data
-                if let input, input != "-" {
-                    data = try Data(contentsOf: Self.expandedFileURL(input))
+                let data: Data = if let input, input != "-" {
+                    try Data(contentsOf: Self.expandedFileURL(input))
                 } else {
-                    data = FileHandle.standardInput.readDataToEndOfFile()
+                    FileHandle.standardInput.readDataToEndOfFile()
                 }
                 let sink = OTelGenAIIngestionSink(configuration: configuration)
                 let result = try await sink.ingest(data)

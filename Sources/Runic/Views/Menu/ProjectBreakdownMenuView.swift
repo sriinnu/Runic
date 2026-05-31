@@ -27,6 +27,7 @@ struct ProjectBreakdownMenuView: View {
                     .foregroundStyle(self.runicTheme.secondaryText)
             } else {
                 let detail = self.detailText(model: model)
+
                 // MARK: - Title
 
                 Text("Projects")

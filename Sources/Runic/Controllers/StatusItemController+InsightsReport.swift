@@ -148,8 +148,7 @@ extension StatusItemController {
             modelBreakdown: UsageLedgerAggregator.modelSummaries(entries: entries, groupByProject: true)
                 .filter { $0.provider == provider },
             projectBreakdown: UsageLedgerAggregator.projectSummaries(entries: entries)
-                .filter { $0.provider == provider }
-        )
+                .filter { $0.provider == provider })
     }
 
     private static func insightsHeaderLines(for data: InsightsReportData) -> [String] {

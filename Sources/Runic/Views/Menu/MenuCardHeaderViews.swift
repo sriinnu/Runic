@@ -128,7 +128,7 @@ struct UsageMenuCardHeaderView: View {
                         RunicTerminalScanlineOverlay(opacity: 0.55)
                     }
                 }
-                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous)))
+                .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous)))
     }
 
     @ViewBuilder

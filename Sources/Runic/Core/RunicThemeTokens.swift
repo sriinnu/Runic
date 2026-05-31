@@ -2,8 +2,8 @@ import SwiftUI
 
 // MARK: - Theme identity tokens
 
-/// A theme is more than a palette. These value types describe its non-color
-/// identity so components can change structure, not just tint.
+// A theme is more than a palette. These value types describe its non-color
+// identity so components can change structure, not just tint.
 
 /// Typographic personality of a theme. `nil` lets the user's font preference
 /// (or the SwiftUI default) take over; non-nil values force the theme's pick.
@@ -244,8 +244,8 @@ extension RunicThemeControlStyle: Decodable {
     }
 }
 
-private extension KeyedDecodingContainer {
-    func rawEnum<T: RawRepresentable>(
+extension KeyedDecodingContainer {
+    fileprivate func rawEnum<T: RawRepresentable>(
         _ type: T.Type,
         forKey key: Key,
         default value: T)
@@ -254,15 +254,15 @@ private extension KeyedDecodingContainer {
         (try? self.decodeIfPresent(String.self, forKey: key)).flatMap(T.init(rawValue:)) ?? value
     }
 
-    func double(forKey key: Key, default value: Double) -> Double {
+    fileprivate func double(forKey key: Key, default value: Double) -> Double {
         (try? self.decodeIfPresent(Double.self, forKey: key)) ?? value
     }
 
-    func cgFloat(forKey key: Key, default value: CGFloat) -> CGFloat {
+    fileprivate func cgFloat(forKey key: Key, default value: CGFloat) -> CGFloat {
         CGFloat(self.double(forKey: key, default: Double(value)))
     }
 
-    func cgFloatIfPresent(forKey key: Key) -> CGFloat? {
+    fileprivate func cgFloatIfPresent(forKey key: Key) -> CGFloat? {
         let value: Double? = try? self.decodeIfPresent(Double.self, forKey: key)
         return value.map { CGFloat($0) }
     }

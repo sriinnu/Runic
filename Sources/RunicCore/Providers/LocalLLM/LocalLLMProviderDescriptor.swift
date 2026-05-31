@@ -124,13 +124,13 @@ public enum LocalLLMUsageError: LocalizedError, Sendable, Equatable {
 }
 
 public enum LocalLLMUsageFetcher {
-    private struct Endpoint: Sendable {
+    private struct Endpoint {
         let runtimeName: String
         let url: URL
         let responseKind: ResponseKind
     }
 
-    private enum ResponseKind: Sendable {
+    private enum ResponseKind {
         case ollamaTags
         case openAIModels
     }
@@ -177,8 +177,8 @@ public enum LocalLLMUsageFetcher {
     ]
 
     public static func fetchFirstAvailable() async throws -> LocalLLMStatusSnapshot {
-        for endpoint in Self.endpoints {
-            if let snapshot = try? await Self.fetch(endpoint) {
+        for endpoint in self.endpoints {
+            if let snapshot = try? await fetch(endpoint) {
                 return snapshot
             }
         }

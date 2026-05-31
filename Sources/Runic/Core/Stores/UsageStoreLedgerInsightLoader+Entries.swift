@@ -75,7 +75,7 @@ extension UsageStoreLedgerInsightLoader {
         return LedgerDailyBuckets(
             dailyByProvider: dailyByProvider,
             allDailySummariesByProvider: allDailySummariesByProvider,
-            mergedDailySummaries: allDailySummariesByProvider.values.flatMap { $0 })
+            mergedDailySummaries: allDailySummariesByProvider.values.flatMap(\.self))
     }
 
     func hourlySummariesByProvider(

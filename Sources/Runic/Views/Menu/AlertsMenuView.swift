@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 struct AlertsMenuView: View {
     @Environment(\.runicFonts) private var fonts
+
     // MARK: - Types
 
     typealias AlertEntry = AlertRuleStore.AlertHistoryEntry

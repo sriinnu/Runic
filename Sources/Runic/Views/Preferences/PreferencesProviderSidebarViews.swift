@@ -48,6 +48,7 @@ struct ProviderSidebarRow: View {
         .opacity(self.isEnabled ? 1 : 0.6)
     }
 }
+
 struct ProviderSidebarSectionCard<Content: View>: View {
     @Environment(\.runicFonts) private var fonts
     private let content: Content

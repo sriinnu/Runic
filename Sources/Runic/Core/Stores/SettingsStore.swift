@@ -15,7 +15,7 @@ final class SettingsStore {
 
     var providerCredentialMigrationNotice: String?
 
-    // Keep credential fields cold at startup; provider fetchers read keychain values only when needed.
+    /// Keep credential fields cold at startup; provider fetchers read keychain values only when needed.
     var credentialValues = SettingsStoreCredentialValues()
 
     var providerConnectionValues: SettingsStoreProviderConnectionValues
@@ -66,5 +66,4 @@ final class SettingsStore {
         RunicFont.applyTheme(self.theme.palette)
         IconRenderer.themePalette = self.theme.palette
     }
-
 }

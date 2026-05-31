@@ -23,7 +23,7 @@ struct UsageTimelineChartMenuView: View {
         }
 
         var cutoffInterval: TimeInterval {
-            -TimeInterval(self.days * 86_400)
+            -TimeInterval(self.days * 86400)
         }
 
         var usesHourlyData: Bool {
@@ -105,7 +105,8 @@ struct UsageTimelineChartMenuView: View {
                 let detail = self.detailText(model: model)
                 let isTerminal = self.runicTheme.isTerminalHUD
                 let isGlow = self.runicTheme.shape.separator == .glow
-                let areaTopAlpha: Double = isTerminal ? 0.24 : (isGlow ? 0.38 : (self.runicTheme.id == "daybreak" ? 0.36 : 0.25))
+                let areaTopAlpha: Double = isTerminal ? 0.24 :
+                    (isGlow ? 0.38 : (self.runicTheme.id == "daybreak" ? 0.36 : 0.25))
                 let areaBottomAlpha: Double = isTerminal ? 0.02 : 0.03
                 let lineWidth: CGFloat = isGlow ? 2.4 : (isTerminal ? 1.4 : 2)
                 Chart {
@@ -247,7 +248,7 @@ struct UsageTimelineChartMenuView: View {
     // MARK: - Stat cell
 
     private struct StatCell: View {
-    @Environment(\.runicFonts) private var fonts
+        @Environment(\.runicFonts) private var fonts
         let label: String
         let value: String
         @Environment(\.runicTheme) private var runicTheme

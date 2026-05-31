@@ -223,7 +223,7 @@ extension UsageExporter {
 
     private static func addProvenance(to entry: inout [String: Any], totals: UsageLedgerTotals) {
         if let tokenProvenance = totals.tokenProvenance {
-            entry["tokenProvenance"] = Self.provenanceJSON(tokenProvenance)
+            entry["tokenProvenance"] = self.provenanceJSON(tokenProvenance)
         }
         if let costProvenance = totals.costProvenance {
             entry["costProvenance"] = Self.provenanceJSON(costProvenance)
@@ -243,8 +243,8 @@ extension UsageExporter {
     }
 }
 
-private extension UsageExporter.Scope {
-    var timelineDays: Int? {
+extension UsageExporter.Scope {
+    fileprivate var timelineDays: Int? {
         switch self {
         case .timeline3d: 3
         case .timeline7d, .weekly: 7
@@ -255,7 +255,7 @@ private extension UsageExporter.Scope {
         }
     }
 
-    var includesDailySummaries: Bool {
+    fileprivate var includesDailySummaries: Bool {
         switch self {
         case .all, .timeline, .timeline3d, .timeline7d, .timeline30d, .timeline90d, .timeline1y, .weekly,
              .utilization:

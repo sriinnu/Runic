@@ -40,20 +40,61 @@ final class RunicFontStore: @unchecked Sendable {
 
     // MARK: - SwiftUI Fonts
 
-    var caption2: Font { self.makeFont(size: 11, relativeTo: .caption2) }
-    var caption: Font { self.makeFont(size: 12, relativeTo: .caption) }
-    var footnote: Font { self.makeFont(size: 13, relativeTo: .footnote) }
-    var callout: Font { self.makeFont(size: 15, relativeTo: .callout) }
-    var body: Font { self.makeFont(size: 14, relativeTo: .body) }
-    var subheadline: Font { self.makeFont(size: 15, relativeTo: .subheadline) }
-    var headline: Font { self.makeFont(size: 16, relativeTo: .headline).weight(.bold) }
-    var title3: Font { self.makeFont(size: 18, relativeTo: .title3) }
-    var title2: Font { self.makeFont(size: 20, relativeTo: .title2) }
-    var title: Font { self.makeFont(size: 24, relativeTo: .title) }
-    var largeTitle: Font { self.makeFont(size: 28, relativeTo: .largeTitle) }
-    var numericCaption: Font { self.makeNumericFont(size: 12, weight: .regular) }
-    var numericFootnote: Font { self.makeNumericFont(size: 13, weight: .medium) }
-    var numericHeadline: Font { self.makeNumericFont(size: 16, weight: .semibold) }
+    var caption2: Font {
+        self.makeFont(size: 11, relativeTo: .caption2)
+    }
+
+    var caption: Font {
+        self.makeFont(size: 12, relativeTo: .caption)
+    }
+
+    var footnote: Font {
+        self.makeFont(size: 13, relativeTo: .footnote)
+    }
+
+    var callout: Font {
+        self.makeFont(size: 15, relativeTo: .callout)
+    }
+
+    var body: Font {
+        self.makeFont(size: 14, relativeTo: .body)
+    }
+
+    var subheadline: Font {
+        self.makeFont(size: 15, relativeTo: .subheadline)
+    }
+
+    var headline: Font {
+        self.makeFont(size: 16, relativeTo: .headline).weight(.bold)
+    }
+
+    var title3: Font {
+        self.makeFont(size: 18, relativeTo: .title3)
+    }
+
+    var title2: Font {
+        self.makeFont(size: 20, relativeTo: .title2)
+    }
+
+    var title: Font {
+        self.makeFont(size: 24, relativeTo: .title)
+    }
+
+    var largeTitle: Font {
+        self.makeFont(size: 28, relativeTo: .largeTitle)
+    }
+
+    var numericCaption: Font {
+        self.makeNumericFont(size: 12, weight: .regular)
+    }
+
+    var numericFootnote: Font {
+        self.makeNumericFont(size: 13, weight: .medium)
+    }
+
+    var numericHeadline: Font {
+        self.makeNumericFont(size: 16, weight: .semibold)
+    }
 
     var activeRules: RunicFontRules {
         RunicFontRules.rules(for: self.activeFamily).applying(self.themeTypography)
@@ -213,5 +254,5 @@ extension EnvironmentValues {
     /// injected at every scene root by `RunicApp`. Using `.shared` directly
     /// as the default would trigger a main-actor isolation warning at the
     /// `@Entry` site.
-    @Entry var runicFonts: RunicFontStore = RunicFontStore()
+    @Entry var runicFonts: RunicFontStore = .init()
 }

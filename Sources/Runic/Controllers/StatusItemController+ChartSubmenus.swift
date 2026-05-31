@@ -118,5 +118,4 @@ extension StatusItemController {
         submenu.addItem(chartItem)
         return submenu
     }
-
 }

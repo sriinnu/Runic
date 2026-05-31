@@ -40,6 +40,6 @@ struct VercelAIUsageFetcherTests {
 
         #expect(decoded.data?.count == 1)
         #expect(decoded.data?.first?.id == "openai/gpt-5")
-        #expect(decoded.data?.first?.contextWindow == 400000)
+        #expect(decoded.data?.first?.contextWindow == 400_000)
     }
 }
