@@ -2,9 +2,6 @@ import Foundation
 #if canImport(Security)
 import Security
 #endif
-#if canImport(LocalAuthentication)
-import LocalAuthentication
-#endif
 
 public enum ProviderTokenSource: String, Sendable {
     case keychain
@@ -27,7 +24,6 @@ public struct ProviderTokenResolution: Sendable {
 public enum ProviderTokenResolver {
     private static let log = RunicLog.logger("provider-token")
 
-    private static let keychainService = RunicKeychainService.providerCredentials
     private static let zaiAccount = "zai-api-token"
     private static let copilotAccount = "copilot-api-token"
     private static let minimaxAccount = "minimax-api-token"
@@ -445,43 +441,8 @@ public enum ProviderTokenResolver {
         return nil
     }
 
-    private static func cleaned(_ raw: String?) -> String? {
-        guard var value = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
-            return nil
-        }
-
-        if (value.hasPrefix("\"") && value.hasSuffix("\"")) ||
-            (value.hasPrefix("'") && value.hasSuffix("'"))
-        {
-            value.removeFirst()
-            value.removeLast()
-        }
-
-        value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? nil : value
-    }
-
-    private static func keychainToken(service: String, account: String) -> String? {
-        #if canImport(Security)
-        if service == RunicKeychainService.providerCredentials {
-            return ProviderCredentialKeychainMigration.token(account: account)
-        }
-        // Token stores write to the standard keychain (dataProtection: false),
-        // so try it first.  Fall back to the Data Protection keychain for
-        // pre-migration items that haven't been moved yet.
-        if let token = self.keychainRead(service: service, account: account, dataProtection: false) {
-            return token
-        }
-        return self.keychainRead(service: service, account: account, dataProtection: true)
-        #else
-        _ = service
-        _ = account
-        return nil
-        #endif
-    }
-
     #if canImport(Security)
-    private static func keychainRead(service: String, account: String, dataProtection: Bool) -> String? {
+    static func keychainRead(service: String, account: String, dataProtection: Bool) -> String? {
         var result: CFTypeRef?
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
