@@ -1,0 +1,215 @@
+import Foundation
+
+public struct UsageLedgerHourlySummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let projectID: String?
+    public let hourStart: Date
+    public let hourKey: String // "2026-01-31T14:00:00"
+    public let totals: UsageLedgerTotals
+    public let requestCount: Int
+
+    public init(
+        provider: UsageProvider,
+        projectID: String?,
+        hourStart: Date,
+        hourKey: String,
+        totals: UsageLedgerTotals,
+        requestCount: Int)
+    {
+        self.provider = provider
+        self.projectID = projectID
+        self.hourStart = hourStart
+        self.hourKey = hourKey
+        self.totals = totals
+        self.requestCount = requestCount
+    }
+}
+
+public struct UsageLedgerDailySummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let projectID: String?
+    public let dayStart: Date
+    public let dayKey: String
+    public let totals: UsageLedgerTotals
+    public let modelsUsed: [String]
+
+    public init(
+        provider: UsageProvider,
+        projectID: String?,
+        dayStart: Date,
+        dayKey: String,
+        totals: UsageLedgerTotals,
+        modelsUsed: [String])
+    {
+        self.provider = provider
+        self.projectID = projectID
+        self.dayStart = dayStart
+        self.dayKey = dayKey
+        self.totals = totals
+        self.modelsUsed = modelsUsed
+    }
+}
+
+public struct UsageLedgerSessionSummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let sessionID: String
+    public let projectID: String?
+    public let firstActivity: Date
+    public let lastActivity: Date
+    public let totals: UsageLedgerTotals
+    public let modelsUsed: [String]
+    public let versions: [String]
+
+    public init(
+        provider: UsageProvider,
+        sessionID: String,
+        projectID: String?,
+        firstActivity: Date,
+        lastActivity: Date,
+        totals: UsageLedgerTotals,
+        modelsUsed: [String],
+        versions: [String])
+    {
+        self.provider = provider
+        self.sessionID = sessionID
+        self.projectID = projectID
+        self.firstActivity = firstActivity
+        self.lastActivity = lastActivity
+        self.totals = totals
+        self.modelsUsed = modelsUsed
+        self.versions = versions
+    }
+}
+
+public struct UsageLedgerBlockSummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let sessionID: String?
+    public let projectID: String?
+    public let start: Date
+    public let end: Date
+    public let isActive: Bool
+    public let entryCount: Int
+    public let totals: UsageLedgerTotals
+    public let tokensPerMinute: Double?
+    public let projectedTotalTokens: Int?
+
+    public init(
+        provider: UsageProvider,
+        sessionID: String?,
+        projectID: String?,
+        start: Date,
+        end: Date,
+        isActive: Bool,
+        entryCount: Int,
+        totals: UsageLedgerTotals,
+        tokensPerMinute: Double?,
+        projectedTotalTokens: Int?)
+    {
+        self.provider = provider
+        self.sessionID = sessionID
+        self.projectID = projectID
+        self.start = start
+        self.end = end
+        self.isActive = isActive
+        self.entryCount = entryCount
+        self.totals = totals
+        self.tokensPerMinute = tokensPerMinute
+        self.projectedTotalTokens = projectedTotalTokens
+    }
+}
+
+public struct UsageLedgerModelSummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let projectKey: String?
+    public let projectID: String?
+    public let projectName: String?
+    public let projectNameConfidence: UsageLedgerProjectNameConfidence?
+    public let projectNameSource: UsageLedgerProjectNameSource?
+    public let projectNameProvenance: String?
+    public let model: String
+    public let entryCount: Int
+    public let totals: UsageLedgerTotals
+
+    public init(
+        provider: UsageProvider,
+        projectKey: String? = nil,
+        projectID: String?,
+        projectName: String? = nil,
+        projectNameConfidence: UsageLedgerProjectNameConfidence? = nil,
+        projectNameSource: UsageLedgerProjectNameSource? = nil,
+        projectNameProvenance: String? = nil,
+        model: String,
+        entryCount: Int,
+        totals: UsageLedgerTotals)
+    {
+        self.provider = provider
+        self.projectKey = projectKey
+        self.projectID = projectID
+        self.projectName = projectName
+        self.projectNameConfidence = projectNameConfidence
+        self.projectNameSource = projectNameSource
+        self.projectNameProvenance = projectNameProvenance
+        self.model = model
+        self.entryCount = entryCount
+        self.totals = totals
+    }
+
+    public var displayProjectName: String {
+        let trimmedName = self.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedName, !trimmedName.isEmpty {
+            return trimmedName
+        }
+        if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: self.projectID) {
+            return fallback
+        }
+        return "Unknown project"
+    }
+}
+
+public struct UsageLedgerProjectSummary: Sendable, Codable, Hashable {
+    public let provider: UsageProvider
+    public let projectKey: String?
+    public let projectID: String?
+    public let projectName: String?
+    public let projectNameConfidence: UsageLedgerProjectNameConfidence?
+    public let projectNameSource: UsageLedgerProjectNameSource?
+    public let projectNameProvenance: String?
+    public let entryCount: Int
+    public let totals: UsageLedgerTotals
+    public let modelsUsed: [String]
+
+    public init(
+        provider: UsageProvider,
+        projectKey: String? = nil,
+        projectID: String?,
+        projectName: String? = nil,
+        projectNameConfidence: UsageLedgerProjectNameConfidence? = nil,
+        projectNameSource: UsageLedgerProjectNameSource? = nil,
+        projectNameProvenance: String? = nil,
+        entryCount: Int,
+        totals: UsageLedgerTotals,
+        modelsUsed: [String])
+    {
+        self.provider = provider
+        self.projectKey = projectKey
+        self.projectID = projectID
+        self.projectName = projectName
+        self.projectNameConfidence = projectNameConfidence
+        self.projectNameSource = projectNameSource
+        self.projectNameProvenance = projectNameProvenance
+        self.entryCount = entryCount
+        self.totals = totals
+        self.modelsUsed = modelsUsed
+    }
+
+    public var displayProjectName: String {
+        let trimmedName = self.projectName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedName, !trimmedName.isEmpty {
+            return trimmedName
+        }
+        if let fallback = UsageLedgerProjectIdentityResolver.fallbackDisplayName(projectID: self.projectID) {
+            return fallback
+        }
+        return "Unknown project"
+    }
+}

@@ -3,8 +3,6 @@ import Foundation
 
 // MARK: - iCloud CloudKit Sync Engine
 
-// swiftlint:disable type_name
-
 /// CloudKit-based synchronization engine for iCloud sync
 ///
 /// This engine handles bidirectional synchronization of Runic data using
@@ -14,9 +12,7 @@ import Foundation
 /// - Background sync with NSPersistentCloudKitContainer compatibility
 /// - Privacy-first encryption for sensitive data
 /// - Retry logic with exponential backoff
-public actor iCloudSyncEngine: SyncEngine {
-    // swiftlint:enable type_name
-
+public actor ICloudSyncEngine: SyncEngine {
     // MARK: - Properties
 
     /// CloudKit container for sync operations

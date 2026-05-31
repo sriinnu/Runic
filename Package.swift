@@ -45,6 +45,9 @@ let package = Package(
                     "Performance/PerformanceAggregator.swift.disabled",
                     "Performance/PerformanceInterceptor.swift.disabled",
                 ],
+                resources: [
+                    .process("OpenAIWeb/Resources"),
+                ],
                 // Sync directory now enabled for iCloud CloudKit synchronization
                 swiftSettings: [
                     .enableUpcomingFeature("StrictConcurrency"),
