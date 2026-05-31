@@ -38,86 +38,11 @@ final class SettingsStore {
         }
     }
 
-    var sessionQuotaNotificationsEnabled: Bool {
-        didSet {
-            self.userDefaults.set(self.sessionQuotaNotificationsEnabled, forKey: "sessionQuotaNotificationsEnabled")
-        }
-    }
-
-    /// When enabled, post macOS notifications when spend forecasts breach project budgets.
-    var budgetNotificationsEnabled: Bool {
-        didSet {
-            self.userDefaults.set(self.budgetNotificationsEnabled, forKey: "budgetNotificationsEnabled")
-        }
-    }
+    var usageFeatureValues: SettingsStoreUsageFeatureValues
 
     var appearanceValues: SettingsStoreAppearanceValues
 
-    /// Optional: show provider token/cost summaries from local usage logs.
-    var costUsageEnabled: Bool {
-        didSet { self.userDefaults.set(self.costUsageEnabled, forKey: "tokenCostUsageEnabled") }
-    }
-
-    /// Comma/newline separated OpenTelemetry GenAI JSON/JSONL files or folders.
-    var otelGenAILogPaths: String {
-        didSet { self.userDefaults.set(self.otelGenAILogPaths, forKey: "otelGenAILogPaths") }
-    }
-
-    /// Optional: limit how many insight rows appear in the menu before "More…".
-    var insightsMenuMaxItems: Int {
-        didSet { self.userDefaults.set(self.insightsMenuMaxItems, forKey: "insightsMenuMaxItems") }
-    }
-
-    /// Optional: how many days to include in the insights report.
-    var insightsReportDays: Int {
-        didSet { self.userDefaults.set(self.insightsReportDays, forKey: "insightsReportDays") }
-    }
-
-    /// How many days of usage history to scan for ledger data (charts, breakdowns).
-    /// Options: 3, 7, 30, 90, 365. Default: 30.
-    var ledgerMaxAgeDays: Int {
-        didSet { self.userDefaults.set(self.ledgerMaxAgeDays, forKey: "ledgerMaxAgeDays") }
-    }
-
-    /// Optional: augment Claude usage with claude.ai web API (via browser cookies),
-    /// incl. "Extra usage" spend.
-    var claudeWebExtrasEnabled: Bool {
-        didSet { self.userDefaults.set(self.claudeWebExtrasEnabled, forKey: "claudeWebExtrasEnabled") }
-    }
-
-    /// Optional: show Codex credits + Claude extra usage sections in the menu UI.
-    var showOptionalCreditsAndExtraUsage: Bool {
-        didSet {
-            self.userDefaults.set(self.showOptionalCreditsAndExtraUsage, forKey: "showOptionalCreditsAndExtraUsage")
-        }
-    }
-
-    /// Optional: fetch OpenAI web dashboard extras for Codex (browser cookies).
-    var openAIWebAccessEnabled: Bool {
-        didSet { self.userDefaults.set(self.openAIWebAccessEnabled, forKey: "openAIWebAccessEnabled") }
-    }
-
     var providerCredentialMigrationNotice: String?
-
-    var codexUsageDataSourceRaw: String? {
-        didSet {
-            if let raw = self.codexUsageDataSourceRaw {
-                self.userDefaults.set(raw, forKey: "codexUsageDataSource")
-            } else {
-                self.userDefaults.removeObject(forKey: "codexUsageDataSource")
-            }
-        }
-    }
-
-    var claudeUsageDataSourceRaw: String? {
-        didSet {
-            if let raw = self.claudeUsageDataSourceRaw {
-                self.userDefaults.set(raw, forKey: "claudeUsageDataSource")
-            } else {
-                self.userDefaults.removeObject(forKey: "claudeUsageDataSource")
-            }
-        }
-    }
 
     // Keep credential fields cold at startup; provider fetchers read keychain values only when needed.
     var credentialValues = SettingsStoreCredentialValues()
@@ -162,19 +87,8 @@ final class SettingsStore {
         self.launchAtLogin = defaults.launchAtLogin
         self.debugMenuEnabled = defaults.debugMenuEnabled
         self.debugLoadingPatternRaw = defaults.debugLoadingPatternRaw
-        self.sessionQuotaNotificationsEnabled = defaults.sessionQuotaNotificationsEnabled
-        self.budgetNotificationsEnabled = defaults.budgetNotificationsEnabled
+        self.usageFeatureValues = SettingsStoreUsageFeatureValues(defaults: defaults)
         self.appearanceValues = SettingsStoreAppearanceValues(defaults: defaults)
-        self.costUsageEnabled = defaults.costUsageEnabled
-        self.otelGenAILogPaths = defaults.otelGenAILogPaths
-        self.insightsMenuMaxItems = defaults.insightsMenuMaxItems
-        self.insightsReportDays = defaults.insightsReportDays
-        self.ledgerMaxAgeDays = defaults.ledgerMaxAgeDays
-        self.claudeWebExtrasEnabled = defaults.claudeWebExtrasEnabled
-        self.showOptionalCreditsAndExtraUsage = defaults.showOptionalCreditsAndExtraUsage
-        self.openAIWebAccessEnabled = defaults.openAIWebAccessEnabled
-        self.codexUsageDataSourceRaw = defaults.codexUsageDataSourceRaw
-        self.claudeUsageDataSourceRaw = defaults.claudeUsageDataSourceRaw
         self.providerConnectionValues = SettingsStoreProviderConnectionValues(defaults: defaults)
         let credentialMigration = ProviderCredentialKeychainMigration.migrateKnownLegacyItems()
         if credentialMigration.needsUserRepair {
