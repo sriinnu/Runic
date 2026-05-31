@@ -19,11 +19,11 @@ import SwiftUI
 // - Manage keyboard shortcuts and user actions
 //
 // **Architecture Pattern:**
-// This file is split across 4 files via extensions:
-// - `StatusItemController.swift` - Core setup (318 lines)
-// - `StatusItemController+Menu.swift` - Menu construction (1878 lines)
-// - `StatusItemController+Actions.swift` - User actions (200 lines)
-// - `StatusItemController+Animation.swift` - Animation system (469 lines)
+// This type is split across focused extensions:
+// - `StatusItemController.swift` - Core setup
+// - `StatusItemController+Menu*.swift` - Menu lifecycle, population, switchers, and refresh state
+// - `StatusItemController+Actions.swift` - User actions
+// - `StatusItemController+Animation.swift` - Animation system
 //
 // **Performance:**
 // - **60 FPS cap** during active pings (PerformanceConstants.menubarFPS)
