@@ -61,7 +61,7 @@ extension GeminiStatusProbe {
         dataLoader: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse)) async throws
         -> String
     {
-        guard let url = URL(string: Self.tokenRefreshEndpoint) else {
+        guard let url = URL(string: tokenRefreshEndpoint) else {
             throw GeminiStatusProbeError.apiError("Invalid token refresh URL")
         }
 

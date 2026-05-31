@@ -28,7 +28,9 @@ struct RunicProviderHealthRow: Identifiable, Hashable {
     let dataDetail: String
     let issue: String?
 
-    var id: UsageProvider { self.provider }
+    var id: UsageProvider {
+        self.provider
+    }
 }
 
 struct RunicActionRecommendation: Identifiable, Hashable {
@@ -316,9 +318,9 @@ enum RunicDiagnosticsReport {
 
     private static func fontLabel(_ id: String) -> String {
         switch id {
-        case RunicFontChoice.sfPro.id: return RunicFontChoice.sfPro.displayName
-        case RunicFontChoice.sfMono.id: return RunicFontChoice.sfMono.displayName
-        default: return id
+        case RunicFontChoice.sfPro.id: RunicFontChoice.sfPro.displayName
+        case RunicFontChoice.sfMono.id: RunicFontChoice.sfMono.displayName
+        default: id
         }
     }
 

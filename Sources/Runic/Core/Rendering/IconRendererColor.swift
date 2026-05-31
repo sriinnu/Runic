@@ -15,8 +15,8 @@ extension IconRenderer {
     private nonisolated(unsafe) static var _themePalette: RunicThemePalette?
 
     static var themePalette: RunicThemePalette? {
-        get { Self.palettelLock.withLock { Self._themePalette } }
-        set { Self.palettelLock.withLock { Self._themePalette = newValue } }
+        get { palettelLock.withLock { Self._themePalette } }
+        set { palettelLock.withLock { Self._themePalette = newValue } }
     }
 
     static func vibrantAccentColor(pressure: Double, stale: Bool) -> NSColor {

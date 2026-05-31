@@ -229,7 +229,7 @@ cd Runic
 ### Release Preparation
 ```bash
 # 1. Update version
-echo "VERSION=1.2.3" > version.env
+printf "MARKETING_VERSION=1.2.3\nBUILD_NUMBER=1\n" > version.env
 
 # 2. Build all platforms
 ./scripts/build-macos.sh

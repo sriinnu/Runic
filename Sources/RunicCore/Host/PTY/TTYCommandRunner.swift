@@ -204,7 +204,7 @@ public struct TTYCommandRunner {
         if FileManager.default.isExecutableFile(atPath: binary) {
             return binary
         }
-        if let hit = Self.which(binary) {
+        if let hit = which(binary) {
             return hit
         }
         throw Error.binaryNotFound(binary)

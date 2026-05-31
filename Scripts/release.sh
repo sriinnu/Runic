@@ -22,17 +22,16 @@ if [[ "$CURRENT_BRANCH" != "main" ]]; then
   err "Release must be run from branch 'main' (current: $CURRENT_BRANCH)"
 fi
 
-swiftformat Sources Tests >/dev/null
+KEY_FILE=$(clean_key "${SPARKLE_PRIVATE_KEY_FILE:-}")
+trap 'rm -f "$KEY_FILE"' EXIT
+probe_sparkle_key "$KEY_FILE"
+
+swiftformat Sources Tests --lint
 swiftlint --strict
 swift test
 
 # Note: run this script in the foreground; do not background it so it waits to completion.
 "$ROOT/Scripts/sign-and-notarize.sh"
-
-KEY_FILE=$(clean_key "$SPARKLE_PRIVATE_KEY_FILE")
-trap 'rm -f "$KEY_FILE"' EXIT
-
-probe_sparkle_key "$KEY_FILE"
 
 clear_sparkle_caches "$BUNDLE_ID"
 

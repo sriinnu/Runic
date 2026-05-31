@@ -108,5 +108,4 @@ extension SettingsStore {
         _ = self.providerToggleRevision
         return 0
     }
-
 }

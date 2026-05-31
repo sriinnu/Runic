@@ -17,7 +17,7 @@ enum RunicScreenshotRenderer {
     }
 
     static var isRequested: Bool {
-        Self.request != nil
+        request != nil
     }
 
     static func startIfRequested(
@@ -52,7 +52,7 @@ enum RunicScreenshotRenderer {
 
     private static func installKeepAliveWindow() {
         let window = NSWindow(
-            contentRect: CGRect(x: -10_000, y: -10_000, width: 1, height: 1),
+            contentRect: CGRect(x: -10000, y: -10000, width: 1, height: 1),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false)
@@ -139,19 +139,19 @@ enum RunicScreenshotRenderer {
         selection: PreferencesSelection,
         to url: URL) throws
     {
-        try Self.writePNG(
+        try self.writePNG(
             PreferencesView(settings: settings, store: store, updater: updater, selection: selection)
                 .environment(\.runicFonts, RunicFontStore.shared),
-            size: Self.preferencesSize,
+            size: self.preferencesSize,
             to: url)
     }
 
-    private static func writePNG<Content: View>(_ view: Content, size: CGSize, to url: URL) throws {
+    private static func writePNG(_ view: some View, size: CGSize, to url: URL) throws {
         let hostingView = NSHostingView(rootView: view)
         hostingView.frame = CGRect(origin: .zero, size: size)
 
         let window = NSWindow(
-            contentRect: CGRect(origin: CGPoint(x: -10_000, y: -10_000), size: size),
+            contentRect: CGRect(origin: CGPoint(x: -10000, y: -10000), size: size),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false)

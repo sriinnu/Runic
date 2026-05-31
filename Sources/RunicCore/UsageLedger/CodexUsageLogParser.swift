@@ -366,7 +366,7 @@ struct CodexUsageLogParser {
     }
 
     private func sourceWatermark(for metadata: SourceFileMetadata, dayKey: String?) -> UsageRelaySourceWatermark {
-        return UsageRelaySourceWatermark(
+        UsageRelaySourceWatermark(
             dayKey: dayKey,
             sourceKind: "codex-jsonl",
             sourceID: metadata.path,

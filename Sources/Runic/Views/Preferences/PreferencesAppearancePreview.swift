@@ -52,10 +52,10 @@ private struct ThemeSwatch: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
-                .fill(palette.surfaceBackgroundStyle)
+            RoundedRectangle(cornerRadius: self.palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                .fill(self.palette.surfaceBackgroundStyle)
             HStack(spacing: 3) {
-                ForEach(Array(palette.swatchColors.enumerated()), id: \.offset) { _, color in
+                ForEach(Array(self.palette.swatchColors.enumerated()), id: \.offset) { _, color in
                     Circle()
                         .fill(color)
                         .frame(width: 6, height: 6)
@@ -63,14 +63,14 @@ private struct ThemeSwatch: View {
             }
             .frame(maxHeight: .infinity, alignment: .bottom)
             .padding(.bottom, 5)
-            Image(systemName: palette.symbolName)
+            Image(systemName: self.palette.symbolName)
                 .font(self.fonts.caption.weight(.bold))
-                .foregroundStyle(palette.primaryText)
+                .foregroundStyle(self.palette.primaryText)
                 .shadow(color: .black.opacity(0.22), radius: 1, x: 0, y: 1)
         }
         .overlay(
-            RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
-                .stroke(self.isSelected ? palette.highlight : palette.menuSeparatorColor, lineWidth: 1))
+            RoundedRectangle(cornerRadius: self.palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                .stroke(self.isSelected ? self.palette.highlight : self.palette.menuSeparatorColor, lineWidth: 1))
     }
 }
 

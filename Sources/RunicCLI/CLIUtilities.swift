@@ -52,7 +52,7 @@ extension RunicCLI {
             return .zai
         default:
             guard let provider = UsageProvider(rawValue: raw) else {
-                Self.exit(code: 1, message: "Unknown provider: \(raw)")
+                self.exit(code: 1, message: "Unknown provider: \(raw)")
             }
             return provider
         }

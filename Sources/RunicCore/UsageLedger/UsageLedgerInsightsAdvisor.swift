@@ -96,8 +96,7 @@ public struct UsageLedgerRoutingRecommendation: Sendable, Codable, Hashable {
 }
 
 public enum UsageLedgerInsightsAdvisor {
-    public static func reliabilityScore(_ input: UsageLedgerReliabilityInput) -> UsageLedgerReliabilityScore?
-    {
+    public static func reliabilityScore(_ input: UsageLedgerReliabilityInput) -> UsageLedgerReliabilityScore? {
         let daily = input.daily
         let activeBlock = input.activeBlock
         let modelBreakdown = input.breakdowns.models

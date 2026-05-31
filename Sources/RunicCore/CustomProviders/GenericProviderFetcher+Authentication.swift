@@ -82,7 +82,7 @@ extension GenericProviderFetcher {
         guard let data = result as? Data,
               let token = String(data: data, encoding: .utf8)?
                   .trimmingCharacters(in: .whitespacesAndNewlines),
-              !token.isEmpty
+                  !token.isEmpty
         else {
             return nil
         }

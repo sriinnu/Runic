@@ -19,7 +19,7 @@ public actor LedgerCache {
     static let cacheSchemaVersion = 3
     static let relaySchemaVersion = 3
     static let maxTrustedLegacyDailyTokens = 100_000_000
-    static let maxTrustedLegacyDailyRequests = 50_000
+    static let maxTrustedLegacyDailyRequests = 50000
     static let log = Logger(subsystem: "com.sriinnu.athena.Runic", category: "ledger-cache")
     let cacheDir: URL
     let relayDir: URL

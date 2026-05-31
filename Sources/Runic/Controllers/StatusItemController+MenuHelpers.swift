@@ -130,7 +130,7 @@ extension StatusItemController {
                             .foregroundStyle(self.runicTheme.secondaryText)
                             .padding(.top, RunicSpacing.xs)
                             .padding(.trailing, RunicSpacing.xs)
-                        }
+                    }
                 }
         }
     }

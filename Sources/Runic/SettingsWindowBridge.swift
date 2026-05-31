@@ -5,7 +5,7 @@ enum SettingsWindowBridge {
     static let tabUserInfoKey = "tab"
 
     static func tab(from notification: Notification) -> PreferencesTab? {
-        guard let raw = notification.userInfo?[Self.tabUserInfoKey] as? String else { return nil }
+        guard let raw = notification.userInfo?[tabUserInfoKey] as? String else { return nil }
         return PreferencesTab(rawValue: raw)
     }
 
@@ -28,9 +28,9 @@ enum SettingsWindowBridge {
 }
 
 @MainActor
-private extension NSApplication {
+extension NSApplication {
     @discardableResult
-    func openRunicSettingsWindow() -> Bool {
+    fileprivate func openRunicSettingsWindow() -> Bool {
         let selectors = [
             Selector(("showSettingsWindow:")),
             Selector(("showPreferencesWindow:")),

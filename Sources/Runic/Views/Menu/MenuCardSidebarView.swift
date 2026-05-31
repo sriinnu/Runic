@@ -103,7 +103,7 @@ private struct ProviderSidebarRailView: View {
     @Environment(\.runicTheme) private var runicTheme
 
     private var railBackground: LinearGradient {
-        return LinearGradient(
+        LinearGradient(
             colors: [
                 self.runicTheme.surfaceAlt.opacity(self.isHighlighted ? 0.68 : 0.48),
                 self.runicTheme.cardFill.opacity(self.isHighlighted ? 0.54 : 0.34),

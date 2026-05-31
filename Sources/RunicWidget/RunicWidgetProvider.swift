@@ -2,6 +2,7 @@ import AppIntents
 import RunicCore
 import SwiftUI
 import WidgetKit
+
 enum ProviderChoice: String, AppEnum {
     case codex
     case claude

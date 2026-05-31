@@ -441,5 +441,4 @@ struct MenuCardModelTests {
 
         #expect(model.providerCost == nil)
     }
-
 }

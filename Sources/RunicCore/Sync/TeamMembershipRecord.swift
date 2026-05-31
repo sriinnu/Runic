@@ -10,7 +10,10 @@ import Foundation
 /// - Zone: TeamCollaborationZone (custom zone)
 public struct TeamMembershipRecord: SyncableRecord {
     public let recordID: String
-    public var recordType: String { CloudKitRecordType.teamMembership }
+    public var recordType: String {
+        CloudKitRecordType.teamMembership
+    }
+
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?

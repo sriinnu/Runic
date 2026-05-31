@@ -75,7 +75,8 @@ struct InlineUsageChartView: View {
                 let isTerminal = self.runicTheme.isTerminalHUD
                 let isGlow = self.runicTheme.shape.separator == .glow
                 let chartStyle = self.chartStyle
-                let areaTopAlpha: Double = isTerminal ? 0 : (isGlow ? 0.32 : (self.runicTheme.id == "daybreak" ? 0.30 : 0.20))
+                let areaTopAlpha: Double = isTerminal ? 0 :
+                    (isGlow ? 0.32 : (self.runicTheme.id == "daybreak" ? 0.30 : 0.20))
                 let areaBottomAlpha: Double = isTerminal ? 0 : 0.02
                 let lineWidth: CGFloat = isGlow ? 2.0 : (isTerminal ? 1.2 : 1.5)
                 ZStack(alignment: .topTrailing) {

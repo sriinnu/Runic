@@ -310,7 +310,7 @@ struct OTelGenAILedgerAdapterTests {
         let source = OTelGenAIFileLedgerSource(
             files: [file],
             options: OTelGenAIIngestionOptions(enabled: true),
-            minTimestamp: oldDate.addingTimeInterval(86_400))
+            minTimestamp: oldDate.addingTimeInterval(86400))
 
         let entries = try await source.loadEntries()
         #expect(entries.isEmpty)

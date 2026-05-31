@@ -123,7 +123,7 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
                 do {
                     for await event in await eventHub.stream(replayLatest: false, bufferingNewest: 32) {
                         try Task.checkCancellation()
-                        continuation.yield(try Self.frame(for: event, format: format))
+                        try continuation.yield(Self.frame(for: event, format: format))
                     }
                 } catch {}
                 continuation.finish()

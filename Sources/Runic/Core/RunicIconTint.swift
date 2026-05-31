@@ -144,15 +144,15 @@ extension RunicThemePalette {
     {
         switch intent {
         case .destructive:
-            return self.warm
+            self.warm
         case .statusWarning:
-            return self.highlight
+            self.highlight
         case .statusGood:
-            return self.accent
+            self.accent
         case .data, .info:
-            return selected || hovered ? self.accent : self.secondary
+            selected || hovered ? self.accent : self.secondary
         case .action, .navigation:
-            return selected || hovered ? self.accent : self.readableSecondaryText
+            selected || hovered ? self.accent : self.readableSecondaryText
         }
     }
 
@@ -162,7 +162,7 @@ extension RunicThemePalette {
         minimumContrast: Double)
         -> RGB
     {
-        if Self.contrast(foreground, background) >= minimumContrast {
+        if self.contrast(foreground, background) >= minimumContrast {
             return foreground
         }
 

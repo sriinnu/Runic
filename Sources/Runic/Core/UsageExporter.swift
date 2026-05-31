@@ -75,5 +75,4 @@ enum UsageExporter {
             self.exportJSON(store: store, provider: provider, scope: scope)
         }
     }
-
 }

@@ -208,7 +208,7 @@ struct ProviderHistoryMonthSnapshot: Hashable {
     let error: String?
 }
 
-struct UsageDebugCredentialSource: Sendable {
+struct UsageDebugCredentialSource {
     let label: String
     let resolution: @Sendable () -> ProviderTokenResolution?
 }

@@ -106,15 +106,14 @@ extension OTelGenAILedgerAdapter {
     static func dateFromNumericTimestamp(_ raw: Double) -> Date? {
         guard raw > 0 else { return nil }
 
-        let seconds: Double
-        if raw >= 100_000_000_000_000_000 {
-            seconds = raw / 1_000_000_000
+        let seconds: Double = if raw >= 100_000_000_000_000_000 {
+            raw / 1_000_000_000
         } else if raw >= 100_000_000_000_000 {
-            seconds = raw / 1_000_000
+            raw / 1_000_000
         } else if raw >= 100_000_000_000 {
-            seconds = raw / 1_000
+            raw / 1000
         } else {
-            seconds = raw
+            raw
         }
 
         guard seconds > 0, seconds < 4_102_444_800 else { return nil }

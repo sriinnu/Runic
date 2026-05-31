@@ -22,7 +22,10 @@ public enum CloudKitRecordType {
 /// devices using CloudKit, with support for encryption and versioning.
 public struct UsageSnapshotSyncRecord: SyncableRecord {
     public let recordID: String
-    public var recordType: String { CloudKitRecordType.usageSnapshot }
+    public var recordType: String {
+        CloudKitRecordType.usageSnapshot
+    }
+
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?
@@ -141,7 +144,10 @@ public struct UsageSnapshotSyncRecord: SyncableRecord {
 /// across all devices where the user is signed in.
 public struct UserPreferencesSyncRecord: SyncableRecord {
     public let recordID: String
-    public var recordType: String { CloudKitRecordType.userPreferences }
+    public var recordType: String {
+        CloudKitRecordType.userPreferences
+    }
+
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?
@@ -229,7 +235,10 @@ public struct UserPreferencesSyncRecord: SyncableRecord {
 /// consistent across all user devices.
 public struct AlertConfigurationSyncRecord: SyncableRecord {
     public let recordID: String
-    public var recordType: String { CloudKitRecordType.alertConfiguration }
+    public var recordType: String {
+        CloudKitRecordType.alertConfiguration
+    }
+
     public let version: Int
     public let modifiedAt: Date
     public let lastModifiedDeviceID: String?

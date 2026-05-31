@@ -36,9 +36,10 @@ extension SettingsStore {
         self.credentialPersistTasks.zai = self.makeCredentialPersistTask(
             value: self.zaiAPIToken,
             loggerName: "zai-token-store",
-            failureMessage: "Failed to persist z.ai token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist z.ai token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistMiniMaxAPIToken() {
@@ -47,9 +48,10 @@ extension SettingsStore {
         self.credentialPersistTasks.minimax = self.makeCredentialPersistTask(
             value: self.minimaxAPIToken,
             loggerName: "minimax-token-store",
-            failureMessage: "Failed to persist MiniMax token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist MiniMax token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistMiniMaxCookieHeader() {
@@ -58,9 +60,10 @@ extension SettingsStore {
         self.credentialPersistTasks.minimaxCookieHeader = self.makeCredentialPersistTask(
             value: self.minimaxCookieHeader,
             loggerName: "minimax-cookie-store",
-            failureMessage: "Failed to persist MiniMax cookie header") { header in
-                try store.storeHeader(header)
-            }
+            failureMessage: "Failed to persist MiniMax cookie header")
+        { header in
+            try store.storeHeader(header)
+        }
     }
 
     func schedulePersistMiniMaxGroupID() {
@@ -69,9 +72,10 @@ extension SettingsStore {
         self.credentialPersistTasks.minimaxGroupID = self.makeCredentialPersistTask(
             value: self.minimaxGroupID,
             loggerName: "minimax-groupid-store",
-            failureMessage: "Failed to persist MiniMax Group ID") { groupID in
-                try groupStore.storeGroupID(groupID)
-            }
+            failureMessage: "Failed to persist MiniMax Group ID")
+        { groupID in
+            try groupStore.storeGroupID(groupID)
+        }
     }
 
     func schedulePersistCopilotAPIToken() {
@@ -80,9 +84,10 @@ extension SettingsStore {
         self.credentialPersistTasks.copilot = self.makeCredentialPersistTask(
             value: self.copilotAPIToken,
             loggerName: "copilot-token-store",
-            failureMessage: "Failed to persist Copilot token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Copilot token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistOpenRouterAPIToken() {
@@ -91,9 +96,10 @@ extension SettingsStore {
         self.credentialPersistTasks.openRouter = self.makeCredentialPersistTask(
             value: self.openRouterAPIToken,
             loggerName: "openrouter-token-store",
-            failureMessage: "Failed to persist OpenRouter token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist OpenRouter token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistVercelAIAPIToken() {
@@ -102,9 +108,10 @@ extension SettingsStore {
         self.credentialPersistTasks.vercelAI = self.makeCredentialPersistTask(
             value: self.vercelAIAPIToken,
             loggerName: "vercelai-token-store",
-            failureMessage: "Failed to persist Vercel AI token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Vercel AI token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistGroqAPIToken() {
@@ -113,9 +120,10 @@ extension SettingsStore {
         self.credentialPersistTasks.groq = self.makeCredentialPersistTask(
             value: self.groqAPIToken,
             loggerName: "groq-token-store",
-            failureMessage: "Failed to persist Groq token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Groq token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistDeepSeekAPIToken() {
@@ -124,9 +132,10 @@ extension SettingsStore {
         self.credentialPersistTasks.deepSeek = self.makeCredentialPersistTask(
             value: self.deepSeekAPIToken,
             loggerName: "deepseek-token-store",
-            failureMessage: "Failed to persist DeepSeek token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist DeepSeek token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistFireworksAPIToken() {
@@ -135,9 +144,10 @@ extension SettingsStore {
         self.credentialPersistTasks.fireworks = self.makeCredentialPersistTask(
             value: self.fireworksAPIToken,
             loggerName: "fireworks-token-store",
-            failureMessage: "Failed to persist Fireworks token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Fireworks token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistMistralAPIToken() {
@@ -146,9 +156,10 @@ extension SettingsStore {
         self.credentialPersistTasks.mistral = self.makeCredentialPersistTask(
             value: self.mistralAPIToken,
             loggerName: "mistral-token-store",
-            failureMessage: "Failed to persist Mistral token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Mistral token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistPerplexityAPIToken() {
@@ -157,9 +168,10 @@ extension SettingsStore {
         self.credentialPersistTasks.perplexity = self.makeCredentialPersistTask(
             value: self.perplexityAPIToken,
             loggerName: "perplexity-token-store",
-            failureMessage: "Failed to persist Perplexity token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Perplexity token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistKimiAPIToken() {
@@ -168,9 +180,10 @@ extension SettingsStore {
         self.credentialPersistTasks.kimi = self.makeCredentialPersistTask(
             value: self.kimiAPIToken,
             loggerName: "kimi-token-store",
-            failureMessage: "Failed to persist Kimi token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Kimi token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistAuggieAPIToken() {
@@ -179,9 +192,10 @@ extension SettingsStore {
         self.credentialPersistTasks.auggie = self.makeCredentialPersistTask(
             value: self.auggieAPIToken,
             loggerName: "auggie-token-store",
-            failureMessage: "Failed to persist Auggie token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Auggie token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistTogetherAPIToken() {
@@ -190,9 +204,10 @@ extension SettingsStore {
         self.credentialPersistTasks.together = self.makeCredentialPersistTask(
             value: self.togetherAPIToken,
             loggerName: "together-token-store",
-            failureMessage: "Failed to persist Together token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Together token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistCohereAPIToken() {
@@ -201,9 +216,10 @@ extension SettingsStore {
         self.credentialPersistTasks.cohere = self.makeCredentialPersistTask(
             value: self.cohereAPIToken,
             loggerName: "cohere-token-store",
-            failureMessage: "Failed to persist Cohere token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Cohere token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistXAiAPIToken() {
@@ -212,9 +228,10 @@ extension SettingsStore {
         self.credentialPersistTasks.xai = self.makeCredentialPersistTask(
             value: self.xaiAPIToken,
             loggerName: "xai-token-store",
-            failureMessage: "Failed to persist xAI token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist xAI token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistCerebrasAPIToken() {
@@ -223,9 +240,10 @@ extension SettingsStore {
         self.credentialPersistTasks.cerebras = self.makeCredentialPersistTask(
             value: self.cerebrasAPIToken,
             loggerName: "cerebras-token-store",
-            failureMessage: "Failed to persist Cerebras token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Cerebras token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistSambaNovaAPIToken() {
@@ -234,9 +252,10 @@ extension SettingsStore {
         self.credentialPersistTasks.sambaNova = self.makeCredentialPersistTask(
             value: self.sambaNovaAPIToken,
             loggerName: "sambanova-token-store",
-            failureMessage: "Failed to persist SambaNova token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist SambaNova token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistAzureOpenAIAPIToken() {
@@ -245,9 +264,10 @@ extension SettingsStore {
         self.credentialPersistTasks.azureOpenAI = self.makeCredentialPersistTask(
             value: self.azureOpenAIAPIToken,
             loggerName: "azure-openai-token-store",
-            failureMessage: "Failed to persist Azure OpenAI token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Azure OpenAI token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 
     func schedulePersistQwenAPIToken() {
@@ -256,8 +276,9 @@ extension SettingsStore {
         self.credentialPersistTasks.qwen = self.makeCredentialPersistTask(
             value: self.qwenAPIToken,
             loggerName: "qwen-token-store",
-            failureMessage: "Failed to persist Qwen token") { token in
-                try tokenStore.storeToken(token)
-            }
+            failureMessage: "Failed to persist Qwen token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
     }
 }

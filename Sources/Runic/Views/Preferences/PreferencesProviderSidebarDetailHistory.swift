@@ -3,7 +3,6 @@ import RunicCore
 import SwiftUI
 
 extension ProviderSidebarDetailView {
-
     var statusBadge: some View {
         let (color, bg) = self.statusColors
         return Text(self.usageStatus.text)
@@ -343,6 +342,4 @@ extension ProviderSidebarDetailView {
         }
         self.historySelectedDay = snapshot.days.map(\.dayStart).max()
     }
-
-
 }

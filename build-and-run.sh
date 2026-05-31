@@ -204,12 +204,14 @@ create_app_bundle() {
 
     # Create Info.plist
     local version="1.0.0"
+    local build_number=$(date +%Y%m%d%H%M%S)
     if [[ -f "version.env" ]]; then
         source "version.env"
-        version="${VERSION:-$version}"
+        version="${MARKETING_VERSION:-${VERSION:-$version}}"
+        build_number="${BUILD_NUMBER:-$build_number}"
     fi
 
-    log_info "Creating Info.plist (version: $version)..."
+    log_info "Creating Info.plist (version: $version, build: $build_number)..."
     cat > "$app_dir/Contents/Info.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -232,7 +234,7 @@ create_app_bundle() {
     <key>CFBundleShortVersionString</key>
     <string>$version</string>
     <key>CFBundleVersion</key>
-    <string>$version</string>
+    <string>$build_number</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSPrincipalClass</key>

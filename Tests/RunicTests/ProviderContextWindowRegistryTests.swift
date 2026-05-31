@@ -1,6 +1,6 @@
-@testable import Runic
 import RunicCore
 import XCTest
+@testable import Runic
 
 final class ProviderContextWindowRegistryTests: XCTestCase {
     func test_koshaExactModelContextOverridesStaticProviderFallback() throws {

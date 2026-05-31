@@ -242,8 +242,8 @@ extension UsageStore {
         defer { self.openAIWebAccountDidChange = false }
         guard context.allowBrowserCookieImport,
               let imported = await self.importOpenAIDashboardCookiesIfNeeded(
-                targetEmail: targetEmail,
-                force: true)
+                  targetEmail: targetEmail,
+                  force: true)
         else {
             self.openAIDashboardCookieImportStatus =
                 "Codex account changed; import browser cookies manually to refresh web extras."
@@ -284,8 +284,8 @@ extension UsageStore {
     {
         guard allowBrowserCookieImport,
               let imported = await self.importOpenAIDashboardCookiesIfNeeded(
-                targetEmail: targetEmail,
-                force: true)
+                  targetEmail: targetEmail,
+                  force: true)
         else {
             return currentEmail
         }

@@ -202,10 +202,10 @@ struct SettingsStoreDefaultsSnapshot {
         userDefaults.object(forKey: key) as? Int ?? defaultValue
     }
 
-    private static func enumValue<Value>(
+    private static func enumValue<Value: RawRepresentable>(
         _ key: String,
         defaultValue: Value,
-        userDefaults: UserDefaults) -> Value where Value: RawRepresentable, Value.RawValue == String
+        userDefaults: UserDefaults) -> Value where Value.RawValue == String
     {
         let raw = userDefaults.string(forKey: key)
         return raw.flatMap(Value.init(rawValue:)) ?? defaultValue

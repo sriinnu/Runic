@@ -72,6 +72,7 @@ CLEAN_BUILD=false
 
 APP_NAME="Runic"
 PRODUCT_NAME="Runic"
+BUNDLE_ID="com.sriinnu.athena.runic"
 
 ################################################################################
 # Helper Functions
@@ -250,7 +251,8 @@ build_app() {
 
     if [[ -f "version.env" ]]; then
         source "version.env"
-        version="${VERSION:-$version}"
+        version="${MARKETING_VERSION:-${VERSION:-$version}}"
+        build_number="${BUILD_NUMBER:-$build_number}"
     fi
 
     log_info "Building version: $version (build $build_number)"
@@ -380,9 +382,11 @@ create_app_bundle() {
 
     # Create Info.plist
     local version="1.0.0"
+    local build_number=$(date +%Y%m%d%H%M%S)
     if [[ -f "version.env" ]]; then
         source "version.env"
-        version="${VERSION:-$version}"
+        version="${MARKETING_VERSION:-${VERSION:-$version}}"
+        build_number="${BUILD_NUMBER:-$build_number}"
     fi
 
     if [[ "$DRY_RUN" == false ]]; then
@@ -398,7 +402,7 @@ create_app_bundle() {
     <key>CFBundleIconFile</key>
     <string>Icon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.runic.app</string>
+    <string>$BUNDLE_ID</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -408,7 +412,7 @@ create_app_bundle() {
     <key>CFBundleShortVersionString</key>
     <string>$version</string>
     <key>CFBundleVersion</key>
-    <string>$version</string>
+    <string>$build_number</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSPrincipalClass</key>
@@ -476,7 +480,7 @@ create_build_artifacts() {
 
     if [[ -f "$PROJECT_ROOT/version.env" ]]; then
         source "$PROJECT_ROOT/version.env"
-        version="${VERSION:-$version}"
+        version="${MARKETING_VERSION:-${VERSION:-$version}}"
     fi
 
     # Create ZIP archive

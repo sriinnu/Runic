@@ -95,7 +95,7 @@ extension TTYCommandRunner {
     }
 
     static func statusMaxNeedle(_ markers: [Data]) -> Int {
-        ([Self.cursorQuery.count] + markers.map(\.count)).max() ?? Self.cursorQuery.count
+        ([cursorQuery.count] + markers.map(\.count)).max() ?? cursorQuery.count
     }
 
     static func updateMaxNeedle(_ needles: [Data]) -> Int {
@@ -174,7 +174,7 @@ extension TTYCommandRunner {
             usleep(120_000)
             return true
         }
-        if Self.resendCodexStatusIfNeeded(context: context, state: &state) {
+        if self.resendCodexStatusIfNeeded(context: context, state: &state) {
             return true
         }
         return false

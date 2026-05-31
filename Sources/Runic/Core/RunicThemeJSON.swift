@@ -115,25 +115,24 @@ extension Color {
     private static func systemColorToken(_ token: String) -> Color? {
         var body = token
         body.removeFirst() // drop leading $
-        var opacity: Double = 1.0
+        var opacity = 1.0
         if let atIndex = body.firstIndex(of: "@") {
             let opString = String(body[body.index(after: atIndex)...])
             body = String(body[..<atIndex])
             opacity = Double(opString) ?? 1.0
         }
-        let nsColor: NSColor?
-        switch body {
-        case "controlAccentColor": nsColor = .controlAccentColor
-        case "windowBackgroundColor": nsColor = .windowBackgroundColor
-        case "controlBackgroundColor": nsColor = .controlBackgroundColor
-        case "separatorColor": nsColor = .separatorColor
-        case "controlTextColor": nsColor = .controlTextColor
-        case "labelColor": nsColor = .labelColor
-        case "secondaryLabelColor": nsColor = .secondaryLabelColor
-        case "tertiaryLabelColor": nsColor = .tertiaryLabelColor
-        case "white": nsColor = .white
-        case "black": nsColor = .black
-        default: nsColor = nil
+        let nsColor: NSColor? = switch body {
+        case "controlAccentColor": .controlAccentColor
+        case "windowBackgroundColor": .windowBackgroundColor
+        case "controlBackgroundColor": .controlBackgroundColor
+        case "separatorColor": .separatorColor
+        case "controlTextColor": .controlTextColor
+        case "labelColor": .labelColor
+        case "secondaryLabelColor": .secondaryLabelColor
+        case "tertiaryLabelColor": .tertiaryLabelColor
+        case "white": .white
+        case "black": .black
+        default: nil
         }
         guard let ns = nsColor else { return nil }
         return Color(nsColor: ns).opacity(opacity)
@@ -232,22 +231,21 @@ extension RunicThemeJSON {
 
     private func makeMotion() -> RunicThemeMotion {
         switch self.motion.preset {
-        case "slow": return .slow
-        case "snappy": return .snappy
-        case "instant": return .instant
-        case "mechanical": return .mechanical
-        default: return .standard
+        case "slow": .slow
+        case "snappy": .snappy
+        case "instant": .instant
+        case "mechanical": .mechanical
+        default: .standard
         }
     }
 
     private func makeDensity() -> RunicThemeDensity {
         switch self.density.preset {
-        case "compact": return .compact
-        case "generous": return .generous
-        default: return .normal
+        case "compact": .compact
+        case "generous": .generous
+        default: .normal
         }
     }
-
 }
 
 // MARK: - Loader

@@ -219,8 +219,8 @@ extension StatusItemController {
         item.image = image
     }
 
-    func addHostedMenuItem<Content: View>(
-        _ rootView: Content,
+    func addHostedMenuItem(
+        _ rootView: some View,
         id: String,
         width: CGFloat,
         to menu: NSMenu)

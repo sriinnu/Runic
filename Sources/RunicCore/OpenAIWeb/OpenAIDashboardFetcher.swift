@@ -352,7 +352,10 @@ public struct OpenAIDashboardFetcher {
     }
 
     private func scrape(webView: WKWebView) async throws -> ScrapeResult {
-        let any = try await webView.evaluateJavaScript(openAIDashboardScrapeScript)
+        guard let script = openAIDashboardScrapeScript else {
+            throw OpenAIDashboardScrapeScriptError.missingResource
+        }
+        let any = try await webView.evaluateJavaScript(script)
         guard let dict = any as? [String: Any] else {
             return ScrapeResult(
                 loginRequired: true,

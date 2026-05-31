@@ -273,18 +273,18 @@ extension IconRenderer {
     }
 }
 
-private extension CGPoint {
-    func lerp(to other: CGPoint, p: CGFloat) -> CGPoint {
+extension CGPoint {
+    fileprivate func lerp(to other: CGPoint, p: CGFloat) -> CGPoint {
         CGPoint(x: self.x + (other.x - self.x) * p, y: self.y + (other.y - self.y) * p)
     }
 
-    func offset(dx: CGFloat, dy: CGFloat) -> CGPoint {
+    fileprivate func offset(dx: CGFloat, dy: CGFloat) -> CGPoint {
         CGPoint(x: self.x + dx, y: self.y + dy)
     }
 }
 
-private extension CGFloat {
-    func lerp(to other: CGFloat, p: CGFloat) -> CGFloat {
+extension CGFloat {
+    fileprivate func lerp(to other: CGFloat, p: CGFloat) -> CGFloat {
         self + (other - self) * p
     }
 }

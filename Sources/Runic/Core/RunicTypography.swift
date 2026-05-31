@@ -1,5 +1,5 @@
-import CoreText
 import AppKit
+import CoreText
 import SwiftUI
 
 // MARK: - Typography tokens
@@ -407,20 +407,57 @@ enum RunicFont {
         RunicFontStore.shared.applyTheme(palette)
     }
 
-    static var activeRules: RunicFontRules { RunicFontStore.shared.activeRules }
-    static var systemFallbackDesign: Font.Design { RunicFontStore.shared.systemFallbackDesign }
+    static var activeRules: RunicFontRules {
+        RunicFontStore.shared.activeRules
+    }
 
-    static var caption2: Font { RunicFontStore.shared.caption2 }
-    static var caption: Font { RunicFontStore.shared.caption }
-    static var footnote: Font { RunicFontStore.shared.footnote }
-    static var callout: Font { RunicFontStore.shared.callout }
-    static var body: Font { RunicFontStore.shared.body }
-    static var subheadline: Font { RunicFontStore.shared.subheadline }
-    static var headline: Font { RunicFontStore.shared.headline }
-    static var title3: Font { RunicFontStore.shared.title3 }
-    static var title2: Font { RunicFontStore.shared.title2 }
-    static var title: Font { RunicFontStore.shared.title }
-    static var largeTitle: Font { RunicFontStore.shared.largeTitle }
+    static var systemFallbackDesign: Font.Design {
+        RunicFontStore.shared.systemFallbackDesign
+    }
+
+    static var caption2: Font {
+        RunicFontStore.shared.caption2
+    }
+
+    static var caption: Font {
+        RunicFontStore.shared.caption
+    }
+
+    static var footnote: Font {
+        RunicFontStore.shared.footnote
+    }
+
+    static var callout: Font {
+        RunicFontStore.shared.callout
+    }
+
+    static var body: Font {
+        RunicFontStore.shared.body
+    }
+
+    static var subheadline: Font {
+        RunicFontStore.shared.subheadline
+    }
+
+    static var headline: Font {
+        RunicFontStore.shared.headline
+    }
+
+    static var title3: Font {
+        RunicFontStore.shared.title3
+    }
+
+    static var title2: Font {
+        RunicFontStore.shared.title2
+    }
+
+    static var title: Font {
+        RunicFontStore.shared.title
+    }
+
+    static var largeTitle: Font {
+        RunicFontStore.shared.largeTitle
+    }
 
     static func system(size: CGFloat) -> Font {
         RunicFontStore.shared.system(size: size)

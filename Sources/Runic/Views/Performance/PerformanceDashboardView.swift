@@ -6,6 +6,7 @@ import SwiftUI
 struct PerformanceDashboardView: View {
     @Environment(\.runicFonts) var fonts
     @Environment(\.runicTheme) var runicTheme
+
     // MARK: - Types
 
     enum TimeRange: String, CaseIterable, Identifiable {

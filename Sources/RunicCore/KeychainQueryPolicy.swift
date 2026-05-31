@@ -23,8 +23,8 @@ enum RunicCoreKeychainQueryPolicy {
 
     static func setAuthenticationUI(_ allowUserInteraction: Bool, in query: inout [String: Any]) {
         query[kSecUseAuthenticationUI as String] = allowUserInteraction
-            ? (Self.authenticationUIAllow as CFString)
-            : (Self.authenticationUIFail as CFString)
+            ? (self.authenticationUIAllow as CFString)
+            : (self.authenticationUIFail as CFString)
         #if canImport(LocalAuthentication)
         let context = LAContext()
         context.interactionNotAllowed = !allowUserInteraction
