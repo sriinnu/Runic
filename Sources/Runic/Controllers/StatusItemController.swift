@@ -24,6 +24,7 @@ import SwiftUI
 // - `StatusItemController+Menu*.swift` - Menu lifecycle, population, switchers, and refresh state
 // - `StatusItemController+Actions.swift` - User actions
 // - `StatusItemController+Animation.swift` - Animation system
+// - `StatusItemController+IconRendering.swift` - Status item icon rendering
 //
 // **Performance:**
 // - **60 FPS cap** during active pings (PerformanceConstants.menubarFPS)
