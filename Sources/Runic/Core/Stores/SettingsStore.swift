@@ -2,41 +2,12 @@ import Foundation
 import Observation
 import RunicCore
 
-// Structural lint debt: settings storage still needs smaller persistence domains.
 @MainActor
 @Observable
 final class SettingsStore {
-    /// Persisted provider display order.
-    ///
-    /// Stored as raw `UsageProvider` strings so new providers can be appended automatically without breaking.
-    var providerOrderRaw: [String] {
-        didSet { self.userDefaults.set(self.providerOrderRaw, forKey: "providerOrder") }
-    }
+    var appPreferenceValues: SettingsStoreAppPreferenceValues
 
     var refreshPreferenceValues: SettingsStoreRefreshPreferenceValues
-
-    var launchAtLogin: Bool {
-        didSet {
-            self.userDefaults.set(self.launchAtLogin, forKey: "launchAtLogin")
-        }
-    }
-
-    /// Hidden toggle to reveal debug-only menu items (enable via defaults write com.sriinnu.athena.Runic
-    /// debugMenuEnabled
-    /// -bool YES).
-    var debugMenuEnabled: Bool {
-        didSet { self.userDefaults.set(self.debugMenuEnabled, forKey: "debugMenuEnabled") }
-    }
-
-    var debugLoadingPatternRaw: String? {
-        didSet {
-            if let raw = self.debugLoadingPatternRaw {
-                self.userDefaults.set(raw, forKey: "debugLoadingPattern")
-            } else {
-                self.userDefaults.removeObject(forKey: "debugLoadingPattern")
-            }
-        }
-    }
 
     var usageFeatureValues: SettingsStoreUsageFeatureValues
 
@@ -48,20 +19,6 @@ final class SettingsStore {
     var credentialValues = SettingsStoreCredentialValues()
 
     var providerConnectionValues: SettingsStoreProviderConnectionValues
-
-    var selectedMenuProviderRaw: String? {
-        didSet {
-            if let raw = self.selectedMenuProviderRaw {
-                self.userDefaults.set(raw, forKey: "selectedMenuProvider")
-            } else {
-                self.userDefaults.removeObject(forKey: "selectedMenuProvider")
-            }
-        }
-    }
-
-    var providerDetectionCompleted: Bool {
-        didSet { self.userDefaults.set(self.providerDetectionCompleted, forKey: "providerDetectionCompleted") }
-    }
 
     @ObservationIgnored let userDefaults: UserDefaults
     @ObservationIgnored let toggleStore: ProviderToggleStore
@@ -82,11 +39,8 @@ final class SettingsStore {
         self.userDefaults = userDefaults
         self.credentialStores = credentialStores
         let defaults = SettingsStoreDefaultsSnapshot.load(from: userDefaults)
-        self.providerOrderRaw = defaults.providerOrderRaw
+        self.appPreferenceValues = SettingsStoreAppPreferenceValues(defaults: defaults)
         self.refreshPreferenceValues = SettingsStoreRefreshPreferenceValues(defaults: defaults)
-        self.launchAtLogin = defaults.launchAtLogin
-        self.debugMenuEnabled = defaults.debugMenuEnabled
-        self.debugLoadingPatternRaw = defaults.debugLoadingPatternRaw
         self.usageFeatureValues = SettingsStoreUsageFeatureValues(defaults: defaults)
         self.appearanceValues = SettingsStoreAppearanceValues(defaults: defaults)
         self.providerConnectionValues = SettingsStoreProviderConnectionValues(defaults: defaults)
@@ -99,8 +53,6 @@ final class SettingsStore {
                 "(\(blocked) blocked, \(failed) failed). Re-save affected API keys below; " +
                 "Runic will not prompt in the background."
         }
-        self.selectedMenuProviderRaw = defaults.selectedMenuProviderRaw
-        self.providerDetectionCompleted = defaults.providerDetectionCompleted
         self.toggleStore = ProviderToggleStore(userDefaults: userDefaults)
         self.toggleStore.purgeLegacyKeys()
         // Do not re-register login items during startup; macOS can surface a password prompt.
