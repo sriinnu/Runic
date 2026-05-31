@@ -13,51 +13,7 @@ final class SettingsStore {
         didSet { self.userDefaults.set(self.providerOrderRaw, forKey: "providerOrder") }
     }
 
-    var refreshFrequency: RefreshFrequency {
-        didSet { self.userDefaults.set(self.refreshFrequency.rawValue, forKey: "refreshFrequency") }
-    }
-
-    var autoDisableRefreshWhenIdleEnabled: Bool {
-        didSet { self.userDefaults.set(
-            self.autoDisableRefreshWhenIdleEnabled,
-            forKey: "autoDisableRefreshWhenIdleEnabled") }
-    }
-
-    var autoDisableRefreshWhenIdleMinutes: Int {
-        didSet { self.userDefaults.set(
-            self.autoDisableRefreshWhenIdleMinutes,
-            forKey: "autoDisableRefreshWhenIdleMinutes") }
-    }
-
-    var autoDisableRefreshOnSleepEnabled: Bool {
-        didSet {
-            self.userDefaults.set(self.autoDisableRefreshOnSleepEnabled, forKey: "autoDisableRefreshOnSleepEnabled")
-        }
-    }
-
-    var autoRefreshWarningEnabled: Bool {
-        didSet { self.userDefaults.set(self.autoRefreshWarningEnabled, forKey: "autoRefreshWarningEnabled") }
-    }
-
-    var autoRefreshWarningThreshold: Int {
-        didSet { self.userDefaults.set(self.autoRefreshWarningThreshold, forKey: "autoRefreshWarningThreshold") }
-    }
-
-    var autoSuspendInactiveProvidersEnabled: Bool {
-        didSet {
-            self.userDefaults.set(
-                self.autoSuspendInactiveProvidersEnabled,
-                forKey: "autoSuspendInactiveProvidersEnabled")
-        }
-    }
-
-    var autoSuspendInactiveProvidersMinutes: Int {
-        didSet {
-            self.userDefaults.set(
-                self.autoSuspendInactiveProvidersMinutes,
-                forKey: "autoSuspendInactiveProvidersMinutes")
-        }
-    }
+    var refreshPreferenceValues: SettingsStoreRefreshPreferenceValues
 
     var launchAtLogin: Bool {
         didSet {
@@ -80,10 +36,6 @@ final class SettingsStore {
                 self.userDefaults.removeObject(forKey: "debugLoadingPattern")
             }
         }
-    }
-
-    var statusChecksEnabled: Bool {
-        didSet { self.userDefaults.set(self.statusChecksEnabled, forKey: "statusChecksEnabled") }
     }
 
     var sessionQuotaNotificationsEnabled: Bool {
@@ -206,18 +158,10 @@ final class SettingsStore {
         self.credentialStores = credentialStores
         let defaults = SettingsStoreDefaultsSnapshot.load(from: userDefaults)
         self.providerOrderRaw = defaults.providerOrderRaw
-        self.refreshFrequency = defaults.refreshFrequency
-        self.autoDisableRefreshWhenIdleEnabled = defaults.autoDisableRefreshWhenIdleEnabled
-        self.autoDisableRefreshWhenIdleMinutes = defaults.autoDisableRefreshWhenIdleMinutes
-        self.autoDisableRefreshOnSleepEnabled = defaults.autoDisableRefreshOnSleepEnabled
-        self.autoRefreshWarningEnabled = defaults.autoRefreshWarningEnabled
-        self.autoRefreshWarningThreshold = defaults.autoRefreshWarningThreshold
-        self.autoSuspendInactiveProvidersEnabled = defaults.autoSuspendInactiveProvidersEnabled
-        self.autoSuspendInactiveProvidersMinutes = defaults.autoSuspendInactiveProvidersMinutes
+        self.refreshPreferenceValues = SettingsStoreRefreshPreferenceValues(defaults: defaults)
         self.launchAtLogin = defaults.launchAtLogin
         self.debugMenuEnabled = defaults.debugMenuEnabled
         self.debugLoadingPatternRaw = defaults.debugLoadingPatternRaw
-        self.statusChecksEnabled = defaults.statusChecksEnabled
         self.sessionQuotaNotificationsEnabled = defaults.sessionQuotaNotificationsEnabled
         self.budgetNotificationsEnabled = defaults.budgetNotificationsEnabled
         self.appearanceValues = SettingsStoreAppearanceValues(defaults: defaults)
