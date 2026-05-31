@@ -124,8 +124,7 @@ enum IconRenderer {
                 indicator: self.indicatorKey(statusIndicator),
                 appearance: self.appearanceKey(appearance),
                 dataMode: self.dataModeKey(dataMode),
-                family: RunicFontStore.shared.family,
-                themeID: Self.themePalette?.id ?? "")
+                themeID: appearance == .vibrant ? Self.themePalette?.id ?? "" : "")
             if let cached = self.cachedIcon(for: key) {
                 return cached
             }

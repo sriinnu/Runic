@@ -11,9 +11,8 @@ extension IconRenderer {
         let indicator: Int
         let appearance: Int
         let dataMode: Int
-        /// User font family + theme palette id. Without these in the key,
-        /// changing font/theme would serve a stale cached icon.
-        let family: String
+        /// Theme palette id for vibrant rendering. Template icons use system
+        /// label colors, so they should not churn when preferences change.
         let themeID: String
     }
 
