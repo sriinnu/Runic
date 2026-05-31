@@ -170,45 +170,7 @@ final class SettingsStore {
     // Keep credential fields cold at startup; provider fetchers read keychain values only when needed.
     var credentialValues = SettingsStoreCredentialValues()
 
-    /// Azure OpenAI endpoint URL (stored in UserDefaults).
-    var azureOpenAIEndpoint: String {
-        didSet { self.userDefaults.set(self.azureOpenAIEndpoint, forKey: "azureOpenAIEndpoint") }
-    }
-
-    /// Azure OpenAI deployment name (stored in UserDefaults).
-    var azureOpenAIDeployment: String {
-        didSet { self.userDefaults.set(self.azureOpenAIDeployment, forKey: "azureOpenAIDeployment") }
-    }
-
-    /// Azure OpenAI API version (stored in UserDefaults).
-    var azureOpenAIAPIVersion: String {
-        didSet { self.userDefaults.set(self.azureOpenAIAPIVersion, forKey: "azureOpenAIAPIVersion") }
-    }
-
-    /// Amazon Bedrock region (stored in UserDefaults).
-    var bedrockRegion: String {
-        didSet { self.userDefaults.set(self.bedrockRegion, forKey: "bedrockRegion") }
-    }
-
-    /// Optional AWS profile for Amazon Bedrock (stored in UserDefaults).
-    var bedrockAWSProfile: String {
-        didSet { self.userDefaults.set(self.bedrockAWSProfile, forKey: "bedrockAWSProfile") }
-    }
-
-    /// Optional model filter for Amazon Bedrock (stored in UserDefaults).
-    var bedrockModelID: String {
-        didSet { self.userDefaults.set(self.bedrockModelID, forKey: "bedrockModelID") }
-    }
-
-    /// Google Cloud project for Vertex AI (stored in UserDefaults).
-    var vertexaiProject: String {
-        didSet { self.userDefaults.set(self.vertexaiProject, forKey: "vertexaiProject") }
-    }
-
-    /// Google Cloud location/region for Vertex AI (stored in UserDefaults).
-    var vertexaiLocation: String {
-        didSet { self.userDefaults.set(self.vertexaiLocation, forKey: "vertexaiLocation") }
-    }
+    var providerConnectionValues: SettingsStoreProviderConnectionValues
 
     var selectedMenuProviderRaw: String? {
         didSet {
@@ -269,14 +231,7 @@ final class SettingsStore {
         self.openAIWebAccessEnabled = defaults.openAIWebAccessEnabled
         self.codexUsageDataSourceRaw = defaults.codexUsageDataSourceRaw
         self.claudeUsageDataSourceRaw = defaults.claudeUsageDataSourceRaw
-        self.azureOpenAIEndpoint = defaults.azureOpenAIEndpoint
-        self.azureOpenAIDeployment = defaults.azureOpenAIDeployment
-        self.azureOpenAIAPIVersion = defaults.azureOpenAIAPIVersion
-        self.bedrockRegion = defaults.bedrockRegion
-        self.bedrockAWSProfile = defaults.bedrockAWSProfile
-        self.bedrockModelID = defaults.bedrockModelID
-        self.vertexaiProject = defaults.vertexaiProject
-        self.vertexaiLocation = defaults.vertexaiLocation
+        self.providerConnectionValues = SettingsStoreProviderConnectionValues(defaults: defaults)
         let credentialMigration = ProviderCredentialKeychainMigration.migrateKnownLegacyItems()
         if credentialMigration.needsUserRepair {
             let blocked = credentialMigration.blockedAccounts.count
