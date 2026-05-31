@@ -233,8 +233,7 @@ private func makeUpdaterController() -> UpdaterProviding {
     }
 
     if InstallOrigin.isHomebrewCask(appBundleURL: bundleURL) {
-        return DisabledUpdaterController(
-            unavailableReason: "Updates managed by Homebrew. Run: brew upgrade --cask sriinnu.athena/tap/runic")
+        return DisabledUpdaterController(unavailableReason: InstallOrigin.homebrewUpdaterUnavailableReason)
     }
 
     guard isDeveloperIDSigned(bundleURL: bundleURL) else {
@@ -255,9 +254,9 @@ private func makeUpdaterController() -> UpdaterProviding {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-#if DEBUG
+    #if DEBUG
     static var duplicateInstanceCheckDisabledForTests = false
-#endif
+    #endif
 
     private static let productionBundleID = "com.sriinnu.athena.runic"
     private static let debugBundleID = "com.sriinnu.athena.runic.debug"
@@ -304,7 +303,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Exit early if another Runic from the production/debug bundle family is already running.
     /// Stale login items or local debug bundles can otherwise spin up two status items.
     private static func terminateIfDuplicateInstance() -> Bool {
-        guard let existing = Self.existingDuplicateInstance() else { return false }
+        guard let existing = existingDuplicateInstance() else { return false }
         RunicLog.logger("singleton").info(
             "Another Runic instance already running (pid \(existing.processIdentifier)); terminating self.")
         existing.activate(options: [])
@@ -313,10 +312,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     static func existingDuplicateInstance() -> NSRunningApplication? {
-#if DEBUG
-        if Self.duplicateInstanceCheckDisabledForTests { return nil }
-#endif
-        guard !Self.isRunningUnderTests else { return nil }
+        #if DEBUG
+        if self.duplicateInstanceCheckDisabledForTests { return nil }
+        #endif
+        guard !self.isRunningUnderTests else { return nil }
 
         let myPID = ProcessInfo.processInfo.processIdentifier
         let currentBundleID = Bundle.main.bundleIdentifier ?? Self.productionBundleID

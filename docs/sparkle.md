@@ -10,16 +10,16 @@ read_when:
 
 - Framework: Sparkle 2.8.1 via SwiftPM.
 - Updater: `SPUStandardUpdaterController` owned by `AppDelegate` (see `Sources/Runic/RunicApp.swift:1`).
-- Feed: `SUFeedURL` in Info.plist points to GitHub Releases appcast (`appcast.xml`).
-- Key: `SUPublicEDKey` set to `AGCY8w5vHirVfGGDGc8Szc5iuOqupZSh9pMj/Qs67XI=`. Keep the Ed25519 private key safe; use it when generating the appcast.
+- Feed: `SUFeedURL` in Info.plist points to the committed `appcast.xml` on `main`.
+- Key: `SUPublicEDKey` set to `1Ay3r9lgXQtyOjzVSCjlT5dvQuRlJghNKa8Goqvhfz4=`. Keep the Ed25519 private key safe; use it when generating the appcast.
 - UI: auto-check toggle (About) enables auto-downloads; menu only shows “Update ready, restart now?” once an update is downloaded.
 - LSUIElement: works; updater window will show when checking. App is non-sandboxed.
 
 ## Release flow
 1) Build & notarize as usual (`./Scripts/sign-and-notarize.sh`), producing notarized `Runic-<ver>.zip`.
 2) Generate appcast entry with Sparkle `generate_appcast` using the Ed25519 private key; HTML release notes come from `CHANGELOG.md` via `Scripts/changelog-to-html.sh`.
-3) Upload `appcast.xml` + zip to GitHub Releases (feed URL stays stable).
-4) Tag/release.
+3) Upload the zip + dSYM zip to GitHub Releases.
+4) Commit and push the generated `appcast.xml` to `main` so the raw feed URL updates.
 
 ## Notes
 - HTML release notes are embedded in the appcast entry; the Sparkle update dialog should show formatted bullets (not raw tags).

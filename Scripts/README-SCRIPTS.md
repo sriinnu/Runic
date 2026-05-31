@@ -870,7 +870,7 @@ export CI=true
 **Update version across all platforms**:
 ```bash
 # Update version.env
-echo "VERSION=1.2.3" > version.env
+printf "MARKETING_VERSION=1.2.3\nBUILD_NUMBER=1\n" > version.env
 
 # Builds will automatically use this version
 ./scripts/build-macos.sh
