@@ -99,72 +99,7 @@ final class SettingsStore {
         }
     }
 
-    /// When enabled, progress bars show "percent used" instead of "percent left".
-    var usageBarsShowUsed: Bool {
-        didSet { self.userDefaults.set(self.usageBarsShowUsed, forKey: "usageBarsShowUsed") }
-    }
-
-    var usageMetricDisplayMode: UsageMetricDisplayMode {
-        didSet {
-            self.userDefaults.set(self.usageMetricDisplayMode.rawValue, forKey: "usageMetricDisplayMode")
-        }
-    }
-
-    var menuMode: MenuMode {
-        didSet {
-            self.userDefaults.set(self.menuMode.rawValue, forKey: "menuMode")
-        }
-    }
-
-    var chartStyle: ChartStyle {
-        didSet { self.userDefaults.set(self.chartStyle.rawValue, forKey: "chartStyle") }
-    }
-
-    var numberFormat: NumberFormat {
-        didSet { self.userDefaults.set(self.numberFormat.rawValue, forKey: "numberFormat") }
-    }
-
-    var dateFormat: DateFormat {
-        didSet { self.userDefaults.set(self.dateFormat.rawValue, forKey: "dateFormat") }
-    }
-
-    var theme: Theme {
-        didSet {
-            self.userDefaults.set(self.theme.rawValue, forKey: "theme")
-            RunicApp.applyTheme(self.theme)
-            RunicFont.applyTheme(self.theme.palette)
-            IconRenderer.themePalette = self.theme.palette
-            self.bumpVisualSettingsRevision()
-        }
-    }
-
-    var selectedFontFamily: String {
-        didSet {
-            let migrated = RunicFontChoice.migratedFamily(self.selectedFontFamily)
-            if migrated != self.selectedFontFamily {
-                self.selectedFontFamily = migrated
-            }
-            self.userDefaults.set(self.selectedFontFamily, forKey: "selectedFontFamily")
-            RunicFont.family = self.selectedFontFamily
-            self.bumpVisualSettingsRevision()
-        }
-    }
-
-    private(set) var visualSettingsRevision: Int = 0
-
-    /// Optional: use provider branding icons with a percentage in the menu bar.
-    var menuBarShowsBrandIconWithPercent: Bool {
-        didSet {
-            self.userDefaults.set(self.menuBarShowsBrandIconWithPercent, forKey: "menuBarShowsBrandIconWithPercent")
-        }
-    }
-
-    /// Optional: render the menu bar icon with a vibrant, data-reactive color.
-    var menuBarVibrantIconEnabled: Bool {
-        didSet {
-            self.userDefaults.set(self.menuBarVibrantIconEnabled, forKey: "menuBarVibrantIconEnabled")
-        }
-    }
+    var appearanceValues: SettingsStoreAppearanceValues
 
     /// Optional: show provider token/cost summaries from local usage logs.
     var costUsageEnabled: Bool {
@@ -190,10 +125,6 @@ final class SettingsStore {
     /// Options: 3, 7, 30, 90, 365. Default: 30.
     var ledgerMaxAgeDays: Int {
         didSet { self.userDefaults.set(self.ledgerMaxAgeDays, forKey: "ledgerMaxAgeDays") }
-    }
-
-    var randomBlinkEnabled: Bool {
-        didSet { self.userDefaults.set(self.randomBlinkEnabled, forKey: "randomBlinkEnabled") }
     }
 
     /// Optional: augment Claude usage with claude.ai web API (via browser cookies),
@@ -234,35 +165,6 @@ final class SettingsStore {
                 self.userDefaults.removeObject(forKey: "claudeUsageDataSource")
             }
         }
-    }
-
-    /// Optional: collapse provider icons into a single menu bar item with an in-menu switcher.
-    var mergeIcons: Bool {
-        didSet { self.userDefaults.set(self.mergeIcons, forKey: "mergeIcons") }
-    }
-
-    /// Optional: show provider icons in the in-menu switcher.
-    var switcherShowsIcons: Bool {
-        didSet { self.userDefaults.set(self.switcherShowsIcons, forKey: "switcherShowsIcons") }
-    }
-
-    /// Optional: position the provider switcher either on top or in a left sidebar.
-    var providerSwitcherLayout: ProviderSwitcherLayout {
-        didSet {
-            self.userDefaults.set(self.providerSwitcherLayout.rawValue, forKey: "providerSwitcherLayout")
-        }
-    }
-
-    /// Optional: size of provider icons in the switcher.
-    var providerSwitcherIconSize: ProviderSwitcherIconSize {
-        didSet {
-            self.userDefaults.set(self.providerSwitcherIconSize.rawValue, forKey: "providerSwitcherIconSize")
-        }
-    }
-
-    /// Show the built-in providers pane as a sidebar (true) or flat list (false).
-    var providersPaneSidebar: Bool {
-        didSet { self.userDefaults.set(self.providersPaneSidebar, forKey: "providersPaneSidebar") }
     }
 
     // Keep credential fields cold at startup; provider fetchers read keychain values only when needed.
@@ -356,32 +258,17 @@ final class SettingsStore {
         self.statusChecksEnabled = defaults.statusChecksEnabled
         self.sessionQuotaNotificationsEnabled = defaults.sessionQuotaNotificationsEnabled
         self.budgetNotificationsEnabled = defaults.budgetNotificationsEnabled
-        self.usageBarsShowUsed = defaults.usageBarsShowUsed
-        self.usageMetricDisplayMode = defaults.usageMetricDisplayMode
-        self.menuMode = defaults.menuMode
-        self.chartStyle = defaults.chartStyle
-        self.numberFormat = defaults.numberFormat
-        self.dateFormat = defaults.dateFormat
-        self.theme = defaults.theme
-        self.selectedFontFamily = defaults.selectedFontFamily
-        self.menuBarShowsBrandIconWithPercent = defaults.menuBarShowsBrandIconWithPercent
-        self.menuBarVibrantIconEnabled = defaults.menuBarVibrantIconEnabled
+        self.appearanceValues = SettingsStoreAppearanceValues(defaults: defaults)
         self.costUsageEnabled = defaults.costUsageEnabled
         self.otelGenAILogPaths = defaults.otelGenAILogPaths
         self.insightsMenuMaxItems = defaults.insightsMenuMaxItems
         self.insightsReportDays = defaults.insightsReportDays
         self.ledgerMaxAgeDays = defaults.ledgerMaxAgeDays
-        self.randomBlinkEnabled = defaults.randomBlinkEnabled
         self.claudeWebExtrasEnabled = defaults.claudeWebExtrasEnabled
         self.showOptionalCreditsAndExtraUsage = defaults.showOptionalCreditsAndExtraUsage
         self.openAIWebAccessEnabled = defaults.openAIWebAccessEnabled
         self.codexUsageDataSourceRaw = defaults.codexUsageDataSourceRaw
         self.claudeUsageDataSourceRaw = defaults.claudeUsageDataSourceRaw
-        self.mergeIcons = defaults.mergeIcons
-        self.switcherShowsIcons = defaults.switcherShowsIcons
-        self.providerSwitcherLayout = defaults.providerSwitcherLayout
-        self.providerSwitcherIconSize = defaults.providerSwitcherIconSize
-        self.providersPaneSidebar = defaults.providersPaneSidebar
         self.azureOpenAIEndpoint = defaults.azureOpenAIEndpoint
         self.azureOpenAIDeployment = defaults.azureOpenAIDeployment
         self.azureOpenAIAPIVersion = defaults.azureOpenAIAPIVersion
@@ -415,7 +302,4 @@ final class SettingsStore {
         IconRenderer.themePalette = self.theme.palette
     }
 
-    private func bumpVisualSettingsRevision() {
-        self.visualSettingsRevision &+= 1
-    }
 }
