@@ -153,6 +153,46 @@ struct LedgerCacheTests {
     }
 
     @Test
+    func `relay keeps heavy days above the legacy plausibility cap`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cacheDir = root.appendingPathComponent("ledger-cache", isDirectory: true)
+        let relayDir = root.appendingPathComponent("relay", isDirectory: true)
+        let cache = LedgerCache(cacheDir: cacheDir, relayDir: relayDir)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let timestamp = try #require(calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12)))
+        let dayKey = LedgerCache.dayKey(for: timestamp)
+
+        // A real heavy day: well over the 100M-token legacy cap (cache reads alone
+        // run into the hundreds of millions for power users).
+        await cache.mergeEntries(
+            provider: "claude",
+            entries: [
+                self.entry(timestamp: timestamp, inputTokens: 600_000_000, requestID: "r1", sourceFingerprint: "f1"),
+            ],
+            scanDate: timestamp.addingTimeInterval(10),
+            sourceWatermarks: [
+                UsageRelaySourceWatermark(
+                    dayKey: dayKey,
+                    sourceKind: "claude-jsonl",
+                    sourceID: "session.jsonl",
+                    sourceFingerprint: "f1"),
+            ])
+
+        try fm.removeItem(at: cacheDir.appendingPathComponent("claude-daily.json"))
+        let restored = await cache.loadCachedDailies(provider: "claude")
+        // Must NOT be quarantined: relay data is trusted, not legacy-suspect.
+        #expect(restored?.dailies.count == 1)
+        #expect(restored?.dailies.first?.inputTokens == 600_000_000)
+    }
+
+    @Test
     func `relay materializes latest event snapshot for a day`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
@@ -352,6 +392,65 @@ struct LedgerCacheTests {
 
         let loaded = await cache.loadCachedDailies(provider: "codex")
         #expect(loaded?.dailies.map(\.dayKey) == ["2026-01-02"])
+    }
+
+    @Test
+    func `relay collapses a busy day into one aggregate record`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cacheDir = root.appendingPathComponent("ledger-cache", isDirectory: true)
+        let relayDir = root.appendingPathComponent("relay", isDirectory: true)
+        let cache = LedgerCache(cacheDir: cacheDir, relayDir: relayDir)
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let timestamp = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 1,
+            day: 1,
+            hour: 12)))
+        let dayKey = LedgerCache.dayKey(for: timestamp)
+
+        let entryCount = 5000
+        let entries = (0..<entryCount).map { index in
+            self.entry(
+                timestamp: timestamp.addingTimeInterval(Double(index)),
+                inputTokens: 10,
+                requestID: "request-\(index)",
+                sourceFingerprint: "file-v1")
+        }
+
+        await cache.mergeEntries(
+            provider: "codex",
+            entries: entries,
+            scanDate: timestamp.addingTimeInterval(Double(entryCount)),
+            sourceWatermarks: [
+                UsageRelaySourceWatermark(
+                    dayKey: dayKey,
+                    sourceKind: "codex-jsonl",
+                    sourceID: "session.jsonl",
+                    sourceFingerprint: "file-v1"),
+            ])
+
+        // The relay must remember the day as a single aggregate row, not 5000
+        // verbatim event records — the regression that once drove the file past
+        // 500MB. A busy day stays a handful of lines (one event + watermark).
+        let relayFile = await cache.relayHistoryFileURL(provider: "codex")
+        let relayText = try String(contentsOf: relayFile, encoding: .utf8)
+        let recordCount = relayText.split(separator: "\n").count
+        #expect(recordCount <= 8)
+
+        // The aggregate still materializes the correct daily totals.
+        try fm.removeItem(at: cacheDir.appendingPathComponent("codex-daily.json"))
+        let restored = await cache.loadCachedDailies(provider: "codex")
+        #expect(restored?.dailies.count == 1)
+        #expect(restored?.dailies.first?.inputTokens == entryCount * 10)
+        #expect(restored?.dailies.first?.requestCount == entryCount)
     }
 
     private func entry(

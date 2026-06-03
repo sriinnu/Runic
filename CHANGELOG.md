@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.5 — 2026-06-03
+- Usage: stop hiding high-usage days — days with very large token totals (cache reads can run to hundreds of millions per day) were wrongly quarantined and shown as zero in usage, cost, and timeline panels; real history now renders in full.
+- Usage: fix a relay-cache growth bug where heavy provider history could bloat the local cache and stall refresh, leaving usage, cost, and timeline panels blank; history is stored as compact daily summaries and the cache self-compacts.
+
 ## 2.2.3 — 2026-05-30
 - Preferences: make status-menu Settings and About actions open the Settings window and select the requested panel reliably.
 

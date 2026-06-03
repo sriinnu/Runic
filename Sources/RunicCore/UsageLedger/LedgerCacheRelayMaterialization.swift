@@ -84,7 +84,12 @@ extension LedgerCache {
                 }
             }
 
-            let daily = CachedDaily(
+            // Relay events are Runic's own normalized scan output, not untrusted
+            // legacy cache data, so the plausibility cap does not apply here.
+            // Heavy real days legitimately exceed 100M tokens (cache reads alone
+            // can run into the billions); quarantining them here is what made
+            // recent high-usage days render as zero.
+            return CachedDaily(
                 dayKey: dayKey,
                 inputTokens: input,
                 outputTokens: output,
@@ -93,8 +98,6 @@ extension LedgerCache {
                 costUSD: hasCost ? cost : nil,
                 requestCount: requests,
                 modelsUsed: models.sorted())
-            guard Self.isTrustedLegacyDaily(provider: provider, daily: daily) else { return nil }
-            return daily
         }
         .sorted { $0.dayKey < $1.dayKey }
 

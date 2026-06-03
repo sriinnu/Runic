@@ -3,6 +3,24 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.2.5</title>
+            <pubDate>Wed, 03 Jun 2026 22:41:34 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>65</sparkle:version>
+            <sparkle:shortVersionString>2.2.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.2.5</h2>
+<ul>
+<li>Usage: stop hiding high-usage days — days with very large token totals (cache reads can run to hundreds of millions per day) were wrongly quarantined and shown as zero in usage, cost, and timeline panels; real history now renders in full.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.5/Runic-2.2.5.zip" length="33154146" type="application/octet-stream" sparkle:edSignature="r8cCbaRVWVHjQpWxAsjj+K6b3z+RY2tssTY69k8EBBxm8nuc33RumFxowRRJp57tuoU1NniUXpQ7jHC2U4MJAw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.5/Runic65-64.delta" sparkle:deltaFrom="64" length="2037274" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="v8xs+G+IT0ebLQXlciJXFZ38/tHXrv6yjFmfK57HalTvkH6Xe56npG6zOy52pVd2qWJbJHOw4aKewaJoqlLiDQ=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.2.3</title>
             <pubDate>Sat, 30 May 2026 16:04:53 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
