@@ -85,35 +85,20 @@ extension LedgerCache {
         var records: [UsageRelayRecord] = []
         for dayKey in dayKeys.sorted() {
             let snapshotID = self.snapshotID(provider: provider, dayKey: dayKey, writtenAt: scanDate)
-            let dayEntries = entries
-                .enumerated()
-                .filter { Self.dayKey(for: $0.element.timestamp) == dayKey }
-            for (index, entry) in dayEntries {
-                let event = UsageRelayEvent(
-                    eventID: self.eventID(for: entry, dayKey: dayKey, index: index),
-                    snapshotID: snapshotID,
-                    provider: provider,
-                    timestamp: entry.timestamp,
-                    dayKey: dayKey,
-                    sessionID: entry.sessionID,
-                    projectID: entry.projectID,
-                    projectName: entry.projectName,
-                    model: entry.model,
-                    modelsUsed: nil,
-                    inputTokens: entry.inputTokens,
-                    outputTokens: entry.outputTokens,
-                    cacheCreationTokens: entry.cacheCreationTokens,
-                    cacheReadTokens: entry.cacheReadTokens,
-                    costUSD: entry.costUSD,
-                    requestCount: nil,
-                    requestID: entry.requestID,
-                    messageID: entry.messageID,
-                    version: entry.version,
-                    source: entry.source.rawValue,
-                    operationKind: entry.operationKind?.rawValue,
-                    tokenProvenance: entry.tokenProvenance,
-                    costProvenance: entry.costProvenance,
-                    sourceFingerprint: entry.sourceFingerprint)
+            let dayEntries = entries.filter { Self.dayKey(for: $0.timestamp) == dayKey }
+
+            // The relay is a compact daily memory: every day — today included —
+            // collapses to ONE aggregate record ("yesterday, as of yesterday").
+            // Writing a record per raw log line is what let a single Codex rebuild
+            // balloon this file past 500MB. Fine-grained intra-day detail is
+            // recomputed live from the provider logs, so the relay never needs
+            // per-event rows.
+            if let event = Self.aggregatedDailyEvent(
+                provider: provider,
+                dayKey: dayKey,
+                snapshotID: snapshotID,
+                entries: dayEntries)
+            {
                 records.append(UsageRelayRecord(
                     schemaVersion: Self.relaySchemaVersion,
                     recordType: UsageRelayRecordType.event.rawValue,
@@ -174,29 +159,67 @@ extension LedgerCache {
         }
     }
 
-    func snapshotID(provider: String, dayKey: String, writtenAt: Date) -> String {
-        "snapshot:\(provider):\(dayKey):\(Int(writtenAt.timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
+    /// Collapse a day's raw entries into a single aggregate relay event. This is
+    /// the whole point of the relay: a historical day is remembered as one summed
+    /// row, not as a verbatim copy of every provider log line.
+    static func aggregatedDailyEvent(
+        provider: String,
+        dayKey: String,
+        snapshotID: String,
+        entries: [UsageLedgerEntry]) -> UsageRelayEvent?
+    {
+        guard !entries.isEmpty else { return nil }
+
+        var input = 0
+        var output = 0
+        var cacheCreation = 0
+        var cacheRead = 0
+        var cost = 0.0
+        var hasCost = false
+        var models = Set<String>()
+
+        for entry in entries {
+            input += entry.inputTokens
+            output += entry.outputTokens
+            cacheCreation += entry.cacheCreationTokens
+            cacheRead += entry.cacheReadTokens
+            if let entryCost = entry.costUSD {
+                cost += entryCost
+                hasCost = true
+            }
+            if let model = entry.model { models.insert(model) }
+        }
+
+        let modelsUsed = models.sorted()
+        return UsageRelayEvent(
+            eventID: "daily-aggregate:\(provider):\(dayKey)",
+            snapshotID: snapshotID,
+            provider: provider,
+            timestamp: Self.dayKeyFormatter.date(from: dayKey) ?? entries[0].timestamp,
+            dayKey: dayKey,
+            sessionID: nil,
+            projectID: nil,
+            projectName: nil,
+            model: modelsUsed.count == 1 ? modelsUsed.first : nil,
+            modelsUsed: modelsUsed,
+            inputTokens: input,
+            outputTokens: output,
+            cacheCreationTokens: cacheCreation,
+            cacheReadTokens: cacheRead,
+            costUSD: hasCost ? cost : nil,
+            requestCount: entries.count,
+            requestID: nil,
+            messageID: nil,
+            version: nil,
+            source: "relay-daily-aggregate",
+            operationKind: nil,
+            tokenProvenance: nil,
+            costProvenance: nil,
+            sourceFingerprint: "daily-aggregate:\(provider):\(dayKey)")
     }
 
-    func eventID(for entry: UsageLedgerEntry, dayKey: String, index: Int) -> String {
-        if let requestID = entry.requestID, !requestID.isEmpty {
-            return "\(entry.source.rawValue):request:\(requestID)"
-        }
-        if let messageID = entry.messageID, !messageID.isEmpty {
-            return "\(entry.source.rawValue):message:\(messageID)"
-        }
-        let timestampMillis = Int(entry.timestamp.timeIntervalSince1970 * 1000)
-        return [
-            entry.source.rawValue,
-            dayKey,
-            entry.sessionID ?? "-",
-            "\(timestampMillis)",
-            "\(entry.inputTokens)",
-            "\(entry.outputTokens)",
-            "\(entry.cacheCreationTokens)",
-            "\(entry.cacheReadTokens)",
-            "\(index)",
-        ].joined(separator: ":")
+    func snapshotID(provider: String, dayKey: String, writtenAt: Date) -> String {
+        "snapshot:\(provider):\(dayKey):\(Int(writtenAt.timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
     }
 
     static func touchedDayKeys(
