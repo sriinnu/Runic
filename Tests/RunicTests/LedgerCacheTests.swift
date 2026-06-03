@@ -153,6 +153,46 @@ struct LedgerCacheTests {
     }
 
     @Test
+    func `relay keeps heavy days above the legacy plausibility cap`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cacheDir = root.appendingPathComponent("ledger-cache", isDirectory: true)
+        let relayDir = root.appendingPathComponent("relay", isDirectory: true)
+        let cache = LedgerCache(cacheDir: cacheDir, relayDir: relayDir)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let timestamp = try #require(calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12)))
+        let dayKey = LedgerCache.dayKey(for: timestamp)
+
+        // A real heavy day: well over the 100M-token legacy cap (cache reads alone
+        // run into the hundreds of millions for power users).
+        await cache.mergeEntries(
+            provider: "claude",
+            entries: [
+                self.entry(timestamp: timestamp, inputTokens: 600_000_000, requestID: "r1", sourceFingerprint: "f1"),
+            ],
+            scanDate: timestamp.addingTimeInterval(10),
+            sourceWatermarks: [
+                UsageRelaySourceWatermark(
+                    dayKey: dayKey,
+                    sourceKind: "claude-jsonl",
+                    sourceID: "session.jsonl",
+                    sourceFingerprint: "f1"),
+            ])
+
+        try fm.removeItem(at: cacheDir.appendingPathComponent("claude-daily.json"))
+        let restored = await cache.loadCachedDailies(provider: "claude")
+        // Must NOT be quarantined: relay data is trusted, not legacy-suspect.
+        #expect(restored?.dailies.count == 1)
+        #expect(restored?.dailies.first?.inputTokens == 600_000_000)
+    }
+
+    @Test
     func `relay materializes latest event snapshot for a day`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
