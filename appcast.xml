@@ -3,6 +3,21 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.2.4</title>
+            <pubDate>Wed, 03 Jun 2026 22:21:08 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>64</sparkle:version>
+            <sparkle:shortVersionString>2.2.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.2.4</h2>
+<ul>
+<li>Usage: fix a bug where a large local usage-history cache could stall refresh and leave usage, cost, and timeline panels blank; historical days are now stored as compact daily summaries and the cache self-compacts.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.4/Runic-2.2.4.zip" length="33155144" type="application/octet-stream" sparkle:edSignature="QGL01C3LLDp38d26oEzFwyCVNtDsdutc8Hlen5NM+szbU05oeyfpQteMFFLRJwe5zm60KrI/SDqxnm2irdDiBA=="/>
+        </item>
+        <item>
             <title>2.2.3</title>
             <pubDate>Sat, 30 May 2026 16:04:53 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
