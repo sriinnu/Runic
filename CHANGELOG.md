@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.5 — 2026-06-03
+- Usage: stop hiding high-usage days — days with very large token totals (cache reads can run to hundreds of millions per day) were wrongly quarantined and shown as zero in usage, cost, and timeline panels; real history now renders in full.
+
 ## 2.2.4 — 2026-06-03
 - Usage: fix a bug where a large local usage-history cache could stall refresh and leave usage, cost, and timeline panels blank; historical days are now stored as compact daily summaries and the cache self-compacts.
 
