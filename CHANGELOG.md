@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.4 — 2026-06-03
+- Usage: fix a bug where a large local usage-history cache could stall refresh and leave usage, cost, and timeline panels blank; historical days are now stored as compact daily summaries and the cache self-compacts.
+
 ## 2.2.3 — 2026-05-30
 - Preferences: make status-menu Settings and About actions open the Settings window and select the requested panel reliably.
 
