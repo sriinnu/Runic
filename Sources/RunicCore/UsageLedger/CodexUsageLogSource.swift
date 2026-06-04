@@ -93,7 +93,17 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         }
 
         if !readFailures.isEmpty {
-            throw CodexUsageLogError.readFailed(readFailures.joined(separator: ", "))
+            // A live Codex session can rewrite a rollout file mid-scan. Don't throw
+            // away every other file's history because one was busy — keep what
+            // parsed; the busy file is re-read on the next refresh. Only fail when
+            // nothing could be read at all.
+            self.log.warning("Codex usage log: skipped busy file(s) during scan", metadata: [
+                "skipped": "\(readFailures.count)",
+                "parsedEntries": "\(entries.count)",
+            ])
+            if entries.isEmpty {
+                throw CodexUsageLogError.readFailed(readFailures.joined(separator: ", "))
+            }
         }
 
         await cache.mergeEntries(
