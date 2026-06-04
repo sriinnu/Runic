@@ -22,6 +22,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private let log: RunicLogger
     private let cache: LedgerCache
     private let scanMode: UsageLedgerLogScanMode
+    private let maxAgeDays: Int?
 
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -40,13 +41,14 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         self.log = log
         self.cache = cache
         self.scanMode = scanMode
-        _ = maxAgeDays // Retained for source compatibility; scanMode controls history reads.
+        self.maxAgeDays = maxAgeDays
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
         let root = try self.resolveSessionsRoot()
         let todayKey = LedgerCache.dayKey(for: self.now)
-        let window = self.scanWindow(todayKey: todayKey)
+        let scanMode = await self.resolvedScanMode()
+        let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode)
 
         // Relay contract: normal refresh never reopens historical provider
         // JSONLs. Explicit rebuild mode is the repair path that opts into
@@ -126,9 +128,21 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let fileWatermarkDayKey: String?
     }
 
-    private func scanWindow(todayKey: String) -> ScanWindow {
+    /// Explicit rebuild always wins; otherwise rebuild once when no history is
+    /// cached at all (fresh install / cleared cache), then stay today-only.
+    private func resolvedScanMode() async -> UsageLedgerLogScanMode {
+        if case .rebuildHistory = self.scanMode { return self.scanMode }
+        let requested = max(1, self.maxAgeDays ?? 1)
+        guard requested > 1 else { return self.scanMode }
+        if await self.cache.effectiveCoveredMaxAgeDays(provider: "codex") == nil {
+            return .rebuildHistory(maxAgeDays: requested)
+        }
+        return self.scanMode
+    }
+
+    private func scanWindow(todayKey: String, scanMode: UsageLedgerLogScanMode) -> ScanWindow {
         let calendar = Calendar.current
-        switch self.scanMode {
+        switch scanMode {
         case .refreshToday:
             return ScanWindow(
                 minDate: calendar.startOfDay(for: self.now),

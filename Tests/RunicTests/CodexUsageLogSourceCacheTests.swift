@@ -162,6 +162,36 @@ extension CodexUsageLogSourceTests {
     }
 
     @Test
+    func `codex backfills history once when cache is empty`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+        try Self.writeSession(root: root, date: yesterday, input: 900, modifiedAt: now, fileManager: fm)
+
+        // Empty cache, DEFAULT (today-only) scan mode. With nothing cached yet it
+        // must do a one-time history rebuild and surface yesterday's usage, then
+        // record coverage so subsequent refreshes return to today-only.
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+
+        let entries = try await source.loadEntries()
+        #expect(entries.map(\.inputTokens) == [900])
+        #expect(await cache.loadCachedDailies(provider: "codex")?.coveredMaxAgeDays == 30)
+    }
+
+    @Test
     func `codex rebuild repairs cached history from historical jsonl`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory

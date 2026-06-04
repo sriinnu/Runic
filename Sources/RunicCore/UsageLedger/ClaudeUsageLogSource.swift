@@ -22,6 +22,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     let log: RunicLogger
     let cache: LedgerCache
     let scanMode: UsageLedgerLogScanMode
+    let maxAgeDays: Int?
 
     struct DedupeTokens {
         let input: Int
@@ -47,7 +48,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         self.log = log
         self.cache = cache
         self.scanMode = scanMode
-        _ = maxAgeDays // Retained for source compatibility; scanMode controls history reads.
+        self.maxAgeDays = maxAgeDays
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
@@ -61,7 +62,8 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         // historical reads and commits empty day snapshots for missing raw data.
         let cache = self.cache
         let todayKey = LedgerCache.dayKey(for: self.now)
-        let window = self.scanWindow(todayKey: todayKey)
+        let scanMode = await self.resolvedScanMode()
+        let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode)
         let allFiles = self.findUsageFiles(in: projectsDirs, minDate: window.fileMinModificationDate)
 
         // Claude keeps long-lived project JSONLs. Normal refresh opens only

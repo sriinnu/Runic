@@ -1,9 +1,23 @@
 import Foundation
 
 extension ClaudeUsageLogSource {
-    func scanWindow(todayKey: String) -> ScanWindow {
+    /// Pick the scan window. An explicit rebuild always wins. Otherwise, with no
+    /// cached history at all (fresh install / cleared cache), do a one-time
+    /// history rebuild so the app isn't stuck showing only today; once any
+    /// coverage exists, normal refresh stays today-only (the relay contract).
+    func resolvedScanMode() async -> UsageLedgerLogScanMode {
+        if case .rebuildHistory = self.scanMode { return self.scanMode }
+        let requested = max(1, self.maxAgeDays ?? 1)
+        guard requested > 1 else { return self.scanMode }
+        if await self.cache.effectiveCoveredMaxAgeDays(provider: "claude") == nil {
+            return .rebuildHistory(maxAgeDays: requested)
+        }
+        return self.scanMode
+    }
+
+    func scanWindow(todayKey: String, scanMode: UsageLedgerLogScanMode) -> ScanWindow {
         let calendar = Calendar.current
-        switch self.scanMode {
+        switch scanMode {
         case .refreshToday:
             let todayStart = calendar.startOfDay(for: self.now)
             return ScanWindow(
