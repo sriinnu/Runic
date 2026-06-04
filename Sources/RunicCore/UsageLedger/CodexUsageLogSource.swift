@@ -22,6 +22,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private let log: RunicLogger
     private let cache: LedgerCache
     private let scanMode: UsageLedgerLogScanMode
+    private let maxAgeDays: Int?
 
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -40,13 +41,14 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         self.log = log
         self.cache = cache
         self.scanMode = scanMode
-        _ = maxAgeDays // Retained for source compatibility; scanMode controls history reads.
+        self.maxAgeDays = maxAgeDays
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
         let root = try self.resolveSessionsRoot()
         let todayKey = LedgerCache.dayKey(for: self.now)
-        let window = self.scanWindow(todayKey: todayKey)
+        let scanMode = await self.resolvedScanMode()
+        let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode)
 
         // Relay contract: normal refresh never reopens historical provider
         // JSONLs. Explicit rebuild mode is the repair path that opts into
@@ -93,7 +95,29 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         }
 
         if !readFailures.isEmpty {
-            throw CodexUsageLogError.readFailed(readFailures.joined(separator: ", "))
+            // A live Codex session can rewrite a rollout file mid-scan. Don't throw
+            // away every other file's history because one was busy — keep what
+            // parsed; the busy file is re-read on the next refresh. Only fail when
+            // nothing could be read at all.
+            self.log.warning("Codex usage log: skipped busy file(s) during scan", metadata: [
+                "skipped": "\(readFailures.count)",
+                "parsedEntries": "\(entries.count)",
+            ])
+            if entries.isEmpty {
+                throw CodexUsageLogError.readFailed(readFailures.joined(separator: ", "))
+            }
+
+            // A partial scan must NOT seal any day as empty: a day that produced no
+            // entries may only look empty because its file was busy, and an empty
+            // snapshot tells the relay to clear that day. Keep watermarks only for
+            // days that actually produced entries, so untouched days retain their
+            // cached history instead of being silently erased. (On a clean scan
+            // this block doesn't run, so genuine empty-day clears still work.)
+            let daysWithEntries = Set(entries.map { LedgerCache.dayKey(for: $0.timestamp) })
+            sourceWatermarks = sourceWatermarks.filter { watermark in
+                guard let dayKey = watermark.dayKey else { return true }
+                return daysWithEntries.contains(dayKey)
+            }
         }
 
         await cache.mergeEntries(
@@ -116,9 +140,21 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let fileWatermarkDayKey: String?
     }
 
-    private func scanWindow(todayKey: String) -> ScanWindow {
+    /// Explicit rebuild always wins; otherwise rebuild once when no history is
+    /// cached at all (fresh install / cleared cache), then stay today-only.
+    private func resolvedScanMode() async -> UsageLedgerLogScanMode {
+        if case .rebuildHistory = self.scanMode { return self.scanMode }
+        let requested = max(1, self.maxAgeDays ?? 1)
+        guard requested > 1 else { return self.scanMode }
+        if await self.cache.effectiveCoveredMaxAgeDays(provider: "codex") == nil {
+            return .rebuildHistory(maxAgeDays: requested)
+        }
+        return self.scanMode
+    }
+
+    private func scanWindow(todayKey: String, scanMode: UsageLedgerLogScanMode) -> ScanWindow {
         let calendar = Calendar.current
-        switch self.scanMode {
+        switch scanMode {
         case .refreshToday:
             return ScanWindow(
                 minDate: calendar.startOfDay(for: self.now),

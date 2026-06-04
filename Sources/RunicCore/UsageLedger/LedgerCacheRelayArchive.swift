@@ -108,46 +108,27 @@ extension LedgerCache {
                     watermark: nil))
             }
 
-            let matchingWatermarks = sourceWatermarks.filter { watermark in
-                watermark.dayKey == nil || watermark.dayKey == dayKey
-            }
-            if matchingWatermarks.isEmpty {
-                records.append(UsageRelayRecord(
-                    schemaVersion: Self.relaySchemaVersion,
-                    recordType: UsageRelayRecordType.watermark.rawValue,
-                    provider: provider,
-                    writtenAt: scanDate,
-                    event: nil,
-                    watermark: UsageRelayWatermark(
-                        snapshotID: snapshotID,
-                        dayKey: dayKey,
-                        sourceKind: "scan",
-                        sourceID: "scan:\(provider):\(dayKey)",
-                        sourceFingerprint: "scan:\(provider):\(dayKey):\(scanDate.timeIntervalSince1970)",
-                        path: nil,
-                        modifiedAt: nil,
-                        sizeBytes: nil,
-                        scannedAt: scanDate)))
-            } else {
-                for sourceWatermark in matchingWatermarks {
-                    records.append(UsageRelayRecord(
-                        schemaVersion: Self.relaySchemaVersion,
-                        recordType: UsageRelayRecordType.watermark.rawValue,
-                        provider: provider,
-                        writtenAt: scanDate,
-                        event: nil,
-                        watermark: UsageRelayWatermark(
-                            snapshotID: snapshotID,
-                            dayKey: dayKey,
-                            sourceKind: sourceWatermark.sourceKind,
-                            sourceID: sourceWatermark.sourceID,
-                            sourceFingerprint: sourceWatermark.sourceFingerprint,
-                            path: sourceWatermark.path,
-                            modifiedAt: sourceWatermark.modifiedAt,
-                            sizeBytes: sourceWatermark.sizeBytes,
-                            scannedAt: scanDate)))
-                }
-            }
+            // One watermark per day — all the materializer needs to pick the
+            // latest snapshot for a day. Writing one per scanned source file made
+            // the relay O(files × days): 671 Claude logs × 30 days ≈ 20k rows /
+            // 17MB of pure bookkeeping. Nothing reads per-file watermarks (the
+            // sources gate incremental scans on file mtime), so collapse to O(days).
+            records.append(UsageRelayRecord(
+                schemaVersion: Self.relaySchemaVersion,
+                recordType: UsageRelayRecordType.watermark.rawValue,
+                provider: provider,
+                writtenAt: scanDate,
+                event: nil,
+                watermark: UsageRelayWatermark(
+                    snapshotID: snapshotID,
+                    dayKey: dayKey,
+                    sourceKind: "scan",
+                    sourceID: "scan:\(provider):\(dayKey)",
+                    sourceFingerprint: "scan:\(provider):\(dayKey):\(snapshotID)",
+                    path: nil,
+                    modifiedAt: nil,
+                    sizeBytes: nil,
+                    scannedAt: scanDate)))
         }
 
         do {

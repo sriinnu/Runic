@@ -130,9 +130,18 @@ struct CodexUsageLogParser {
                     entries: &entries)
             })
         let latestMetadata = self.sourceMetadata(for: file.url)
-        guard latestMetadata == sourceMetadata else {
+        // A live, multi-day Codex session writes to its rollout file continuously,
+        // so the file almost always GROWS during a read. That is safe for an
+        // append-only log: we parsed a valid prefix and the appended tail is
+        // captured on the next scan (a torn final line just fails to decode and is
+        // skipped). Rejecting on any change stranded long-running sessions, so only
+        // treat a SHRINK — truncation or rewrite — as a genuinely torn read.
+        if let before = sourceMetadata.sizeBytes,
+           let after = latestMetadata.sizeBytes,
+           after < before
+        {
             throw CodexUsageLogSource.CodexUsageLogError.readFailed(
-                "Codex usage log changed while scanning: \(sourceMetadata.path)")
+                "Codex usage log truncated while scanning: \(sourceMetadata.path)")
         }
         return CodexUsageParsedFile(
             entries: entries,

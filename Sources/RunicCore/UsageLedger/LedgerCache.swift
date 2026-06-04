@@ -94,9 +94,15 @@ public actor LedgerCache {
         let url = self.fileURL(provider: provider)
         var versionedLedger = ledger
         versionedLedger.schemaVersion = Self.cacheSchemaVersion
-        guard let data = try? JSONEncoder().encode(versionedLedger) else { return }
-        try? data.write(to: url, options: .atomic)
-        Self.log.debug("Saved \(ledger.dailies.count) days for \(provider)")
+        do {
+            let data = try JSONEncoder().encode(versionedLedger)
+            try data.write(to: url, options: .atomic)
+            Self.log.debug("Saved \(ledger.dailies.count) days for \(provider)")
+        } catch {
+            // A silently-dropped write loses freshly-merged coverage and forces an
+            // expensive rebuild next launch; surface it so it's diagnosable.
+            Self.log.warning("Failed to save daily cache for \(provider): \(error.localizedDescription)")
+        }
     }
 
     /// Merge hot daily entries into the frozen daily cache.
