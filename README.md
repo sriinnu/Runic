@@ -31,7 +31,7 @@ Its job is not to make provider usage look cleaner than it is. Its job is to rep
 ## What It Does
 
 - Shows enabled provider usage from APIs, local CLIs, web sessions, local probes, and local telemetry where available.
-- Tracks token and cost history for Claude and Codex through a Runic-owned relay, with normal refresh reading today's live logs and explicit rebuild repairing historical JSONL data.
+- Tracks token and cost history for Claude and Codex through a compact, self-compacting Runic-owned relay: normal refresh reads today's live logs, history is backfilled automatically on first run, and an explicit rebuild repairs historical JSONL data on demand.
 - Reads capability metadata from Kosha-discovery when present, then falls back to bundled context metadata.
 - Exports scoped usage data as CSV or JSON with provenance fields where known.
 - Provides a CLI for scripts and diagnostics.
