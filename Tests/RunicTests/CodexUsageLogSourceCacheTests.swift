@@ -162,6 +162,52 @@ extension CodexUsageLogSourceTests {
     }
 
     @Test
+    func `codex backfill is one-shot then stays today-only`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+        let twoDaysAgo = Calendar.current.date(byAdding: .day, value: -2, to: now) ?? now
+        try Self.writeSession(root: root, date: yesterday, input: 900, modifiedAt: now, fileManager: fm)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+
+        // First scan, empty cache → one-time backfill rebuild picks up yesterday.
+        let first = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+        let firstEntries = try await first.loadEntries()
+        #expect(firstEntries.map(\.inputTokens) == [900])
+
+        // A NEW historical day appears. A second scan must NOT rebuild again — it
+        // stays today-only, so this older day is ignored (the relay contract), and
+        // there's no rebuild loop.
+        try Self.writeSession(root: root, date: twoDaysAgo, input: 500, modifiedAt: now, fileManager: fm)
+        let second = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+        let secondEntries = try await second.loadEntries()
+
+        #expect(!secondEntries.map(\.inputTokens).contains(500))
+        let dailies = await cache.loadCachedDailies(provider: "codex")?.dailies ?? []
+        #expect(dailies.contains { $0.dayKey == LedgerCache.dayKey(for: yesterday) })
+        #expect(!dailies.contains { $0.dayKey == LedgerCache.dayKey(for: twoDaysAgo) })
+    }
+
+    @Test
     func `codex rebuild with an unreadable file keeps that day's cached history`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
