@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.6 — 2026-06-04
+- Usage: keep the local history cache compact — a month of history dropped from ~17 MB to under 100 KB, and it self-compacts so it can't balloon again.
+- Usage: history rebuild now survives a provider rewriting its logs mid-scan, and never drops a day's cached totals when a file is briefly unavailable.
+- Usage: a fresh install (or after clearing local data) backfills recent history automatically instead of showing only today.
+
 ## 2.2.5 — 2026-06-03
 - Usage: stop hiding high-usage days — days with very large token totals (cache reads can run to hundreds of millions per day) were wrongly quarantined and shown as zero in usage, cost, and timeline panels; real history now renders in full.
 - Usage: fix a relay-cache growth bug where heavy provider history could bloat the local cache and stall refresh, leaving usage, cost, and timeline panels blank; history is stored as compact daily summaries and the cache self-compacts.
