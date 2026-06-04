@@ -3,6 +3,23 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.2.6</title>
+            <pubDate>Thu, 04 Jun 2026 17:36:03 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>67</sparkle:version>
+            <sparkle:shortVersionString>2.2.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.2.6</h2>
+<ul>
+<li>Usage: keep the local history cache compact — a month of history dropped from ~17 MB to under 100 KB, and it self-compacts so it can't balloon again.</li>
+<li>Usage: history rebuild now survives a provider rewriting its logs mid-scan, and never drops a day's cached totals when a file is briefly unavailable.</li>
+<li>Usage: a fresh install (or after clearing local data) backfills recent history automatically instead of showing only today.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.6/Runic-2.2.6.zip" length="33170234" type="application/octet-stream" sparkle:edSignature="rEK3wnyI2m8UQq9flT5NQ6ecfvaIZvErFm4tXfnYzQOwI1Eyw9CpQ3PjI3b83USyJZj0AZbaQaZouB76/hOVCA=="/>
+        </item>
+        <item>
             <title>2.2.5</title>
             <pubDate>Wed, 03 Jun 2026 22:41:34 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
