@@ -162,6 +162,71 @@ extension CodexUsageLogSourceTests {
     }
 
     @Test
+    func `codex rebuild with an unreadable file keeps that day's cached history`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let busyDay = Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+
+        // A readable session today so the scan isn't a total failure.
+        try Self.writeSession(root: root, date: now, input: 700, modifiedAt: now, fileManager: fm)
+        // The busy day's session, then make it unreadable to stand in for a file
+        // a live session is rewriting mid-scan (the parser throws either way).
+        try Self.writeSession(root: root, date: busyDay, input: 999, modifiedAt: now, fileManager: fm)
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: busyDay)
+        let busyDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        let busyFile = try #require(
+            try fm.contentsOfDirectory(at: busyDir, includingPropertiesForKeys: nil)
+                .first { $0.pathExtension == "jsonl" })
+        try fm.setAttributes([.posixPermissions: 0], ofItemAtPath: busyFile.path)
+        defer { try? fm.setAttributes([.posixPermissions: 0o644], ofItemAtPath: busyFile.path) }
+
+        // The busy day already holds real cached history that must survive the scan.
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        await cache.mergeDailies(
+            provider: "codex",
+            newDailies: [
+                CachedDaily(
+                    dayKey: LedgerCache.dayKey(for: busyDay),
+                    inputTokens: 5000,
+                    outputTokens: 0,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    costUSD: nil,
+                    requestCount: 1,
+                    modelsUsed: ["gpt-5"]),
+            ],
+            scanDate: now,
+            todayKey: nil,
+            coveredMaxAgeDays: 3)
+
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache,
+            scanMode: .rebuildHistory(maxAgeDays: 3))
+
+        _ = try await source.loadEntries()
+
+        // The busy day's file failed to read — its cached 5000 must NOT be erased
+        // by a spurious empty snapshot.
+        let busyDaily = await cache.loadCachedDailies(provider: "codex")?.dailies
+            .first { $0.dayKey == LedgerCache.dayKey(for: busyDay) }
+        #expect(busyDaily?.inputTokens == 5000)
+    }
+
+    @Test
     func `codex backfills history once when cache is empty`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory

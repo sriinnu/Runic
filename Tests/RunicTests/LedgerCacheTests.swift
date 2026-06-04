@@ -153,6 +153,52 @@ struct LedgerCacheTests {
     }
 
     @Test
+    func `compaction keeps the latest event snapshot and drops superseded ones`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cacheDir = root.appendingPathComponent("ledger-cache", isDirectory: true)
+        let relayDir = root.appendingPathComponent("relay", isDirectory: true)
+        let cache = LedgerCache(cacheDir: cacheDir, relayDir: relayDir)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let timestamp = try #require(calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12)))
+        let dayKey = LedgerCache.dayKey(for: timestamp)
+
+        // Two scans of the same day → two snapshots; the newer one wins.
+        for (index, tokens) in [10, 50].enumerated() {
+            await cache.mergeEntries(
+                provider: "codex",
+                entries: [self.entry(
+                    timestamp: timestamp,
+                    inputTokens: tokens,
+                    requestID: "request-\(index)",
+                    sourceFingerprint: "file-v\(index)")],
+                scanDate: timestamp.addingTimeInterval(TimeInterval(10 * (index + 1))),
+                sourceWatermarks: [
+                    UsageRelaySourceWatermark(
+                        dayKey: dayKey,
+                        sourceKind: "codex-jsonl",
+                        sourceID: "session.jsonl",
+                        sourceFingerprint: "file-v\(index)"),
+                ])
+        }
+
+        await cache.compactRelay(provider: "codex")
+
+        // After compaction the latest snapshot's data must still materialize — the
+        // superseded snapshot is dropped, but the day is NOT lost.
+        try fm.removeItem(at: cacheDir.appendingPathComponent("codex-daily.json"))
+        let restored = await cache.loadCachedDailies(provider: "codex")
+        #expect(restored?.dailies.count == 1)
+        #expect(restored?.dailies.first?.inputTokens == 50)
+    }
+
+    @Test
     func `relay writes one watermark per day regardless of source file count`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory

@@ -106,6 +106,18 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             if entries.isEmpty {
                 throw CodexUsageLogError.readFailed(readFailures.joined(separator: ", "))
             }
+
+            // A partial scan must NOT seal any day as empty: a day that produced no
+            // entries may only look empty because its file was busy, and an empty
+            // snapshot tells the relay to clear that day. Keep watermarks only for
+            // days that actually produced entries, so untouched days retain their
+            // cached history instead of being silently erased. (On a clean scan
+            // this block doesn't run, so genuine empty-day clears still work.)
+            let daysWithEntries = Set(entries.map { LedgerCache.dayKey(for: $0.timestamp) })
+            sourceWatermarks = sourceWatermarks.filter { watermark in
+                guard let dayKey = watermark.dayKey else { return true }
+                return daysWithEntries.contains(dayKey)
+            }
         }
 
         await cache.mergeEntries(
