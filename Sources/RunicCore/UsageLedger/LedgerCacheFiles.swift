@@ -120,6 +120,7 @@ extension LedgerCache {
         }
 
         var writeError: Error?
+        var keptWatermarkDays = Set<String>()
         do {
             try CostUsageJsonl.scan(fileURL: url, maxLineBytes: lineCap, prefixBytes: lineCap) { line in
                 guard writeError == nil, !line.wasTruncated, !line.bytes.isEmpty,
@@ -143,6 +144,12 @@ extension LedgerCache {
                     return
                 }
                 guard latest[dayKey]?.snapshotID == snapshotID else { return }
+                // One watermark per day is enough to mark the latest snapshot, so
+                // drop the rest — this is what shrinks a relay already bloated with
+                // per-file watermarks (events, one per day, are always kept).
+                if record.recordType == UsageRelayRecordType.watermark.rawValue {
+                    guard keptWatermarkDays.insert(dayKey).inserted else { return }
+                }
                 var out = line.bytes
                 out.append(0x0A)
                 do { try handle.write(contentsOf: out) } catch { writeError = error }

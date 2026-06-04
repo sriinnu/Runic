@@ -153,6 +153,45 @@ struct LedgerCacheTests {
     }
 
     @Test
+    func `relay writes one watermark per day regardless of source file count`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cacheDir = root.appendingPathComponent("ledger-cache", isDirectory: true)
+        let relayDir = root.appendingPathComponent("relay", isDirectory: true)
+        let cache = LedgerCache(cacheDir: cacheDir, relayDir: relayDir)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let timestamp = try #require(calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12)))
+
+        // Simulate a scan that touched 50 distinct source files — each used to
+        // produce its own per-day watermark, exploding the relay to O(files × days).
+        let fileWatermarks = (0..<50).map { index in
+            UsageRelaySourceWatermark(
+                dayKey: nil,
+                sourceKind: "claude-jsonl",
+                sourceID: "session-\(index).jsonl",
+                sourceFingerprint: "fingerprint-\(index)")
+        }
+        await cache.mergeEntries(
+            provider: "claude",
+            entries: [self.entry(timestamp: timestamp, inputTokens: 10, requestID: "r1", sourceFingerprint: "f1")],
+            scanDate: timestamp.addingTimeInterval(5),
+            sourceWatermarks: fileWatermarks)
+
+        let relayURL = await cache.relayHistoryFileURL(provider: "claude")
+        let relayText = try String(contentsOf: relayURL, encoding: .utf8)
+        let watermarkLines = relayText
+            .split(separator: "\n")
+            .filter { $0.contains(#""recordType":"watermark""#) }
+        #expect(watermarkLines.count == 1)
+    }
+
+    @Test
     func `relay keeps heavy days above the legacy plausibility cap`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
