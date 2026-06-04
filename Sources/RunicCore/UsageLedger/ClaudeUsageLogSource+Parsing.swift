@@ -38,8 +38,15 @@ extension ClaudeUsageLogSource {
             throw ClaudeUsageLogError.readFailed("\(file.url.path): \(error.localizedDescription)")
         }
         let latestMetadata = self.sourceMetadata(for: file.url)
-        guard latestMetadata == sourceMetadata else {
-            throw ClaudeUsageLogError.readFailed("Claude usage log changed while scanning: \(sourceMetadata.path)")
+        // A live session appends to its project JSONL continuously, so the file
+        // usually GROWS during a read. That is safe for an append-only log: we
+        // parsed a valid prefix and the tail is captured next scan. Only reject a
+        // SHRINK (truncation/rewrite) as a genuinely torn read.
+        if let before = sourceMetadata.sizeBytes,
+           let after = latestMetadata.sizeBytes,
+           after < before
+        {
+            throw ClaudeUsageLogError.readFailed("Claude usage log truncated while scanning: \(sourceMetadata.path)")
         }
         return ParsedUsageFile(
             entries: entries,
