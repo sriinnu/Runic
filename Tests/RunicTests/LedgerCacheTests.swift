@@ -586,6 +586,94 @@ struct LedgerCacheTests {
     }
 
     @Test
+    func `concurrent appends from two cache instances do not tear relay lines`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let relayDir = root.appendingPathComponent("relay", isDirectory: true)
+        // Two instances over the SAME relay dir stand in for two processes; the
+        // advisory flock must serialize their appends so no line is torn.
+        let a = LedgerCache(cacheDir: root.appendingPathComponent("a", isDirectory: true), relayDir: relayDir)
+        let b = LedgerCache(cacheDir: root.appendingPathComponent("b", isDirectory: true), relayDir: relayDir)
+        let writtenAt = Date(timeIntervalSince1970: 1_767_252_000)
+
+        func record(_ i: Int) -> [UsageRelayRecord] {
+            let watermark = UsageRelayWatermark(
+                snapshotID: "snap-\(i)", dayKey: "2026-01-01", sourceKind: "test", sourceID: "test",
+                sourceFingerprint: "f-\(i)", path: nil, modifiedAt: nil, sizeBytes: nil, scannedAt: writtenAt)
+            return [UsageRelayRecord(schemaVersion: LedgerCache.relaySchemaVersion, recordType: "watermark",
+                                     provider: "codex", writtenAt: writtenAt, event: nil, watermark: watermark)]
+        }
+
+        let count = 40
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<count {
+                let cache = (i % 2 == 0) ? a : b
+                group.addTask { try? await cache.appendRelayRecords(record(i)) }
+            }
+        }
+
+        let url = await a.relayHistoryFileURL(provider: "codex")
+        let text = try String(contentsOf: url, encoding: .utf8)
+        let lines = text.split(separator: "\n")
+        #expect(lines.count == count) // no records lost
+        for line in lines {
+            // Every line is a complete, decodable record — none interleaved/torn.
+            #expect((try? JSONDecoder().decode(UsageRelayRecord.self, from: Data(line.utf8))) != nil)
+        }
+        #expect(fm.fileExists(atPath: relayDir.appendingPathComponent("codex.lock").path))
+    }
+
+    @Test
+    func `relay picks the last-appended snapshot even when its clock time is earlier`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cache = LedgerCache(
+            cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true),
+            relayDir: root.appendingPathComponent("relay", isDirectory: true))
+        let dayKey = "2026-01-01"
+
+        func records(tokens: Int, writtenAt: Date, tag: String) -> [UsageRelayRecord] {
+            let snapshotID = "snapshot:codex:\(dayKey):\(tag)"
+            let event = UsageRelayEvent(
+                eventID: "daily-aggregate:codex:\(dayKey)",
+                snapshotID: snapshotID, provider: "codex", timestamp: writtenAt, dayKey: dayKey,
+                sessionID: nil, projectID: nil, projectName: nil, model: "gpt-5", modelsUsed: ["gpt-5"],
+                inputTokens: tokens, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
+                costUSD: nil, requestCount: 1, requestID: nil, messageID: nil, version: nil,
+                source: "test", operationKind: nil, tokenProvenance: nil, costProvenance: nil,
+                sourceFingerprint: nil)
+            let watermark = UsageRelayWatermark(
+                snapshotID: snapshotID, dayKey: dayKey, sourceKind: "test", sourceID: "test",
+                sourceFingerprint: "test", path: nil, modifiedAt: nil, sizeBytes: nil, scannedAt: writtenAt)
+            return [
+                UsageRelayRecord(schemaVersion: LedgerCache.relaySchemaVersion, recordType: "event",
+                                 provider: "codex", writtenAt: writtenAt, event: event, watermark: nil),
+                UsageRelayRecord(schemaVersion: LedgerCache.relaySchemaVersion, recordType: "watermark",
+                                 provider: "codex", writtenAt: writtenAt, event: nil, watermark: watermark),
+            ]
+        }
+
+        let base = Date(timeIntervalSince1970: 1_767_252_000)
+        // First append has a FUTURE clock time; the second (newer) scan's clock has
+        // jumped backward. Append order, not wall-clock, must decide the winner.
+        try await cache.appendRelayRecords(records(tokens: 100, writtenAt: base.addingTimeInterval(3600), tag: "a"))
+        try await cache.appendRelayRecords(records(tokens: 200, writtenAt: base, tag: "b"))
+
+        let restored = await cache.loadCachedDailies(provider: "codex")
+        #expect(restored?.dailies.first?.inputTokens == 200) // last appended wins
+    }
+
+    @Test
     func `catch-up heal still triggers after the cache file is deleted but relay survives`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
