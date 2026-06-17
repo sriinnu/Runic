@@ -43,11 +43,14 @@ extension ClaudeUsageLogSource {
         switch scanMode {
         case .refreshToday:
             // Widen the window back over any gap (app closed while Claude was
-            // used) so missed days are backfilled. Additive on purpose: no
-            // completion watermarks and a nil file-watermark day key mean only
-            // days that actually produced entries (plus today, the mutable day)
-            // are touched — a gap day whose long-lived project JSONL was pruned
-            // keeps its existing relay aggregate rather than being sealed empty.
+            // used) so missed days are backfilled. Additive on purpose: a nil
+            // file-watermark day key means historical gap days are touched only
+            // when they actually produce entries, so a gap day whose long-lived
+            // project JSONL was pruned keeps its relay aggregate. Only TODAY gets
+            // a completion watermark, so today is always re-materialized (cleared
+            // when it has gone to zero, even on a multi-day catch-up). On a
+            // partial scan the busy-file filter drops it when today produced no
+            // entries, preserving a merely-busy today.
             let days = max(1, catchUpDays)
             let todayStart = calendar.startOfDay(for: self.now)
             let start = calendar.date(byAdding: .day, value: -(days - 1), to: todayStart) ?? todayStart
@@ -57,7 +60,13 @@ extension ClaudeUsageLogSource {
                 requireTouchedAfterMinDate: true,
                 relayTodayKey: todayKey,
                 coveredMaxAgeDays: nil,
-                completionWatermarks: [],
+                completionWatermarks: [
+                    UsageRelaySourceWatermark(
+                        dayKey: todayKey,
+                        sourceKind: "claude-today",
+                        sourceID: "today:claude:\(todayKey)",
+                        sourceFingerprint: "today:claude:\(todayKey):\(Int(self.now.timeIntervalSince1970))"),
+                ],
                 fileWatermarkDayKey: nil)
         case let .rebuildHistory(maxAgeDays):
             let days = max(1, maxAgeDays)

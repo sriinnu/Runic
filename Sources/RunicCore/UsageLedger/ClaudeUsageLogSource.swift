@@ -104,31 +104,48 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             .info(
                 "Scanning \(filesToScan.count) of \(allFiles.count) JSONL files touched today")
 
-        // Parse files concurrently (max 16 at a time).
+        // Parse files concurrently (max 16 at a time). A live Claude session can
+        // rewrite a JSONL mid-scan; tolerate per-file read failures instead of
+        // aborting the whole scan (mirrors Codex). Each task returns either a
+        // parsed file or the path that failed.
         let maxConcurrency = 16
-        let parsedFiles = try await withThrowingTaskGroup(
-            of: ParsedUsageFile.self,
-            returning: [ParsedUsageFile].self)
+        let outcomes = await withTaskGroup(
+            of: (ParsedUsageFile?, String?).self,
+            returning: [(ParsedUsageFile?, String?)].self)
         { group in
-            var all: [ParsedUsageFile] = []
+            var all: [(ParsedUsageFile?, String?)] = []
             var inflight = 0
             for file in filesToScan {
                 if inflight >= maxConcurrency {
-                    if let parsed = try await group.next() {
-                        all.append(parsed)
+                    if let result = await group.next() {
+                        all.append(result)
                         inflight -= 1
                     }
                 }
                 group.addTask {
-                    try self.parseFile(file, minDate: window.minDate, dayKey: window.fileWatermarkDayKey)
+                    do {
+                        let parsed = try self.parseFile(
+                            file,
+                            minDate: window.minDate,
+                            dayKey: window.fileWatermarkDayKey)
+                        return (parsed, nil)
+                    } catch {
+                        self.log.warning("Claude usage log read failed", metadata: [
+                            "file": file.url.path,
+                            "error": error.localizedDescription,
+                        ])
+                        return (nil, file.url.path)
+                    }
                 }
                 inflight += 1
             }
-            while let parsed = try await group.next() {
-                all.append(parsed)
+            while let result = await group.next() {
+                all.append(result)
             }
             return all
         }
+        let parsedFiles = outcomes.compactMap(\.0)
+        let readFailures = outcomes.compactMap(\.1)
         let fileEntries = parsedFiles.flatMap(\.entries)
 
         // Deduplicate across files using the same composite key as per-file dedup.
@@ -151,7 +168,27 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             }
         }
 
-        let sourceWatermarks = window.completionWatermarks + parsedFiles.map(\.watermark)
+        var sourceWatermarks = window.completionWatermarks + parsedFiles.map(\.watermark)
+        if !readFailures.isEmpty {
+            // A busy file must not abort the scan or seal a day empty. Keep what
+            // parsed; only fail when nothing could be read at all. On a partial
+            // scan, keep watermarks only for days that actually produced entries,
+            // so untouched/busy days (including today) retain their cached history
+            // instead of being cleared by a spurious empty snapshot (mirrors Codex).
+            self.log.warning("Claude usage log: skipped busy file(s) during scan", metadata: [
+                "skipped": "\(readFailures.count)",
+                "parsedEntries": "\(entries.count)",
+            ])
+            if entries.isEmpty {
+                throw ClaudeUsageLogError.readFailed(readFailures.joined(separator: ", "))
+            }
+            let daysWithEntries = Set(entries.map { LedgerCache.dayKey(for: $0.timestamp) })
+            sourceWatermarks = sourceWatermarks.filter { watermark in
+                guard let dayKey = watermark.dayKey else { return true }
+                return daysWithEntries.contains(dayKey)
+            }
+        }
+
         await cache.mergeEntries(
             provider: "claude",
             entries: entries,

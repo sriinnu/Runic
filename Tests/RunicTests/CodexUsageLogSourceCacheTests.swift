@@ -304,6 +304,58 @@ extension CodexUsageLogSourceTests {
     }
 
     @Test
+    func `codex catch-up clears a today that dropped to zero while a gap day has usage`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let cal = Calendar.current
+        let todayKey = LedgerCache.dayKey(for: now)
+        let yesterday = cal.date(byAdding: .day, value: -1, to: now) ?? now
+        let twoDaysAgo = cal.date(byAdding: .day, value: -2, to: now) ?? now
+
+        // Today already has an aggregate, last scan was 2 days ago (so a multi-day
+        // catch-up fires), and today's raw session is gone (usage dropped to zero).
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        await cache.mergeDailies(
+            provider: "codex",
+            newDailies: [
+                CachedDaily(
+                    dayKey: todayKey,
+                    inputTokens: 4321,
+                    outputTokens: 0,
+                    cacheCreationTokens: 0,
+                    cacheReadTokens: 0,
+                    costUSD: nil,
+                    requestCount: 9,
+                    modelsUsed: ["gpt-5"]),
+            ],
+            scanDate: twoDaysAgo,
+            todayKey: nil,
+            coveredMaxAgeDays: 30)
+        await cache.markCatchUpHealed(provider: "codex") // isolate catch-up from the one-time heal
+        try Self.writeSession(root: root, date: yesterday, input: 222, modifiedAt: now, fileManager: fm)
+
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+
+        _ = try await source.loadEntries()
+        let dailies = await cache.loadCachedDailies(provider: "codex")?.dailies ?? []
+        // Yesterday backfilled; today's stale aggregate cleared (not left behind).
+        #expect(dailies.contains { $0.dayKey == LedgerCache.dayKey(for: yesterday) })
+        #expect(!dailies.contains { $0.dayKey == todayKey })
+    }
+
+    @Test
     func `codex catch-up preserves a gap day whose raw logs rotated away`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory

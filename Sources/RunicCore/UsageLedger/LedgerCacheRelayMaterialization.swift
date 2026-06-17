@@ -19,10 +19,16 @@ extension LedgerCache {
                 prefixBytes: 512 * 1024)
             { line in
                 guard !line.wasTruncated, !line.bytes.isEmpty else { return }
+                // Accept this schema and OLDER (records are additive-optional, so
+                // they still decode). Only skip genuinely future versions whose
+                // semantics this build can't safely interpret. Using `>=` here was
+                // a latent landmine: the next `relaySchemaVersion` bump would have
+                // silently dropped every existing day — the exact "renders as zero"
+                // failure the relay exists to prevent.
                 guard
                     let record = try? JSONDecoder().decode(UsageRelayRecord.self, from: line.bytes),
                     record.provider == provider,
-                    record.schemaVersion >= Self.relaySchemaVersion
+                    record.schemaVersion <= Self.relaySchemaVersion
                 else {
                     return
                 }

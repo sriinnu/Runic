@@ -96,7 +96,9 @@ public actor LedgerCache {
         versionedLedger.schemaVersion = Self.cacheSchemaVersion
         do {
             let data = try JSONEncoder().encode(versionedLedger)
-            try data.write(to: url, options: .atomic)
+            try self.withProviderFileLock(provider: provider) {
+                try data.write(to: url, options: .atomic)
+            }
             Self.log.debug("Saved \(ledger.dailies.count) days for \(provider)")
         } catch {
             // A silently-dropped write loses freshly-merged coverage and forces an
@@ -240,13 +242,25 @@ public actor LedgerCache {
     /// so if it's interrupted before being marked, re-running it next launch is
     /// harmless. See `catchUpHealVersion` on `CachedLedger`.
     public func needsCatchUpHeal(provider: String) -> Bool {
-        guard let ledger = self.loadCacheFileLedger(provider: provider) else { return false }
-        return (ledger.catchUpHealVersion ?? 0) < Self.catchUpHealVersion
+        // The stamp lives on the cache file. Common path: file exists -> compare.
+        if let ledger = self.loadCacheFileLedger(provider: provider) {
+            return (ledger.catchUpHealVersion ?? 0) < Self.catchUpHealVersion
+        }
+        // Edge: the cache file was deleted but relay data survived. That's exactly
+        // the kind of established install that may carry the legacy gap, so still
+        // heal it (markCatchUpHealed recreates the file with the stamp, so this
+        // can't loop). A truly fresh install has neither file nor relay and is
+        // handled by the fresh-install rebuild instead. The relay scan only runs
+        // in this rare no-file case, so steady-state refresh pays nothing extra.
+        return !self.materializedRelayState(provider: provider).touchedDayKeys.isEmpty
     }
 
     /// Record that the one-time catch-up repair has completed for this provider.
     public func markCatchUpHealed(provider: String) {
-        guard var ledger = self.loadCacheFileLedger(provider: provider) else { return }
+        var ledger = self.loadCacheFileLedger(provider: provider) ?? CachedLedger(
+            lastScanDate: .distantPast,
+            lastFullScanDate: nil,
+            dailies: [])
         ledger.catchUpHealVersion = Self.catchUpHealVersion
         self.saveDailies(provider: provider, ledger: ledger)
     }
