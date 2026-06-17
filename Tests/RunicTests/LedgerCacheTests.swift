@@ -538,6 +538,81 @@ struct LedgerCacheTests {
         #expect(restored?.dailies.first?.requestCount == entryCount)
     }
 
+    @Test
+    func `relay materializes records written by an older schema version`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cache = LedgerCache(
+            cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true),
+            relayDir: root.appendingPathComponent("relay", isDirectory: true))
+        let writtenAt = Date(timeIntervalSince1970: 1_767_252_000)
+
+        func records(dayKey: String, tokens: Int, schemaVersion: Int) -> [UsageRelayRecord] {
+            let snapshotID = "snapshot:codex:\(dayKey):\(schemaVersion)"
+            let event = UsageRelayEvent(
+                eventID: "daily-aggregate:codex:\(dayKey)",
+                snapshotID: snapshotID, provider: "codex", timestamp: writtenAt, dayKey: dayKey,
+                sessionID: nil, projectID: nil, projectName: nil, model: "gpt-5", modelsUsed: ["gpt-5"],
+                inputTokens: tokens, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
+                costUSD: nil, requestCount: 1, requestID: nil, messageID: nil, version: nil,
+                source: "test", operationKind: nil, tokenProvenance: nil, costProvenance: nil,
+                sourceFingerprint: nil)
+            let watermark = UsageRelayWatermark(
+                snapshotID: snapshotID, dayKey: dayKey, sourceKind: "test", sourceID: "test",
+                sourceFingerprint: "test", path: nil, modifiedAt: nil, sizeBytes: nil, scannedAt: writtenAt)
+            return [
+                UsageRelayRecord(schemaVersion: schemaVersion, recordType: "event", provider: "codex",
+                                 writtenAt: writtenAt, event: event, watermark: nil),
+                UsageRelayRecord(schemaVersion: schemaVersion, recordType: "watermark", provider: "codex",
+                                 writtenAt: writtenAt, event: nil, watermark: watermark),
+            ]
+        }
+
+        // A day written by an OLDER schema must still materialize (the bug: `>=`
+        // dropped it, blanking all history on a future schema bump). A FUTURE
+        // schema we can't interpret is ignored.
+        try await cache.appendRelayRecords(records(dayKey: "2026-01-01", tokens: 4242, schemaVersion: LedgerCache.relaySchemaVersion - 1))
+        try await cache.appendRelayRecords(records(dayKey: "2026-01-02", tokens: 9999, schemaVersion: LedgerCache.relaySchemaVersion + 1))
+
+        let restored = await cache.loadCachedDailies(provider: "codex")
+        let byDay = Dictionary(uniqueKeysWithValues: (restored?.dailies ?? []).map { ($0.dayKey, $0) })
+        #expect(byDay["2026-01-01"]?.inputTokens == 4242) // older schema survives
+        #expect(byDay["2026-01-02"] == nil)               // future schema ignored
+    }
+
+    @Test
+    func `catch-up heal still triggers after the cache file is deleted but relay survives`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let cacheDir = root.appendingPathComponent("ledger-cache", isDirectory: true)
+        let cache = LedgerCache(cacheDir: cacheDir, relayDir: root.appendingPathComponent("relay", isDirectory: true))
+        let timestamp = Date(timeIntervalSince1970: 1_767_252_000)
+
+        await cache.mergeEntries(
+            provider: "codex",
+            entries: [self.entry(timestamp: timestamp, inputTokens: 10, requestID: "r1", sourceFingerprint: "f1")],
+            scanDate: timestamp)
+        #expect(await cache.needsCatchUpHeal(provider: "codex") == true)  // unstamped install
+        await cache.markCatchUpHealed(provider: "codex")
+        #expect(await cache.needsCatchUpHeal(provider: "codex") == false) // stamped
+
+        // Cache file deleted, relay survives — must still heal (and re-stamp).
+        try fm.removeItem(at: cacheDir.appendingPathComponent("codex-daily.json"))
+        #expect(await cache.needsCatchUpHeal(provider: "codex") == true)
+        await cache.markCatchUpHealed(provider: "codex")
+        #expect(await cache.needsCatchUpHeal(provider: "codex") == false) // file recreated + stamped
+    }
+
     private func entry(
         timestamp: Date,
         inputTokens: Int,

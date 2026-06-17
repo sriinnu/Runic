@@ -9,6 +9,31 @@ extension LedgerCache {
         self.relayDir.appendingPathComponent("\(provider)-events.jsonl")
     }
 
+    /// Serialize a provider's file mutations across PROCESSES via an advisory
+    /// `flock`. The actor already serializes in-process; this guards the upgrade
+    /// window where a second build of Runic is also running — without it,
+    /// concurrent relay appends can interleave bytes within a line and a
+    /// compaction swap can land while another process holds an open handle to the
+    /// old inode, dropping that process's just-written records.
+    ///
+    /// Acquire the lock ONCE around the whole append+compaction (compaction runs
+    /// inside the held lock, never re-locks) and once around each daily write, so
+    /// it never nests on a second fd (which would self-deadlock under `LOCK_EX`).
+    /// Advisory: only processes that also take the lock are serialized; it's
+    /// best-effort and falls through unlocked if the lock can't be opened rather
+    /// than blocking the menu.
+    @discardableResult
+    func withProviderFileLock<T>(provider: String, _ body: () throws -> T) rethrows -> T {
+        try? FileManager.default.createDirectory(at: self.relayDir, withIntermediateDirectories: true)
+        let lockURL = self.relayDir.appendingPathComponent("\(provider).lock")
+        let fd = open(lockURL.path, O_CREAT | O_RDWR, 0o644)
+        guard fd >= 0 else { return try body() }
+        defer { close(fd) }
+        _ = flock(fd, LOCK_EX)
+        defer { _ = flock(fd, LOCK_UN) }
+        return try body()
+    }
+
     func loadCacheFileLedger(provider: String) -> CachedLedger? {
         let url = self.fileURL(provider: provider)
         guard let data = try? Data(contentsOf: url),
@@ -41,17 +66,22 @@ extension LedgerCache {
         }
         guard !combined.isEmpty else { return }
 
-        if FileManager.default.fileExists(atPath: url.path),
-           let handle = try? FileHandle(forWritingTo: url)
-        {
-            defer { try? handle.close() }
-            _ = try handle.seekToEnd()
-            try handle.write(contentsOf: combined)
-        } else {
-            try combined.write(to: url, options: .atomic)
-        }
+        let provider = records[0].provider
+        try self.withProviderFileLock(provider: provider) {
+            if FileManager.default.fileExists(atPath: url.path),
+               let handle = try? FileHandle(forWritingTo: url)
+            {
+                defer { try? handle.close() }
+                _ = try handle.seekToEnd()
+                try handle.write(contentsOf: combined)
+            } else {
+                try combined.write(to: url, options: .atomic)
+            }
 
-        self.compactRelayIfNeeded(provider: records[0].provider)
+            // Inside the held lock: a cross-process compaction can't swap the file
+            // out from under another writer mid-append.
+            self.compactRelayIfNeeded(provider: provider)
+        }
     }
 
     /// The relay is append-only, so every scan leaves the prior day-snapshots

@@ -201,7 +201,20 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 fileMaxAgeDays: days,
                 relayTodayKey: todayKey,
                 coveredMaxAgeDays: nil,
-                completionWatermarks: [],
+                // Only TODAY carries a completion watermark, so today is always
+                // re-materialized — cleared when it has genuinely gone to zero,
+                // even on a multi-day catch-up where another day has usage.
+                // Historical gap days deliberately get none (additive: untouched
+                // days keep their relay aggregate). On a partial scan the busy-file
+                // filter drops this watermark when today produced no entries, so a
+                // merely-busy today is preserved rather than wrongly cleared.
+                completionWatermarks: [
+                    UsageRelaySourceWatermark(
+                        dayKey: todayKey,
+                        sourceKind: "codex-today",
+                        sourceID: "today:codex:\(todayKey)",
+                        sourceFingerprint: "today:codex:\(todayKey):\(Int(self.now.timeIntervalSince1970))"),
+                ],
                 fileWatermarkDayKey: nil)
         case let .rebuildHistory(maxAgeDays):
             let days = max(1, maxAgeDays)
