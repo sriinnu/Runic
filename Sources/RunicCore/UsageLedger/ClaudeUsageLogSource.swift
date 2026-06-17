@@ -63,7 +63,13 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let cache = self.cache
         let todayKey = LedgerCache.dayKey(for: self.now)
         let scanMode = await self.resolvedScanMode()
-        let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode)
+        let healing = await self.cache.needsCatchUpHeal(provider: "claude")
+        let catchUpDays = await self.catchUpDays(scanMode: scanMode, healing: healing)
+        let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode, catchUpDays: catchUpDays)
+        // A rebuild (fresh install or explicit) already fully covers the window, so
+        // stamp the heal too — otherwise the next refresh would redundantly heal.
+        let isRebuild: Bool = if case .rebuildHistory = scanMode { true } else { false }
+        let markHealed = healing || isRebuild
         let allFiles = self.findUsageFiles(in: projectsDirs, minDate: window.fileMinModificationDate)
 
         // Claude keeps long-lived project JSONLs. Normal refresh opens only
@@ -90,6 +96,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 todayKey: window.relayTodayKey,
                 coveredMaxAgeDays: window.coveredMaxAgeDays,
                 sourceWatermarks: window.completionWatermarks)
+            if markHealed { await cache.markCatchUpHealed(provider: "claude") }
             return []
         }
 
@@ -153,6 +160,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             coveredMaxAgeDays: window.coveredMaxAgeDays,
             sourceWatermarks: sourceWatermarks)
 
+        if markHealed { await cache.markCatchUpHealed(provider: "claude") }
         return entries
     }
 

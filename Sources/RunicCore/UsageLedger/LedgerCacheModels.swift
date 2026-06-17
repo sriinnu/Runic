@@ -6,19 +6,29 @@ public struct CachedLedger: Codable, Sendable {
     public var lastFullScanDate: Date?
     public var coveredMaxAgeDays: Int?
     public var dailies: [CachedDaily]
+    /// One-time repair stamp. Builds before the additive catch-up fix advanced
+    /// `lastScanDate` to today on a today-only scan without backfilling the days
+    /// the app was closed during, so those days are missing and the normal
+    /// gap-detection (which keys off `lastScanDate`) can't see the gap anymore.
+    /// When this stamp is below the current heal version, the source runs one
+    /// full-retention additive backfill, then writes the current version so it
+    /// never repeats. Absent (nil) on caches written by older builds.
+    public var catchUpHealVersion: Int?
 
     public init(
         schemaVersion: Int? = nil,
         lastScanDate: Date,
         lastFullScanDate: Date?,
         coveredMaxAgeDays: Int? = nil,
-        dailies: [CachedDaily])
+        dailies: [CachedDaily],
+        catchUpHealVersion: Int? = nil)
     {
         self.schemaVersion = schemaVersion
         self.lastScanDate = lastScanDate
         self.lastFullScanDate = lastFullScanDate
         self.coveredMaxAgeDays = coveredMaxAgeDays
         self.dailies = dailies
+        self.catchUpHealVersion = catchUpHealVersion
     }
 }
 
