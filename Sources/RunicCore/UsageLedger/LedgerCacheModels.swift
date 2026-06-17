@@ -183,9 +183,12 @@ struct UsageRelaySnapshotMarker {
 
     func isNewer(than other: UsageRelaySnapshotMarker?) -> Bool {
         guard let other else { return true }
-        if self.writtenAt != other.writtenAt {
-            return self.writtenAt > other.writtenAt
-        }
+        // The relay is append-only, so read-order `sequence` IS true append order:
+        // a later-appended record always wins. This is immune to system-clock
+        // jumps, unlike wall-clock `writtenAt` — a backward NTP/DST correction
+        // between two same-day scans could otherwise let an older snapshot win and
+        // silently regress that day's totals. `sequence` is strictly increasing
+        // within a read, so it never ties.
         return self.sequence > other.sequence
     }
 }
