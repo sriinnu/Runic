@@ -586,6 +586,49 @@ struct LedgerCacheTests {
     }
 
     @Test
+    func `concurrent appends from two cache instances do not tear relay lines`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-ledger-cache-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let relayDir = root.appendingPathComponent("relay", isDirectory: true)
+        // Two instances over the SAME relay dir stand in for two processes; the
+        // advisory flock must serialize their appends so no line is torn.
+        let a = LedgerCache(cacheDir: root.appendingPathComponent("a", isDirectory: true), relayDir: relayDir)
+        let b = LedgerCache(cacheDir: root.appendingPathComponent("b", isDirectory: true), relayDir: relayDir)
+        let writtenAt = Date(timeIntervalSince1970: 1_767_252_000)
+
+        func record(_ i: Int) -> [UsageRelayRecord] {
+            let watermark = UsageRelayWatermark(
+                snapshotID: "snap-\(i)", dayKey: "2026-01-01", sourceKind: "test", sourceID: "test",
+                sourceFingerprint: "f-\(i)", path: nil, modifiedAt: nil, sizeBytes: nil, scannedAt: writtenAt)
+            return [UsageRelayRecord(schemaVersion: LedgerCache.relaySchemaVersion, recordType: "watermark",
+                                     provider: "codex", writtenAt: writtenAt, event: nil, watermark: watermark)]
+        }
+
+        let count = 40
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<count {
+                let cache = (i % 2 == 0) ? a : b
+                group.addTask { try? await cache.appendRelayRecords(record(i)) }
+            }
+        }
+
+        let url = await a.relayHistoryFileURL(provider: "codex")
+        let text = try String(contentsOf: url, encoding: .utf8)
+        let lines = text.split(separator: "\n")
+        #expect(lines.count == count) // no records lost
+        for line in lines {
+            // Every line is a complete, decodable record — none interleaved/torn.
+            #expect((try? JSONDecoder().decode(UsageRelayRecord.self, from: Data(line.utf8))) != nil)
+        }
+        #expect(fm.fileExists(atPath: relayDir.appendingPathComponent("codex.lock").path))
+    }
+
+    @Test
     func `relay picks the last-appended snapshot even when its clock time is earlier`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory

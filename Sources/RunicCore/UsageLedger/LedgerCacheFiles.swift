@@ -19,9 +19,17 @@ extension LedgerCache {
     /// Acquire the lock ONCE around the whole append+compaction (compaction runs
     /// inside the held lock, never re-locks) and once around each daily write, so
     /// it never nests on a second fd (which would self-deadlock under `LOCK_EX`).
-    /// Advisory: only processes that also take the lock are serialized; it's
-    /// best-effort and falls through unlocked if the lock can't be opened rather
-    /// than blocking the menu.
+    /// Advisory: only processes that also take the lock are serialized — the
+    /// upgrade window where an OLD build is still running is not protected (it
+    /// never takes the lock); this guards future build-to-build concurrency.
+    ///
+    /// Acquisition is BOUNDED: `LedgerCache` is an actor, so a blocking `LOCK_EX`
+    /// would stall the actor (and any awaiting menu refresh) for as long as
+    /// another process holds it — which can be seconds during a large compaction.
+    /// Instead we poll `LOCK_EX|LOCK_NB` for ~500ms, then proceed unlocked rather
+    /// than freeze the UI. Worst case under contention past the ceiling is the
+    /// same interleaving this guards against — rare, and self-healing on read —
+    /// which is the right trade for never hanging the menu.
     @discardableResult
     func withProviderFileLock<T>(provider: String, _ body: () throws -> T) rethrows -> T {
         try? FileManager.default.createDirectory(at: self.relayDir, withIntermediateDirectories: true)
@@ -29,8 +37,14 @@ extension LedgerCache {
         let fd = open(lockURL.path, O_CREAT | O_RDWR, 0o644)
         guard fd >= 0 else { return try body() }
         defer { close(fd) }
-        _ = flock(fd, LOCK_EX)
-        defer { _ = flock(fd, LOCK_UN) }
+
+        var acquired = false
+        for _ in 0..<50 { // ~500ms ceiling (50 × 10ms)
+            if flock(fd, LOCK_EX | LOCK_NB) == 0 { acquired = true; break }
+            if errno != EWOULDBLOCK { break } // a real error, not contention
+            usleep(10_000)
+        }
+        defer { if acquired { _ = flock(fd, LOCK_UN) } }
         return try body()
     }
 
@@ -112,9 +126,14 @@ extension LedgerCache {
         var sequence = 0
         do {
             try CostUsageJsonl.scan(fileURL: url, maxLineBytes: lineCap, prefixBytes: lineCap) { line in
+                // Gate IDENTICALLY to materialization (same filters, same order)
+                // so `sequence` and latest-per-day selection match exactly. If
+                // compaction counted/kept a future-schema record the reader skips,
+                // it could drop the snapshot the reader would have selected.
                 guard !line.wasTruncated, !line.bytes.isEmpty,
                       let record = try? JSONDecoder().decode(UsageRelayRecord.self, from: line.bytes),
-                      record.provider == provider
+                      record.provider == provider,
+                      record.schemaVersion <= Self.relaySchemaVersion
                 else {
                     return
                 }
@@ -155,7 +174,8 @@ extension LedgerCache {
             try CostUsageJsonl.scan(fileURL: url, maxLineBytes: lineCap, prefixBytes: lineCap) { line in
                 guard writeError == nil, !line.wasTruncated, !line.bytes.isEmpty,
                       let record = try? JSONDecoder().decode(UsageRelayRecord.self, from: line.bytes),
-                      record.provider == provider
+                      record.provider == provider,
+                      record.schemaVersion <= Self.relaySchemaVersion
                 else {
                     return
                 }
