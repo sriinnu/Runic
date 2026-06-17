@@ -16,6 +16,7 @@ public struct UsageLedgerEntry: Sendable, Codable, Hashable {
     public enum Source: String, Sendable, Codable {
         case claudeLog
         case codexLog
+        case opencodeLog
         case api
         case cli
         case openTelemetry

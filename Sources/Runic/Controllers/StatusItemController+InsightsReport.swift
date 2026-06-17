@@ -94,6 +94,8 @@ extension StatusItemController {
         switch provider {
         case .codex:
             [CodexUsageLogSource(maxAgeDays: maxDays, now: now)]
+        case .opencode:
+            [OpencodeUsageLogSource(maxAgeDays: maxDays, now: now)]
         case .claude:
             [ClaudeUsageLogSource(maxAgeDays: maxDays, now: now)]
         default:

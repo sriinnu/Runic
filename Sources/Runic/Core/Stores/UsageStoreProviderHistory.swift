@@ -41,6 +41,8 @@ struct UsageStoreProviderHistorySupport {
             return ClaudeUsageLogSource(maxAgeDays: maxAgeDays, now: now)
         case .codex:
             return CodexUsageLogSource(maxAgeDays: maxAgeDays, now: now)
+        case .opencode:
+            return OpencodeUsageLogSource(maxAgeDays: maxAgeDays, now: now)
         case .copilot,
              .gemini,
              .antigravity,
@@ -84,7 +86,7 @@ struct UsageStoreProviderHistorySupport {
             generatedAt: generatedAt,
             days: [],
             isSupported: false,
-            note: "History is currently available for Claude/Codex local ledgers and configured OTel log sources.",
+            note: "History is currently available for Claude/Codex/opencode local ledgers and configured OTel log sources.",
             error: nil)
     }
 
