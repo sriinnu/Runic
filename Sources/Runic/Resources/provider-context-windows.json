@@ -1,6 +1,7 @@
 {
   "claude": { "model": "Claude Opus 4.6", "contextK": 1000 },
   "codex": { "model": "GPT-5 Codex", "contextK": 400 },
+  "opencode": { "model": "Routed model", "label": "ctx varies" },
   "cursor": { "model": "GPT-4o", "contextK": 128 },
   "factory": { "model": "Droid routed model", "label": "ctx varies" },
   "gemini": { "model": "Gemini 2.5 Pro", "contextK": 1000 },

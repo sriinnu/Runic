@@ -11,6 +11,7 @@ enum ProviderImplementationRegistry {
     private static let store = Store()
     private static let bootstrap: Void = {
         _ = ProviderImplementationRegistry.register(CodexProviderImplementation())
+        _ = ProviderImplementationRegistry.register(OpencodeProviderImplementation())
         _ = ProviderImplementationRegistry.register(ClaudeProviderImplementation())
         _ = ProviderImplementationRegistry.register(FactoryProviderImplementation())
         _ = ProviderImplementationRegistry.register(ZaiProviderImplementation())

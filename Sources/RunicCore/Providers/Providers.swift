@@ -4,6 +4,7 @@ import Silo
 // swiftformat:disable sortDeclarations
 public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case codex
+    case opencode
     case claude
     case cursor
     case factory
@@ -37,6 +38,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
 
 public enum IconStyle: Sendable, Hashable {
     case codex
+    case opencode
     case claude
     case zai
     case gemini

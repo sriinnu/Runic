@@ -55,6 +55,7 @@ public enum ProviderDescriptorRegistry {
     private static let store = Store()
     private static let bootstrap: Void = {
         _ = ProviderDescriptorRegistry.register(CodexProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(OpencodeProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(ClaudeProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(FactoryProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(ZaiProviderDescriptor.descriptor)

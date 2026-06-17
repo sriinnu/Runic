@@ -12,6 +12,8 @@ enum UsageLedgerSourceFactory {
             return ClaudeUsageLogSource(maxAgeDays: maxAgeDays, now: now)
         case .codex:
             return CodexUsageLogSource(maxAgeDays: maxAgeDays, now: now)
+        case .opencode:
+            return OpencodeUsageLogSource(maxAgeDays: maxAgeDays, now: now)
         case .copilot,
              .gemini,
              .antigravity,
