@@ -29,7 +29,8 @@ public enum OpencodeProviderDescriptor {
                 usageCoverage: ProviderUsageCoverage(
                     supportsModelBreakdown: true,
                     supportsTokenMetrics: true,
-                    supportsProjectAttribution: true)),
+                    supportsProjectAttribution: true),
+                providesLiveSnapshot: false),
             branding: ProviderBranding(
                 iconStyle: .opencode,
                 iconResourceName: "ProviderIcon-opencode",

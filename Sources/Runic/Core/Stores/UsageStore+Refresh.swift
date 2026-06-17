@@ -153,6 +153,18 @@ extension UsageStore {
             return
         }
 
+        // History-only providers (e.g. opencode) have no live gauge to fetch —
+        // their usage comes from the ledger timeline. Skip snapshotting so an
+        // empty fetch plan never surfaces a spurious "no strategy" error or trips
+        // the stale badge. The ledger refresh runs separately and populates them.
+        if !self.metadata(for: provider).providesLiveSnapshot {
+            await MainActor.run {
+                self.errors[provider] = nil
+                self.snapshots.removeValue(forKey: provider)
+            }
+            return
+        }
+
         self.refreshingProviders.insert(provider)
         defer { self.refreshingProviders.remove(provider) }
 

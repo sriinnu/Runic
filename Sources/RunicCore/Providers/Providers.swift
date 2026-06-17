@@ -127,6 +127,11 @@ public struct ProviderMetadata: Sendable {
     public let statusWorkspaceProductID: String?
     /// Data coverage for this provider's usage fetch path.
     public let usageCoverage: ProviderUsageCoverage
+    /// Whether this provider exposes a live usage snapshot (a gauge to fetch).
+    /// History-only providers (e.g. opencode) derive everything from their local
+    /// ledger timeline and have no live fetch — the refresh skips snapshotting
+    /// them so an empty fetch plan never surfaces a spurious error/stale badge.
+    public let providesLiveSnapshot: Bool
 
     public init(
         id: UsageProvider,
@@ -148,7 +153,8 @@ public struct ProviderMetadata: Sendable {
         statusPageURL: String?,
         statusLinkURL: String? = nil,
         statusWorkspaceProductID: String? = nil,
-        usageCoverage: ProviderUsageCoverage = .none)
+        usageCoverage: ProviderUsageCoverage = .none,
+        providesLiveSnapshot: Bool = true)
     {
         self.id = id
         self.displayName = displayName
@@ -170,6 +176,7 @@ public struct ProviderMetadata: Sendable {
         self.statusLinkURL = statusLinkURL
         self.statusWorkspaceProductID = statusWorkspaceProductID
         self.usageCoverage = usageCoverage
+        self.providesLiveSnapshot = providesLiveSnapshot
     }
 }
 

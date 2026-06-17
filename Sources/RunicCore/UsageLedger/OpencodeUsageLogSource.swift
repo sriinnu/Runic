@@ -62,7 +62,12 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let markHealed = healing || isRebuild
 
         let cache = self.cache
-        let files = self.listMessageFiles(root: root, minDate: window.minDate)
+        // On rebuild, skip the mtime pre-filter entirely and rely on the per-entry
+        // timestamp filter: a backup/restore or `rsync -a` can preserve an old file
+        // mtime on a message whose `created` is within the window, and rebuild is
+        // the repair path that must still find it. refreshToday keeps the mtime
+        // prune for speed.
+        let files = self.listMessageFiles(root: root, minDate: isRebuild ? nil : window.minDate)
 
         if files.isEmpty {
             await cache.mergeEntries(
@@ -217,19 +222,37 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         throw OpencodeUsageLogError.noStorageDirectory
     }
 
+    /// opencode lays out messages as `message/<sessionID>/<messageID>.json` (one
+    /// level deep). Listing session dirs first lets us prune an entire idle
+    /// session by its directory mtime — appending a message bumps the dir mtime,
+    /// so an old session whose dir predates `minDate` is skipped wholesale instead
+    /// of stat-ing every file in it on the hot refresh path. `minDate == nil`
+    /// (rebuild) scans everything.
     private func listMessageFiles(root: URL, minDate: Date?) -> [URL] {
         var results: [URL] = []
-        let enumerator = self.fileManager.enumerator(
+        let sessionDirs = (try? self.fileManager.contentsOfDirectory(
             at: root,
-            includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey],
-            options: [.skipsHiddenFiles])
-        while let item = enumerator?.nextObject() as? URL {
-            guard item.pathExtension.lowercased() == "json" else { continue }
-            if let minDate {
-                let values = try? item.resourceValues(forKeys: [.contentModificationDateKey])
-                if let modifiedAt = values?.contentModificationDate, modifiedAt < minDate { continue }
+            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles])) ?? []
+
+        for dir in sessionDirs {
+            let dirValues = try? dir.resourceValues(forKeys: [.isDirectoryKey, .contentModificationDateKey])
+            guard dirValues?.isDirectory != false else { continue }
+            if let minDate, let dirModified = dirValues?.contentModificationDate, dirModified < minDate {
+                continue // whole session untouched since the window start
             }
-            results.append(item)
+
+            let files = (try? self.fileManager.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.contentModificationDateKey],
+                options: [.skipsHiddenFiles])) ?? []
+            for item in files where item.pathExtension.lowercased() == "json" {
+                if let minDate {
+                    let values = try? item.resourceValues(forKeys: [.contentModificationDateKey])
+                    if let modifiedAt = values?.contentModificationDate, modifiedAt < minDate { continue }
+                }
+                results.append(item)
+            }
         }
         return results
     }
@@ -260,7 +283,9 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let key = message.id ?? "\(file.lastPathComponent)"
         guard seenKeys.insert(key).inserted else { return nil }
 
-        let projectName = message.path?.cwd.map { URL(fileURLWithPath: $0).lastPathComponent }
+        let projectName = message.path?.cwd
+            .map { URL(fileURLWithPath: $0).lastPathComponent }
+            .flatMap { $0 == "/" || $0.isEmpty ? nil : $0 }
 
         return UsageLedgerEntry(
             provider: .opencode,
