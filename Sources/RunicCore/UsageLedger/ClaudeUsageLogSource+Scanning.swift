@@ -15,19 +15,50 @@ extension ClaudeUsageLogSource {
         return self.scanMode
     }
 
-    func scanWindow(todayKey: String, scanMode: UsageLedgerLogScanMode) -> ScanWindow {
+    /// How many days back a normal (`.refreshToday`) scan should reach.
+    ///
+    /// A today-only refresh silently loses any day the app was closed during: if
+    /// Claude was used while Runic wasn't refreshing, that day is never scanned
+    /// and never reaches the relay, blanking the recent timeline. Widening the
+    /// window back to the last scan date backfills exactly the missed days. In
+    /// steady state the last scan is today, so this is 1 (today-only) and costs
+    /// nothing. Bounded by the retention window. Unlike `.rebuildHistory`, this
+    /// catch-up is *additive*: the wider window in `scanWindow` seals no empty
+    /// days, so a gap day whose raw logs have since rotated away keeps its
+    /// existing relay aggregate instead of being erased. `retention == 1`
+    /// intentionally has no catch-up (today is the only renderable day anyway).
+    func catchUpDays(scanMode: UsageLedgerLogScanMode, healing: Bool) async -> Int {
+        guard case .refreshToday = scanMode else { return 1 }
+        let requested = max(1, self.maxAgeDays ?? 1)
+        guard requested > 1 else { return 1 }
+        // One-time legacy repair: backfill the full retention window once, since
+        // the gap that today-only builds skipped can be anywhere in it.
+        if healing { return requested }
+        let gap = await self.cache.scanGapDays(provider: "claude", now: self.now) ?? 1
+        return min(max(1, gap), requested)
+    }
+
+    func scanWindow(todayKey: String, scanMode: UsageLedgerLogScanMode, catchUpDays: Int) -> ScanWindow {
         let calendar = Calendar.current
         switch scanMode {
         case .refreshToday:
+            // Widen the window back over any gap (app closed while Claude was
+            // used) so missed days are backfilled. Additive on purpose: no
+            // completion watermarks and a nil file-watermark day key mean only
+            // days that actually produced entries (plus today, the mutable day)
+            // are touched — a gap day whose long-lived project JSONL was pruned
+            // keeps its existing relay aggregate rather than being sealed empty.
+            let days = max(1, catchUpDays)
             let todayStart = calendar.startOfDay(for: self.now)
+            let start = calendar.date(byAdding: .day, value: -(days - 1), to: todayStart) ?? todayStart
             return ScanWindow(
-                minDate: todayStart,
-                fileMinModificationDate: todayStart,
+                minDate: start,
+                fileMinModificationDate: start,
                 requireTouchedAfterMinDate: true,
                 relayTodayKey: todayKey,
                 coveredMaxAgeDays: nil,
                 completionWatermarks: [],
-                fileWatermarkDayKey: todayKey)
+                fileWatermarkDayKey: nil)
         case let .rebuildHistory(maxAgeDays):
             let days = max(1, maxAgeDays)
             let todayStart = calendar.startOfDay(for: self.now)

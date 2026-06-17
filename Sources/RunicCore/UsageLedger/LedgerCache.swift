@@ -228,6 +228,51 @@ public actor LedgerCache {
         self.loadCachedDailies(provider: provider)?.lastScanDate
     }
 
+    /// Current one-time catch-up repair version. Bump to force every existing
+    /// install to run one more full-retention additive backfill on next refresh.
+    static let catchUpHealVersion = 1
+
+    /// Whether this provider still needs the one-time legacy catch-up repair.
+    ///
+    /// Only established installs (an existing cache file with prior coverage) are
+    /// healed — a fresh install has no file and already does a full rebuild, so
+    /// there's nothing to repair. Idempotent: the heal is an additive backfill,
+    /// so if it's interrupted before being marked, re-running it next launch is
+    /// harmless. See `catchUpHealVersion` on `CachedLedger`.
+    public func needsCatchUpHeal(provider: String) -> Bool {
+        guard let ledger = self.loadCacheFileLedger(provider: provider) else { return false }
+        return (ledger.catchUpHealVersion ?? 0) < Self.catchUpHealVersion
+    }
+
+    /// Record that the one-time catch-up repair has completed for this provider.
+    public func markCatchUpHealed(provider: String) {
+        guard var ledger = self.loadCacheFileLedger(provider: provider) else { return }
+        ledger.catchUpHealVersion = Self.catchUpHealVersion
+        self.saveDailies(provider: provider, ledger: ledger)
+    }
+
+    /// Whole-day span from the last recorded scan up to `now`, counting today.
+    ///
+    /// Returns `1` when the provider was already scanned today (no catch-up
+    /// needed), `nil` when it was never scanned, and `N > 1` when the last scan
+    /// was `N - 1` days ago. Log sources use this to widen a normal refresh back
+    /// to the last scan: a today-only refresh silently loses any day the app was
+    /// closed during, so when usage happened on those days it never reaches the
+    /// relay and the recent timeline goes blank. Anchoring to the last scan date
+    /// (not "today") backfills exactly the missed window. `.distantPast` (an
+    /// uninitialized ledger) is treated as "never scanned" so callers fall back
+    /// to their fresh-install rebuild instead of scanning thousands of days.
+    public func scanGapDays(provider: String, now: Date) -> Int? {
+        guard let lastScan = self.loadCachedDailies(provider: provider)?.lastScanDate,
+              lastScan > .distantPast
+        else { return nil }
+        let calendar = Calendar.current
+        let lastDay = calendar.startOfDay(for: lastScan)
+        let today = calendar.startOfDay(for: now)
+        guard let days = calendar.dateComponents([.day], from: lastDay, to: today).day else { return nil }
+        return max(1, days + 1)
+    }
+
     /// Largest bounded history window that has already been scanned.
     public func coveredMaxAgeDays(provider: String) -> Int? {
         self.loadCachedDailies(provider: provider)?.coveredMaxAgeDays
