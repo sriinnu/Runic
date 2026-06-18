@@ -68,7 +68,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode, catchUpDays: catchUpDays)
         // A rebuild (fresh install, explicit, or the one-time heal) fully covers the
         // window, so stamp the heal too — otherwise the next refresh would heal again.
-        let isRebuild: Bool = if case .rebuildHistory = scanMode { true } else { false }
+        let isRebuild = if case .rebuildHistory = scanMode { true } else { false }
         let markHealed = healing || isRebuild
         let allFiles = self.findUsageFiles(in: projectsDirs, minDate: window.fileMinModificationDate)
 

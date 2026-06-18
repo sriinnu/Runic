@@ -58,7 +58,7 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let scanMode = await self.resolvedScanMode(healing: healing)
         let catchUpDays = await self.catchUpDays(scanMode: scanMode)
         let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode, catchUpDays: catchUpDays)
-        let isRebuild: Bool = if case .rebuildHistory = scanMode { true } else { false }
+        let isRebuild = if case .rebuildHistory = scanMode { true } else { false }
         let markHealed = healing || isRebuild
 
         let cache = self.cache

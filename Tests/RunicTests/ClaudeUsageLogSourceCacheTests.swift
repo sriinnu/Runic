@@ -4,7 +4,7 @@ import Testing
 
 struct ClaudeUsageLogSourceCacheTests {
     /// Write one minimal Claude JSONL session under `<base>/projects/<project>/<session>.jsonl`.
-    static func writeSession(
+    static func writeSession( // swiftlint:disable:this function_parameter_count
         base: URL,
         project: String,
         session: String,
@@ -40,8 +40,22 @@ struct ClaudeUsageLogSourceCacheTests {
 
         let now = Date(timeIntervalSince1970: 1_767_252_000)
         // Two sessions today: one readable, one unreadable (a live session rewriting it).
-        _ = try Self.writeSession(base: base, project: "proj", session: "ok", date: now, input: 700, modifiedAt: now, fileManager: fm)
-        let busy = try Self.writeSession(base: base, project: "proj", session: "busy", date: now, input: 999, modifiedAt: now, fileManager: fm)
+        _ = try Self.writeSession(
+            base: base,
+            project: "proj",
+            session: "ok",
+            date: now,
+            input: 700,
+            modifiedAt: now,
+            fileManager: fm)
+        let busy = try Self.writeSession(
+            base: base,
+            project: "proj",
+            session: "busy",
+            date: now,
+            input: 999,
+            modifiedAt: now,
+            fileManager: fm)
         try fm.setAttributes([.posixPermissions: 0], ofItemAtPath: busy.path)
         defer { try? fm.setAttributes([.posixPermissions: 0o644], ofItemAtPath: busy.path) }
 
@@ -71,7 +85,9 @@ struct ClaudeUsageLogSourceCacheTests {
         try fm.createDirectory(at: base, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: base) }
         // The projects dir must exist for the source to resolve it.
-        try fm.createDirectory(at: base.appendingPathComponent("projects", isDirectory: true), withIntermediateDirectories: true)
+        try fm.createDirectory(
+            at: base.appendingPathComponent("projects", isDirectory: true),
+            withIntermediateDirectories: true)
 
         let now = Date(timeIntervalSince1970: 1_767_252_000)
         let cal = Calendar.current
@@ -99,7 +115,14 @@ struct ClaudeUsageLogSourceCacheTests {
             todayKey: nil,
             coveredMaxAgeDays: 30)
         await cache.markCatchUpHealed(provider: "claude") // isolate catch-up from the heal
-        _ = try Self.writeSession(base: base, project: "proj", session: "y", date: yesterday, input: 321, modifiedAt: now, fileManager: fm)
+        _ = try Self.writeSession(
+            base: base,
+            project: "proj",
+            session: "y",
+            date: yesterday,
+            input: 321,
+            modifiedAt: now,
+            fileManager: fm)
 
         let source = ClaudeUsageLogSource(
             environment: [:],

@@ -556,33 +556,73 @@ struct LedgerCacheTests {
             let snapshotID = "snapshot:codex:\(dayKey):\(schemaVersion)"
             let event = UsageRelayEvent(
                 eventID: "daily-aggregate:codex:\(dayKey)",
-                snapshotID: snapshotID, provider: "codex", timestamp: writtenAt, dayKey: dayKey,
-                sessionID: nil, projectID: nil, projectName: nil, model: "gpt-5", modelsUsed: ["gpt-5"],
-                inputTokens: tokens, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
-                costUSD: nil, requestCount: 1, requestID: nil, messageID: nil, version: nil,
-                source: "test", operationKind: nil, tokenProvenance: nil, costProvenance: nil,
+                snapshotID: snapshotID,
+                provider: "codex",
+                timestamp: writtenAt,
+                dayKey: dayKey,
+                sessionID: nil,
+                projectID: nil,
+                projectName: nil,
+                model: "gpt-5",
+                modelsUsed: ["gpt-5"],
+                inputTokens: tokens,
+                outputTokens: 0,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: nil,
+                requestCount: 1,
+                requestID: nil,
+                messageID: nil,
+                version: nil,
+                source: "test",
+                operationKind: nil,
+                tokenProvenance: nil,
+                costProvenance: nil,
                 sourceFingerprint: nil)
             let watermark = UsageRelayWatermark(
-                snapshotID: snapshotID, dayKey: dayKey, sourceKind: "test", sourceID: "test",
-                sourceFingerprint: "test", path: nil, modifiedAt: nil, sizeBytes: nil, scannedAt: writtenAt)
+                snapshotID: snapshotID,
+                dayKey: dayKey,
+                sourceKind: "test",
+                sourceID: "test",
+                sourceFingerprint: "test",
+                path: nil,
+                modifiedAt: nil,
+                sizeBytes: nil,
+                scannedAt: writtenAt)
             return [
-                UsageRelayRecord(schemaVersion: schemaVersion, recordType: "event", provider: "codex",
-                                 writtenAt: writtenAt, event: event, watermark: nil),
-                UsageRelayRecord(schemaVersion: schemaVersion, recordType: "watermark", provider: "codex",
-                                 writtenAt: writtenAt, event: nil, watermark: watermark),
+                UsageRelayRecord(
+                    schemaVersion: schemaVersion,
+                    recordType: "event",
+                    provider: "codex",
+                    writtenAt: writtenAt,
+                    event: event,
+                    watermark: nil),
+                UsageRelayRecord(
+                    schemaVersion: schemaVersion,
+                    recordType: "watermark",
+                    provider: "codex",
+                    writtenAt: writtenAt,
+                    event: nil,
+                    watermark: watermark),
             ]
         }
 
         // A day written by an OLDER schema must still materialize (the bug: `>=`
         // dropped it, blanking all history on a future schema bump). A FUTURE
         // schema we can't interpret is ignored.
-        try await cache.appendRelayRecords(records(dayKey: "2026-01-01", tokens: 4242, schemaVersion: LedgerCache.relaySchemaVersion - 1))
-        try await cache.appendRelayRecords(records(dayKey: "2026-01-02", tokens: 9999, schemaVersion: LedgerCache.relaySchemaVersion + 1))
+        try await cache.appendRelayRecords(records(
+            dayKey: "2026-01-01",
+            tokens: 4242,
+            schemaVersion: LedgerCache.relaySchemaVersion - 1))
+        try await cache.appendRelayRecords(records(
+            dayKey: "2026-01-02",
+            tokens: 9999,
+            schemaVersion: LedgerCache.relaySchemaVersion + 1))
 
         let restored = await cache.loadCachedDailies(provider: "codex")
         let byDay = Dictionary(uniqueKeysWithValues: (restored?.dailies ?? []).map { ($0.dayKey, $0) })
         #expect(byDay["2026-01-01"]?.inputTokens == 4242) // older schema survives
-        #expect(byDay["2026-01-02"] == nil)               // future schema ignored
+        #expect(byDay["2026-01-02"] == nil) // future schema ignored
     }
 
     @Test
@@ -603,10 +643,22 @@ struct LedgerCacheTests {
 
         func record(_ i: Int) -> [UsageRelayRecord] {
             let watermark = UsageRelayWatermark(
-                snapshotID: "snap-\(i)", dayKey: "2026-01-01", sourceKind: "test", sourceID: "test",
-                sourceFingerprint: "f-\(i)", path: nil, modifiedAt: nil, sizeBytes: nil, scannedAt: writtenAt)
-            return [UsageRelayRecord(schemaVersion: LedgerCache.relaySchemaVersion, recordType: "watermark",
-                                     provider: "codex", writtenAt: writtenAt, event: nil, watermark: watermark)]
+                snapshotID: "snap-\(i)",
+                dayKey: "2026-01-01",
+                sourceKind: "test",
+                sourceID: "test",
+                sourceFingerprint: "f-\(i)",
+                path: nil,
+                modifiedAt: nil,
+                sizeBytes: nil,
+                scannedAt: writtenAt)
+            return [UsageRelayRecord(
+                schemaVersion: LedgerCache.relaySchemaVersion,
+                recordType: "watermark",
+                provider: "codex",
+                writtenAt: writtenAt,
+                event: nil,
+                watermark: watermark)]
         }
 
         let count = 40
@@ -646,20 +698,54 @@ struct LedgerCacheTests {
             let snapshotID = "snapshot:codex:\(dayKey):\(tag)"
             let event = UsageRelayEvent(
                 eventID: "daily-aggregate:codex:\(dayKey)",
-                snapshotID: snapshotID, provider: "codex", timestamp: writtenAt, dayKey: dayKey,
-                sessionID: nil, projectID: nil, projectName: nil, model: "gpt-5", modelsUsed: ["gpt-5"],
-                inputTokens: tokens, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
-                costUSD: nil, requestCount: 1, requestID: nil, messageID: nil, version: nil,
-                source: "test", operationKind: nil, tokenProvenance: nil, costProvenance: nil,
+                snapshotID: snapshotID,
+                provider: "codex",
+                timestamp: writtenAt,
+                dayKey: dayKey,
+                sessionID: nil,
+                projectID: nil,
+                projectName: nil,
+                model: "gpt-5",
+                modelsUsed: ["gpt-5"],
+                inputTokens: tokens,
+                outputTokens: 0,
+                cacheCreationTokens: 0,
+                cacheReadTokens: 0,
+                costUSD: nil,
+                requestCount: 1,
+                requestID: nil,
+                messageID: nil,
+                version: nil,
+                source: "test",
+                operationKind: nil,
+                tokenProvenance: nil,
+                costProvenance: nil,
                 sourceFingerprint: nil)
             let watermark = UsageRelayWatermark(
-                snapshotID: snapshotID, dayKey: dayKey, sourceKind: "test", sourceID: "test",
-                sourceFingerprint: "test", path: nil, modifiedAt: nil, sizeBytes: nil, scannedAt: writtenAt)
+                snapshotID: snapshotID,
+                dayKey: dayKey,
+                sourceKind: "test",
+                sourceID: "test",
+                sourceFingerprint: "test",
+                path: nil,
+                modifiedAt: nil,
+                sizeBytes: nil,
+                scannedAt: writtenAt)
             return [
-                UsageRelayRecord(schemaVersion: LedgerCache.relaySchemaVersion, recordType: "event",
-                                 provider: "codex", writtenAt: writtenAt, event: event, watermark: nil),
-                UsageRelayRecord(schemaVersion: LedgerCache.relaySchemaVersion, recordType: "watermark",
-                                 provider: "codex", writtenAt: writtenAt, event: nil, watermark: watermark),
+                UsageRelayRecord(
+                    schemaVersion: LedgerCache.relaySchemaVersion,
+                    recordType: "event",
+                    provider: "codex",
+                    writtenAt: writtenAt,
+                    event: event,
+                    watermark: nil),
+                UsageRelayRecord(
+                    schemaVersion: LedgerCache.relaySchemaVersion,
+                    recordType: "watermark",
+                    provider: "codex",
+                    writtenAt: writtenAt,
+                    event: nil,
+                    watermark: watermark),
             ]
         }
 
@@ -690,7 +776,7 @@ struct LedgerCacheTests {
             provider: "codex",
             entries: [self.entry(timestamp: timestamp, inputTokens: 10, requestID: "r1", sourceFingerprint: "f1")],
             scanDate: timestamp)
-        #expect(await cache.needsCatchUpHeal(provider: "codex") == true)  // unstamped install
+        #expect(await cache.needsCatchUpHeal(provider: "codex") == true) // unstamped install
         await cache.markCatchUpHealed(provider: "codex")
         #expect(await cache.needsCatchUpHeal(provider: "codex") == false) // stamped
 
