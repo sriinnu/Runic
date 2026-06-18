@@ -42,7 +42,7 @@ extension LedgerCache {
         for _ in 0..<50 { // ~500ms ceiling (50 × 10ms)
             if flock(fd, LOCK_EX | LOCK_NB) == 0 { acquired = true; break }
             if errno != EWOULDBLOCK { break } // a real error, not contention
-            usleep(10_000)
+            usleep(10000)
         }
         defer { if acquired { _ = flock(fd, LOCK_UN) } }
         return try body()

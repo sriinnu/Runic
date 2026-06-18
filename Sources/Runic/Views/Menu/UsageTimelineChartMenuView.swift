@@ -297,32 +297,47 @@ struct UsageTimelineChartMenuView: View {
 
     private static func makeDailyModel(from summaries: [UsageLedgerDailySummary], timeRange: TimeRange) -> Model {
         let now = Date()
+        let calendar = Calendar.current
         let cutoffDate = now.addingTimeInterval(timeRange.cutoffInterval)
-        let filtered = summaries.filter { $0.dayStart >= cutoffDate }
-        let sorted = filtered.sorted { $0.dayStart < $1.dayStart }
+        let todayStart = calendar.startOfDay(for: now)
+        let real = summaries.filter { $0.dayStart >= cutoffDate }
+
+        // Stats come from the real days only; an empty day contributes nothing.
+        var totalTokens = 0
+        var totalCost: Double = 0
+        var hasCost = false
+        var byDay: [Date: UsageLedgerDailySummary] = [:]
+        for summary in real {
+            totalTokens += summary.totals.totalTokens
+            if let cost = summary.totals.costUSD { totalCost += cost; hasCost = true }
+            byDay[calendar.startOfDay(for: summary.dayStart)] = summary
+        }
+        let activeDays = byDay.count
 
         var points: [Point] = []
         var pointsByKey: [String: Point] = [:]
         var dateKeys: [(key: String, date: Date)] = []
         var peak: Point?
-        var totalTokens = 0
-        var totalCost: Double = 0
-        var hasCost = false
 
-        for summary in sorted {
-            let tokens = summary.totals.totalTokens
-            totalTokens += tokens
-            if let cost = summary.totals.costUSD {
-                totalCost += cost
-                hasCost = true
-            }
-            let point = Point(date: summary.dayStart, totalTokens: tokens, key: summary.dayKey)
-            points.append(point)
-            pointsByKey[summary.dayKey] = point
-            dateKeys.append((summary.dayKey, summary.dayStart))
-
-            if peak == nil || tokens > (peak?.totalTokens ?? 0) {
-                peak = point
+        // Only build points when there is real data — a provider with no history in
+        // range still shows the "No data" empty state. With data, fill EVERY day in
+        // the range so a day with no usage reads as a real zero (a dip), not an
+        // interpolated line across the gap.
+        if activeDays > 0 {
+            let startDay = calendar.startOfDay(for: cutoffDate)
+            var day = startDay
+            var guardCount = 0
+            while day <= todayStart, guardCount < 800 {
+                guardCount += 1
+                let key = LedgerCache.dayKey(for: day)
+                let tokens = byDay[day]?.totals.totalTokens ?? 0
+                let point = Point(date: day, totalTokens: tokens, key: key)
+                points.append(point)
+                pointsByKey[key] = point
+                dateKeys.append((key, day))
+                if tokens > 0, tokens > (peak?.totalTokens ?? 0) { peak = point }
+                guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+                day = next
             }
         }
 
@@ -340,7 +355,7 @@ struct UsageTimelineChartMenuView: View {
             dateKeys: dateKeys,
             peakPoint: peak,
             totalTokens: totalTokens,
-            averagePerPeriod: points.isEmpty ? 0 : totalTokens / max(1, points.count),
+            averagePerPeriod: activeDays == 0 ? 0 : totalTokens / activeDays,
             peakTokens: peak?.totalTokens ?? 0,
             totalCostUSD: hasCost ? totalCost : nil,
             desiredAxisCount: desiredAxisCount,

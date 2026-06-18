@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.0 — 2026-06-17
+- Usage: the timeline no longer goes blank after the app has been closed for a few days — missed days are now backfilled from the last scan instead of only scanning today, and a one-time repair recovers gaps that older builds left behind.
+- Usage: a day's history is preserved even if its provider logs have since rotated away, and the local history relay is hardened against version upgrades, a second copy of the app running during an upgrade, busy log files, and system-clock changes — so days can't silently zero out.
+- Providers: added opencode — its local message history shows up as a usage timeline with per-model, per-project, and cost breakdowns (cost is read straight from opencode's own records). Opt-in: enable "Show opencode usage" in Preferences → Providers.
+
 ## 2.2.6 — 2026-06-04
 - Usage: keep the local history cache compact — a month of history dropped from ~17 MB to under 100 KB, and it self-compacts so it can't balloon again.
 - Usage: history rebuild now survives a provider rewriting its logs mid-scan, and never drops a day's cached totals when a file is briefly unavailable.

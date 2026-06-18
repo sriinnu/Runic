@@ -86,7 +86,7 @@ struct UsageStoreProviderHistorySupport {
             generatedAt: generatedAt,
             days: [],
             isSupported: false,
-            note: "History is currently available for Claude/Codex/opencode local ledgers and configured OTel log sources.",
+            note: "History is available for Claude/Codex/opencode local ledgers and configured OTel sources.",
             error: nil)
     }
 

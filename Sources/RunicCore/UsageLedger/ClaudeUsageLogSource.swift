@@ -62,13 +62,13 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         // historical reads and commits empty day snapshots for missing raw data.
         let cache = self.cache
         let todayKey = LedgerCache.dayKey(for: self.now)
-        let scanMode = await self.resolvedScanMode()
         let healing = await self.cache.needsCatchUpHeal(provider: "claude")
-        let catchUpDays = await self.catchUpDays(scanMode: scanMode, healing: healing)
+        let scanMode = await self.resolvedScanMode(healing: healing)
+        let catchUpDays = await self.catchUpDays(scanMode: scanMode)
         let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode, catchUpDays: catchUpDays)
-        // A rebuild (fresh install or explicit) already fully covers the window, so
-        // stamp the heal too — otherwise the next refresh would redundantly heal.
-        let isRebuild: Bool = if case .rebuildHistory = scanMode { true } else { false }
+        // A rebuild (fresh install, explicit, or the one-time heal) fully covers the
+        // window, so stamp the heal too — otherwise the next refresh would heal again.
+        let isRebuild = if case .rebuildHistory = scanMode { true } else { false }
         let markHealed = healing || isRebuild
         let allFiles = self.findUsageFiles(in: projectsDirs, minDate: window.fileMinModificationDate)
 

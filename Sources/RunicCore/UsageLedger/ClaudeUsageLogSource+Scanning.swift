@@ -5,11 +5,17 @@ extension ClaudeUsageLogSource {
     /// cached history at all (fresh install / cleared cache), do a one-time
     /// history rebuild so the app isn't stuck showing only today; once any
     /// coverage exists, normal refresh stays today-only (the relay contract).
-    func resolvedScanMode() async -> UsageLedgerLogScanMode {
+    func resolvedScanMode(healing: Bool) async -> UsageLedgerLogScanMode {
         if case .rebuildHistory = self.scanMode { return self.scanMode }
         let requested = max(1, self.maxAgeDays ?? 1)
         guard requested > 1 else { return self.scanMode }
         if await self.cache.effectiveCoveredMaxAgeDays(provider: "claude") == nil {
+            return .rebuildHistory(maxAgeDays: requested)
+        }
+        // The one-time legacy repair runs as a real rebuild, not an additive
+        // refresh, so it deterministically backfills the whole retention window
+        // instead of risking an interrupted heal that stamps done with nothing.
+        if healing {
             return .rebuildHistory(maxAgeDays: requested)
         }
         return self.scanMode
@@ -27,13 +33,10 @@ extension ClaudeUsageLogSource {
     /// days, so a gap day whose raw logs have since rotated away keeps its
     /// existing relay aggregate instead of being erased. `retention == 1`
     /// intentionally has no catch-up (today is the only renderable day anyway).
-    func catchUpDays(scanMode: UsageLedgerLogScanMode, healing: Bool) async -> Int {
+    func catchUpDays(scanMode: UsageLedgerLogScanMode) async -> Int {
         guard case .refreshToday = scanMode else { return 1 }
         let requested = max(1, self.maxAgeDays ?? 1)
         guard requested > 1 else { return 1 }
-        // One-time legacy repair: backfill the full retention window once, since
-        // the gap that today-only builds skipped can be anywhere in it.
-        if healing { return requested }
         let gap = await self.cache.scanGapDays(provider: "claude", now: self.now) ?? 1
         return min(max(1, gap), requested)
     }
