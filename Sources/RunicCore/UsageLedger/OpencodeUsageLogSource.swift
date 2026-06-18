@@ -54,9 +54,9 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     public func loadEntries() async throws -> [UsageLedgerEntry] {
         let root = try self.resolveMessagesRoot()
         let todayKey = LedgerCache.dayKey(for: self.now)
-        let scanMode = await self.resolvedScanMode()
         let healing = await self.cache.needsCatchUpHeal(provider: "opencode")
-        let catchUpDays = await self.catchUpDays(scanMode: scanMode, healing: healing)
+        let scanMode = await self.resolvedScanMode(healing: healing)
+        let catchUpDays = await self.catchUpDays(scanMode: scanMode)
         let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode, catchUpDays: catchUpDays)
         let isRebuild: Bool = if case .rebuildHistory = scanMode { true } else { false }
         let markHealed = healing || isRebuild
@@ -140,21 +140,25 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let completionWatermarks: [UsageRelaySourceWatermark]
     }
 
-    private func resolvedScanMode() async -> UsageLedgerLogScanMode {
+    private func resolvedScanMode(healing: Bool) async -> UsageLedgerLogScanMode {
         if case .rebuildHistory = self.scanMode { return self.scanMode }
         let requested = max(1, self.maxAgeDays ?? 1)
         guard requested > 1 else { return self.scanMode }
         if await self.cache.effectiveCoveredMaxAgeDays(provider: "opencode") == nil {
             return .rebuildHistory(maxAgeDays: requested)
         }
+        // One-time legacy repair runs as a deterministic rebuild, not an additive
+        // refresh that could stamp done having captured nothing if interrupted.
+        if healing {
+            return .rebuildHistory(maxAgeDays: requested)
+        }
         return self.scanMode
     }
 
-    private func catchUpDays(scanMode: UsageLedgerLogScanMode, healing: Bool) async -> Int {
+    private func catchUpDays(scanMode: UsageLedgerLogScanMode) async -> Int {
         guard case .refreshToday = scanMode else { return 1 }
         let requested = max(1, self.maxAgeDays ?? 1)
         guard requested > 1 else { return 1 }
-        if healing { return requested }
         let gap = await self.cache.scanGapDays(provider: "opencode", now: self.now) ?? 1
         return min(max(1, gap), requested)
     }

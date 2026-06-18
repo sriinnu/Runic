@@ -47,12 +47,12 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     public func loadEntries() async throws -> [UsageLedgerEntry] {
         let root = try self.resolveSessionsRoot()
         let todayKey = LedgerCache.dayKey(for: self.now)
-        let scanMode = await self.resolvedScanMode()
         let healing = await self.cache.needsCatchUpHeal(provider: "codex")
-        let catchUpDays = await self.catchUpDays(scanMode: scanMode, healing: healing)
+        let scanMode = await self.resolvedScanMode(healing: healing)
+        let catchUpDays = await self.catchUpDays(scanMode: scanMode)
         let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode, catchUpDays: catchUpDays)
-        // A rebuild (fresh install or explicit) already fully covers the window, so
-        // stamp the heal too — otherwise the next refresh would redundantly heal.
+        // A rebuild (fresh install, explicit, or the one-time heal) fully covers the
+        // window, so stamp the heal too — otherwise the next refresh would heal again.
         let isRebuild: Bool = if case .rebuildHistory = scanMode { true } else { false }
         let markHealed = healing || isRebuild
 
@@ -150,11 +150,18 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
     /// Explicit rebuild always wins; otherwise rebuild once when no history is
     /// cached at all (fresh install / cleared cache), then stay today-only.
-    private func resolvedScanMode() async -> UsageLedgerLogScanMode {
+    private func resolvedScanMode(healing: Bool) async -> UsageLedgerLogScanMode {
         if case .rebuildHistory = self.scanMode { return self.scanMode }
         let requested = max(1, self.maxAgeDays ?? 1)
         guard requested > 1 else { return self.scanMode }
         if await self.cache.effectiveCoveredMaxAgeDays(provider: "codex") == nil {
+            return .rebuildHistory(maxAgeDays: requested)
+        }
+        // The one-time legacy repair runs as a real rebuild, not an additive
+        // refresh: a rebuild deterministically backfills the whole retention window
+        // (and seals genuinely-empty days), whereas an interrupted additive heal
+        // could stamp itself done having captured nothing, then never retry.
+        if healing {
             return .rebuildHistory(maxAgeDays: requested)
         }
         return self.scanMode
@@ -172,13 +179,10 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     /// days, so a gap day whose raw logs have since rotated away keeps its
     /// existing relay aggregate instead of being erased. `retention == 1`
     /// intentionally has no catch-up (today is the only renderable day anyway).
-    private func catchUpDays(scanMode: UsageLedgerLogScanMode, healing: Bool) async -> Int {
+    private func catchUpDays(scanMode: UsageLedgerLogScanMode) async -> Int {
         guard case .refreshToday = scanMode else { return 1 }
         let requested = max(1, self.maxAgeDays ?? 1)
         guard requested > 1 else { return 1 }
-        // One-time legacy repair: backfill the full retention window once, since
-        // the gap that today-only builds skipped can be anywhere in it.
-        if healing { return requested }
         let gap = await self.cache.scanGapDays(provider: "codex", now: self.now) ?? 1
         return min(max(1, gap), requested)
     }

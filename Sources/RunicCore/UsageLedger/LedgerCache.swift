@@ -231,8 +231,10 @@ public actor LedgerCache {
     }
 
     /// Current one-time catch-up repair version. Bump to force every existing
-    /// install to run one more full-retention additive backfill on next refresh.
-    static let catchUpHealVersion = 1
+    /// install to run one more full-retention rebuild on next refresh.
+    /// v2: re-run as a deterministic `.rebuildHistory` (v1's additive heal could
+    /// stamp itself done having captured nothing if a long scan was interrupted).
+    static let catchUpHealVersion = 2
 
     /// Whether this provider still needs the one-time legacy catch-up repair.
     ///

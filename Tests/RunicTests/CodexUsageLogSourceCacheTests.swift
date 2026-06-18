@@ -389,6 +389,10 @@ extension CodexUsageLogSourceTests {
             scanDate: fourDaysAgo, // last scan 4 days ago → catch-up will fire
             todayKey: nil,
             coveredMaxAgeDays: 30)
+        // Already-healed install: this exercises the NORMAL additive catch-up
+        // (which preserves rotated-away days), not the one-time heal (a rebuild
+        // that deliberately re-derives the window from raw logs).
+        await cache.markCatchUpHealed(provider: "codex")
         // A more recent gap day DOES still have its raw session.
         try Self.writeSession(root: root, date: twoDaysAgo, input: 222, modifiedAt: now, fileManager: fm)
 
