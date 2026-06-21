@@ -41,6 +41,25 @@ enum CostUsagePricing {
             inputCostPerToken: 1.75e-6,
             outputCostPerToken: 1.4e-5,
             cacheReadInputCostPerToken: 1.75e-7),
+        // gpt-5.3 / 5.4 / 5.5 + the 5.4 mini tier. Rates from the local kosha
+        // registry (per-million ÷ 1e6). gpt-5.3-codex and gpt-5.3-codex-spark both
+        // normalize to "gpt-5.3" via the -codex strip and share its 5.2-level rate.
+        "gpt-5.3": CodexPricing(
+            inputCostPerToken: 1.75e-6,
+            outputCostPerToken: 1.4e-5,
+            cacheReadInputCostPerToken: 1.75e-7),
+        "gpt-5.4": CodexPricing(
+            inputCostPerToken: 2.5e-6,
+            outputCostPerToken: 1.5e-5,
+            cacheReadInputCostPerToken: 2.5e-7),
+        "gpt-5.4-mini": CodexPricing(
+            inputCostPerToken: 7.5e-7,
+            outputCostPerToken: 4.5e-6,
+            cacheReadInputCostPerToken: 7.5e-8),
+        "gpt-5.5": CodexPricing(
+            inputCostPerToken: 5e-6,
+            outputCostPerToken: 3e-5,
+            cacheReadInputCostPerToken: 5e-7),
     ]
 
     private static let claude: [String: ClaudePricing] = [
