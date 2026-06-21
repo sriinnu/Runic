@@ -346,6 +346,148 @@ struct CodexUsageLogSourceTests {
         #expect(cached?.dailies.isEmpty == true)
     }
 
+    // Regression: codex resumes one long-lived rollout and appends to it for days,
+    // but the file stays filed under its START date's folder. The old date-folder
+    // walk stopped opening that folder once it aged past the scan window, so every
+    // byte of current usage went unread and the timeline collapsed to zero. The
+    // file must be selected by mtime (it was just written), wherever it is filed.
+    @Test
+    func `codex scans a resumed rollout filed under an old date folder`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_900_000) // 2026-01-10T00:00:00Z
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+
+        // File the rollout under a START date six days ago — well outside the
+        // 3-day rebuild window the old folder-walk would have opened.
+        let startDate = now.addingTimeInterval(-6 * 86400) // 2026-01-04
+        let parts = calendar.dateComponents([.year, .month, .day], from: startDate)
+        let oldDayDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        try fm.createDirectory(at: oldDayDir, withIntermediateDirectories: true)
+
+        // But its content is recent: cumulative token_count lines dated yesterday
+        // and today (both inside the window). Deltas → two entries.
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        func tokenLine(at date: Date, totalInput: Int, totalOutput: Int) throws -> String {
+            try Self.jsonLine([
+                "type": "event_msg",
+                "timestamp": formatter.string(from: date),
+                "payload": [
+                    "type": "token_count",
+                    "info": [
+                        "model": "openai/gpt-5.2-codex",
+                        "total_token_usage": [
+                            "input_tokens": totalInput,
+                            "cached_input_tokens": 0,
+                            "output_tokens": totalOutput,
+                        ],
+                    ],
+                ],
+            ])
+        }
+        let yesterday = now.addingTimeInterval(-1 * 86400 + 3600) // 2026-01-09
+        let today = now.addingTimeInterval(3600) // 2026-01-10
+        let body = try tokenLine(at: yesterday, totalInput: 100, totalOutput: 10) + "\n"
+            + tokenLine(at: today, totalInput: 250, totalOutput: 25) + "\n"
+        let fileURL = oldDayDir.appendingPathComponent("rollout-resumed.jsonl")
+        try body.write(to: fileURL, atomically: true, encoding: .utf8)
+        // Mtime is now — the file was just appended to, even though it lives in an
+        // old folder. This is the signal mtime-based selection keys on.
+        try fm.setAttributes([.modificationDate: now], ofItemAtPath: fileURL.path)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 3,
+            now: now,
+            cache: cache)
+        let entries = try await source.loadEntries()
+
+        // Both recent deltas captured despite the file living in a stale folder.
+        #expect(entries.count == 2)
+        #expect(entries.map(\.inputTokens).reduce(0, +) == 250) // 100 + (250-100)
+        #expect(entries.map(\.outputTokens).reduce(0, +) == 25) // 10 + (25-10)
+    }
+
+    // Regression: a modern rollout interleaves multiple cumulative
+    // total_token_usage streams (parallel sub-agents), so the running total jumps
+    // backwards and cumulative deltas explode. Usage must come from the
+    // self-contained per-request last_token_usage, and a windowed scan must not
+    // over-count by treating a mid-session cumulative as a first delta.
+    @Test
+    func `codex uses per-request last token usage, not cumulative totals`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_900_000) // 2026-01-10T00:00:00Z
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        let dayDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        try fm.createDirectory(at: dayDir, withIntermediateDirectories: true)
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        func line(at date: Date, lastIn: Int, lastOut: Int, totalIn: Int) throws -> String {
+            try Self.jsonLine([
+                "type": "event_msg",
+                "timestamp": formatter.string(from: date),
+                "payload": [
+                    "type": "token_count",
+                    "info": [
+                        "model": "gpt-5.5",
+                        "total_token_usage": ["input_tokens": totalIn, "output_tokens": 9999],
+                        "last_token_usage": ["input_tokens": lastIn, "output_tokens": lastOut],
+                    ],
+                ],
+            ])
+        }
+        // Cumulative totals jump around (10000 -> 5000) and dwarf the real
+        // per-request deltas. With maxAgeDays 3 the 2026-01-06 line is out of window.
+        let body = try [
+            line(at: now.addingTimeInterval(-4 * 86400), lastIn: 7777, lastOut: 1, totalIn: 3000), // 01-06, skipped
+            line(at: now.addingTimeInterval(-1 * 86400 + 3600), lastIn: 100, lastOut: 10, totalIn: 10000), // 01-09
+            line(at: now.addingTimeInterval(3600), lastIn: 200, lastOut: 20, totalIn: 5000), // 01-10
+        ].joined(separator: "\n") + "\n"
+        let fileURL = dayDir.appendingPathComponent("rollout-interleaved.jsonl")
+        try body.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 3,
+            now: now,
+            cache: cache)
+        let entries = try await source.loadEntries()
+
+        // Only the two in-window lines, summed from last_token_usage — not the
+        // cumulative totals and not the out-of-window line.
+        #expect(entries.count == 2)
+        #expect(entries.map(\.inputTokens).reduce(0, +) == 300) // 100 + 200
+        #expect(entries.map(\.outputTokens).reduce(0, +) == 30) // 10 + 20
+    }
+
     static func jsonLine(_ object: [String: Any]) throws -> String {
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
         guard let text = String(data: data, encoding: .utf8) else {

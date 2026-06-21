@@ -289,21 +289,38 @@ struct CodexUsageLogParser {
     }
 
     private func tokenDeltas(from info: [String: Any], previousTotals: inout CodexTotals?) -> CodexTotals? {
-        if let total = info["total_token_usage"] as? [String: Any] {
-            let current = CodexTotals(
-                input: self.toInt(total["input_tokens"]),
-                cached: self.toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"]),
-                output: self.toInt(total["output_tokens"]))
-            let delta = Self.deltaTotals(current: current, previous: previousTotals)
-            previousTotals = current
+        // Prefer last_token_usage — the self-contained per-request delta. A modern
+        // codex rollout interleaves MULTIPLE cumulative total_token_usage streams
+        // (parallel sub-agents/conversations) in one file, so the running total
+        // jumps backwards between requests and cumulative deltas explode into the
+        // billions/trillions. last_token_usage also needs no prior state, so a
+        // windowed scan that starts mid-session (minDate) can't over-count the
+        // first kept line. Only fall back to cumulative deltas for legacy lines
+        // that predate last_token_usage.
+        if let last = info["last_token_usage"] as? [String: Any] {
+            // Keep the cumulative cursor current so a (rare) later total-only line in
+            // the same file computes a correct incremental delta instead of folding
+            // in turns already captured here.
+            if let total = info["total_token_usage"] as? [String: Any] {
+                previousTotals = CodexTotals(
+                    input: self.toInt(total["input_tokens"]),
+                    cached: self.toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"]),
+                    output: self.toInt(total["output_tokens"]))
+            }
+            let delta = CodexTotals(
+                input: max(0, self.toInt(last["input_tokens"])),
+                cached: max(0, self.toInt(last["cached_input_tokens"] ?? last["cache_read_input_tokens"])),
+                output: max(0, self.toInt(last["output_tokens"])))
             return delta.input == 0 && delta.cached == 0 && delta.output == 0 ? nil : delta
         }
 
-        guard let last = info["last_token_usage"] as? [String: Any] else { return nil }
-        let delta = CodexTotals(
-            input: max(0, self.toInt(last["input_tokens"])),
-            cached: max(0, self.toInt(last["cached_input_tokens"] ?? last["cache_read_input_tokens"])),
-            output: max(0, self.toInt(last["output_tokens"])))
+        guard let total = info["total_token_usage"] as? [String: Any] else { return nil }
+        let current = CodexTotals(
+            input: self.toInt(total["input_tokens"]),
+            cached: self.toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"]),
+            output: self.toInt(total["output_tokens"]))
+        let delta = Self.deltaTotals(current: current, previous: previousTotals)
+        previousTotals = current
         return delta.input == 0 && delta.cached == 0 && delta.output == 0 ? nil : delta
     }
 

@@ -20,6 +20,32 @@ struct CostUsagePricingTests {
     }
 
     @Test
+    func `codex cost supports gpt53 54 55 model families`() {
+        // gpt-5.3-codex and -codex-spark both normalize to gpt-5.3.
+        #expect(CostUsagePricing.normalizeCodexModel("gpt-5.3-codex") == "gpt-5.3")
+        #expect(CostUsagePricing.normalizeCodexModel("gpt-5.3-codex-spark") == "gpt-5.3")
+        for model in ["gpt-5.3-codex", "gpt-5.3-codex-spark", "gpt-5.4", "gpt-5.4-mini", "gpt-5.5"] {
+            let cost = CostUsagePricing.codexCostUSD(
+                model: model,
+                inputTokens: 1000,
+                cachedInputTokens: 100,
+                outputTokens: 50)
+            #expect(cost != nil && (cost ?? 0) > 0, "expected priced cost for \(model)")
+        }
+    }
+
+    @Test
+    func `codex cost returns nil for unknown models`() {
+        // codex-auto-review is not a real model — no fabricated price.
+        let cost = CostUsagePricing.codexCostUSD(
+            model: "codex-auto-review",
+            inputTokens: 1000,
+            cachedInputTokens: 0,
+            outputTokens: 50)
+        #expect(cost == nil)
+    }
+
+    @Test
     func `normalizes claude opus41 dated variants`() {
         #expect(CostUsagePricing.normalizeClaudeModel("claude-opus-4-1-20250805") == "claude-opus-4-1")
     }

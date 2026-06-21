@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.0 — 2026-06-21
+- Codex: fix the timeline silently dropping to zero during long, continuous sessions. Codex now resumes a single rollout file and appends to it for days while keeping it filed under its start date; the scanner only looked in the last few date-named folders, so once a live session aged past that window all current usage went unread. Usage is now found by when a file was last written, wherever it lives — so an active goal-loop session is always captured.
+- Codex: add cost rates for the gpt-5.3, gpt-5.4 (incl. mini), and gpt-5.5 model families so cost and per-model breakdowns stop reading as $0 for recent usage.
+
 ## 2.3.0 — 2026-06-17
 - Usage: the timeline no longer goes blank after the app has been closed for a few days — missed days are now backfilled from the last scan instead of only scanning today, and a one-time repair recovers gaps that older builds left behind.
 - Usage: a day's history is preserved even if its provider logs have since rotated away, and the local history relay is hardened against version upgrades, a second copy of the app running during an upgrade, busy log files, and system-clock changes — so days can't silently zero out.
