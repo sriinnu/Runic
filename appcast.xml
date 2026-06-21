@@ -3,21 +3,32 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.4.0</title>
+            <pubDate>Sun, 21 Jun 2026 23:14:27 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>69</sparkle:version>
+            <sparkle:shortVersionString>2.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.4.0</h2>
+<ul>
+<li>Codex: fix the timeline silently dropping to zero during long, continuous sessions. Codex now resumes a single rollout file and appends to it for days while keeping it filed under its start date; the scanner only looked in the last few date-named folders, so once a live session aged past that window all current usage went unread. Usage is now found by when a file was last written, wherever it lives — so an active goal-loop session is always captured.</li>
+<li>Codex: add cost rates for the gpt-5.3, gpt-5.4 (incl. mini), and gpt-5.5 model families so cost and per-model breakdowns stop reading as $0 for recent usage.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.0/Runic-2.4.0.zip" length="33061806" type="application/octet-stream" sparkle:edSignature="g4phYm/aLxl3LIfgZDD5+BmDAgbxwTF8pmLNalOSSyjMwc0M6PT5UYnlnKmVgCjcIC2A1xlSUtvTtwZv2nxGDQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.0/Runic69-67.delta" sparkle:deltaFrom="67" length="12548898" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="OTBsaJsYr3FHHAWWuleU4grTQ8V7di8NwlAnSUtnxmG4ZrqVYrYpNF7EEJUoBZbZYx77FbnxfstIKfv11lzEBQ=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.2.6</title>
             <pubDate>Thu, 04 Jun 2026 17:36:03 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>67</sparkle:version>
             <sparkle:shortVersionString>2.2.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.2.6</h2>
-<ul>
-<li>Usage: keep the local history cache compact — a month of history dropped from ~17 MB to under 100 KB, and it self-compacts so it can't balloon again.</li>
-<li>Usage: history rebuild now survives a provider rewriting its logs mid-scan, and never drops a day's cached totals when a file is briefly unavailable.</li>
-<li>Usage: a fresh install (or after clearing local data) backfills recent history automatically instead of showing only today.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.6/Runic-2.2.6.zip" length="33170234" type="application/octet-stream" sparkle:edSignature="rEK3wnyI2m8UQq9flT5NQ6ecfvaIZvErFm4tXfnYzQOwI1Eyw9CpQ3PjI3b83USyJZj0AZbaQaZouB76/hOVCA=="/>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.0/Runic-2.2.6.zip" length="33170234" type="application/octet-stream" sparkle:edSignature="rEK3wnyI2m8UQq9flT5NQ6ecfvaIZvErFm4tXfnYzQOwI1Eyw9CpQ3PjI3b83USyJZj0AZbaQaZouB76/hOVCA=="/>
         </item>
         <item>
             <title>2.2.5</title>
@@ -36,136 +47,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.5/Runic65-64.delta" sparkle:deltaFrom="64" length="2037274" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="v8xs+G+IT0ebLQXlciJXFZ38/tHXrv6yjFmfK57HalTvkH6Xe56npG6zOy52pVd2qWJbJHOw4aKewaJoqlLiDQ=="/>
             </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.2.3</title>
-            <pubDate>Sat, 30 May 2026 16:04:53 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>63</sparkle:version>
-            <sparkle:shortVersionString>2.2.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.2.3</h2>
-<ul>
-<li>Preferences: make status-menu Settings and About actions open the Settings window and select the requested panel reliably.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.3/Runic-2.2.3.zip" length="32743788" type="application/octet-stream" sparkle:edSignature="/BH9D7a46lEdxWQerx/wkk+353uWFXoHWcGRWfSdJ6fvF3qUjhNI7Ej2U3/cAXMaMSD/hfaRgdv0Fm7Q2qZ1Dw=="/>
-        </item>
-        <item>
-            <title>2.2.2</title>
-            <pubDate>Sat, 30 May 2026 15:14:15 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>62</sparkle:version>
-            <sparkle:shortVersionString>2.2.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.2.2</h2>
-<ul>
-<li>Usage: make cost refresh scan only the mutable current day by default, with <code>--rebuild</code> reserved for 30-day provider JSONL repair.</li>
-<li>Usage: harden the provider relay cache so empty rebuild days clear stale snapshots and cached history stays frozen during normal refreshes.</li>
-<li>Docs: rewrite the README as a direct local-first project statement and document refresh versus rebuild behavior.</li>
-<li>Governance: switch current development licensing from AGPL-3.0-or-later to MPL-2.0.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.2/Runic-2.2.2.zip" length="32736403" type="application/octet-stream" sparkle:edSignature="k52QMbI1eD0YOzgMUmkdFWx8JnTgUZN7buDFEO9wkgs6o/BR8uwCfp/09LbVkJEe3QjR7s65HH6M9lHZbAaNCg=="/>
-        </item>
-        <item>
-            <title>2.1.4</title>
-            <pubDate>Wed, 13 May 2026 18:07:31 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>56</sparkle:version>
-            <sparkle:shortVersionString>2.1.4</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.1.4</h2>
-<ul>
-<li>Packaging: fix launch crash in packaged builds by avoiding SwiftPM <code>Bundle.module</code> resource lookup at app startup.</li>
-<li>Resources: route fonts, provider SVGs, and provider context fallbacks through a packaged-app-safe resource locator.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.1.4/Runic-2.1.4.zip" length="32329531" type="application/octet-stream" sparkle:edSignature="SZbE7yOeSDo/oI9VyH9IoXwWbUv24ikv9hwwXiMkBitAh4CKK/ESqaGPGsUo8JDyTMvfpyBHXO3tzRoPYVMBDQ=="/>
-        </item>
-        <item>
-            <title>2.1.3</title>
-            <pubDate>Wed, 13 May 2026 15:34:01 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>55</sparkle:version>
-            <sparkle:shortVersionString>2.1.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.1.3</h2>
-<ul>
-<li>Context: add provider-level context transparency that separates advertised/configured max context from observed usage and context-health messaging.</li>
-<li>Context: read provider context windows from the Kosha TTL-backed registry when available, with static fallbacks for every built-in provider.</li>
-<li>Providers: include Vercel AI Gateway in the provider surface and usage plumbing.</li>
-<li>Icons: polish the Codex mark into a larger colorful transparent SVG without the old badge border.</li>
-<li>Themes: apply the selected palette to the main menubar panels, overview panel, provider tabs, sidebar switcher, chart submenus, progress bars, and Preferences panes.</li>
-<li>Themes: make themed surfaces use palette backgrounds, strokes, text, track colors, and accent tints instead of falling back to macOS system grays.</li>
-<li>Preferences: make the full settings window reflect the active theme behind every tab, not only the appearance preview.</li>
-<li>Privacy: sanitize public contact/package metadata to use the GitHub noreply identity.</li>
-<li>Release: add <code>Scripts/clean-local-builds.sh</code> for wiping generated local build artifacts safely.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.1.3/Runic-2.1.3.zip" length="32330015" type="application/octet-stream" sparkle:edSignature="NCQrpmJzcJEU8N3lmSK+t0T8YTQJFRhRQoaDFGfL3YjA5cT2QOpO3hNadE4QQCbqQNV4FGf4+WBeHCg1Jr7EBQ=="/>
-        </item>
-        <item>
-            <title>2.0.0</title>
-            <pubDate>Fri, 27 Mar 2026 18:53:39 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>51</sparkle:version>
-            <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.0.0</h2>
-<ul>
-<li>Typography: custom font system with 7 bundled families (Fira Code, JetBrains Mono, IBM Plex Mono, Space Mono, Inconsolata, Caveat, SF Pro/Mono)</li>
-<li>Typography: live font switching from Settings > General — no restart needed</li>
-<li>Typography: RunicTypography design tokens with dynamic RunicFont scale across 600+ font call sites</li>
-<li>Typography: drop-in font extensibility — add TTF/OTF to Resources/Fonts, rebuild, auto-discovered</li>
-<li>Typography: font preview in picker — each choice rendered in its own typeface</li>
-<li>Typography: NSMenuItem post-processor applies selected font to all plain menu items</li>
-<li>Typography: xLarge dynamic type for slightly larger text across the app</li>
-<li>Menu: wider card base width (310→340pt) for monospaced font comfort</li>
-<li>iOS: RunicFont enum for consistent monospaced typography across widgets and views</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.0.0/Runic-2.0.0.zip" length="35394004" type="application/octet-stream" sparkle:edSignature="VIBJ2AnXWmsFN2J6sm/FooxOkhx4L9W8Ew9dF3yR1QnNVl2Bhvo2GKprn8102F6M1/EZMzvLHNd8xfrsiJuyBQ=="/>
-        </item>
-        <item>
-            <title>1.2.0</title>
-            <pubDate>Tue, 25 Mar 2026 21:00:00 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>50</sparkle:version>
-            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 1.2.0</h2>
-<ul>
-<li>14 security fixes (HTTPS enforcement, log redaction, file permissions, keychain hardening)</li>
-<li>Ledger cache for instant display on menu open</li>
-<li>Clean project names (AI/Runic instead of full directory paths)</li>
-<li>Parallel provider refresh</li>
-<li>Overview dashboard with context windows</li>
-</ul>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v1.2.0/Runic-1.2.0.zip" length="31042134" type="application/octet-stream" sparkle:edSignature="L8UpDLPKB4QSgpCddUUe5u4aQQjqpW2r2lUbYnKmK+pBtIFMg74m3mMgEP5v1fTYjMGzPVRj7W9AFovNUAY7Dg=="/>
-        </item>
-        <item>
-            <title>1.1.0</title>
-            <pubDate>Sun, 23 Mar 2026 00:00:00 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>49</sparkle:version>
-            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 1.1.0</h2>
-<ul>
-<li>Overview dashboard with activity ring, context windows, reset countdowns</li>
-<li>Context windows from config file (no recompile needed)</li>
-<li>Parallel provider refresh (concurrent instead of sequential)</li>
-<li>Keychain ACL fix (no more password prompts on relaunch)</li>
-</ul>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v1.1.0/Runic-1.1.0.zip" length="30807384" type="application/octet-stream" sparkle:edSignature="hXMeE/CLrSDV+kbFythUA6w84WQ7u0YpvXK6uI58QHfBAn2FpH98xWERNfyL55gxBULdMASXzpv1UxmjtRFjCg=="/>
         </item>
         <item>
             <title>0.14.0</title>
