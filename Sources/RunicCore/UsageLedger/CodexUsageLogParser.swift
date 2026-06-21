@@ -298,6 +298,15 @@ struct CodexUsageLogParser {
         // first kept line. Only fall back to cumulative deltas for legacy lines
         // that predate last_token_usage.
         if let last = info["last_token_usage"] as? [String: Any] {
+            // Keep the cumulative cursor current so a (rare) later total-only line in
+            // the same file computes a correct incremental delta instead of folding
+            // in turns already captured here.
+            if let total = info["total_token_usage"] as? [String: Any] {
+                previousTotals = CodexTotals(
+                    input: self.toInt(total["input_tokens"]),
+                    cached: self.toInt(total["cached_input_tokens"] ?? total["cache_read_input_tokens"]),
+                    output: self.toInt(total["output_tokens"]))
+            }
             let delta = CodexTotals(
                 input: max(0, self.toInt(last["input_tokens"])),
                 cached: max(0, self.toInt(last["cached_input_tokens"] ?? last["cache_read_input_tokens"])),
