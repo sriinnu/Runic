@@ -62,8 +62,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let cache = self.cache
         let filesToScan = self.listSessionFiles(
             root: root,
-            minDate: window.minDate,
-            maxAgeDays: window.fileMaxAgeDays)
+            minDate: window.minDate)
 
         if filesToScan.isEmpty {
             await cache.mergeEntries(
@@ -141,7 +140,6 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
     private struct ScanWindow {
         let minDate: Date
-        let fileMaxAgeDays: Int?
         let relayTodayKey: String?
         let coveredMaxAgeDays: Int?
         let completionWatermarks: [UsageRelaySourceWatermark]
@@ -202,7 +200,6 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             let start = calendar.date(byAdding: .day, value: -(days - 1), to: todayStart) ?? todayStart
             return ScanWindow(
                 minDate: start,
-                fileMaxAgeDays: days,
                 relayTodayKey: todayKey,
                 coveredMaxAgeDays: nil,
                 // Only TODAY carries a completion watermark, so today is always
@@ -237,7 +234,6 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             }
             return ScanWindow(
                 minDate: start,
-                fileMaxAgeDays: days,
                 relayTodayKey: nil,
                 coveredMaxAgeDays: days,
                 completionWatermarks: watermarks,
@@ -269,55 +265,36 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         throw CodexUsageLogError.noSessionsDirectory
     }
 
-    private func listSessionFiles(root: URL, minDate: Date?, maxAgeDays: Int?) -> [CodexUsageSessionFile] {
+    /// Select rollout files by modification time, NOT by date-named folder.
+    ///
+    /// Codex no longer writes one file per session per day. A long-running session
+    /// (e.g. a goal-oriented loop) resumes a single rollout and appends to it for
+    /// days — but the file stays filed under its *start* date's folder. The old
+    /// behavior walked only the last N date-named folders, so once a live session
+    /// aged past that window its folder was never opened again and every byte of
+    /// current usage went unread: the timeline silently collapsed to zero even
+    /// while the user was actively burning tokens.
+    ///
+    /// Selecting by mtime fixes this: any rollout touched since the window start is
+    /// scanned, wherever it is filed. The parser already attributes each line by
+    /// its own content timestamp and honors `minDate`, so feeding it a multi-day
+    /// file lands every line on the correct day. Recursive enumeration costs one
+    /// stat per file (hundreds, microseconds each); the mtime filter keeps the
+    /// actual reads down to the handful of files written in the window.
+    private func listSessionFiles(root: URL, minDate: Date?) -> [CodexUsageSessionFile] {
         var results: [CodexUsageSessionFile] = []
 
-        let calendar = Calendar.current
-        if let maxAgeDays, maxAgeDays > 0 {
-            let scanDays = max(1, maxAgeDays)
-            let start = calendar.startOfDay(for: self.now)
-
-            for offset in 0..<scanDays {
-                guard let date = calendar.date(byAdding: .day, value: -offset, to: start) else { continue }
-                let components = calendar.dateComponents([.year, .month, .day], from: date)
-                let year = String(format: "%04d", components.year ?? 1970)
-                let month = String(format: "%02d", components.month ?? 1)
-                let day = String(format: "%02d", components.day ?? 1)
-
-                let dayDir = root
-                    .appendingPathComponent(year, isDirectory: true)
-                    .appendingPathComponent(month, isDirectory: true)
-                    .appendingPathComponent(day, isDirectory: true)
-
-                guard let items = try? self.fileManager.contentsOfDirectory(
-                    at: dayDir,
-                    includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey],
-                    options: [.skipsHiddenFiles])
-                else {
-                    continue
-                }
-
-                for item in items where item.pathExtension.lowercased() == "jsonl" {
-                    let values = try? item.resourceValues(forKeys: [.contentModificationDateKey])
-                    let modifiedAt = values?.contentModificationDate
-                    if let minDate, let modifiedAt, modifiedAt < minDate { continue }
-                    let sessionID = item.deletingPathExtension().lastPathComponent
-                    results.append(CodexUsageSessionFile(url: item, sessionID: sessionID, modifiedAt: modifiedAt))
-                }
-            }
-        } else {
-            let enumerator = self.fileManager.enumerator(
-                at: root,
-                includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey],
-                options: [.skipsHiddenFiles])
-            while let item = enumerator?.nextObject() as? URL {
-                guard item.pathExtension.lowercased() == "jsonl" else { continue }
-                let values = try? item.resourceValues(forKeys: [.contentModificationDateKey])
-                let modifiedAt = values?.contentModificationDate
-                if let minDate, let modifiedAt, modifiedAt < minDate { continue }
-                let sessionID = item.deletingPathExtension().lastPathComponent
-                results.append(CodexUsageSessionFile(url: item, sessionID: sessionID, modifiedAt: modifiedAt))
-            }
+        let enumerator = self.fileManager.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles])
+        while let item = enumerator?.nextObject() as? URL {
+            guard item.pathExtension.lowercased() == "jsonl" else { continue }
+            let values = try? item.resourceValues(forKeys: [.contentModificationDateKey])
+            let modifiedAt = values?.contentModificationDate
+            if let minDate, let modifiedAt, modifiedAt < minDate { continue }
+            let sessionID = item.deletingPathExtension().lastPathComponent
+            results.append(CodexUsageSessionFile(url: item, sessionID: sessionID, modifiedAt: modifiedAt))
         }
 
         return results
