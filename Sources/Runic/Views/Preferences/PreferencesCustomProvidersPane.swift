@@ -118,8 +118,8 @@ struct CustomProvidersPane: View {
             if let actionError { Text(actionError) }
         }
         .alert("Delete Provider", isPresented: Binding(
-            get: { self.confirmDelete != nil },
-            set: { if !$0 { self.confirmDelete = nil } }))
+                get: { self.confirmDelete != nil },
+                set: { if !$0 { self.confirmDelete = nil } }))
         {
             Button("Cancel", role: .cancel) { self.confirmDelete = nil }
             Button("Delete", role: .destructive) {
@@ -128,11 +128,11 @@ struct CustomProvidersPane: View {
                 }
                 self.confirmDelete = nil
             }
-        } message: {
-            if let provider = self.confirmDelete {
-                Text("Are you sure you want to delete '\(provider.name)'? This action cannot be undone.")
+            } message: {
+                if let provider = self.confirmDelete {
+                    Text("Are you sure you want to delete '\(provider.name)'? This action cannot be undone.")
+                }
             }
-        }
     }
 
     // MARK: - Actions

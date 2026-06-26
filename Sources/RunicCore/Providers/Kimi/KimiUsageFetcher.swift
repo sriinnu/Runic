@@ -53,7 +53,7 @@ enum KimiUsageFetcher {
     }
 
     static func fetchBalance(apiKey: String, baseURL: String?) async throws -> KimiBalanceResponse {
-        guard let url = Self.balanceURL(baseURL: baseURL) else {
+        guard let url = balanceURL(baseURL: baseURL) else {
             throw KimiAPIError.invalidResponse
         }
 
@@ -84,11 +84,10 @@ enum KimiUsageFetcher {
 extension KimiBalanceResponse {
     func toUsageSnapshot() -> UsageSnapshot {
         let available = self.data?.availableBalance
-        let summary: String
-        if let available {
-            summary = "Balance: \(Self.formatAmount(available))"
+        let summary = if let available {
+            "Balance: \(Self.formatAmount(available))"
         } else {
-            summary = "Balance unavailable"
+            "Balance unavailable"
         }
 
         var parts: [String] = []
