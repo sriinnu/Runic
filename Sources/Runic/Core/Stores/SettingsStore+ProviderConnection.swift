@@ -9,6 +9,7 @@ struct SettingsStoreProviderConnectionValues {
     var bedrockModelID: String
     var vertexaiProject: String
     var vertexaiLocation: String
+    var kimiBaseURL: String
 
     init(defaults: SettingsStoreDefaultsSnapshot) {
         self.azureOpenAIEndpoint = defaults.azureOpenAIEndpoint
@@ -19,6 +20,7 @@ struct SettingsStoreProviderConnectionValues {
         self.bedrockModelID = defaults.bedrockModelID
         self.vertexaiProject = defaults.vertexaiProject
         self.vertexaiLocation = defaults.vertexaiLocation
+        self.kimiBaseURL = defaults.kimiBaseURL
     }
 }
 
@@ -92,6 +94,18 @@ extension SettingsStore {
         set {
             self.providerConnectionValues.vertexaiLocation = newValue
             self.userDefaults.set(newValue, forKey: "vertexaiLocation")
+        }
+    }
+
+    /// Kimi / Moonshot API base URL override (stored in UserDefaults).
+    ///
+    /// Empty falls back to the international endpoint. Set to `https://api.moonshot.cn`
+    /// for subscriptions bought on the China platform, or any reseller/proxy host.
+    var kimiBaseURL: String {
+        get { self.providerConnectionValues.kimiBaseURL }
+        set {
+            self.providerConnectionValues.kimiBaseURL = newValue
+            self.userDefaults.set(newValue, forKey: "kimiBaseURL")
         }
     }
 }

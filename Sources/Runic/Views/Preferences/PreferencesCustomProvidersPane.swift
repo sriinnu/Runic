@@ -9,9 +9,23 @@ struct CustomProvidersPane: View {
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
     @State private var providers: [CustomProviderConfig] = []
-    @State private var showingAddProvider = false
-    @State private var editingProvider: CustomProviderConfig?
+    @State private var editorSheet: EditorSheet?
     @State private var confirmDelete: CustomProviderConfig?
+    @State private var actionError: String?
+
+    /// Single sheet state so add/edit never stack two `.sheet` modifiers on one view
+    /// (a known SwiftUI bug where the second silently wins).
+    private enum EditorSheet: Identifiable {
+        case add
+        case edit(CustomProviderConfig)
+
+        var id: String {
+            switch self {
+            case .add: "add"
+            case let .edit(provider): "edit-\(provider.id)"
+            }
+        }
+    }
 
     var body: some View {
         PreferencesListPane {
@@ -24,7 +38,7 @@ struct CustomProvidersPane: View {
                     Spacer()
 
                     Button {
-                        self.showingAddProvider = true
+                        self.editorSheet = .add
                     } label: {
                         Label("Add Provider", systemImage: "plus")
                     }
@@ -57,7 +71,7 @@ struct CustomProvidersPane: View {
                             provider: provider,
                             snapshot: self.store.customProviderSnapshots[provider.id],
                             onToggle: { enabled in self.toggleProvider(provider, enabled: enabled) },
-                            onEdit: { self.editingProvider = provider },
+                            onEdit: { self.editorSheet = .edit(provider) },
                             onDelete: { self.confirmDelete = provider })
                             .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
 
@@ -73,23 +87,31 @@ struct CustomProvidersPane: View {
         .onAppear {
             self.loadProviders()
         }
-        .sheet(isPresented: self.$showingAddProvider) {
-            CustomProviderEditorView(
-                provider: nil,
-                onSave: { provider in
-                    self.addProvider(provider)
-                    self.showingAddProvider = false
-                },
-                onCancel: { self.showingAddProvider = false })
+        .sheet(item: self.$editorSheet) { sheet in
+            switch sheet {
+            case .add:
+                CustomProviderEditorView(
+                    provider: nil,
+                    onSave: { provider in
+                        if self.addProvider(provider) { self.editorSheet = nil }
+                    },
+                    onCancel: { self.editorSheet = nil })
+            case let .edit(provider):
+                CustomProviderEditorView(
+                    provider: provider,
+                    onSave: { updated in
+                        if self.updateProvider(updated) { self.editorSheet = nil }
+                    },
+                    onCancel: { self.editorSheet = nil })
+            }
         }
-        .sheet(item: self.$editingProvider) { provider in
-            CustomProviderEditorView(
-                provider: provider,
-                onSave: { updated in
-                    self.updateProvider(updated)
-                    self.editingProvider = nil
-                },
-                onCancel: { self.editingProvider = nil })
+        .alert("Couldn't save provider", isPresented: Binding(
+            get: { self.actionError != nil },
+            set: { if !$0 { self.actionError = nil } }))
+        {
+            Button("OK", role: .cancel) { self.actionError = nil }
+        } message: {
+            if let actionError { Text(actionError) }
         }
         .alert("Delete Provider", isPresented: Binding(
             get: { self.confirmDelete != nil },
@@ -115,23 +137,33 @@ struct CustomProvidersPane: View {
         self.providers = CustomProviderStore.getAllProviders()
     }
 
-    private func addProvider(_ provider: CustomProviderConfig) {
+    /// Returns true on success so the editor sheet only dismisses when the save
+    /// actually persisted — otherwise the user's input is kept for correction, and
+    /// dismissing + presenting the error alert in one update cycle (a SwiftUI race
+    /// that drops the alert) is avoided.
+    @discardableResult
+    private func addProvider(_ provider: CustomProviderConfig) -> Bool {
         do {
             try CustomProviderStore.addProvider(provider)
             self.loadProviders()
             Task { await self.store.refreshCustomProvider(id: provider.id) }
+            return true
         } catch {
-            print("Failed to add provider: \(error)")
+            self.actionError = error.localizedDescription
+            return false
         }
     }
 
-    private func updateProvider(_ provider: CustomProviderConfig) {
+    @discardableResult
+    private func updateProvider(_ provider: CustomProviderConfig) -> Bool {
         do {
             try CustomProviderStore.updateProvider(provider)
             self.loadProviders()
             Task { await self.store.refreshCustomProvider(id: provider.id) }
+            return true
         } catch {
-            print("Failed to update provider: \(error)")
+            self.actionError = error.localizedDescription
+            return false
         }
     }
 
@@ -142,7 +174,7 @@ struct CustomProvidersPane: View {
             self.loadProviders()
             self.store.clearCustomProviderSnapshot(id: provider.id)
         } catch {
-            print("Failed to delete provider: \(error)")
+            self.actionError = error.localizedDescription
         }
     }
 

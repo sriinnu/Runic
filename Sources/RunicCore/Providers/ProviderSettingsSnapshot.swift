@@ -67,6 +67,15 @@ public struct ProviderSettingsSnapshot: Sendable {
         }
     }
 
+    public struct KimiProviderSettings: Sendable {
+        /// Base URL override (for example `https://api.moonshot.cn`). Nil uses the default host.
+        public let baseURL: String?
+
+        public init(baseURL: String?) {
+            self.baseURL = baseURL
+        }
+    }
+
     public let debugMenuEnabled: Bool
     public let codex: CodexProviderSettings?
     public let claude: ClaudeProviderSettings?
@@ -75,6 +84,7 @@ public struct ProviderSettingsSnapshot: Sendable {
     public let azure: AzureProviderSettings?
     public let bedrock: BedrockProviderSettings?
     public let vertexai: VertexAIProviderSettings?
+    public let kimi: KimiProviderSettings?
 
     public init(
         debugMenuEnabled: Bool,
@@ -84,7 +94,8 @@ public struct ProviderSettingsSnapshot: Sendable {
         copilot: CopilotProviderSettings?,
         azure: AzureProviderSettings?,
         bedrock: BedrockProviderSettings?,
-        vertexai: VertexAIProviderSettings? = nil)
+        vertexai: VertexAIProviderSettings? = nil,
+        kimi: KimiProviderSettings? = nil)
     {
         self.debugMenuEnabled = debugMenuEnabled
         self.codex = codex
@@ -94,5 +105,6 @@ public struct ProviderSettingsSnapshot: Sendable {
         self.azure = azure
         self.bedrock = bedrock
         self.vertexai = vertexai
+        self.kimi = kimi
     }
 }

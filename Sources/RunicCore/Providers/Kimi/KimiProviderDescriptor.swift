@@ -10,12 +10,12 @@ public enum KimiProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .kimi,
                 displayName: "Kimi",
-                sessionLabel: "Models",
+                sessionLabel: "Balance",
                 weeklyLabel: "",
                 opusLabel: nil,
                 supportsOpus: false,
                 supportsCredits: false,
-                creditsHint: "Shows model availability from Kimi API.",
+                creditsHint: "Shows account balance from the Moonshot (Kimi) API.",
                 toggleTitle: "Show Kimi usage",
                 cliName: "kimi",
                 defaultEnabled: false,
@@ -24,7 +24,7 @@ public enum KimiProviderDescriptor {
                 dashboardURL: "https://platform.moonshot.ai/console",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
-                    supportsModelBreakdown: true,
+                    supportsModelBreakdown: false,
                     supportsTokenMetrics: false,
                     supportsProjectAttribution: false)),
             branding: ProviderBranding(
@@ -56,7 +56,8 @@ struct KimiAPIFetchStrategy: ProviderFetchStrategy {
         guard let tokenRes = Self.resolveTokenResolution(environment: context.env) else {
             throw KimiSettingsError.missingToken
         }
-        let usage = try await KimiUsageFetcher.fetchModels(apiKey: tokenRes.token)
+        let baseURL = Self.resolveBaseURL(context: context)
+        let usage = try await KimiUsageFetcher.fetchBalance(apiKey: tokenRes.token, baseURL: baseURL)
         return self.makeResult(
             usage: usage.toUsageSnapshot(),
             sourceLabel: tokenRes.source.rawValue)
@@ -68,6 +69,18 @@ struct KimiAPIFetchStrategy: ProviderFetchStrategy {
 
     private static func resolveTokenResolution(environment: [String: String]) -> ProviderTokenResolution? {
         ProviderTokenResolver.kimiResolution(environment: environment)
+    }
+
+    /// Resolve the API base URL: explicit setting first, then environment overrides, else default.
+    private static func resolveBaseURL(context: ProviderFetchContext) -> String? {
+        func cleaned(_ value: String?) -> String? {
+            guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !trimmed.isEmpty else { return nil }
+            return trimmed
+        }
+        return cleaned(context.settings?.kimi?.baseURL)
+            ?? cleaned(context.env["MOONSHOT_BASE_URL"])
+            ?? cleaned(context.env["KIMI_BASE_URL"])
     }
 }
 
