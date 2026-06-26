@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.1 — 2026-06-26
+- Kimi: you can now point the provider at the right region. Subscriptions bought on the China platform (api.moonshot.cn), or routed through a reseller/proxy, no longer fail to load — set an optional "API base URL" in Preferences → Providers → Kimi (defaults to api.moonshot.ai, also honors MOONSHOT_BASE_URL / KIMI_BASE_URL). Kimi also now shows your real account balance from the Moonshot balance API instead of only listing available models.
+- Custom providers: adding or editing a provider now reports failures inline in the editor instead of silently doing nothing, keeps your input when a save fails, and no longer loses the second of two stacked dialogs — fixing a case where the add/edit sheet could appear to do nothing.
+- Provider icons: corrected four logos. Kimi's mark was invisible on light backgrounds and now renders in its brand color; Gemini uses its current "spark" mark; Auggie shows the real Augment logo; and Factory shows Factory.ai's emblem instead of an unrelated placeholder.
+
 ## 2.4.0 — 2026-06-21
 - Codex: fix the timeline silently dropping to zero during long, continuous sessions. Codex now resumes a single rollout file and appends to it for days while keeping it filed under its start date; the scanner only looked in the last few date-named folders, so once a live session aged past that window all current usage went unread. Usage is now found by when a file was last written, wherever it lives — so an active goal-loop session is always captured.
 - Codex: add cost rates for the gpt-5.3, gpt-5.4 (incl. mini), and gpt-5.5 model families so cost and per-model breakdowns stop reading as $0 for recent usage.
