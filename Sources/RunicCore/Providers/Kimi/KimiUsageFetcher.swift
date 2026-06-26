@@ -1,19 +1,63 @@
 import Foundation
 
-struct KimiModelsResponse: Decodable {
-    let data: [Model]?
+/// Response from Moonshot's `/v1/users/me/balance` endpoint.
+///
+/// Shape: `{ "code": 0, "data": { "available_balance": …, "voucher_balance": …,
+/// "cash_balance": … }, "scode": "0x0", "status": true }`.
+struct KimiBalanceResponse: Decodable {
+    let data: Balance?
+    let status: Bool?
 
-    struct Model: Decodable {
-        let id: String?
+    struct Balance: Decodable {
+        let availableBalance: Double?
+        let voucherBalance: Double?
+        let cashBalance: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case availableBalance = "available_balance"
+            case voucherBalance = "voucher_balance"
+            case cashBalance = "cash_balance"
+        }
     }
 }
 
 enum KimiUsageFetcher {
-    static let apiURL = URL(string: "https://api.moonshot.ai/v1/models")!
+    /// Default international host. Overridable per the user's subscription region.
+    static let defaultBaseURL = "https://api.moonshot.ai"
     private static let requestTimeout: TimeInterval = 20
 
-    static func fetchModels(apiKey: String) async throws -> KimiModelsResponse {
-        var request = URLRequest(url: apiURL)
+    /// Build the balance URL from an optional user-supplied base URL.
+    ///
+    /// Accepts hosts with or without a scheme, a trailing slash, or a trailing
+    /// `/v1` (for example `https://api.moonshot.cn`, `api.moonshot.cn/v1/`).
+    static func balanceURL(baseURL: String?) -> URL? {
+        var base = (baseURL?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
+            $0.isEmpty ? nil : $0
+        } ?? Self.defaultBaseURL
+
+        if !base.contains("://") {
+            base = "https://\(base)"
+        }
+        while base.hasSuffix("/") {
+            base.removeLast()
+        }
+        if base.lowercased().hasSuffix("/v1") {
+            base.removeLast(3)
+        }
+        // Reject a base that collapsed to just a scheme (e.g. degenerate "/v1/"
+        // input) so the caller gets a clean error instead of an empty-host URL.
+        guard let url = URL(string: "\(base)/v1/users/me/balance"), url.host?.isEmpty == false else {
+            return nil
+        }
+        return url
+    }
+
+    static func fetchBalance(apiKey: String, baseURL: String?) async throws -> KimiBalanceResponse {
+        guard let url = Self.balanceURL(baseURL: baseURL) else {
+            throw KimiAPIError.invalidResponse
+        }
+
+        var request = URLRequest(url: url)
         request.timeoutInterval = Self.requestTimeout
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -33,29 +77,50 @@ enum KimiUsageFetcher {
         }
 
         let decoder = JSONDecoder()
-        return try decoder.decode(KimiModelsResponse.self, from: data)
+        return try decoder.decode(KimiBalanceResponse.self, from: data)
     }
 }
 
-extension KimiModelsResponse {
+extension KimiBalanceResponse {
     func toUsageSnapshot() -> UsageSnapshot {
-        let models = (self.data ?? []).compactMap(\.id)
-        var summary = "Models available: \(models.count)"
-        let preview = models.prefix(3).joined(separator: ", ")
-        if !preview.isEmpty {
-            summary += " (\(preview))"
+        let available = self.data?.availableBalance
+        let summary: String
+        if let available {
+            summary = "Balance: \(Self.formatAmount(available))"
+        } else {
+            summary = "Balance unavailable"
         }
+
+        var parts: [String] = []
+        if let voucher = self.data?.voucherBalance, voucher > 0 {
+            parts.append("Voucher \(Self.formatAmount(voucher))")
+        }
+        if let cash = self.data?.cashBalance, cash > 0 {
+            parts.append("Cash \(Self.formatAmount(cash))")
+        }
+        let detail = parts.isEmpty ? summary : "\(summary) (\(parts.joined(separator: ", ")))"
 
         return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: summary),
+                resetDescription: detail),
             secondary: nil,
             tertiary: nil,
             updatedAt: Date(),
             identity: nil)
+    }
+
+    /// Render the raw balance number as-is. The Moonshot balance API returns no
+    /// currency code (it differs by platform — CNY on .cn, USD on .ai), so we never
+    /// invent a symbol; we show exactly what the API returns.
+    private static func formatAmount(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 }
 

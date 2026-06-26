@@ -55,7 +55,9 @@ extension UsageStore {
                 modelID: self.providerSettingValue(self.settings.bedrockModelID)),
             vertexai: ProviderSettingsSnapshot.VertexAIProviderSettings(
                 project: self.providerSettingValue(self.settings.vertexaiProject),
-                location: self.providerSettingValue(self.settings.vertexaiLocation)))
+                location: self.providerSettingValue(self.settings.vertexaiLocation)),
+            kimi: ProviderSettingsSnapshot.KimiProviderSettings(
+                baseURL: self.providerSettingValue(self.settings.kimiBaseURL)))
     }
 
     private func providerSettingValue(_ value: String) -> String? {

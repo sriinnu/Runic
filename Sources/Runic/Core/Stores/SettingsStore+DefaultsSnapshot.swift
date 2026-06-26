@@ -51,6 +51,7 @@ struct SettingsStoreDefaultsSnapshot {
     let bedrockModelID: String
     let vertexaiProject: String
     let vertexaiLocation: String
+    let kimiBaseURL: String
     let selectedMenuProviderRaw: String?
     let providerDetectionCompleted: Bool
 
@@ -176,6 +177,7 @@ struct SettingsStoreDefaultsSnapshot {
             bedrockModelID: userDefaults.string(forKey: "bedrockModelID") ?? "",
             vertexaiProject: userDefaults.string(forKey: "vertexaiProject") ?? "",
             vertexaiLocation: userDefaults.string(forKey: "vertexaiLocation") ?? "",
+            kimiBaseURL: userDefaults.string(forKey: "kimiBaseURL") ?? "",
             selectedMenuProviderRaw: selectedMenuProviderRaw,
             providerDetectionCompleted: Self.bool(
                 "providerDetectionCompleted",

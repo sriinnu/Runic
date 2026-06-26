@@ -87,6 +87,7 @@ extension SettingsStore {
         _ = self.mistralAPIToken
         _ = self.perplexityAPIToken
         _ = self.kimiAPIToken
+        _ = self.kimiBaseURL
         _ = self.auggieAPIToken
         _ = self.togetherAPIToken
         _ = self.cohereAPIToken

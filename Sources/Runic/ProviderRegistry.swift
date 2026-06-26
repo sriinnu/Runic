@@ -54,6 +54,8 @@ struct ProviderRegistry {
                             in: .whitespacesAndNewlines)
                         let cleanedVertexAILocation = settings.vertexaiLocation.trimmingCharacters(
                             in: .whitespacesAndNewlines)
+                        let cleanedKimiBaseURL = settings.kimiBaseURL.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
                         return ProviderSettingsSnapshot(
                             debugMenuEnabled: settings.debugMenuEnabled,
                             codex: ProviderSettingsSnapshot.CodexProviderSettings(
@@ -75,7 +77,9 @@ struct ProviderRegistry {
                                 modelID: cleanedBedrockModel.isEmpty ? nil : cleanedBedrockModel),
                             vertexai: ProviderSettingsSnapshot.VertexAIProviderSettings(
                                 project: cleanedVertexAIProject.isEmpty ? nil : cleanedVertexAIProject,
-                                location: cleanedVertexAILocation.isEmpty ? nil : cleanedVertexAILocation))
+                                location: cleanedVertexAILocation.isEmpty ? nil : cleanedVertexAILocation),
+                            kimi: ProviderSettingsSnapshot.KimiProviderSettings(
+                                baseURL: cleanedKimiBaseURL.isEmpty ? nil : cleanedKimiBaseURL))
                     }
                     let context = ProviderFetchContext(
                         runtime: .app,
