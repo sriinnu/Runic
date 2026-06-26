@@ -93,14 +93,18 @@ struct CustomProvidersPane: View {
                 CustomProviderEditorView(
                     provider: nil,
                     onSave: { provider in
-                        if self.addProvider(provider) { self.editorSheet = nil }
+                        let error = self.addProvider(provider)
+                        if error == nil { self.editorSheet = nil }
+                        return error
                     },
                     onCancel: { self.editorSheet = nil })
             case let .edit(provider):
                 CustomProviderEditorView(
                     provider: provider,
                     onSave: { updated in
-                        if self.updateProvider(updated) { self.editorSheet = nil }
+                        let error = self.updateProvider(updated)
+                        if error == nil { self.editorSheet = nil }
+                        return error
                     },
                     onCancel: { self.editorSheet = nil })
             }
@@ -137,33 +141,30 @@ struct CustomProvidersPane: View {
         self.providers = CustomProviderStore.getAllProviders()
     }
 
-    /// Returns true on success so the editor sheet only dismisses when the save
-    /// actually persisted — otherwise the user's input is kept for correction, and
-    /// dismissing + presenting the error alert in one update cycle (a SwiftUI race
-    /// that drops the alert) is avoided.
-    @discardableResult
-    private func addProvider(_ provider: CustomProviderConfig) -> Bool {
+    /// Returns nil on success, or an error message to surface. Callers dismiss the
+    /// editor sheet only on success (keeping the user's input on failure). Add/edit
+    /// errors are shown INLINE in the editor — which sits in front of the pane —
+    /// because an alert attached to the pane can be occluded by the open sheet on
+    /// macOS and silently never appear.
+    private func addProvider(_ provider: CustomProviderConfig) -> String? {
         do {
             try CustomProviderStore.addProvider(provider)
             self.loadProviders()
             Task { await self.store.refreshCustomProvider(id: provider.id) }
-            return true
+            return nil
         } catch {
-            self.actionError = error.localizedDescription
-            return false
+            return error.localizedDescription
         }
     }
 
-    @discardableResult
-    private func updateProvider(_ provider: CustomProviderConfig) -> Bool {
+    private func updateProvider(_ provider: CustomProviderConfig) -> String? {
         do {
             try CustomProviderStore.updateProvider(provider)
             self.loadProviders()
             Task { await self.store.refreshCustomProvider(id: provider.id) }
-            return true
+            return nil
         } catch {
-            self.actionError = error.localizedDescription
-            return false
+            return error.localizedDescription
         }
     }
 
@@ -181,7 +182,8 @@ struct CustomProvidersPane: View {
     private func toggleProvider(_ provider: CustomProviderConfig, enabled: Bool) {
         var updated = provider
         updated.enabled = enabled
-        self.updateProvider(updated)
+        // No sheet is open here, so the pane alert surfaces correctly.
+        if let error = self.updateProvider(updated) { self.actionError = error }
     }
 }
 
@@ -309,7 +311,8 @@ extension NSColor {
 private struct CustomProviderEditorView: View {
     @Environment(\.runicFonts) private var fonts
     let provider: CustomProviderConfig?
-    let onSave: (CustomProviderConfig) -> Void
+    /// Returns nil on success, or an error message shown inline in this editor.
+    let onSave: (CustomProviderConfig) -> String?
     let onCancel: () -> Void
 
     @State private var name: String = ""
@@ -367,7 +370,7 @@ private struct CustomProviderEditorView: View {
         let account = self.provider?.auth.tokenKeychain ?? "custom-\(id)-api-token"
         do {
             try self.tokenStore.storeToken(self.apiToken, account: account)
-            self.onSave(CustomProviderConfig(
+            let error = self.onSave(CustomProviderConfig(
                 id: id,
                 name: self.name.trimmingCharacters(in: .whitespacesAndNewlines),
                 icon: self.icon.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -379,6 +382,7 @@ private struct CustomProviderEditorView: View {
                 endpoints: EndpointConfig(usage: UsageEndpoint(
                     url: self.usageEndpointURL.trimmingCharacters(in: .whitespacesAndNewlines),
                     mapping: ResponseMapping()))))
+            self.saveError = error
         } catch {
             self.saveError = "Could not save API token: \(error.localizedDescription)"
         }
