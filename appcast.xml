@@ -3,20 +3,34 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.4.1</title>
+            <pubDate>Sat, 27 Jun 2026 03:05:32 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>71</sparkle:version>
+            <sparkle:shortVersionString>2.4.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.4.1</h2>
+<ul>
+<li>Kimi: you can now point the provider at the right region. Subscriptions bought on the China platform (api.moonshot.cn), or routed through a reseller/proxy, no longer fail to load — set an optional "API base URL" in Preferences → Providers → Kimi (defaults to api.moonshot.ai, also honors MOONSHOT_BASE_URL / KIMI_BASE_URL). Kimi also now shows your real account balance from the Moonshot balance API instead of only listing available models.</li>
+<li>Custom providers: adding or editing a provider now reports failures inline in the editor instead of silently doing nothing, keeps your input when a save fails, and no longer loses the second of two stacked dialogs — fixing a case where the add/edit sheet could appear to do nothing.</li>
+<li>Provider icons: corrected four logos. Kimi's mark was invisible on light backgrounds and now renders in its brand color; Gemini uses its current "spark" mark; Auggie shows the real Augment logo; and Factory shows Factory.ai's emblem instead of an unrelated placeholder.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic-2.4.1.zip" length="33099736" type="application/octet-stream" sparkle:edSignature="yMZRWGMrZLVydmIcb2CS6U5gJPIsQvrIxElgfvC44cp3aymXcdEXp4ilUT/Z02d/j6pIgxCIyv9PkZwRLGFmDg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic71-69.delta" sparkle:deltaFrom="69" length="3627598" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LnVT/UJbmvm8tf5GWdoFNk+yuST4pYNCUKfD1Tv4/YcjJPl6gHbalxMRIgQU3SqZaaBFwGoDnZwKC6SRHBQABg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic71-67.delta" sparkle:deltaFrom="67" length="12643870" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Qd7Dk5ISQpexWoiPYhHg2TZXtLYsnu7u/E9qB9UpsUpCq195AeOXFW7FPKXNd2MCEFe7XD/sGfzzlVXrON+sDg=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.4.0</title>
             <pubDate>Sun, 21 Jun 2026 23:14:27 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>69</sparkle:version>
             <sparkle:shortVersionString>2.4.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.4.0</h2>
-<ul>
-<li>Codex: fix the timeline silently dropping to zero during long, continuous sessions. Codex now resumes a single rollout file and appends to it for days while keeping it filed under its start date; the scanner only looked in the last few date-named folders, so once a live session aged past that window all current usage went unread. Usage is now found by when a file was last written, wherever it lives — so an active goal-loop session is always captured.</li>
-<li>Codex: add cost rates for the gpt-5.3, gpt-5.4 (incl. mini), and gpt-5.5 model families so cost and per-model breakdowns stop reading as $0 for recent usage.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.0/Runic-2.4.0.zip" length="33061806" type="application/octet-stream" sparkle:edSignature="g4phYm/aLxl3LIfgZDD5+BmDAgbxwTF8pmLNalOSSyjMwc0M6PT5UYnlnKmVgCjcIC2A1xlSUtvTtwZv2nxGDQ=="/>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic-2.4.0.zip" length="33061806" type="application/octet-stream" sparkle:edSignature="g4phYm/aLxl3LIfgZDD5+BmDAgbxwTF8pmLNalOSSyjMwc0M6PT5UYnlnKmVgCjcIC2A1xlSUtvTtwZv2nxGDQ=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.0/Runic69-67.delta" sparkle:deltaFrom="67" length="12548898" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="OTBsaJsYr3FHHAWWuleU4grTQ8V7di8NwlAnSUtnxmG4ZrqVYrYpNF7EEJUoBZbZYx77FbnxfstIKfv11lzEBQ=="/>
             </sparkle:deltas>
@@ -28,25 +42,7 @@
             <sparkle:version>67</sparkle:version>
             <sparkle:shortVersionString>2.2.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.0/Runic-2.2.6.zip" length="33170234" type="application/octet-stream" sparkle:edSignature="rEK3wnyI2m8UQq9flT5NQ6ecfvaIZvErFm4tXfnYzQOwI1Eyw9CpQ3PjI3b83USyJZj0AZbaQaZouB76/hOVCA=="/>
-        </item>
-        <item>
-            <title>2.2.5</title>
-            <pubDate>Wed, 03 Jun 2026 22:41:34 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>65</sparkle:version>
-            <sparkle:shortVersionString>2.2.5</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.2.5</h2>
-<ul>
-<li>Usage: stop hiding high-usage days — days with very large token totals (cache reads can run to hundreds of millions per day) were wrongly quarantined and shown as zero in usage, cost, and timeline panels; real history now renders in full.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.5/Runic-2.2.5.zip" length="33154146" type="application/octet-stream" sparkle:edSignature="r8cCbaRVWVHjQpWxAsjj+K6b3z+RY2tssTY69k8EBBxm8nuc33RumFxowRRJp57tuoU1NniUXpQ7jHC2U4MJAw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.2.5/Runic65-64.delta" sparkle:deltaFrom="64" length="2037274" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="v8xs+G+IT0ebLQXlciJXFZ38/tHXrv6yjFmfK57HalTvkH6Xe56npG6zOy52pVd2qWJbJHOw4aKewaJoqlLiDQ=="/>
-            </sparkle:deltas>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic-2.2.6.zip" length="33170234" type="application/octet-stream" sparkle:edSignature="rEK3wnyI2m8UQq9flT5NQ6ecfvaIZvErFm4tXfnYzQOwI1Eyw9CpQ3PjI3b83USyJZj0AZbaQaZouB76/hOVCA=="/>
         </item>
         <item>
             <title>0.14.0</title>
