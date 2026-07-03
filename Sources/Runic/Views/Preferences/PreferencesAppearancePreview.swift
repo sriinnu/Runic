@@ -24,13 +24,14 @@ struct ThemeChoiceButton: View {
                     Text(palette.tagline)
                         .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.secondaryText)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, RunicSpacing.xs)
             .padding(.vertical, RunicSpacing.xs)
-            .frame(minHeight: 50, alignment: .leading)
+            .frame(minHeight: 56, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                     .fill(self.isSelected ? palette.accent.opacity(0.14) : Color.primary.opacity(0.035)))
@@ -157,9 +158,19 @@ struct AppearancePreviewCard: View {
                     style: .continuous)
                     .stroke(palette.menuSeparatorColor, lineWidth: 1))
 
-            HStack(spacing: RunicSpacing.xs) {
+            HStack(alignment: .center, spacing: RunicSpacing.xs) {
                 self.metricPreview(title: "Session", value: "42%", color: palette.accent, fill: 0.42)
                 self.metricPreview(title: "Weekly", value: "71%", color: palette.highlight, fill: 0.71)
+                // A hint of character in the previewed theme's own colors —
+                // static art (no env/animation) since this previews a palette
+                // that may not be the active theme.
+                RunicDoodleArt(
+                    mood: .zen,
+                    bodyColor: palette.accent,
+                    eyeColor: palette.primaryText,
+                    detailColor: palette.secondaryText.opacity(0.55))
+                    .frame(width: 36, height: 22)
+                    .accessibilityHidden(true)
             }
 
             VStack(spacing: 0) {

@@ -153,8 +153,12 @@ struct RunicThemePalette {
         self.isTerminalHUD ? self.accent.opacity(0.10) : self.primaryText.opacity(self.isCustom ? 0.12 : 0.08)
     }
 
+    /// Emphasis color for a chart's peak bar/annotation. Every theme keeps
+    /// its `highlight` here — series colors lead with `accent`, so the
+    /// highlight pole reads as "peak" in all bundled palettes. (Was a
+    /// degenerate ternary that returned `highlight` in both branches.)
     var chartPeakColor: Color {
-        self.isTerminalHUD ? self.highlight : self.highlight
+        self.highlight
     }
 
     var menuHoverFill: Color {

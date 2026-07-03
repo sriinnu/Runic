@@ -24,7 +24,7 @@
   "motion":  { "preset": "standard" },
   "density": { "preset": "normal" },
   "style": {
-    "typography": { "scale": 1.02, "tracking": 0.0, "contrast": "strong" },
+    "typography": { "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
     "chrome": { "borderStyle": "hairline", "borderWeight": 0.75, "borderOpacity": 0.48, "cornerStyle": "standard", "panelDepth": "medium" },
     "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.18, "materialIntensity": 0.38 },
     "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "glow" }

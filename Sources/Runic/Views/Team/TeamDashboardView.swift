@@ -98,11 +98,11 @@ struct TeamDashboardView: View {
             let data = self.memberUsageData
 
             if data.isEmpty {
-                Text("No usage data available")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, RunicSpacing.xl)
+                RunicEmptyStateView(
+                    mood: .resting,
+                    title: "No usage data available",
+                    hint: "Member usage appears here once the team syncs.",
+                    layout: .prominent)
             } else {
                 Chart(data) { item in
                     BarMark(

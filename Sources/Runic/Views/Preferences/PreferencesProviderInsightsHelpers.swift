@@ -244,6 +244,11 @@ extension ProviderInsightsComposer {
 
     static func usageValue(_ window: RateWindow?) -> String? {
         guard let window else { return nil }
+        // Windows without a real limit carry a placeholder percent; surface
+        // their summary text instead of a fake "0% used".
+        guard window.gaugePercent(showUsed: true) != nil else {
+            return self.trimmed(window.resetDescription) ?? self.trimmed(window.label)
+        }
         var parts = ["\(Int(window.usedPercent.rounded()))% used"]
         if let minutes = window.windowMinutes, minutes > 0 {
             parts.append("\(minutes)m window")

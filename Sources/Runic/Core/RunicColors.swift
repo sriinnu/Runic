@@ -9,23 +9,19 @@ enum RunicColors {
     static let error = Color(nsColor: .systemRed)
     static let info = Color(nsColor: .systemBlue)
 
-    // MARK: - Chart Palette (6 accessible colors)
+    // MARK: - Identity Palette (5 stable hues)
 
-    /// Ordered palette for chart series. Colors chosen for distinguishability in
-    /// both light and dark mode and for common color-vision deficiencies.
-    static let chartPalette: [Color] = [
+    /// Stable identity hues for hash-keyed elements (team avatars). NOT for
+    /// chart series — charts read `RunicThemePalette.chartColor(at:)` so
+    /// series colors follow the active theme. These stay literal on purpose:
+    /// an avatar keeps its color across theme switches.
+    static let identityPalette: [Color] = [
         Color(red: 0.26, green: 0.55, blue: 0.96), // blue
-        Color(red: 0.94, green: 0.53, blue: 0.18), // orange
         Color(red: 0.46, green: 0.75, blue: 0.36), // green
+        Color(red: 0.94, green: 0.53, blue: 0.18), // orange
         Color(red: 0.80, green: 0.45, blue: 0.92), // purple
         Color(red: 0.26, green: 0.78, blue: 0.86), // teal
-        Color(red: 0.94, green: 0.74, blue: 0.26), // yellow
     ]
-
-    /// Returns a chart color for the given index, wrapping around if needed.
-    static func chartColor(at index: Int) -> Color {
-        self.chartPalette[index % self.chartPalette.count]
-    }
 
     // MARK: - Model Family Colors
 

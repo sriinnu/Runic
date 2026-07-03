@@ -197,7 +197,7 @@ struct GeneralPane: View {
 
                         LazyVGrid(
                             columns: [
-                                GridItem(.adaptive(minimum: 142, maximum: 176), spacing: RunicSpacing.xs),
+                                GridItem(.adaptive(minimum: 122, maximum: 176), spacing: RunicSpacing.xs),
                             ],
                             alignment: .leading,
                             spacing: RunicSpacing.xs)
@@ -375,7 +375,9 @@ struct GeneralPane: View {
                 .foregroundStyle(self.preferenceHelpColor)
         }
         if let snapshot = self.store.tokenSnapshot(for: provider) {
-            let updated = UsageFormatter.updatedString(from: snapshot.updatedAt)
+            let updated = UsageFormatter.updatedString(
+                from: snapshot.updatedAt,
+                style: self.settings.dateFormat.formatterStyle)
             let cost = snapshot.last30DaysCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
             return Text("\(name): \(updated) · 30d \(cost)")
                 .font(self.preferenceHelpFont)

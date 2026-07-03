@@ -151,13 +151,7 @@ struct TeamMember: Identifiable, Hashable, Codable {
     }
 
     var avatarColor: Color {
-        let colors: [Color] = [
-            Color(red: 0.26, green: 0.55, blue: 0.96),
-            Color(red: 0.46, green: 0.75, blue: 0.36),
-            Color(red: 0.94, green: 0.53, blue: 0.18),
-            Color(red: 0.80, green: 0.45, blue: 0.92),
-            Color(red: 0.26, green: 0.78, blue: 0.86),
-        ]
+        let colors = RunicColors.identityPalette
         let index = abs(self.id.hashValue) % colors.count
         return colors[index]
     }
