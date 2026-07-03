@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.5.0 — 2026-07-03
+- Illustrations: added Runi, a vector mascot drawn entirely in SwiftUI (no bitmap art) that now appears across every empty state instead of bare "no data" text, with four moods and full Reduce Motion support.
+- Usage: fixed a critical bug where reopening the app after it had been closed overnight could seal today's still-in-progress data into the permanent history archive during gap catch-up — history now stays correct across app restarts. Also fixed a Codex token-accounting bug that double-counted cached input tokens.
+- Usage: session/weekly gauges no longer fake a 0% or 100% progress bar for providers or windows that don't actually have a known quota — they now show nothing (or a dash) instead of a misleading number, and Overview/CLI averages no longer get dragged down by those placeholder windows.
+- Usage: fixed the credits bar rendering on providers where it mixed currency and 1K-token scales — it's now Codex-only, where the scale is correct.
+- Menu: "Ping now" from the Overview tab now does a real full refresh instead of silently re-pinging whichever provider you last viewed. The Overview chart's legend can no longer drift out of sync with the chart's own color mapping.
+- Menu: the Full/Abbreviated number format and Relative/Absolute date format preferences now apply consistently to insights panels, which previously ignored them and showed the other style.
+- Preferences: fixed theme-card taglines truncating mid-word in the Terminal theme, the 7-card theme grid stranding the selected card alone on its own row, and provider status chips having inconsistent pill styling. Fixed currency amounts rendering without thousands separators and with a stray space after the $ sign, and a near-zero cost-per-1K rate rendering as a misleading "$0.0000".
+- Preferences: normalized theme typography sizing — every theme was quietly running larger than its own declared base sizes for no stated reason, and Terminal now compensates for its locked Commit Mono face reading visually bigger than San Francisco at the same point size.
+- Icons: menubar icon rebuilt as a single-path lemniscate SVG; app icon gradient now runs to the brand teal.
+- Performance: menu submenus now build only when opened instead of eagerly on every refresh, ledger scans resume from a byte offset instead of rescanning provider logs from the start, and history archiving only touches days that actually changed.
+- Build: local ad-hoc dev builds now sign with a stable local identity when available, instead of true ad-hoc signing — which was forcing a repeat Keychain password prompt on every rebuild since ad-hoc's designated requirement is pinned to the literal binary hash.
+
 ## 2.4.1 — 2026-06-26
 - Kimi: you can now point the provider at the right region. Subscriptions bought on the China platform (api.moonshot.cn), or routed through a reseller/proxy, no longer fail to load — set an optional "API base URL" in Preferences → Providers → Kimi (defaults to api.moonshot.ai, also honors MOONSHOT_BASE_URL / KIMI_BASE_URL). Kimi also now shows your real account balance from the Moonshot balance API instead of only listing available models.
 - Custom providers: adding or editing a provider now reports failures inline in the editor instead of silently doing nothing, keeps your input when a save fails, and no longer loses the second of two stacked dialogs — fixing a case where the add/edit sheet could appear to do nothing.
