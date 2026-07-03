@@ -327,7 +327,24 @@ function find_codesign_identity() {
 }
 
 if [[ "$SIGNING_MODE" == "adhoc" ]]; then
-  CODESIGN_ID="-"
+  # Prefer a stable local self-signed identity over true ad-hoc ("-") signing.
+  # True ad-hoc signing has no certificate, so its designated requirement pins
+  # to the literal binary hash (cdhash) — which changes on every rebuild since
+  # Info.plist embeds a fresh build timestamp/git commit each time. That makes
+  # macOS treat each dev build as an unrecognized app for default Keychain
+  # ACLs, forcing a repeat password prompt to access previously-stored items.
+  # Signing with a stable local cert keeps the designated requirement pinned
+  # to the certificate instead, so Keychain access stays trusted across
+  # rebuilds. Falls back to true ad-hoc if the dev cert isn't installed.
+  # Self-signed dev certs never pass the "codesigning" trust-policy check
+  # (no trusted chain to a root), so find_codesign_identity (which filters
+  # on that policy) won't see it — look it up by presence instead. codesign
+  # itself resolves "-s <name>" by preferred-name match, not policy validity.
+  if security find-certificate -c "Runic Dev" >/dev/null 2>&1; then
+    CODESIGN_ID="Runic Dev"
+  else
+    CODESIGN_ID="-"
+  fi
   CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
 elif [[ "$ALLOW_LLDB" == "1" ]]; then
   CODESIGN_ID="-"
