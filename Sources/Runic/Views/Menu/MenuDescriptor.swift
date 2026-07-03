@@ -5,6 +5,18 @@ import RunicCore
 struct MenuDescriptor {
     struct Section {
         var entries: [Entry]
+        /// Text-only informational lines that are NOT rendered by the SwiftUI usage
+        /// card (e.g. Cursor "On-Demand" spend, codex "Last spend:"). The NSMenu
+        /// populator renders these as plain rows; regular text-only sections stay
+        /// filtered out because the card already shows their content.
+        var isSupplementalInfo = false
+
+        var hasActions: Bool {
+            self.entries.contains { entry in
+                if case .action = entry { return true }
+                return false
+            }
+        }
     }
 
     enum Entry {
@@ -55,17 +67,17 @@ struct MenuDescriptor {
 
         switch provider {
         case .codex?:
-            sections.append(Self.usageSection(for: .codex, store: store, settings: settings))
+            sections.append(contentsOf: Self.usageSections(for: .codex, store: store, settings: settings))
             if let accountSection = Self.accountSection(for: .codex, store: store, account: account) {
                 sections.append(accountSection)
             }
         case .claude?:
-            sections.append(Self.usageSection(for: .claude, store: store, settings: settings))
+            sections.append(contentsOf: Self.usageSections(for: .claude, store: store, settings: settings))
             if let accountSection = Self.accountSection(for: .claude, store: store, account: account) {
                 sections.append(accountSection)
             }
         case let provider?:
-            sections.append(Self.usageSection(for: provider, store: store, settings: settings))
+            sections.append(contentsOf: Self.usageSections(for: provider, store: store, settings: settings))
             if let accountSection = Self.accountSection(for: provider, store: store, account: account) {
                 sections.append(accountSection)
             }
@@ -73,7 +85,7 @@ struct MenuDescriptor {
             var addedUsage = false
 
             for enabledProvider in store.enabledProviders() {
-                sections.append(Self.usageSection(for: enabledProvider, store: store, settings: settings))
+                sections.append(contentsOf: Self.usageSections(for: enabledProvider, store: store, settings: settings))
                 addedUsage = true
             }
             if addedUsage {
@@ -96,13 +108,19 @@ struct MenuDescriptor {
         return MenuDescriptor(sections: sections)
     }
 
-    private static func usageSection(
+    /// Builds the usage section for a provider plus (when needed) a supplemental
+    /// text-only section for lines the SwiftUI card does not render. The main
+    /// usage section stays filtered out of the NSMenu (the card duplicates it);
+    /// the supplemental section is rendered as plain rows so this content is
+    /// never silently dropped.
+    private static func usageSections(
         for provider: UsageProvider,
         store: UsageStore,
-        settings: SettingsStore) -> Section
+        settings: SettingsStore) -> [Section]
     {
         let meta = store.metadata(for: provider)
         var entries: [Entry] = []
+        var supplementalEntries: [Entry] = []
         let headlineText: String = {
             if let ver = Self.versionNumber(for: provider, store: store) { return "\(meta.displayName) \(ver)" }
             return meta.displayName
@@ -117,7 +135,7 @@ struct MenuDescriptor {
                     entries.append(.text(paceText, .secondary))
                 }
             } else if provider == .claude {
-                entries.append(.text("Weekly usage unavailable for this account.", .secondary))
+                supplementalEntries.append(.text("Weekly usage unavailable for this account.", .secondary))
             }
             if meta.supportsOpus, let opus = snap.tertiary {
                 Self.appendRateWindow(entries: &entries, title: meta.opusLabel ?? "Sonnet", window: opus)
@@ -132,13 +150,20 @@ struct MenuDescriptor {
                 entries.append(.text("Extra usage: \(used) / \(limit)", .primary))
             }
 
-            if provider == .cursor, let cost = snap.providerCost {
+            // The SwiftUI card renders cursor's "On-demand usage" section when
+            // showOptionalCreditsAndExtraUsage is on, so only emit the
+            // supplemental text row when that section is hidden — the numbers
+            // must appear exactly once.
+            if provider == .cursor,
+               !settings.showOptionalCreditsAndExtraUsage,
+               let cost = snap.providerCost
+            {
                 let used = UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode)
                 if cost.limit > 0 {
                     let limitStr = UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode)
-                    entries.append(.text("On-Demand: \(used) / \(limitStr)", .primary))
+                    supplementalEntries.append(.text("On-Demand: \(used) / \(limitStr)", .primary))
                 } else {
-                    entries.append(.text("On-Demand: \(used)", .primary))
+                    supplementalEntries.append(.text("On-Demand: \(used)", .primary))
                 }
             }
         } else {
@@ -152,7 +177,8 @@ struct MenuDescriptor {
             if let credits = store.credits {
                 entries.append(.text("Credits: \(UsageFormatter.creditsString(from: credits.remaining))", .primary))
                 if let latest = credits.events.first {
-                    entries.append(.text("Last spend: \(UsageFormatter.creditEventSummary(latest))", .secondary))
+                    supplementalEntries
+                        .append(.text("Last spend: \(UsageFormatter.creditEventSummary(latest))", .secondary))
                 }
             } else {
                 let hint = store.lastCreditsError ?? meta.creditsHint
@@ -160,7 +186,11 @@ struct MenuDescriptor {
             }
         }
 
-        return Section(entries: entries)
+        var sections = [Section(entries: entries)]
+        if !supplementalEntries.isEmpty {
+            sections.append(Section(entries: supplementalEntries, isSupplementalInfo: true))
+        }
+        return sections
     }
 
     private static func accountSection(
@@ -262,7 +292,11 @@ struct MenuDescriptor {
             entries.append(.action("Status Page", .statusPage))
         }
 
-        if let statusLine = self.statusLine(for: provider, store: store) {
+        if let statusLine = self.statusLine(
+            for: provider,
+            store: store,
+            dateStyle: settings.dateFormat.formatterStyle)
+        {
             entries.append(.text(statusLine, .secondary))
         }
 
@@ -282,7 +316,11 @@ struct MenuDescriptor {
         return Section(entries: entries)
     }
 
-    private static func statusLine(for provider: UsageProvider?, store: UsageStore) -> String? {
+    private static func statusLine(
+        for provider: UsageProvider?,
+        store: UsageStore,
+        dateStyle: UsageFormatter.DateStyle) -> String?
+    {
         let target = provider ?? store.enabledProviders().first
         guard let target,
               let status = store.status(for: target),
@@ -291,7 +329,7 @@ struct MenuDescriptor {
         let description = status.description?.trimmingCharacters(in: .whitespacesAndNewlines)
         let label = description?.isEmpty == false ? description! : status.indicator.label
         if let updated = status.updatedAt {
-            let freshness = UsageFormatter.updatedString(from: updated)
+            let freshness = UsageFormatter.updatedString(from: updated, style: dateStyle)
             return "\(label) — \(freshness)"
         }
         return label

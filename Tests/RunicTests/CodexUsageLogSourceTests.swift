@@ -149,19 +149,21 @@ struct CodexUsageLogSourceTests {
             cache: cache)
         let entries = try await source.loadEntries()
 
+        // Cached tokens are a subset of input; entries store the disjoint
+        // remainder: (300-50) + (80-10) = 320 input alongside 60 cache reads.
         #expect(entries.count == 2)
-        #expect(entries.reduce(0) { $0 + $1.inputTokens } == 380)
+        #expect(entries.reduce(0) { $0 + $1.inputTokens } == 320)
         #expect(entries.reduce(0) { $0 + $1.cacheReadTokens } == 60)
         #expect(entries.reduce(0) { $0 + $1.outputTokens } == 52)
 
         let cachedAfterFirst = await cache.loadCachedDailies(provider: "codex")?.dailies.first
-        #expect(cachedAfterFirst?.inputTokens == 380)
+        #expect(cachedAfterFirst?.inputTokens == 320)
         #expect(cachedAfterFirst?.cacheReadTokens == 60)
         #expect(cachedAfterFirst?.outputTokens == 52)
 
         _ = try await source.loadEntries()
         let cachedAfterSecond = await cache.loadCachedDailies(provider: "codex")?.dailies.first
-        #expect(cachedAfterSecond?.inputTokens == 380)
+        #expect(cachedAfterSecond?.inputTokens == 320)
         #expect(cachedAfterSecond?.cacheReadTokens == 60)
         #expect(cachedAfterSecond?.outputTokens == 52)
     }
@@ -243,8 +245,9 @@ struct CodexUsageLogSourceTests {
             cache: cache)
         let entries = try await source.loadEntries()
 
+        // Disjoint input remainder: (300-50) + (30-10) = 270 alongside 60 cached.
         #expect(entries.count == 2)
-        #expect(entries.reduce(0) { $0 + $1.inputTokens } == 330)
+        #expect(entries.reduce(0) { $0 + $1.inputTokens } == 270)
         #expect(entries.reduce(0) { $0 + $1.cacheReadTokens } == 60)
         #expect(entries.reduce(0) { $0 + $1.outputTokens } == 45)
     }
@@ -305,7 +308,7 @@ struct CodexUsageLogSourceTests {
 
         #expect(firstEntries.count == 1)
         #expect(secondEntries.count == 1)
-        #expect(cached?.inputTokens == 120)
+        #expect(cached?.inputTokens == 100) // 120 input minus the 20-cached subset
         #expect(cached?.cacheReadTokens == 20)
         #expect(cached?.outputTokens == 10)
     }
@@ -486,6 +489,135 @@ struct CodexUsageLogSourceTests {
         #expect(entries.count == 2)
         #expect(entries.map(\.inputTokens).reduce(0, +) == 300) // 100 + 200
         #expect(entries.map(\.outputTokens).reduce(0, +) == 30) // 10 + 20
+    }
+
+    /// Regression (H1): OpenAI reports cached_input_tokens as a SUBSET of
+    /// input_tokens. The ledger sums input/output/cache as DISJOINT classes, so a
+    /// request with 100K input of which 90K was cached must total 101K — storing
+    /// the full input alongside the cache reads double-counted the cached 90K.
+    @Test
+    func `codex stores cached tokens disjoint from input`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_122_400) // 2026-01-01T00:00:00Z
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        let dayDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        try fm.createDirectory(at: dayDir, withIntermediateDirectories: true)
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let tokenCount = try Self.jsonLine([
+            "type": "event_msg",
+            "timestamp": formatter.string(from: now),
+            "payload": [
+                "type": "token_count",
+                "info": [
+                    "model": "gpt-5.5",
+                    "last_token_usage": [
+                        "input_tokens": 100_000,
+                        "cached_input_tokens": 90000,
+                        "output_tokens": 1000,
+                    ],
+                ],
+            ],
+        ])
+        let fileURL = dayDir.appendingPathComponent("session.jsonl")
+        try "\(tokenCount)\n".write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: nil,
+            now: now,
+            cache: cache)
+        let entries = try await source.loadEntries()
+
+        #expect(entries.count == 1)
+        #expect(entries.first?.inputTokens == 10000) // non-cached remainder only
+        #expect(entries.first?.cacheReadTokens == 90000)
+        #expect(entries.first?.outputTokens == 1000)
+        #expect(entries.first?.totalTokens == 101_000)
+    }
+
+    /// Regression (M2): a legacy cumulative-only rollout spanning several days,
+    /// scanned with a window covering only the last day. Pre-window lines must
+    /// advance the delta cursor SILENTLY so the first in-window line books only
+    /// its true delta — not the file's entire history as one giant entry.
+    @Test
+    func `codex legacy cumulative scan books only the in-window delta`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_122_400) // 2026-01-01T00:00:00Z
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        let dayDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        try fm.createDirectory(at: dayDir, withIntermediateDirectories: true)
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        func cumulativeLine(at date: Date, totalInput: Int, totalOutput: Int) throws -> String {
+            try Self.jsonLine([
+                "type": "event_msg",
+                "timestamp": formatter.string(from: date),
+                "payload": [
+                    "type": "token_count",
+                    "info": [
+                        "model": "openai/gpt-5.2-codex",
+                        "total_token_usage": [
+                            "input_tokens": totalInput,
+                            "cached_input_tokens": 0,
+                            "output_tokens": totalOutput,
+                        ],
+                    ],
+                ],
+            ])
+        }
+        // Three days of cumulative totals; maxAgeDays nil → refreshToday window
+        // covers only the final line.
+        let body = try [
+            cumulativeLine(at: now.addingTimeInterval(-2 * 86400), totalInput: 1000, totalOutput: 100),
+            cumulativeLine(at: now.addingTimeInterval(-1 * 86400), totalInput: 2000, totalOutput: 200),
+            cumulativeLine(at: now, totalInput: 2600, totalOutput: 260),
+        ].joined(separator: "\n") + "\n"
+        let fileURL = dayDir.appendingPathComponent("legacy-rollout.jsonl")
+        try body.write(to: fileURL, atomically: true, encoding: .utf8)
+        try fm.setAttributes([.modificationDate: now], ofItemAtPath: fileURL.path)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: nil,
+            now: now,
+            cache: cache)
+        let entries = try await source.loadEntries()
+
+        // Only the last day's true delta — not the whole file's 2600/260 history.
+        #expect(entries.count == 1)
+        #expect(entries.first?.inputTokens == 600) // 2600 - 2000
+        #expect(entries.first?.outputTokens == 60) // 260 - 200
     }
 
     static func jsonLine(_ object: [String: Any]) throws -> String {

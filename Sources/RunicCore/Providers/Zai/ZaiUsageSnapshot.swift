@@ -39,7 +39,8 @@ extension ZaiUsageSnapshot {
             usedPercent: 0,
             windowMinutes: nil,
             resetsAt: nil,
-            resetDescription: nil)
+            resetDescription: nil,
+            hasKnownLimit: false)
         let secondary = secondaryLimit.map { Self.rateWindow(for: $0) }
 
         let planName = self.planName?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -64,7 +65,8 @@ extension ZaiUsageSnapshot {
             usedPercent: limit.usedPercent,
             windowMinutes: limit.type == .tokensLimit ? limit.windowMinutes : nil,
             resetsAt: limit.nextResetTime,
-            resetDescription: self.resetDescription(for: limit))
+            resetDescription: self.resetDescription(for: limit),
+            hasKnownLimit: true)
     }
 
     private static func resetDescription(for limit: ZaiLimitEntry) -> String? {

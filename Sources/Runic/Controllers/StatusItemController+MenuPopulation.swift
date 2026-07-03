@@ -18,11 +18,14 @@ extension StatusItemController {
             width: context.menuWidth,
             menu: menu)
         if let tabBarView {
+            // Keyboard access: Return on the highlighted tab bar row cycles to
+            // the next provider (mouse users click individual tabs directly).
             self.addHostedMenuItem(
                 self.themedHostedMenuRoot(tabBarView),
                 id: "providerTabBar",
                 width: context.menuWidth,
-                to: menu)
+                to: menu,
+                action: #selector(self.cycleMenuProvider(_:)))
         } else {
             let switcherItem = self.makeProviderSwitcherItem(
                 providers: context.enabledProviders,
@@ -61,7 +64,8 @@ extension StatusItemController {
                     provider: context.currentProvider,
                     width: context.menuWidth,
                     sidebar: context.sidebarConfig,
-                    webItems: context.webItems))
+                    webItems: context.webItems,
+                    animateEntrance: context.animateEntrance))
             return true
         }
 
@@ -105,7 +109,8 @@ extension StatusItemController {
         let hasTimeline = self.addUsageTimelineSubmenu(to: menu, provider: context.currentProvider)
         let hasHourly = self.addHourlyActivitySubmenu(to: menu, provider: context.currentProvider)
         let hasWeekly = self.addWeeklyActivitySubmenu(to: menu, provider: context.currentProvider)
-        if hasTimeline || hasHourly || hasWeekly {
+        let hasHeatmap = self.addUsageHeatmapSubmenu(to: menu, provider: context.currentProvider)
+        if hasTimeline || hasHourly || hasWeekly || hasHeatmap {
             menu.addItem(.separator())
         }
 
@@ -117,17 +122,25 @@ extension StatusItemController {
 
         let hasProjectBreakdown = self.addProjectBreakdownSubmenu(to: menu, provider: context.currentProvider)
         let hasModelBreakdown = self.addModelBreakdownSubmenu(to: menu, provider: context.currentProvider)
-        if hasProjectBreakdown || hasModelBreakdown {
+        let hasEfficiency = self.addEfficiencyMetricsSubmenu(to: menu, provider: context.currentProvider)
+        let hasBudgets = self.addProjectBudgetsSubmenu(to: menu, provider: context.currentProvider)
+        if hasProjectBreakdown || hasModelBreakdown || hasEfficiency || hasBudgets {
+            menu.addItem(.separator())
+        }
+
+        if self.addAlertsSubmenu(to: menu) {
             menu.addItem(.separator())
         }
     }
 
     func addActionableSections(to menu: NSMenu, context: MenuPopulationContext) {
+        // Render sections that carry actions plus supplemental text-only sections
+        // (content the SwiftUI usage card doesn't show, e.g. Cursor "On-Demand"
+        // spend or codex "Last spend:"). Other text-only sections stay filtered
+        // out because the card already renders them. Supplemental lines are
+        // per-provider details, so they are skipped in the multi-provider overview.
         let actionableSections = context.descriptor.sections.filter { section in
-            section.entries.contains { entry in
-                if case .action = entry { return true }
-                return false
-            }
+            section.hasActions || (section.isSupplementalInfo && !context.isOverviewMode)
         }
         for (index, section) in actionableSections.enumerated() {
             self.addActionableSection(section, isOverviewMode: context.isOverviewMode, to: menu)
@@ -223,15 +236,23 @@ extension StatusItemController {
         _ rootView: some View,
         id: String,
         width: CGFloat,
-        to menu: NSMenu)
+        to menu: NSMenu,
+        action: Selector? = nil)
     {
-        let hosting = MenuHostingView(rootView: rootView)
-        let controller = NSHostingController(rootView: rootView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
+        // Sized with the same hosting view instance — no second hierarchy just
+        // for measurement.
+        let hosting = self.makeSizedHostedView(rootView, width: width)
         let item = NSMenuItem()
         item.view = hosting
-        item.isEnabled = false
+        if let action {
+            // Enabled + targeted so keyboard users can highlight the row and
+            // activate it with Return; hosted views draw their own highlight.
+            item.isEnabled = true
+            item.target = self
+            item.action = action
+        } else {
+            item.isEnabled = false
+        }
         item.representedObject = id
         menu.addItem(item)
     }

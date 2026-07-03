@@ -15,11 +15,11 @@ struct ProjectBudgetMenuView: View {
 
         var statusColor: Color {
             if self.isOverBudget {
-                Color(red: 0.94, green: 0.36, blue: 0.36) // Red
+                RunicColors.error
             } else if self.isNearLimit {
-                Color(red: 0.94, green: 0.74, blue: 0.26) // Yellow
+                RunicColors.warning
             } else {
-                Color(red: 0.46, green: 0.75, blue: 0.36) // Green
+                RunicColors.success
             }
         }
     }
@@ -64,19 +64,11 @@ struct ProjectBudgetMenuView: View {
             }
 
             if model.isEmpty {
-                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-                    Text("No budgets configured.")
-                        .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText)
-                    Button {
-                        self.onOpenPreferences()
-                    } label: {
-                        Text("Set up budgets in Preferences")
-                            .font(self.fonts.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(self.runicTheme.accent)
-                }
+                RunicEmptyStateView(
+                    mood: .resting,
+                    title: "No budgets configured.",
+                    actionTitle: "Set up budgets in Preferences",
+                    action: { self.onOpenPreferences() })
             } else {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     ForEach(model) { project in
@@ -102,7 +94,7 @@ struct ProjectBudgetMenuView: View {
                             HStack(spacing: RunicSpacing.xxs) {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(self.fonts.caption2)
-                                    .foregroundStyle(Color(red: 0.94, green: 0.36, blue: 0.36))
+                                    .foregroundStyle(RunicColors.error)
                                 Text("\(overBudget) project\(overBudget == 1 ? "" : "s") over budget")
                                     .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.secondaryText)
@@ -112,7 +104,7 @@ struct ProjectBudgetMenuView: View {
                             HStack(spacing: RunicSpacing.xxs) {
                                 Image(systemName: "exclamationmark.circle.fill")
                                     .font(self.fonts.caption2)
-                                    .foregroundStyle(Color(red: 0.94, green: 0.74, blue: 0.26))
+                                    .foregroundStyle(RunicColors.warning)
                                 Text("\(nearLimit) project\(nearLimit == 1 ? "" : "s") near limit")
                                     .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.secondaryText)

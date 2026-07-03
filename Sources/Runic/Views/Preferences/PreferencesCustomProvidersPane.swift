@@ -47,23 +47,11 @@ struct CustomProvidersPane: View {
                 .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
 
                 if self.providers.isEmpty {
-                    VStack(spacing: RunicSpacing.md) {
-                        Image(systemName: "puzzlepiece.extension")
-                            .font(.system(size: 48))
-                            .foregroundStyle(self.runicTheme.secondaryText)
-
-                        Text("No custom providers configured")
-                            .font(self.fonts.headline)
-                            .foregroundStyle(self.runicTheme.secondaryText)
-
-                        Text("Add a custom API provider to track usage from APIs not natively supported by Runic.")
-                            .font(self.fonts.caption)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: 300)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, RunicSpacing.xl)
+                    RunicEmptyStateView(
+                        mood: .resting,
+                        title: "No custom providers configured",
+                        hint: "Add a custom API provider to track usage from APIs not natively supported by Runic.",
+                        layout: .prominent)
                 } else {
                     // Provider list
                     ForEach(self.providers) { provider in
@@ -219,8 +207,8 @@ private struct CustomProviderRow: View {
                     } else {
                         HStack(spacing: 4) {
                             if let quota = snapshot.usageData.quota, let used = snapshot.usageData.used {
-                                let percent = quota > 0 ? (used / quota) * 100 : 0
-                                Text("\(Int(percent))% used")
+                                let percent = CustomProviderUsageDisplay.percentUsed(used: used, quota: quota)
+                                Text("\(percent)% used")
                                     .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }

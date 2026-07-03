@@ -62,6 +62,71 @@ struct CostUsagePricingTests {
     }
 
     @Test
+    func `claude long context request prices every class at premium`() {
+        // Anthropic bills the WHOLE request — including all output — at the
+        // long-context rate once the input context exceeds 200K, not just the
+        // tokens above the boundary.
+        let cost = CostUsagePricing.claudeCostUSD(
+            model: "claude-sonnet-4-5",
+            inputTokens: 250_000,
+            cacheReadInputTokens: 0,
+            cacheCreationInputTokens: 0,
+            outputTokens: 1000)
+        let expected = 250_000.0 * 6e-6 + 1000.0 * 2.25e-5
+        #expect(abs((cost ?? -1) - expected) < 1e-9)
+    }
+
+    @Test
+    func `claude cache tokens count toward the long context threshold`() {
+        // 150K fresh + 60K cache-read input = 210K context → premium everywhere.
+        let cost = CostUsagePricing.claudeCostUSD(
+            model: "claude-sonnet-4-5",
+            inputTokens: 150_000,
+            cacheReadInputTokens: 60000,
+            cacheCreationInputTokens: 0,
+            outputTokens: 1000)
+        let expected = 150_000.0 * 6e-6 + 60000.0 * 6e-7 + 1000.0 * 2.25e-5
+        #expect(abs((cost ?? -1) - expected) < 1e-9)
+    }
+
+    @Test
+    func `claude exactly at threshold context bills base rates`() {
+        // Anthropic's long-context rule is "exceeds 200K", not "reaches": a
+        // request whose context is exactly 200K bills every class at base.
+        let cost = CostUsagePricing.claudeCostUSD(
+            model: "claude-sonnet-4-5",
+            inputTokens: 200_000,
+            cacheReadInputTokens: 0,
+            cacheCreationInputTokens: 0,
+            outputTokens: 1000)
+        let expected = 200_000.0 * 3e-6 + 1000.0 * 1.5e-5
+        #expect(abs((cost ?? -1) - expected) < 1e-9)
+
+        // One token past the boundary flips the whole request to premium.
+        let premium = CostUsagePricing.claudeCostUSD(
+            model: "claude-sonnet-4-5",
+            inputTokens: 200_001,
+            cacheReadInputTokens: 0,
+            cacheCreationInputTokens: 0,
+            outputTokens: 1000)
+        let expectedPremium = 200_001.0 * 6e-6 + 1000.0 * 2.25e-5
+        #expect(abs((premium ?? -1) - expectedPremium) < 1e-9)
+    }
+
+    @Test
+    func `claude below threshold request prices every class at base`() {
+        // 190K context stays below 200K → base rates for every class.
+        let cost = CostUsagePricing.claudeCostUSD(
+            model: "claude-sonnet-4-5",
+            inputTokens: 150_000,
+            cacheReadInputTokens: 40000,
+            cacheCreationInputTokens: 0,
+            outputTokens: 1000)
+        let expected = 150_000.0 * 3e-6 + 40000.0 * 3e-7 + 1000.0 * 1.5e-5
+        #expect(abs((cost ?? -1) - expected) < 1e-9)
+    }
+
+    @Test
     func `claude cost returns nil for unknown models`() {
         let cost = CostUsagePricing.claudeCostUSD(
             model: "glm-4.6",

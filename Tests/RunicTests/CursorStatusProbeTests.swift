@@ -177,6 +177,69 @@ struct CursorStatusProbeTests {
     }
 
     @Test
+    func `treats percent field of exactly one as a fully used fraction`() {
+        // Exactly 1.0 is ambiguous (1.0-as-percent vs a 0-1 fraction). The tie
+        // DELIBERATELY breaks toward "fraction": a fraction-based plan reports
+        // exactly 1.0 at the instant its quota is exhausted, and reading that
+        // as 1% would show an exhausted plan as nearly untouched — the worst
+        // failure direction. Over-warning on a genuine 1%-as-1.0 is safe.
+        let snapshot = CursorStatusProbe()
+            .parseUsageSummary(
+                CursorUsageSummary(
+                    billingCycleStart: nil,
+                    billingCycleEnd: nil,
+                    membershipType: "pro",
+                    limitType: nil,
+                    isUnlimited: false,
+                    autoModelSelectedDisplayMessage: nil,
+                    namedModelSelectedDisplayMessage: nil,
+                    individualUsage: CursorIndividualUsage(
+                        plan: CursorPlanUsage(
+                            enabled: true,
+                            used: 0,
+                            limit: nil,
+                            remaining: nil,
+                            breakdown: nil,
+                            autoPercentUsed: nil,
+                            apiPercentUsed: nil,
+                            totalPercentUsed: 1.0),
+                        onDemand: nil),
+                    teamUsage: nil),
+                userInfo: nil)
+
+        #expect(snapshot.planPercentUsed == 100.0)
+    }
+
+    @Test
+    func `treats percent field above one as an already scaled percent`() {
+        let snapshot = CursorStatusProbe()
+            .parseUsageSummary(
+                CursorUsageSummary(
+                    billingCycleStart: nil,
+                    billingCycleEnd: nil,
+                    membershipType: "pro",
+                    limitType: nil,
+                    isUnlimited: false,
+                    autoModelSelectedDisplayMessage: nil,
+                    namedModelSelectedDisplayMessage: nil,
+                    individualUsage: CursorIndividualUsage(
+                        plan: CursorPlanUsage(
+                            enabled: true,
+                            used: 0,
+                            limit: nil,
+                            remaining: nil,
+                            breakdown: nil,
+                            autoPercentUsed: nil,
+                            apiPercentUsed: nil,
+                            totalPercentUsed: 42.5),
+                        onDemand: nil),
+                    teamUsage: nil),
+                userInfo: nil)
+
+        #expect(snapshot.planPercentUsed == 42.5)
+    }
+
+    @Test
     func `converts snapshot to usage snapshot`() {
         let snapshot = CursorStatusSnapshot(
             planPercentUsed: 45.0,

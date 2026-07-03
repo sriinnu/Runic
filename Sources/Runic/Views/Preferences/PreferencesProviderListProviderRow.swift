@@ -49,10 +49,7 @@ struct ProviderListProviderRowView: View {
 
                     HStack(alignment: .center, spacing: RunicSpacing.xs) {
                         self.sourceBadge
-                        Text(self.statusLabel)
-                            .font(self.fonts.caption2)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                            .lineLimit(1)
+                        self.connectionStatusBadge
 
                         if isRefreshing {
                             ProgressView()
@@ -111,7 +108,24 @@ struct ProviderListProviderRowView: View {
             .padding(.horizontal, ProviderListMetrics.statusBadgePaddingH)
             .padding(.vertical, ProviderListMetrics.statusBadgePaddingV)
             .background(Capsule(style: .continuous).fill(backgroundColor))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
             .foregroundStyle(color)
+    }
+
+    private var connectionStatusBadge: some View {
+        Text(self.statusLabel)
+            .font(self.fonts.caption2.weight(.medium))
+            .foregroundStyle(self.runicTheme.secondaryText)
+            .padding(.horizontal, RunicSpacing.xs)
+            .padding(.vertical, RunicSpacing.xxxs)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(self.runicTheme.menuSubtleFill))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(self.runicTheme.menuSeparatorColor.opacity(0.42), lineWidth: 0.7))
     }
 
     private var sourceBadge: some View {

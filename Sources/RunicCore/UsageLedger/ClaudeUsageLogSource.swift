@@ -23,6 +23,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     let cache: LedgerCache
     let scanMode: UsageLedgerLogScanMode
     let maxAgeDays: Int?
+    let resumeStore: LedgerScanResumeStore
 
     struct DedupeTokens {
         let input: Int
@@ -39,7 +40,8 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         now: Date = Date(),
         log: RunicLogger = RunicLog.logger("claude-usage-ledger"),
         cache: LedgerCache = .shared,
-        scanMode: UsageLedgerLogScanMode = .refreshToday)
+        scanMode: UsageLedgerLogScanMode = .refreshToday,
+        resumeStore: LedgerScanResumeStore = .shared)
     {
         self.environment = environment
         self.fileManager = fileManager
@@ -49,6 +51,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         self.cache = cache
         self.scanMode = scanMode
         self.maxAgeDays = maxAgeDays
+        self.resumeStore = resumeStore
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
@@ -74,14 +77,11 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
         // Claude keeps long-lived project JSONLs. Normal refresh opens only
         // files touched today, then line-filters by timestamp so old rows stay
-        // historical relay data.
+        // historical relay data. Uses the mtime captured during enumeration —
+        // no second stat per file.
         let filesToScan = if window.requireTouchedAfterMinDate {
             allFiles.filter { file in
-                guard let modDate = (try? self.fileManager
-                    .attributesOfItem(atPath: file.url.path))?[.modificationDate] as? Date
-                else {
-                    return true
-                }
+                guard let modDate = file.modifiedAt else { return true }
                 return modDate >= window.minDate
             }
         } else {
@@ -169,6 +169,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         }
 
         var sourceWatermarks = window.completionWatermarks + parsedFiles.map(\.watermark)
+        var mergeScanDate = self.now
         if !readFailures.isEmpty {
             // A busy file must not abort the scan or seal a day empty. Keep what
             // parsed; only fail when nothing could be read at all. On a partial
@@ -182,6 +183,21 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             if entries.isEmpty {
                 throw ClaudeUsageLogError.readFailed(readFailures.joined(separator: ", "))
             }
+
+            // During a multi-day gap catch-up, a busy file may span ANY day in
+            // the window (long-lived project JSONLs cover many days) and there
+            // is no way to know which days the unreadable file covers. Merging
+            // what parsed would seal those gap days with partial data FOREVER:
+            // the scan anchor advances, so they are never rescanned. Chosen
+            // fix: abort the gap portion of the merge entirely — keep only
+            // today's entries (today is mutable and re-read every refresh) and
+            // keep the OLD scan anchor, so the whole catch-up retries on the
+            // next refresh once the busy file is readable again (mirrors Codex).
+            if case .refreshToday = scanMode, catchUpDays > 1 {
+                entries = entries.filter { LedgerCache.dayKey(for: $0.timestamp) == todayKey }
+                mergeScanDate = await cache.lastScanDate(provider: "claude") ?? self.now
+            }
+
             let daysWithEntries = Set(entries.map { LedgerCache.dayKey(for: $0.timestamp) })
             sourceWatermarks = sourceWatermarks.filter { watermark in
                 guard let dayKey = watermark.dayKey else { return true }
@@ -192,7 +208,7 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         await cache.mergeEntries(
             provider: "claude",
             entries: entries,
-            scanDate: self.now,
+            scanDate: mergeScanDate,
             todayKey: window.relayTodayKey,
             coveredMaxAgeDays: window.coveredMaxAgeDays,
             sourceWatermarks: sourceWatermarks)
@@ -206,6 +222,9 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let projectID: String?
         let projectName: String?
         let sessionID: String?
+        /// Stat'd once during directory enumeration and passed through so the
+        /// mtime filter in `loadEntries` doesn't stat every file a second time.
+        let modifiedAt: Date?
     }
 
     struct ParsedUsageFile {

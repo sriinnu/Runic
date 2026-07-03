@@ -26,6 +26,8 @@ extension FactoryStatusProbe {
             premiumUserTokens: usage?.premium?.userTokens ?? 0,
             premiumOrgTokens: usage?.premium?.orgTotalTokensUsed ?? 0,
             premiumAllowance: usage?.premium?.totalAllowance ?? 0,
+            standardUsedRatio: usage?.standard?.usedRatio,
+            premiumUsedRatio: usage?.premium?.usedRatio,
             periodStart: periodStart,
             periodEnd: periodEnd,
             planName: authInfo.organization?.subscription?.orbSubscription?.plan?.name,

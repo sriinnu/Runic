@@ -19,7 +19,11 @@ public struct AntigravityStatusSnapshot: Sendable {
     public let accountPlan: String?
 
     public func toUsageSnapshot() throws -> UsageSnapshot {
-        let ordered = Self.selectModels(self.modelQuotas)
+        // A quota with no reported remainingFraction is UNKNOWN, not depleted.
+        // Emitting it would render as 0% remaining, fire a false "session
+        // depleted" notification, and sort first as most-constrained — drop it.
+        let known = self.modelQuotas.filter { $0.remainingFraction != nil }
+        let ordered = Self.selectModels(known)
         guard let primaryQuota = ordered.first else {
             throw AntigravityStatusProbeError.parseFailed("No quota models available")
         }

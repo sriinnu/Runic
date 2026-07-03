@@ -24,7 +24,7 @@
   "motion":  { "preset": "instant" },
   "density": { "preset": "normal" },
   "style": {
-    "typography": { "bodyFamily": "CommitMono", "numericFamily": "CommitMono", "scale": 1.03, "tracking": 0.01, "lineSpacing": 1.45, "contrast": "strong" },
+    "typography": { "bodyFamily": "CommitMono", "numericFamily": "CommitMono", "scale": 0.96, "tracking": 0.01, "lineSpacing": 1.45, "contrast": "strong" },
     "chrome": { "borderStyle": "hud", "borderWeight": 0.75, "borderOpacity": 0.44, "cornerStyle": "compact", "panelDepth": "low" },
     "effects": { "scanlineOpacity": 0.16, "glowStrength": 0.14, "materialIntensity": 0.0 },
     "controls": { "selectedFillStyle": "terminalSolid", "progressStyle": "segmentedHUD", "hoverStyle": "neutral" }

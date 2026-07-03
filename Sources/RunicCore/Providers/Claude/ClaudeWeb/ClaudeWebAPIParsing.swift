@@ -58,8 +58,8 @@ extension ClaudeWebAPIFetcher {
         var sessionPercent: Double?
         var sessionResets: Date?
         if let fiveHour = json["five_hour"] as? [String: Any] {
-            if let utilization = fiveHour["utilization"] as? Int {
-                sessionPercent = Double(utilization)
+            if let utilization = Self.utilizationPercent(fiveHour["utilization"]) {
+                sessionPercent = utilization
             }
             if let resetsAt = fiveHour["resets_at"] as? String {
                 sessionResets = self.parseISO8601Date(resetsAt)
@@ -74,8 +74,8 @@ extension ClaudeWebAPIFetcher {
         var weeklyPercent: Double?
         var weeklyResets: Date?
         if let sevenDay = json["seven_day"] as? [String: Any] {
-            if let utilization = sevenDay["utilization"] as? Int {
-                weeklyPercent = Double(utilization)
+            if let utilization = Self.utilizationPercent(sevenDay["utilization"]) {
+                weeklyPercent = utilization
             }
             if let resetsAt = sevenDay["resets_at"] as? String {
                 weeklyResets = self.parseISO8601Date(resetsAt)
@@ -85,8 +85,8 @@ extension ClaudeWebAPIFetcher {
         // Parse seven_day_opus (Opus-specific weekly) usage
         var opusPercent: Double?
         if let sevenDayOpus = json["seven_day_opus"] as? [String: Any] {
-            if let utilization = sevenDayOpus["utilization"] as? Int {
-                opusPercent = Double(utilization)
+            if let utilization = Self.utilizationPercent(sevenDayOpus["utilization"]) {
+                opusPercent = utilization
             }
         }
 
@@ -100,6 +100,14 @@ extension ClaudeWebAPIFetcher {
             accountOrganization: nil,
             accountEmail: nil,
             loginMethod: nil)
+    }
+
+    /// The API reports `utilization` as a number that may be integral (45) or
+    /// fractional (45.5); JSONSerialization surfaces both as NSNumber, and a
+    /// fractional value must not fail the whole payload.
+    private static func utilizationPercent(_ raw: Any?) -> Double? {
+        guard let number = raw as? NSNumber else { return nil }
+        return number.doubleValue
     }
 
     static func parseOverageSpendLimit(_ data: Data) -> ProviderCostSnapshot? {

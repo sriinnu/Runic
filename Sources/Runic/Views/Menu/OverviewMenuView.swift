@@ -13,12 +13,17 @@ struct OverviewMenuView: View {
         let provider: UsageProvider
         let name: String
         let icon: NSImage?
+        /// Percent to display, already resolved against the used/left toggle.
         let usedPercent: Double
         let todayTokens: Int
         let brandColor: Color
         let resetDescription: String?
         let windowLabel: String? // e.g. "5h" or "Weekly"
         let topModelContext: String? // e.g. "200K ctx"
+        /// Whether the provider's primary window tracks a real, measured
+        /// quota. Providers without one (balance/counter stubs) show "—" and
+        /// are excluded from the cross-provider average.
+        var hasQuota: Bool = true
     }
 
     struct DailyPoint: Identifiable {
@@ -34,6 +39,11 @@ struct OverviewMenuView: View {
     let totalTodayTokens: Int
     let totalProviders: Int
     let width: CGFloat
+    /// Mirrors the `usageBarsShowUsed` setting so the overview reads the same
+    /// direction (used vs left) as the cards and menubar.
+    var showsUsed: Bool = true
+    /// Mirrors the number-format preference (abbreviated vs full).
+    var numberStyle: UsageFormatter.NumberStyle = .abbreviated
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
@@ -46,7 +56,7 @@ struct OverviewMenuView: View {
                     Circle()
                         .stroke(self.runicTheme.menuTrackColor, lineWidth: 3)
                     Circle()
-                        .trim(from: 0, to: min(1, self.averageUsedPercent / 100))
+                        .trim(from: 0, to: min(1, (self.averagePercent ?? 0) / 100))
                         .stroke(
                             AngularGradient(
                                 colors: [self.runicTheme.highlight, self.runicTheme.accent],
@@ -57,7 +67,7 @@ struct OverviewMenuView: View {
                 .frame(width: 32, height: 32)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(UsageFormatter.tokenCountString(self.totalTodayTokens))
+                    Text(UsageFormatter.tokenCountString(self.totalTodayTokens, style: self.numberStyle))
                         .font(self.fonts.system(size: 22, weight: .bold))
                     Text("\(self.summaries.count) of \(self.totalProviders) active")
                         .font(self.fonts.caption2)
@@ -70,7 +80,7 @@ struct OverviewMenuView: View {
                     Text("today")
                         .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.secondaryText)
-                    Text("\(Int(self.averageUsedPercent))% avg")
+                    Text(self.averagePercentText)
                         .font(self.fonts.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(self.runicTheme.primaryText)
@@ -90,7 +100,7 @@ struct OverviewMenuView: View {
             } else {
                 VStack(spacing: RunicSpacing.compact) {
                     ForEach(self.summaries) { summary in
-                        ProviderRow(summary: summary)
+                        ProviderRow(summary: summary, showsUsed: self.showsUsed, numberStyle: self.numberStyle)
                     }
                 }
             }
@@ -105,15 +115,16 @@ struct OverviewMenuView: View {
                         .font(self.fonts.caption2)
                         .foregroundStyle(self.runicTheme.secondaryText)
                     Spacer()
-                    // Mini legend dots
+                    // Mini legend dots — same domain/order as the chart scale
+                    // so dot colors always match the bars.
                     HStack(spacing: RunicSpacing.xxs) {
-                        ForEach(self.summaries.prefix(4)) { s in
+                        ForEach(self.chartLegendEntries.prefix(4), id: \.name) { entry in
                             Circle()
-                                .fill(s.brandColor)
+                                .fill(entry.color)
                                 .frame(width: 5, height: 5)
                         }
-                        if self.summaries.count > 4 {
-                            Text("+\(self.summaries.count - 4)")
+                        if self.chartLegendEntries.count > 4 {
+                            Text("+\(self.chartLegendEntries.count - 4)")
                                 .font(self.fonts.system(size: 8))
                                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.75))
                         }
@@ -129,7 +140,9 @@ struct OverviewMenuView: View {
                             .cornerRadius(self.runicTheme.shape.cornerRadius(2))
                     }
                 }
-                .chartForegroundStyleScale(range: self.chartColors)
+                .chartForegroundStyleScale(
+                    domain: self.chartLegendEntries.map(\.name),
+                    range: self.chartLegendEntries.map(\.color))
                 .chartLegend(.hidden)
                 .chartYAxis {
                     AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
@@ -160,14 +173,55 @@ struct OverviewMenuView: View {
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
     }
 
-    private var averageUsedPercent: Double {
-        let active = self.summaries.filter { $0.usedPercent > 0 }
-        guard !active.isEmpty else { return 0 }
-        return active.reduce(0) { $0 + $1.usedPercent } / Double(active.count)
+    private var averagePercent: Double? {
+        Self.averagePercent(self.summaries)
     }
 
-    private var chartColors: [Color] {
-        self.summaries.indices.map { self.runicTheme.chartColor(at: $0) }
+    /// Header text for the average; "—" when no provider has a measurable
+    /// quota so it never reads as everything-depleted.
+    private var averagePercentText: String {
+        guard let averagePercent = self.averagePercent else { return "—" }
+        return "\(Int(averagePercent))% \(self.showsUsed ? "used" : "left") avg"
+    }
+
+    /// Average of the display percents across providers with a real quota
+    /// window. Stub providers (permanent 0% placeholders without a limit) are
+    /// excluded so the average only mixes comparable percentages; when no
+    /// provider is comparable there is no average at all (`nil`), not 0.
+    static func averagePercent(_ summaries: [ProviderSummary]) -> Double? {
+        let comparable = summaries.filter(\.hasQuota)
+        guard !comparable.isEmpty else { return nil }
+        return comparable.reduce(0) { $0 + $1.usedPercent } / Double(comparable.count)
+    }
+
+    /// Display percent for a primary window, resolved against the used/left
+    /// toggle the cards and menubar honor.
+    static func displayPercent(for window: RateWindow?, showsUsed: Bool) -> Double {
+        guard let window else { return 0 }
+        guard Self.windowHasQuota(window) else { return 0 }
+        return min(100, max(0, showsUsed ? window.usedPercent : window.remainingPercent))
+    }
+
+    /// Whether a primary window represents a real, measured quota that can be
+    /// shown as (and averaged with) a percentage. `hasRealQuota` already
+    /// treats `hasKnownLimit` as the primary signal, so this is a straight
+    /// delegation.
+    static func windowHasQuota(_ window: RateWindow?) -> Bool {
+        guard let window else { return false }
+        return SessionQuotaNotificationLogic.hasRealQuota(window)
+    }
+
+    /// One entry per provider present in the chart data, in first-appearance
+    /// order, colored by the provider's brand color so bars, legend dots, and
+    /// the provider rows all agree on identity.
+    var chartLegendEntries: [(name: String, color: Color)] {
+        var seen: Set<String> = []
+        var entries: [(name: String, color: Color)] = []
+        for point in self.chartPoints where !seen.contains(point.provider) {
+            seen.insert(point.provider)
+            entries.append((name: point.provider, color: point.color))
+        }
+        return entries
     }
 }
 
@@ -176,7 +230,16 @@ struct OverviewMenuView: View {
 private struct ProviderRow: View {
     @Environment(\.runicFonts) private var fonts
     let summary: OverviewMenuView.ProviderSummary
+    var showsUsed: Bool = true
+    var numberStyle: UsageFormatter.NumberStyle = .abbreviated
     @Environment(\.runicTheme) private var runicTheme
+
+    /// Emphasize rows needing attention: heavy usage in "used" mode, low
+    /// headroom in "left" mode.
+    private var emphasizesPercent: Bool {
+        guard self.summary.hasQuota else { return false }
+        return self.showsUsed ? self.summary.usedPercent > 80 : self.summary.usedPercent < 20
+    }
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
@@ -230,17 +293,17 @@ private struct ProviderRow: View {
             }
             .frame(height: 7)
 
-            // Percentage
-            Text("\(Int(self.summary.usedPercent))%")
+            // Percentage ("—" for providers without a real quota window)
+            Text(self.summary.hasQuota ? "\(Int(self.summary.usedPercent))%" : "—")
                 .font(self.fonts.system(size: 9, weight: .semibold))
-                .foregroundStyle(self.summary.usedPercent > 80
+                .foregroundStyle(self.emphasizesPercent
                     ? self.runicTheme.primaryText
                     : self.runicTheme.secondaryText)
                 .frame(width: 28, alignment: .trailing)
 
             // Today's tokens (if any)
             if self.summary.todayTokens > 0 {
-                Text(UsageFormatter.tokenCountString(self.summary.todayTokens))
+                Text(UsageFormatter.tokenCountString(self.summary.todayTokens, style: self.numberStyle))
                     .font(self.fonts.system(size: 8))
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(width: 32, alignment: .trailing)

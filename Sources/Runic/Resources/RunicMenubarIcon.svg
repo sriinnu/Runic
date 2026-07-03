@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 22" fill="none">
-  <!-- Infinity symbol (∞) using overlapping ellipses -->
-  <g stroke="currentColor" stroke-width="2.6" fill="none">
-    <ellipse cx="11" cy="11" rx="5.5" ry="5.5"/>
-    <ellipse cx="27" cy="11" rx="5.5" ry="5.5"/>
-  </g>
+  <!-- Infinity mark (∞): one continuous lemniscate with a true center crossover.
+       Template-friendly: single currentColor stroke, no gradients. Keeps a solid
+       silhouette so the sourceIn fill-reveal in IconRendererDrawing still works. -->
+  <path d="M19 11 C13.5 3.6 3.4 4.2 3.4 11 C3.4 17.8 13.5 18.4 19 11 C24.5 3.6 34.6 4.2 34.6 11 C34.6 17.8 24.5 18.4 19 11 Z" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>

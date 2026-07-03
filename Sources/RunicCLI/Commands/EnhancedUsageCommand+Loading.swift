@@ -67,7 +67,8 @@ extension EnhancedUsageCommand {
             limit: nil,
             usedPercent: snapshot.primary.usedPercent,
             remainingPercent: snapshot.primary.remainingPercent,
-            resetDescription: snapshot.primary.resetDescription))
+            resetDescription: snapshot.primary.resetDescription,
+            hasKnownLimit: snapshot.primary.hasKnownLimit))
 
         if let secondary = snapshot.secondary {
             windows.append(WindowData(
@@ -76,7 +77,8 @@ extension EnhancedUsageCommand {
                 limit: nil,
                 usedPercent: secondary.usedPercent,
                 remainingPercent: secondary.remainingPercent,
-                resetDescription: secondary.resetDescription))
+                resetDescription: secondary.resetDescription,
+                hasKnownLimit: secondary.hasKnownLimit))
         }
 
         return ProviderUsageData(
@@ -121,14 +123,18 @@ extension EnhancedUsageCommand {
             sum + data.windows.reduce(0) { $0 + ($1.used ?? 0) }
         }
 
-        let averageUsage = providerData.reduce(0.0) { sum, data in
-            let providerAvg = data.windows.map(\.usedPercent).reduce(0.0, +) / Double(data.windows.count)
-            return sum + providerAvg
-        } / Double(providerData.count)
+        // Only windows with a real limit are comparable percentages; placeholder
+        // 0% windows (hasKnownLimit == false) would drag the average down.
+        let measurable = providerData.compactMap { data -> Double? in
+            let percents = data.windows.filter { $0.hasKnownLimit != false }.map(\.usedPercent)
+            guard !percents.isEmpty else { return nil }
+            return percents.reduce(0.0, +) / Double(percents.count)
+        }
+        let averageUsage = measurable.isEmpty ? 0 : measurable.reduce(0.0, +) / Double(measurable.count)
 
         let highestProvider = providerData.max { lhs, rhs in
-            let lhsMax = lhs.windows.map(\.usedPercent).max() ?? 0
-            let rhsMax = rhs.windows.map(\.usedPercent).max() ?? 0
+            let lhsMax = lhs.windows.filter { $0.hasKnownLimit != false }.map(\.usedPercent).max() ?? 0
+            let rhsMax = rhs.windows.filter { $0.hasKnownLimit != false }.map(\.usedPercent).max() ?? 0
             return lhsMax < rhsMax
         }
 

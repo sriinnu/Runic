@@ -33,6 +33,35 @@ struct UsagePaceTextTests {
     }
 
     @Test
+    func `weekly pace text omits delta when it rounds to zero`() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 50,
+            windowMinutes: 10080,
+            resetsAt: now.addingTimeInterval(3.5 * 24 * 3600),
+            resetDescription: nil)
+
+        let text = UsagePaceText.weekly(provider: .codex, window: window, now: now)
+
+        #expect(text == "Pace: On pace · Lasts to reset")
+    }
+
+    @Test
+    func `weekly pace text never renders negative zero delta`() {
+        let now = Date(timeIntervalSince1970: 0)
+        let window = RateWindow(
+            usedPercent: 49.8,
+            windowMinutes: 10080,
+            resetsAt: now.addingTimeInterval(3.5 * 24 * 3600),
+            resetDescription: nil)
+
+        let text = UsagePaceText.weekly(provider: .codex, window: window, now: now)
+
+        #expect(text?.contains("-0%") == false)
+        #expect(text == "Pace: On pace · Lasts to reset")
+    }
+
+    @Test
     func `weekly pace text hides when reset is missing`() {
         let now = Date(timeIntervalSince1970: 0)
         let window = RateWindow(

@@ -18,20 +18,20 @@ extension RunicCLI {
 
         let meta = ProviderDescriptorRegistry.descriptor(for: provider).metadata
         lines.append(Self.rateLine(title: meta.sessionLabel, window: snapshot.primary, useColor: useColor))
-        if let reset = snapshot.primary.resetDescription {
+        if snapshot.primary.hasKnownLimit != false, let reset = snapshot.primary.resetDescription {
             lines.append(Self.resetLine(reset))
         }
 
         if let secondary = snapshot.secondary {
             lines.append(Self.rateLine(title: meta.weeklyLabel, window: secondary, useColor: useColor))
-            if let reset = secondary.resetDescription {
+            if secondary.hasKnownLimit != false, let reset = secondary.resetDescription {
                 lines.append(Self.resetLine(reset))
             }
         }
 
         if meta.supportsOpus, let tertiary = snapshot.tertiary {
             lines.append(Self.rateLine(title: meta.opusLabel ?? "Sonnet", window: tertiary, useColor: useColor))
-            if let reset = tertiary.resetDescription {
+            if tertiary.hasKnownLimit != false, let reset = tertiary.resetDescription {
                 lines.append(Self.resetLine(reset))
             }
         }
@@ -81,6 +81,12 @@ extension RunicCLI {
     }
 
     private static func rateLine(title: String, window: RateWindow, useColor: Bool) -> String {
+        // Windows without a real limit have a placeholder percent; print
+        // their summary text instead of a fake "0.0% used" bar.
+        guard window.gaugePercent(showUsed: true) != nil else {
+            let info = window.resetDescription ?? window.label ?? "No usage limit reported"
+            return "\(title): \(info)"
+        }
         let text = Self.usageLine(remaining: window.remainingPercent, used: window.usedPercent)
         let colored = Self.colorizeUsage(text, remainingPercent: window.remainingPercent, useColor: useColor)
         return "\(title): \(colored)"
@@ -94,11 +100,17 @@ extension RunicCLI {
 
     private static func usageLine(remaining: Double, used: Double) -> String {
         let barLength = 20
-        let filled = Int(used / 100.0 * Double(barLength))
-        let empty = barLength - filled
+        let (filled, empty) = Self.progressBarCounts(usedPercent: used, width: barLength)
         let filledBar = String(repeating: "█", count: filled)
         let emptyBar = String(repeating: "░", count: empty)
         return "[\(filledBar)\(emptyBar)] \(String(format: "%.1f", used))% used"
+    }
+
+    /// Filled/empty cell counts for a progress bar, clamped so out-of-range
+    /// percents (e.g. 110 or -5) never produce negative repeat counts.
+    static func progressBarCounts(usedPercent: Double, width: Int) -> (filled: Int, empty: Int) {
+        let filled = min(max(Int(usedPercent / 100.0 * Double(width)), 0), width)
+        return (filled, width - filled)
     }
 
     private static func colorizeUsage(_ text: String, remainingPercent: Double, useColor: Bool) -> String {

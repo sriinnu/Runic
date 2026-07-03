@@ -87,7 +87,12 @@ public struct CursorStatusSnapshot: Sendable {
 
     public func toUsageSnapshot() -> UsageSnapshot {
         UsageSnapshot(
-            primary: RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
+            primary: RateWindow(
+                usedPercent: 0,
+                windowMinutes: nil,
+                resetsAt: nil,
+                resetDescription: nil,
+                hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
             providerCost: nil,

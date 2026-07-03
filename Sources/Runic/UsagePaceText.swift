@@ -30,6 +30,7 @@ enum UsagePaceText {
 
     private static func deltaSuffix(for pace: UsagePace) -> String {
         let deltaValue = Int(abs(pace.deltaPercent).rounded())
+        guard deltaValue > 0 else { return "" }
         let sign = pace.deltaPercent >= 0 ? "+" : "-"
         return " (\(sign)\(deltaValue)%)"
     }

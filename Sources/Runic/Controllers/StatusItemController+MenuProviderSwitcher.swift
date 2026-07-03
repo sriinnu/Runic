@@ -33,8 +33,36 @@ extension StatusItemController {
             })
         let item = NSMenuItem()
         item.view = view
-        item.isEnabled = false
+        // Keyboard access: Return on the highlighted switcher row cycles to the
+        // next provider (mouse users click individual buttons in the view).
+        item.isEnabled = true
+        item.target = self
+        item.action = #selector(self.cycleMenuProvider(_:))
         return item
+    }
+
+    /// Advances the in-menu provider selection to the next option (Overview →
+    /// provider 1 → … → Overview). Invoked via Return on the switcher/tab bar
+    /// rows so keyboard users can change providers.
+    @objc func cycleMenuProvider(_ sender: NSMenuItem) {
+        guard let menu = sender.menu else { return }
+        let providers = self.store.enabledProviders()
+        guard !providers.isEmpty else { return }
+
+        var options: [UsageProvider?] = providers.count > 1 ? [nil] : []
+        options.append(contentsOf: providers.map { Optional($0) })
+        guard options.count > 1 else { return }
+
+        let currentIndex = options.firstIndex(of: self.selectedMenuProvider) ?? 0
+        let next = options[(currentIndex + 1) % options.count]
+        self.selectedMenuProvider = next
+        // Overview (nil) must clear the ping target too, so "Ping now" does a
+        // full refresh instead of pinging whichever provider was viewed last.
+        self.lastMenuProvider = next
+        self.populateMenu(menu, provider: next)
+        self.markMenuFresh(menu)
+        self.refreshMenuCardHeights(in: menu)
+        self.applyIcon(phase: nil)
     }
 
     func makeProviderTabBar(
@@ -102,8 +130,10 @@ extension StatusItemController {
         formatter.timeZone = TimeZone.current
 
         var summaries: [OverviewMenuView.ProviderSummary] = []
+        var activeIDs: Set<String> = []
         var chartPoints: [OverviewMenuView.DailyPoint] = []
         var totalToday = 0
+        let showsUsed = self.settings.usageBarsShowUsed
 
         for provider in providers {
             let meta = self.store.metadata(for: provider)
@@ -114,7 +144,6 @@ extension StatusItemController {
                 red: Double(descriptor.branding.color.red),
                 green: Double(descriptor.branding.color.green),
                 blue: Double(descriptor.branding.color.blue))
-            let usedPercent = snapshot?.primary.usedPercent ?? 0
             let todayTokens = self.store.ledgerDailySummary(for: provider)?.totals.totalTokens ?? 0
             totalToday += todayTokens
 
@@ -125,17 +154,25 @@ extension StatusItemController {
                 .contextLabel(for: provider, model: topModel?.model)?
                 .text
 
+            let hasQuota = OverviewMenuView.windowHasQuota(snapshot?.primary)
+            // "Active" stays anchored on raw consumption so the used/left
+            // toggle doesn't change which providers the overview lists.
+            if (snapshot?.primary.usedPercent ?? 0) > 0 || todayTokens > 0 {
+                activeIDs.insert(provider.rawValue)
+            }
+
             summaries.append(OverviewMenuView.ProviderSummary(
                 id: provider.rawValue,
                 provider: provider,
                 name: meta.displayName,
                 icon: icon,
-                usedPercent: usedPercent,
+                usedPercent: OverviewMenuView.displayPercent(for: snapshot?.primary, showsUsed: showsUsed),
                 todayTokens: todayTokens,
                 brandColor: brandColor,
                 resetDescription: resetDesc,
                 windowLabel: windowLabel,
-                topModelContext: topModelContext))
+                topModelContext: topModelContext,
+                hasQuota: hasQuota))
 
             let dailySummaries = self.store.ledgerAllDailySummary(for: provider)
             for summary in dailySummaries where summary.dayStart >= weekAgo {
@@ -148,14 +185,16 @@ extension StatusItemController {
             }
         }
 
-        let activeSummaries = summaries.filter { $0.usedPercent > 0 || $0.todayTokens > 0 }
+        let activeSummaries = summaries.filter { activeIDs.contains($0.id) }
 
         return OverviewMenuView(
             summaries: activeSummaries.isEmpty ? summaries : activeSummaries,
             chartPoints: chartPoints,
             totalTodayTokens: totalToday,
             totalProviders: providers.count,
-            width: width)
+            width: width,
+            showsUsed: showsUsed,
+            numberStyle: self.settings.numberFormat.formatterStyle)
     }
 
     static func abbreviatedProviderName(_ name: String) -> String {
@@ -167,7 +206,7 @@ extension StatusItemController {
             "SambaNova": "SambaN",
             "Azure OpenAI": "Azure",
         ]
-        return abbreviations[name] ?? String(name.prefix(6))
+        return abbreviations[name] ?? "\(name.prefix(6))\u{2026}"
     }
 
     func switcherIcon(for provider: UsageProvider, size: CGFloat) -> NSImage {
@@ -200,15 +239,14 @@ extension StatusItemController {
 
     func switcherWeeklyRemaining(for provider: UsageProvider) -> Double? {
         let snapshot = self.store.snapshot(for: provider)
-        let window: RateWindow? = if provider == .factory {
-            snapshot?.secondary ?? snapshot?.primary
+        let ordered: [RateWindow?] = if provider == .factory {
+            [snapshot?.secondary, snapshot?.primary]
         } else {
-            snapshot?.primary ?? snapshot?.secondary
+            [snapshot?.primary, snapshot?.secondary]
         }
-        guard let window else { return nil }
-        if self.settings.usageBarsShowUsed {
-            return window.usedPercent
-        }
-        return window.remainingPercent
+        // Prefer a window backed by a real limit; providers with only
+        // informational windows get no quota bar at all.
+        let window = ordered.compactMap(\.self).first { $0.hasKnownLimit != false }
+        return window?.gaugePercent(showUsed: self.settings.usageBarsShowUsed)
     }
 }

@@ -80,6 +80,47 @@ struct UsageLedgerAnomalyDetectionTests {
     }
 
     @Test
+    func `idle day in baseline counts as zero instead of disabling detection`() {
+        let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone.current
+        let clock = SummaryClock(now: now, calendar: calendar)
+
+        // Six active baseline days plus an idle Sunday (offset -1 missing),
+        // then a 10x Monday spike. A missing day used to wipe the baseline and
+        // silently disable anomaly detection for the provider.
+        var summaries: [UsageLedgerDailySummary] = []
+        for offset in -7 ... -2 {
+            summaries.append(self.dailySummary(
+                provider: .codex,
+                dayOffset: offset,
+                tokens: 1000,
+                cost: 2.0,
+                clock: clock))
+        }
+        summaries.append(self.dailySummary(
+            provider: .codex,
+            dayOffset: 0,
+            tokens: 10000,
+            cost: 20.0,
+            clock: clock))
+
+        let anomalies = UsageLedgerAnomalyDetector.summaries(
+            dailySummaries: summaries,
+            now: now,
+            calendar: calendar)
+
+        let codex = anomalies[.codex]
+        #expect(codex != nil)
+        #expect(codex?.tokenAnomaly?.severity == .critical)
+        // Baseline averages over all seven days with the idle day at zero.
+        #expect(abs((codex?.tokenAnomaly?.baselineAverage ?? 0) - (6000.0 / 7.0)) < 0.0001)
+        // The idle day also counts as $0 spend, so spend detection still works.
+        #expect(codex?.spendAnomaly?.severity == .critical)
+        #expect(abs((codex?.spendAnomaly?.baselineAverage ?? 0) - (12.0 / 7.0)) < 0.0001)
+    }
+
+    @Test
     func `does not emit anomaly when history has fewer than seven days`() {
         let now = Date(timeIntervalSince1970: 1_771_718_400) // 2026-02-22T00:00:00Z
         var calendar = Calendar(identifier: .gregorian)

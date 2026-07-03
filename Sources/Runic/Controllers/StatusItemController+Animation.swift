@@ -270,6 +270,7 @@ extension StatusItemController {
             self.animationDriver?.stop()
             self.animationDriver = nil
             self.animationPhase = 0
+            self.animatingProviders.removeAll()
             if self.shouldMergeIcons {
                 self.applyIcon(phase: nil)
             } else {
@@ -282,9 +283,19 @@ extension StatusItemController {
         self.animationPhase += 0.045 // half-speed animation
         if self.shouldMergeIcons {
             self.applyIcon(phase: self.animationPhase)
-        } else {
-            UsageProvider.allCases.forEach { self.applyIcon(for: $0, phase: self.animationPhase) }
+            return
         }
+        // Render only providers that are actively animating (re-rendering all
+        // ~28 provider icons per frame at 60fps was pure waste); a provider
+        // that just stopped gets a single static repaint.
+        let animating = Set(UsageProvider.allCases.filter { self.shouldAnimate(provider: $0) })
+        for provider in animating {
+            self.applyIcon(for: provider, phase: self.animationPhase)
+        }
+        for provider in self.animatingProviders.subtracting(animating) {
+            self.applyIcon(for: provider, phase: nil)
+        }
+        self.animatingProviders = animating
     }
 
     private func advanceAnimationPattern() {

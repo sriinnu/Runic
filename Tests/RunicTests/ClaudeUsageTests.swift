@@ -208,6 +208,24 @@ struct ClaudeUsageTests {
     }
 
     @Test
+    func `parses claude web API usage response with fractional utilization`() throws {
+        // The API can report utilization as a fractional number (45.5); that must
+        // not fail the whole payload.
+        let json = """
+        {
+          "five_hour": { "utilization": 45.5, "resets_at": "2025-12-23T16:00:00.000Z" },
+          "seven_day": { "utilization": 12.25, "resets_at": "2025-12-29T23:00:00.000Z" },
+          "seven_day_opus": { "utilization": 0.5 }
+        }
+        """
+        let data = Data(json.utf8)
+        let parsed = try ClaudeWebAPIFetcher._parseUsageResponseForTesting(data)
+        #expect(parsed.sessionPercentUsed == 45.5)
+        #expect(parsed.weeklyPercentUsed == 12.25)
+        #expect(parsed.opusPercentUsed == 0.5)
+    }
+
+    @Test
     func `parses claude web API usage response when weekly missing`() throws {
         let json = """
         {

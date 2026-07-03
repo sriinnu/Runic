@@ -56,20 +56,12 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         guard !breakdown.isEmpty else { return nil }
 
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(UsageBreakdownChartMenuView(breakdown: breakdown, width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "usageBreakdownChart"
-        submenu.addItem(chartItem)
-        return submenu
+        return self.makeDeferredHostedSubmenu(id: "usageBreakdownChart") { [weak self] in
+            guard let self else { return NSView() }
+            return self.makeSizedHostedView(
+                self.themedHostedMenuRoot(UsageBreakdownChartMenuView(breakdown: breakdown, width: width)),
+                width: width)
+        }
     }
 
     func makeCreditsHistorySubmenu() -> NSMenu? {
@@ -77,20 +69,12 @@ extension StatusItemController {
         let width = Self.menuCardBaseWidth
         guard !breakdown.isEmpty else { return nil }
 
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(CreditsHistoryChartMenuView(breakdown: breakdown, width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "creditsHistoryChart"
-        submenu.addItem(chartItem)
-        return submenu
+        return self.makeDeferredHostedSubmenu(id: "creditsHistoryChart") { [weak self] in
+            guard let self else { return NSView() }
+            return self.makeSizedHostedView(
+                self.themedHostedMenuRoot(CreditsHistoryChartMenuView(breakdown: breakdown, width: width)),
+                width: width)
+        }
     }
 
     func makeCostHistorySubmenu(provider: UsageProvider) -> NSMenu? {
@@ -99,23 +83,15 @@ extension StatusItemController {
         guard let tokenSnapshot = self.store.tokenSnapshot(for: provider) else { return nil }
         guard !tokenSnapshot.daily.isEmpty else { return nil }
 
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(CostHistoryChartMenuView(
-            provider: provider,
-            daily: tokenSnapshot.daily,
-            totalCostUSD: tokenSnapshot.last30DaysCostUSD,
-            width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "costHistoryChart"
-        submenu.addItem(chartItem)
-        return submenu
+        return self.makeDeferredHostedSubmenu(id: "costHistoryChart") { [weak self] in
+            guard let self else { return NSView() }
+            return self.makeSizedHostedView(
+                self.themedHostedMenuRoot(CostHistoryChartMenuView(
+                    provider: provider,
+                    daily: tokenSnapshot.daily,
+                    totalCostUSD: tokenSnapshot.last30DaysCostUSD,
+                    width: width)),
+                width: width)
+        }
     }
 }

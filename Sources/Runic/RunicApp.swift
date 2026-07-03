@@ -268,6 +268,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var account: AccountInfo?
     private var preferencesSelection: PreferencesSelection?
     private var refreshLifecycleObservers: [NSObjectProtocol] = []
+    private let performanceRetentionPruner = PerformanceRetentionPruner()
 
     func configure(store: UsageStore, settings: SettingsStore, account: AccountInfo, selection: PreferencesSelection) {
         self.store = store
@@ -283,6 +284,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.store?.startRuntime()
         self.ensureStatusController()
         self.installAutoRefreshLifecycleObservers()
+        self.performanceRetentionPruner.start()
         KeyboardShortcuts.onKeyUp(for: .openMenu) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.statusController?.openMenuFromShortcut()

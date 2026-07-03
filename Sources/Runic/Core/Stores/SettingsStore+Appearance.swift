@@ -193,3 +193,25 @@ extension SettingsStore {
         self.appearanceValues.visualSettingsRevision &+= 1
     }
 }
+
+// MARK: - UsageFormatter style bridging
+
+extension NumberFormat {
+    /// Maps the persisted preference onto the RunicCore formatting style.
+    var formatterStyle: UsageFormatter.NumberStyle {
+        switch self {
+        case .abbreviated: .abbreviated
+        case .full: .full
+        }
+    }
+}
+
+extension DateFormat {
+    /// Maps the persisted preference onto the RunicCore formatting style.
+    var formatterStyle: UsageFormatter.DateStyle {
+        switch self {
+        case .relative: .relative
+        case .absolute: .absolute
+        }
+    }
+}

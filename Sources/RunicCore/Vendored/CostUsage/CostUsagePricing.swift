@@ -196,32 +196,31 @@ enum CostUsagePricing {
         let key = self.normalizeClaudeModel(model)
         guard let pricing = self.claude[key] else { return nil }
 
-        func tiered(_ tokens: Int, base: Double, above: Double?, threshold: Int?) -> Double {
-            guard let threshold, let above else { return Double(tokens) * base }
-            let below = min(tokens, threshold)
-            let over = max(tokens - threshold, 0)
-            return Double(below) * base + Double(over) * above
+        let input = max(0, inputTokens)
+        let cacheRead = max(0, cacheReadInputTokens)
+        let cacheCreation = max(0, cacheCreationInputTokens)
+        let output = max(0, outputTokens)
+
+        // Anthropic long-context billing is whole-request: once the input context
+        // (input + cache reads + cache writes) EXCEEDS the threshold, EVERY token
+        // of EVERY class — including all output — bills at the premium rate. The
+        // premium is never applied per class above the boundary. Exactly-at-
+        // threshold requests (e.g. 200K on the nose) bill at base rates:
+        // Anthropic's rule is "exceeds", not "reaches".
+        let contextTokens = input + cacheRead + cacheCreation
+        let isLongContext = pricing.thresholdTokens.map { contextTokens > $0 } ?? false
+
+        func rate(_ base: Double, _ above: Double?) -> Double {
+            isLongContext ? (above ?? base) : base
         }
 
-        return tiered(
-            max(0, inputTokens),
-            base: pricing.inputCostPerToken,
-            above: pricing.inputCostPerTokenAboveThreshold,
-            threshold: pricing.thresholdTokens)
-            + tiered(
-                max(0, cacheReadInputTokens),
-                base: pricing.cacheReadInputCostPerToken,
-                above: pricing.cacheReadInputCostPerTokenAboveThreshold,
-                threshold: pricing.thresholdTokens)
-            + tiered(
-                max(0, cacheCreationInputTokens),
-                base: pricing.cacheCreationInputCostPerToken,
-                above: pricing.cacheCreationInputCostPerTokenAboveThreshold,
-                threshold: pricing.thresholdTokens)
-            + tiered(
-                max(0, outputTokens),
-                base: pricing.outputCostPerToken,
-                above: pricing.outputCostPerTokenAboveThreshold,
-                threshold: pricing.thresholdTokens)
+        return Double(input) * rate(pricing.inputCostPerToken, pricing.inputCostPerTokenAboveThreshold)
+            + Double(cacheRead) * rate(
+                pricing.cacheReadInputCostPerToken,
+                pricing.cacheReadInputCostPerTokenAboveThreshold)
+            + Double(cacheCreation) * rate(
+                pricing.cacheCreationInputCostPerToken,
+                pricing.cacheCreationInputCostPerTokenAboveThreshold)
+            + Double(output) * rate(pricing.outputCostPerToken, pricing.outputCostPerTokenAboveThreshold)
     }
 }

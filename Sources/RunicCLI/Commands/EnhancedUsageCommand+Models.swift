@@ -26,6 +26,9 @@ extension EnhancedUsageCommand {
         let usedPercent: Double
         let remainingPercent: Double
         let resetDescription: String?
+        /// Mirrors `RateWindow.hasKnownLimit`; `false` means the percents are
+        /// placeholders and renderers should show the summary text instead.
+        let hasKnownLimit: Bool?
     }
 
     struct TokenBreakdown: Encodable {

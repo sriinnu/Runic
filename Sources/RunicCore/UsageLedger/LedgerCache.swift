@@ -25,12 +25,32 @@ public actor LedgerCache {
     let relayDir: URL
     let legacyCostCacheRoot: URL?
 
-    static let dayKeyFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
-        return f
-    }()
+    /// Day-key formatting that always tracks the LIVE current timezone.
+    ///
+    /// This used to be a bare `static let DateFormatter` that froze
+    /// `TimeZone.current` at first use, while scan windows are computed from a
+    /// fresh `Calendar.current` per scan. After a timezone change mid-run the
+    /// two disagreed: entries could be labeled with day keys shifted by a day
+    /// relative to the scan window, and replace-semantics day aggregates could
+    /// shrink yesterday. The box re-checks the current timezone on every use so
+    /// keys and windows stay in lockstep.
+    static let dayKeyFormatterBox = LedgerDayKeyFormatterBox()
+
+    /// In-actor memo of the parsed relay state per provider, validated against
+    /// the relay file's (size, mtime) so external writers are still observed.
+    /// One `loadEntries` cycle used to re-parse the same multi-MB relay JSONL
+    /// 4-5 times; steady state is now one parse per actual file change.
+    var relayStateMemo: [String: RelayStateMemoEntry] = [:]
+
+    struct RelayStateMemoEntry {
+        let sizeBytes: Int64
+        let modifiedAt: Date?
+        let state: UsageRelayMaterializedState
+    }
+
+    /// Providers whose one-time legacy cost-cache relay seeding has completed
+    /// (in-memory mirror of the persisted `{provider}.legacy-seeded` stamp).
+    var legacyCostSeedStamped: Set<String> = []
 
     public init(cacheDir: URL? = nil, relayDir: URL? = nil, legacyCostCacheRoot: URL? = nil) {
         if let cacheDir {
@@ -112,11 +132,17 @@ public actor LedgerCache {
     /// When `todayKey` is supplied, existing days before today are immutable:
     /// this is the fast relay path used by menu refreshes. Passing `nil`
     /// preserves full-rebuild behavior for tests and future backfill tools.
+    ///
+    /// `archiveBoundaryDayKey` bounds relay archiving WITHOUT freezing days:
+    /// the gap catch-up passes `todayKey: nil` (gap days must REPLACE their
+    /// aggregates) plus the current day key here, so the still-partial current
+    /// day is never sealed into the relay (see `mergeDailies` body).
     public func mergeDailies(
         provider: String,
         newDailies: [CachedDaily],
         scanDate: Date,
         todayKey: String? = nil,
+        archiveBoundaryDayKey: String? = nil,
         coveredMaxAgeDays: Int? = nil)
     {
         var ledger = self.loadCachedDailies(provider: provider) ?? CachedLedger(
@@ -130,6 +156,13 @@ public actor LedgerCache {
             existingByKey[daily.dayKey] = daily
         }
 
+        // Track which days this merge actually changes. Archiving every cached
+        // day on every refresh re-wrote the entire history to the relay each
+        // cycle (~86K redundant records/day, driving repeated compactions);
+        // unchanged days are already durable in the daily cache file and are
+        // seeded into the relay by `seedRelayFromLegacyCacheIfNeeded` when
+        // missing, so only genuinely changed aggregates need a new snapshot.
+        var changedDailies: [CachedDaily] = []
         for newDaily in newDailies {
             if let todayKey,
                newDaily.dayKey != todayKey,
@@ -137,14 +170,32 @@ public actor LedgerCache {
             {
                 continue
             }
+            if existingByKey[newDaily.dayKey] != newDaily {
+                changedDailies.append(newDaily)
+            }
             existingByKey[newDaily.dayKey] = newDaily
         }
 
         ledger.dailies = existingByKey.values.sorted { $0.dayKey < $1.dayKey }
         self.updateScanMetadata(&ledger, scanDate: scanDate, coveredMaxAgeDays: coveredMaxAgeDays)
+        // Replace semantics preserved: each changed day gets a fresh
+        // event+watermark snapshot, and the materializer always selects the
+        // newest snapshot per day.
+        //
+        // Days at/after the seal boundary (today) are NEVER archived: relay
+        // snapshots take precedence over the daily cache for their day on
+        // every load, and the steady-state merge never re-archives today — so
+        // an archived partial "today" would pin the whole day at the count it
+        // had at archive time. The gap catch-up passes `todayKey: nil` (gap
+        // days must REPLACE their aggregates) and fires on every morning
+        // rollover (`scanGapDays` returns 2), which used to seal today's
+        // partial aggregate into the relay daily; it now supplies
+        // `archiveBoundaryDayKey` instead. A fully-nil boundary keeps
+        // archive-everything rebuild semantics for backfill tools/tests.
+        let sealBoundaryKey = todayKey ?? archiveBoundaryDayKey
         self.archiveDailySummariesAsRelayEvents(
             provider: provider,
-            dailies: todayKey.map { key in ledger.dailies.filter { $0.dayKey < key } } ?? ledger.dailies,
+            dailies: sealBoundaryKey.map { key in changedDailies.filter { $0.dayKey < key } } ?? changedDailies,
             writtenAt: scanDate)
         self.saveDailies(provider: provider, ledger: ledger)
     }
@@ -310,6 +361,44 @@ public actor LedgerCache {
     }
 
     public static func dayKey(for date: Date) -> String {
-        self.dayKeyFormatter.string(from: date)
+        self.dayKeyFormatterBox.string(from: date)
+    }
+
+    static func dayDate(fromKey dayKey: String) -> Date? {
+        self.dayKeyFormatterBox.date(from: dayKey)
+    }
+}
+
+/// Serializes a `yyyy-MM-dd` day-key formatter behind a lock and refreshes its
+/// timezone from `TimeZone.current` on every use, so a timezone change mid-run
+/// can never leave day keys frozen in the launch-time zone. Thread-safe:
+/// day keys are derived from nonisolated log-source code as well as the actor.
+final class LedgerDayKeyFormatterBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private let formatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        return f
+    }()
+
+    func string(from date: Date, timeZone: TimeZone = .current) -> String {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        self.refreshIfNeeded(timeZone: timeZone)
+        return self.formatter.string(from: date)
+    }
+
+    func date(from dayKey: String, timeZone: TimeZone = .current) -> Date? {
+        self.lock.lock()
+        defer { self.lock.unlock() }
+        self.refreshIfNeeded(timeZone: timeZone)
+        return self.formatter.date(from: dayKey)
+    }
+
+    private func refreshIfNeeded(timeZone: TimeZone) {
+        if self.formatter.timeZone != timeZone {
+            self.formatter.timeZone = timeZone
+        }
     }
 }

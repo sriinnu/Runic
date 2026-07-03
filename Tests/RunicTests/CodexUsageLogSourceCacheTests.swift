@@ -520,6 +520,79 @@ extension CodexUsageLogSourceTests {
     }
 
     @Test
+    func `codex busy file during gap catch-up seals no gap day and retries next refresh`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000) // 2026-01-02T12:00:00Z
+        let cal = Calendar.current
+        let yesterday = cal.date(byAdding: .day, value: -1, to: now) ?? now
+        let twoDaysAgo = cal.date(byAdding: .day, value: -2, to: now) ?? now
+
+        // Readable files: PARTIAL data for the gap day (a second file also
+        // covering that day is busy) plus today's live usage.
+        try Self.writeSession(root: root, date: yesterday, input: 111, modifiedAt: now, fileManager: fm)
+        try Self.writeSession(root: root, date: now, input: 40, modifiedAt: now, fileManager: fm)
+        // The busy file: unreadable mid-catch-up; we cannot know which gap days
+        // it covers, so no gap day may be sealed from this partial scan.
+        try Self.writeSession(root: root, date: twoDaysAgo, input: 999, modifiedAt: now, fileManager: fm)
+        let parts = cal.dateComponents([.year, .month, .day], from: twoDaysAgo)
+        let busyDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        let busyFile = try #require(
+            try fm.contentsOfDirectory(at: busyDir, includingPropertiesForKeys: nil)
+                .first { $0.pathExtension == "jsonl" })
+        try fm.setAttributes([.posixPermissions: 0], ofItemAtPath: busyFile.path)
+        defer { try? fm.setAttributes([.posixPermissions: 0o644], ofItemAtPath: busyFile.path) }
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        await cache.markScanComplete(provider: "codex", scanDate: twoDaysAgo, coveredMaxAgeDays: 30)
+        await cache.markCatchUpHealed(provider: "codex")
+
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+        let entries = try await source.loadEntries()
+
+        // Today (the mutable day) still lands; NO gap day is sealed with the
+        // partial recount.
+        #expect(entries.map(\.inputTokens) == [40])
+        var dailies = await cache.loadCachedDailies(provider: "codex")?.dailies ?? []
+        #expect(dailies.first { $0.dayKey == LedgerCache.dayKey(for: now) }?.inputTokens == 40)
+        #expect(!dailies.contains { $0.dayKey == LedgerCache.dayKey(for: yesterday) })
+        #expect(!dailies.contains { $0.dayKey == LedgerCache.dayKey(for: twoDaysAgo) })
+        // The anchor must NOT advance: the catch-up window stays open.
+        #expect(await cache.scanGapDays(provider: "codex", now: now) == 3)
+
+        // Once the busy file is readable again, the retried catch-up completes
+        // every gap day in full.
+        try fm.setAttributes([.posixPermissions: 0o644], ofItemAtPath: busyFile.path)
+        let retry = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+        let retried = try await retry.loadEntries()
+        #expect(retried.map(\.inputTokens).sorted() == [40, 111, 999])
+        dailies = await cache.loadCachedDailies(provider: "codex")?.dailies ?? []
+        #expect(dailies.first { $0.dayKey == LedgerCache.dayKey(for: yesterday) }?.inputTokens == 111)
+        #expect(dailies.first { $0.dayKey == LedgerCache.dayKey(for: twoDaysAgo) }?.inputTokens == 999)
+        #expect(await cache.scanGapDays(provider: "codex", now: now) == 1)
+    }
+
+    @Test
     func `codex backfills history once when cache is empty`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory

@@ -222,9 +222,9 @@ extension StatusItemController {
             guard self.popover?.isShown == true else { return }
             guard !self.store.isRefreshing else { return }
             let target = provider ?? self.selectedMenuProvider ?? self.store.enabledProviders().first
-            let isStale = target.map { self.store.isStale(provider: $0) } ?? self.store.isStale
-            let hasSnapshot = target.map { self.store.snapshot(for: $0) != nil } ?? true
-            guard isStale || !hasSnapshot else { return }
+            let shouldPing = target.map { self.store.shouldPingOnMenuOpen(provider: $0) }
+                ?? self.store.isStale
+            guard shouldPing else { return }
             await self.store.refresh(trigger: .menuOpen)
         }
     }

@@ -59,6 +59,36 @@ struct OpenAIDashboardParserTests {
     }
 
     @Test
+    func `parses rate limits with decimal percents`() {
+        let body = """
+        Usage limits
+        5h limit
+        45.5% remaining
+        Resets today at 2:15 PM
+        Weekly limit
+        12.25% remaining
+        Resets Fri at 9:00 AM
+        """
+        let limits = OpenAIDashboardParser.parseRateLimits(bodyText: body)
+        #expect(abs((limits.primary?.usedPercent ?? 0) - 54.5) < 0.001)
+        #expect(abs((limits.secondary?.usedPercent ?? 0) - 87.75) < 0.001)
+    }
+
+    @Test
+    func `percent without keyword defaults to remaining`() {
+        // The dashboard renders "N% remaining"; a bare percent means the keyword
+        // was split onto another line, so it must be treated as remaining.
+        let body = """
+        Usage limits
+        5h limit
+        72%
+        Resets today at 2:15 PM
+        """
+        let limits = OpenAIDashboardParser.parseRateLimits(bodyText: body)
+        #expect(abs((limits.primary?.usedPercent ?? 0) - 28) < 0.001)
+    }
+
+    @Test
     func `parses plan from client bootstrap`() {
         let html = """
         <html>

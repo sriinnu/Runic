@@ -7,13 +7,13 @@ struct SmallUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HeaderView(provider: self.entry.provider, updatedAt: self.entry.updatedAt)
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                percentLeft: self.entry.primary?.remainingPercent,
+                window: self.entry.primary,
                 color: WidgetColors.color(for: self.entry.provider))
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                percentLeft: self.entry.secondary?.remainingPercent,
+                window: self.entry.secondary,
                 color: WidgetColors.color(for: self.entry.provider))
             if let codeReview = entry.codeReviewRemainingPercent {
                 UsageBarRow(
@@ -32,13 +32,13 @@ struct MediumUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HeaderView(provider: self.entry.provider, updatedAt: self.entry.updatedAt)
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                percentLeft: self.entry.primary?.remainingPercent,
+                window: self.entry.primary,
                 color: WidgetColors.color(for: self.entry.provider))
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                percentLeft: self.entry.secondary?.remainingPercent,
+                window: self.entry.secondary,
                 color: WidgetColors.color(for: self.entry.provider))
             if let credits = entry.creditsRemaining {
                 ValueLine(title: "Credits", value: WidgetFormat.credits(credits))
@@ -59,13 +59,13 @@ struct LargeUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HeaderView(provider: self.entry.provider, updatedAt: self.entry.updatedAt)
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                percentLeft: self.entry.primary?.remainingPercent,
+                window: self.entry.primary,
                 color: WidgetColors.color(for: self.entry.provider))
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                percentLeft: self.entry.secondary?.remainingPercent,
+                window: self.entry.secondary,
                 color: WidgetColors.color(for: self.entry.provider))
             if let codeReview = entry.codeReviewRemainingPercent {
                 UsageBarRow(
@@ -130,6 +130,25 @@ struct HeaderView: View {
             Text(WidgetFormat.relativeDate(self.updatedAt))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Renders a quota bar for a rate window, or falls back to the window's
+/// summary text when the window has no real limit (`hasKnownLimit == false`)
+/// so providers without quotas never show a fake gauge.
+struct WindowUsageRow: View {
+    let title: String
+    let window: RateWindow?
+    let color: Color
+
+    var body: some View {
+        if let window, window.hasKnownLimit == false {
+            if let summary = window.resetDescription ?? window.label {
+                ValueLine(title: self.title, value: summary)
+            }
+        } else {
+            UsageBarRow(title: self.title, percentLeft: self.window?.remainingPercent, color: self.color)
         }
     }
 }

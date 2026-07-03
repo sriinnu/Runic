@@ -10,8 +10,8 @@ extension MenuPopoverView {
             ProviderContextWindowRegistry.shared.contextLabel(for: provider, model: $0.model)
         } ?? ProviderContextWindowRegistry.shared.contextLabel(for: provider)
         let ledgerTopModelContextLabel = providerContextStatus?.text
-        let credits: CreditsSnapshot? = provider == .codex ? self.store.credits : nil
-        let creditsError: String? = provider == .codex ? self.store.lastCreditsError : nil
+        let credits: CreditsSnapshot? = self.store.credits(for: provider)
+        let creditsError: String? = self.store.creditsError(for: provider)
         let dashboard: OpenAIDashboardSnapshot? = provider == .codex && !self.store.openAIDashboardRequiresLogin
             ? self.store.openAIDashboard
             : nil
@@ -42,14 +42,16 @@ extension MenuPopoverView {
             ledgerUpdatedAt: self.store.ledgerUpdatedAt(for: provider),
             providerContextStatus: providerContextStatus,
             account: self.account,
-            isRefreshing: self.store.isRefreshing,
+            isRefreshing: self.store.refreshingProviders.contains(provider),
             lastError: self.store.error(for: provider),
             usageBarsShowUsed: self.settings.usageBarsShowUsed,
             usageMetricDisplayMode: self.settings.usageMetricDisplayMode,
             menuMode: self.settings.menuMode,
             tokenCostUsageEnabled: self.settings.isCostUsageEffectivelyEnabled(for: provider),
             showOptionalCreditsAndExtraUsage: self.settings.showOptionalCreditsAndExtraUsage,
-            now: Date())
+            now: Date(),
+            numberStyle: self.settings.numberFormat.formatterStyle,
+            dateStyle: self.settings.dateFormat.formatterStyle)
         return UsageMenuCardView.Model.make(input)
     }
 }

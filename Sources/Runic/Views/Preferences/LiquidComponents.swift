@@ -129,14 +129,19 @@ private struct RotatingGradientBorder: View {
     let cornerRadius: CGFloat
     let isActive: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.runicTheme) private var runicTheme
 
-    private static let borderColors: [Color] = [
-        Color(red: 0.36, green: 0.86, blue: 1.0),
-        Color(red: 0.24, green: 0.40, blue: 0.89),
-        Color(red: 0.31, green: 0.00, blue: 0.76),
-        Color(red: 0.24, green: 0.40, blue: 0.89),
-        Color(red: 0.36, green: 0.86, blue: 1.0),
-    ]
+    /// Theme-derived ramp (was a hardcoded blue trio): bright accent →
+    /// primary → highlight and back, so the halo matches every theme.
+    private var borderColors: [Color] {
+        [
+            self.runicTheme.accent,
+            self.runicTheme.primary,
+            self.runicTheme.highlight,
+            self.runicTheme.primary,
+            self.runicTheme.accent,
+        ]
+    }
 
     var body: some View {
         if self.isActive, !self.reduceMotion {
@@ -145,7 +150,7 @@ private struct RotatingGradientBorder: View {
                 RoundedRectangle(cornerRadius: self.cornerRadius, style: .continuous)
                     .strokeBorder(
                         AngularGradient(
-                            gradient: Gradient(colors: Self.borderColors),
+                            gradient: Gradient(colors: self.borderColors),
                             center: .center,
                             angle: .degrees(rotation)),
                         lineWidth: 1.5)

@@ -213,16 +213,19 @@ extension UsageExporter {
 
     private static func exportUtilizationCSV(store: UsageStore, provider: UsageProvider) -> String {
         var lines = ["date,total_tokens,current_used_percent,estimated_used_percent"]
-        let currentUsedPercent = store.snapshot(for: provider)?.primary.usedPercent ?? 0
+        // Windows without a real limit have placeholder percents; export empty
+        // cells instead of a fake 0.00.
+        let primary = store.snapshot(for: provider)?.primary
+        let currentUsedPercent: Double? = primary?.hasKnownLimit == false ? nil : primary?.usedPercent ?? 0
         let todayTokens = store.ledgerDailySummary(for: provider)?.totals.totalTokens ?? 0
-        let scaleFactor = todayTokens > 0 ? currentUsedPercent / Double(todayTokens) : 0
+        let scaleFactor = todayTokens > 0 ? (currentUsedPercent ?? 0) / Double(todayTokens) : 0
         for summary in store.ledgerAllDailySummary(for: provider).sorted(by: { $0.dayStart < $1.dayStart }) {
             let estimated = min(100, Double(summary.totals.totalTokens) * scaleFactor)
             lines.append(Self.csvRow([
                 summary.dayKey,
                 "\(summary.totals.totalTokens)",
-                String(format: "%.2f", currentUsedPercent),
-                String(format: "%.2f", estimated),
+                currentUsedPercent.map { String(format: "%.2f", $0) } ?? "",
+                currentUsedPercent != nil ? String(format: "%.2f", estimated) : "",
             ]))
         }
         return lines.joined(separator: "\n")
@@ -235,7 +238,9 @@ extension UsageExporter {
             let label = Self.csvEscape(window.label ?? "Usage window")
             let reset = Self.csvEscape(window.resetDescription ?? "")
             let resetsAt = window.resetsAt.map(\.description) ?? ""
-            lines.append("\(label),\(String(format: "%.2f", window.usedPercent)),\(reset),\(resetsAt)")
+            // Empty percent cell for windows without a real limit.
+            let percent = window.hasKnownLimit == false ? "" : String(format: "%.2f", window.usedPercent)
+            lines.append("\(label),\(percent),\(reset),\(resetsAt)")
         }
         return lines.joined(separator: "\n")
     }

@@ -12,9 +12,6 @@ struct PerformancePane: View {
     @AppStorage("performanceTrackingEnabled") private var performanceTrackingEnabled = true
     @AppStorage("rawMetricsRetentionDays") private var rawMetricsRetentionDays = 30
     @AppStorage("aggregatedStatsRetentionYears") private var aggregatedStatsRetentionYears = 1
-    @AppStorage("qualityRatingPromptsEnabled") private var qualityRatingPromptsEnabled = false
-    @AppStorage("qualityRatingFrequency") private var qualityRatingFrequency = QualityRatingFrequency.every
-    @AppStorage("maxPromptsPerHour") private var maxPromptsPerHour = 3
 
     @State private var databaseSize: String = "Calculating..."
     @State private var isVacuuming = false
@@ -22,24 +19,6 @@ struct PerformancePane: View {
     @State private var vacuumStatus: String?
     @State private var clearDataStatus: String?
     @State private var appeared = false
-
-    enum QualityRatingFrequency: String, CaseIterable, Identifiable {
-        case every
-        case over1000 = "over_1000"
-        case over5000 = "over_5000"
-
-        var id: String {
-            self.rawValue
-        }
-
-        var label: String {
-            switch self {
-            case .every: "After every response"
-            case .over1000: "Only >1000 tokens"
-            case .over5000: "Only >5000 tokens"
-            }
-        }
-    }
 
     var body: some View {
         LiquidPreferencesPane {
@@ -101,50 +80,15 @@ struct PerformancePane: View {
                             .font(self.fonts.footnote)
                             .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                     }
+
+                    Text("Retention is applied automatically once a day; \"Clear Old Data\" below " +
+                        "runs the same cleanup immediately.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .liquidEntrance(appeared: self.appeared, index: 1)
-
-            LiquidSection(title: "Quality Rating Prompts (Preview)") {
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    PreferenceToggleRow(
-                        title: "Show rating prompts",
-                        subtitle: "Prompt scheduling is not active yet; explicit rating views still store locally.",
-                        binding: self.$qualityRatingPromptsEnabled)
-                        .disabled(true)
-                        .opacity(0.65)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Prompt frequency")
-                            .font(self.fonts.body)
-
-                        Picker("", selection: self.$qualityRatingFrequency) {
-                            ForEach(QualityRatingFrequency.allCases) { freq in
-                                Text(freq.label).tag(freq)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 400)
-                        .disabled(true)
-                        .opacity(0.65)
-
-                        Text("Kept here as a local preview until response-level prompt triggers are wired.")
-                            .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                    }
-
-                    PreferenceStepperRow(
-                        title: "Max prompts per hour",
-                        subtitle: "Planned interruption cap for the prompt scheduler.",
-                        step: 1,
-                        range: 1...10,
-                        valueLabel: { "\($0) prompts" },
-                        value: self.$maxPromptsPerHour)
-                        .disabled(true)
-                        .opacity(0.65)
-                }
-            }
-            .liquidEntrance(appeared: self.appeared, index: 2)
 
             LiquidSection(title: "Database Management") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
@@ -211,7 +155,7 @@ struct PerformancePane: View {
                         .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
-            .liquidEntrance(appeared: self.appeared, index: 3)
+            .liquidEntrance(appeared: self.appeared, index: 2)
 
             LiquidSection(title: "Privacy") {
                 Text("Runic does not collect analytics, crash reports, or anonymous usage stats.")
@@ -222,7 +166,7 @@ struct PerformancePane: View {
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .liquidEntrance(appeared: self.appeared, index: 4)
+            .liquidEntrance(appeared: self.appeared, index: 3)
         }
         .onAppear {
             self.calculateDatabaseSize()

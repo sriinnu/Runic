@@ -65,20 +65,23 @@ struct RetroSectionHeader: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.85))
             } else if self.runicTheme.isTerminalHUD {
-                HStack(spacing: 4) {
+                HStack(alignment: .top, spacing: 4) {
                     Text("[")
                         .foregroundStyle(self.runicTheme.accent.opacity(0.85))
                     Text(self.text.uppercased())
                         .tracking(1.8)
                         .foregroundStyle(self.runicTheme.primaryText)
-                        .lineLimit(1)
+                        // Long headers (e.g. "Export visible timeline, 1 year")
+                        // overflow a single line even at a shrunk scale — wrap
+                        // to a second line instead of silently truncating.
+                        .lineLimit(2)
                         .minimumScaleFactor(0.82)
                         .allowsTightening(true)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("]")
                         .foregroundStyle(self.runicTheme.accent.opacity(0.85))
                 }
                 .font(self.fonts.callout.weight(.bold))
-                .lineLimit(1)
             } else {
                 Text(self.text)
                     .font(self.fonts.subheadline.weight(.semibold))

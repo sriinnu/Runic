@@ -17,7 +17,16 @@ extension LedgerCache {
             }
         }
 
-        guard let usageProvider = UsageProvider(rawValue: provider) else { return }
+        // The legacy cost cache is frozen pre-relay data: once its historical
+        // days have been seeded, re-reading it from disk on every merge forever
+        // is pure waste. Stamp completion (in-memory + on disk) and skip.
+        // Same-day legacy data excluded by `todayKey` is safe to leave behind:
+        // today is always re-derived live from the raw provider logs.
+        guard !self.isLegacyCostSeedStamped(provider: provider) else { return }
+        guard let usageProvider = UsageProvider(rawValue: provider) else {
+            self.stampLegacyCostSeed(provider: provider)
+            return
+        }
         let legacyCostDailies = self.dailiesFromLegacyCostUsageCache(provider: usageProvider)
         let seedCostDailies = legacyCostDailies.filter { daily in
             if seededDayKeys.contains(daily.dayKey) { return false }
@@ -26,7 +35,28 @@ extension LedgerCache {
             }
             return true
         }
-        _ = self.archiveDailySummariesAsRelayEvents(provider: provider, dailies: seedCostDailies, writtenAt: writtenAt)
+        if self.archiveDailySummariesAsRelayEvents(provider: provider, dailies: seedCostDailies, writtenAt: writtenAt) {
+            self.stampLegacyCostSeed(provider: provider)
+        }
+    }
+
+    /// Whether the one-time legacy cost-cache seeding already completed.
+    func isLegacyCostSeedStamped(provider: String) -> Bool {
+        if self.legacyCostSeedStamped.contains(provider) { return true }
+        if FileManager.default.fileExists(atPath: self.legacyCostSeedStampURL(provider: provider).path) {
+            self.legacyCostSeedStamped.insert(provider)
+            return true
+        }
+        return false
+    }
+
+    func stampLegacyCostSeed(provider: String) {
+        self.legacyCostSeedStamped.insert(provider)
+        try? Data().write(to: self.legacyCostSeedStampURL(provider: provider))
+    }
+
+    func legacyCostSeedStampURL(provider: String) -> URL {
+        self.relayDir.appendingPathComponent("\(provider).legacy-seeded")
     }
 
     func dailiesFromLegacyCostUsageCache(provider: UsageProvider) -> [CachedDaily] {

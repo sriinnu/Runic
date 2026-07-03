@@ -151,16 +151,35 @@ enum UsageLedgerAnomalyDetector {
         for (provider, dayBuckets) in bucketsByProvider {
             guard let todayBucket = dayBuckets[todayStart] else { continue }
 
+            // The baseline needs a full week of tenure: a provider whose history
+            // doesn't reach back over the whole window would get a zero-padded
+            // (artificially low) baseline and fire on every new install.
+            guard let baselineWindowStart = calendar.date(
+                byAdding: .day,
+                value: -self.baselineDayCount,
+                to: todayStart),
+                let earliestObservedDay = dayBuckets.keys.min(),
+                earliestObservedDay <= baselineWindowStart
+            else { continue }
+
             var baselineBuckets: [DayUsageBucket] = []
             baselineBuckets.reserveCapacity(self.baselineDayCount)
             for dayOffset in 1...self.baselineDayCount {
-                guard let baselineDay = calendar.date(byAdding: .day, value: -dayOffset, to: todayStart),
-                      let bucket = dayBuckets[baselineDay]
-                else {
+                guard let baselineDay = calendar.date(byAdding: .day, value: -dayOffset, to: todayStart) else {
                     baselineBuckets.removeAll(keepingCapacity: true)
                     break
                 }
-                baselineBuckets.append(bucket)
+                if let bucket = dayBuckets[baselineDay] {
+                    baselineBuckets.append(bucket)
+                } else {
+                    // A day with no bucket inside an established week is a real
+                    // idle day: zero tokens, $0 spend. Bailing here used to
+                    // silently disable anomaly detection for any provider with a
+                    // single idle day in the trailing week.
+                    var idleDay = DayUsageBucket()
+                    idleDay.hasCost = true
+                    baselineBuckets.append(idleDay)
+                }
             }
             guard baselineBuckets.count == self.baselineDayCount else { continue }
 

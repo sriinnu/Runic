@@ -21,6 +21,25 @@ extension StatusItemController {
     func markMenuFresh(_ menu: NSMenu) {
         let key = ObjectIdentifier(menu)
         self.menuVersions[key] = self.menuContentVersion
+        self.pruneStaleMenuState(keeping: key)
+    }
+
+    /// Drop bookkeeping for menus that no longer exist. `ObjectIdentifier`
+    /// keys of deallocated menus both leak and — worse — can be REUSED by a
+    /// newly allocated menu at the same address, which would make a brand-new
+    /// menu look "fresh" and skip its first populate.
+    private func pruneStaleMenuState(keeping key: ObjectIdentifier) {
+        var live: Set<ObjectIdentifier> = [key]
+        if let menu = self.mergedMenu { live.insert(ObjectIdentifier(menu)) }
+        if let menu = self.fallbackMenu { live.insert(ObjectIdentifier(menu)) }
+        for menu in self.providerMenus.values {
+            live.insert(ObjectIdentifier(menu))
+        }
+        for menu in self.openMenus.values {
+            live.insert(ObjectIdentifier(menu))
+        }
+        self.menuVersions = self.menuVersions.filter { live.contains($0.key) }
+        self.menuProviders = self.menuProviders.filter { live.contains($0.key) }
     }
 
     func refreshOpenMenusIfNeeded() {
@@ -69,9 +88,11 @@ extension StatusItemController {
             guard self.openMenus[ObjectIdentifier(menu)] != nil else { return }
             guard !self.store.isRefreshing else { return }
             let provider = self.menuProvider(for: menu) ?? self.resolvedMenuProvider()
-            let isStale = provider.map { self.store.isStale(provider: $0) } ?? self.store.isStale
-            let hasSnapshot = provider.map { self.store.snapshot(for: $0) != nil } ?? true
-            guard isStale || !hasSnapshot else { return }
+            // Error-stale, missing, or simply AGED data all warrant a ping —
+            // `isStale` alone is error-keyed, so old-but-successful snapshots
+            // never re-pinged on menu open. (`.manual` is already excluded by
+            // the guard at the top of this method.)
+            guard self.store.shouldPingOnMenuOpen(provider: provider) else { return }
             await self.store.refresh(trigger: .menuOpen)
         }
     }

@@ -8,23 +8,44 @@ public struct RateWindow: Codable, Equatable, Sendable {
     public let resetDescription: String?
     /// Optional label for this quota window (for example, a model name).
     public let label: String?
+    /// Whether `usedPercent` is backed by a real denominator.
+    ///
+    /// `nil`/`true` means the percentage is a real measurement. `false` marks
+    /// informational windows (balances or usage counters with no limit) whose
+    /// `usedPercent` is a placeholder — UIs must not render a percent gauge
+    /// for them or fold them into cross-provider averages.
+    public let hasKnownLimit: Bool?
 
     public init(
         usedPercent: Double,
         windowMinutes: Int?,
         resetsAt: Date?,
         resetDescription: String?,
-        label: String? = nil)
+        label: String? = nil,
+        hasKnownLimit: Bool? = nil)
     {
         self.usedPercent = usedPercent
         self.windowMinutes = windowMinutes
         self.resetsAt = resetsAt
         self.resetDescription = resetDescription
         self.label = label
+        self.hasKnownLimit = hasKnownLimit
     }
 
     public var remainingPercent: Double {
         max(0, 100 - self.usedPercent)
+    }
+
+    /// The percentage to render on a quota gauge, or `nil` when this window
+    /// has no real limit (`hasKnownLimit == false`) and no gauge should be
+    /// shown at all.
+    ///
+    /// - Parameter showUsed: `true` returns the used percentage, `false`
+    ///   returns the remaining percentage. Both are clamped to `0...100`.
+    public func gaugePercent(showUsed: Bool) -> Double? {
+        guard self.hasKnownLimit != false else { return nil }
+        let used = min(100, max(0, self.usedPercent))
+        return showUsed ? used : 100 - used
     }
 }
 

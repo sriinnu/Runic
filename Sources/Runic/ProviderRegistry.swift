@@ -84,6 +84,13 @@ struct ProviderRegistry {
                     let context = ProviderFetchContext(
                         runtime: .app,
                         sourceMode: .auto,
+                        // Only the Codex descriptor consults this flag; in-app,
+                        // Codex credits already refresh through
+                        // `refreshCreditsIfNeeded()` (with caching), so keeping
+                        // this false avoids a duplicate RPC/TTY credits probe
+                        // per refresh. Every other provider's strategy attaches
+                        // its CreditsSnapshot unconditionally, and the refresh
+                        // path stores those per provider.
                         includeCredits: false,
                         webTimeout: 60,
                         webDebugDumpHTML: false,

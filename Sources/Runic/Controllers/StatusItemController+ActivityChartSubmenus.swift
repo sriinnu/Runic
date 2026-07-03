@@ -2,6 +2,12 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+// Chart submenu builders. Data availability is checked eagerly (it decides
+// whether the submenu row exists at all), but the SwiftUI chart hierarchy is
+// built lazily via `addDeferredChartSubmenu` when the submenu actually opens —
+// building all ~15-20 chart hierarchies on every menu open was the dominant
+// menu-open cost.
+
 extension StatusItemController {
     @discardableResult
     func addUsageTimelineSubmenu(to menu: NSMenu, provider: UsageProvider) -> Bool {
@@ -10,31 +16,24 @@ extension StatusItemController {
         guard !dailySummaries.isEmpty || !hourlySummaries.isEmpty else { return false }
 
         let width = Self.menuCardBaseWidth
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(UsageTimelineChartMenuView(
-            dailySummaries: dailySummaries,
-            hourlySummaries: hourlySummaries,
-            width: width,
-            chartStyle: self.settings.chartStyle,
-            onRangeChange: { [weak self] range in
-                self?.store.ensureLedgerHistoryCovers(days: range.days)
-            }))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "usageTimelineChart"
-        submenu.addItem(chartItem)
-
-        let item = NSMenuItem(title: "Usage timeline", action: nil, keyEquivalent: "")
-        item.isEnabled = true
-        item.submenu = submenu
-        menu.addItem(item)
+        let chartStyle = self.settings.chartStyle
+        let numberStyle = self.settings.numberFormat.formatterStyle
+        self.addDeferredChartSubmenu(
+            title: "Usage timeline",
+            id: "usageTimelineChart",
+            to: menu,
+            width: width)
+        { [weak self] in
+            UsageTimelineChartMenuView(
+                dailySummaries: dailySummaries,
+                hourlySummaries: hourlySummaries,
+                width: width,
+                chartStyle: chartStyle,
+                numberStyle: numberStyle,
+                onRangeChange: { range in
+                    self?.store.ensureLedgerHistoryCovers(days: range.days)
+                })
+        }
         return true
     }
 
@@ -44,26 +43,18 @@ extension StatusItemController {
         guard !hourlySummaries.isEmpty else { return false }
 
         let width = Self.menuCardBaseWidth
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(HourlyActivityChartMenuView(
-            hourlySummaries: hourlySummaries,
-            width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "hourlyActivityChart"
-        submenu.addItem(chartItem)
-
-        let item = NSMenuItem(title: "Today by hour", action: nil, keyEquivalent: "")
-        item.isEnabled = true
-        item.submenu = submenu
-        menu.addItem(item)
+        let numberStyle = self.settings.numberFormat.formatterStyle
+        self.addDeferredChartSubmenu(
+            title: "Today by hour",
+            id: "hourlyActivityChart",
+            to: menu,
+            width: width)
+        {
+            HourlyActivityChartMenuView(
+                hourlySummaries: hourlySummaries,
+                width: width,
+                numberStyle: numberStyle)
+        }
         return true
     }
 
@@ -73,26 +64,18 @@ extension StatusItemController {
         guard !dailySummaries.isEmpty else { return false }
 
         let width = Self.menuCardBaseWidth
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(WeeklyActivityChartMenuView(
-            dailySummaries: dailySummaries,
-            width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "weeklyActivityChart"
-        submenu.addItem(chartItem)
-
-        let item = NSMenuItem(title: "Last 7 days", action: nil, keyEquivalent: "")
-        item.isEnabled = true
-        item.submenu = submenu
-        menu.addItem(item)
+        let numberStyle = self.settings.numberFormat.formatterStyle
+        self.addDeferredChartSubmenu(
+            title: "Last 7 days",
+            id: "weeklyActivityChart",
+            to: menu,
+            width: width)
+        {
+            WeeklyActivityChartMenuView(
+                dailySummaries: dailySummaries,
+                width: width,
+                numberStyle: numberStyle)
+        }
         return true
     }
 
@@ -106,28 +89,18 @@ extension StatusItemController {
         guard todayTokens > 0 else { return false }
 
         let width = Self.menuCardBaseWidth
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(SubscriptionUtilizationChartMenuView(
-            dailySummaries: dailySummaries,
-            currentUsedPercent: currentUsedPercent,
-            todayTokens: todayTokens,
-            width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "subscriptionUtilizationChart"
-        submenu.addItem(chartItem)
-
-        let item = NSMenuItem(title: "Subscription utilization", action: nil, keyEquivalent: "")
-        item.isEnabled = true
-        item.submenu = submenu
-        menu.addItem(item)
+        self.addDeferredChartSubmenu(
+            title: "Subscription utilization",
+            id: "subscriptionUtilizationChart",
+            to: menu,
+            width: width)
+        {
+            SubscriptionUtilizationChartMenuView(
+                dailySummaries: dailySummaries,
+                currentUsedPercent: currentUsedPercent,
+                todayTokens: todayTokens,
+                width: width)
+        }
         return true
     }
 
@@ -146,30 +119,104 @@ extension StatusItemController {
         guard primaryPercent > 0 || (secondaryPercent ?? 0) > 0 else { return false }
 
         let width = Self.menuCardBaseWidth
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(UsageWindowComparisonChartMenuView(
-            dailySummaries: dailySummaries,
-            primaryLabel: primaryLabel,
-            secondaryLabel: secondaryLabel,
-            primaryPercent: primaryPercent,
-            secondaryPercent: secondaryPercent,
-            width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
+        self.addDeferredChartSubmenu(
+            title: "Usage windows",
+            id: "usageWindowComparisonChart",
+            to: menu,
+            width: width)
+        {
+            UsageWindowComparisonChartMenuView(
+                dailySummaries: dailySummaries,
+                primaryLabel: primaryLabel,
+                secondaryLabel: secondaryLabel,
+                primaryPercent: primaryPercent,
+                secondaryPercent: secondaryPercent,
+                width: width)
+        }
+        return true
+    }
 
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "usageWindowComparisonChart"
-        submenu.addItem(chartItem)
+    @discardableResult
+    func addUsageHeatmapSubmenu(to menu: NSMenu, provider: UsageProvider) -> Bool {
+        let hourlySummaries = self.store.ledgerHourlySummary(for: provider)
+        guard !hourlySummaries.isEmpty else { return false }
 
-        let item = NSMenuItem(title: "Usage windows", action: nil, keyEquivalent: "")
-        item.isEnabled = true
-        item.submenu = submenu
-        menu.addItem(item)
+        let width = Self.menuCardBaseWidth
+        let numberStyle = self.settings.numberFormat.formatterStyle
+        self.addDeferredChartSubmenu(
+            title: "Usage heatmap",
+            id: "usageHeatmapChart",
+            to: menu,
+            width: width)
+        {
+            UsageHeatmapMenuView(
+                hourlySummaries: hourlySummaries,
+                width: width,
+                numberStyle: numberStyle)
+        }
+        return true
+    }
+
+    @discardableResult
+    func addEfficiencyMetricsSubmenu(to menu: NSMenu, provider: UsageProvider) -> Bool {
+        let modelSummaries = self.store.ledgerModelBreakdown(for: provider)
+        guard !modelSummaries.isEmpty else { return false }
+
+        let width = Self.menuCardBaseWidth
+        let numberStyle = self.settings.numberFormat.formatterStyle
+        self.addDeferredChartSubmenu(
+            title: "Efficiency metrics",
+            id: "efficiencyMetricsTable",
+            to: menu,
+            width: width)
+        {
+            EfficiencyMetricsMenuView(
+                modelSummaries: modelSummaries,
+                width: width,
+                numberStyle: numberStyle)
+        }
+        return true
+    }
+
+    @discardableResult
+    func addProjectBudgetsSubmenu(to menu: NSMenu, provider: UsageProvider) -> Bool {
+        let projectSummaries = self.store.ledgerProjectBreakdown(for: provider)
+        let hasBudgets = !ProjectBudgetStore.getAllBudgets().isEmpty
+        // Show when budgets are configured, or when project data exists so the
+        // empty state can point users at budget setup.
+        guard hasBudgets || !projectSummaries.isEmpty else { return false }
+
+        let width = Self.menuCardBaseWidth
+        self.addDeferredChartSubmenu(
+            title: "Project budgets",
+            id: "projectBudgetsPanel",
+            to: menu,
+            width: width)
+        { [weak self] in
+            ProjectBudgetMenuView(
+                projectSummaries: projectSummaries,
+                width: width,
+                onOpenPreferences: {
+                    self?.openSettings(tab: .analytics)
+                })
+        }
+        return true
+    }
+
+    @discardableResult
+    func addAlertsSubmenu(to menu: NSMenu) -> Bool {
+        guard !AlertRuleStore.getRecentHistory(limit: 1).isEmpty else { return false }
+
+        let width = Self.menuCardBaseWidth
+        let dateStyle = self.settings.dateFormat.formatterStyle
+        self.addDeferredChartSubmenu(
+            title: "Alerts",
+            id: "alertsPanel",
+            to: menu,
+            width: width)
+        {
+            AlertsMenuView(width: width, dateStyle: dateStyle)
+        }
         return true
     }
 }

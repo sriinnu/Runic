@@ -126,6 +126,7 @@ extension MenuPopoverView {
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
                 width: self.panelBodyWidth,
                 chartStyle: self.settings.chartStyle,
+                numberStyle: self.settings.numberFormat.formatterStyle,
                 selectedTimeRange: self.$selectedTimelineRange,
                 onRangeChange: { range in
                     self.store.ensureLedgerHistoryCovers(days: range.days)
@@ -133,11 +134,13 @@ extension MenuPopoverView {
         case .hourly:
             HourlyActivityChartMenuView(
                 hourlySummaries: self.store.ledgerHourlySummary(for: provider),
-                width: self.panelBodyWidth)
+                width: self.panelBodyWidth,
+                numberStyle: self.settings.numberFormat.formatterStyle)
         case .weekly:
             WeeklyActivityChartMenuView(
                 dailySummaries: self.store.ledgerAllDailySummary(for: provider),
-                width: self.panelBodyWidth)
+                width: self.panelBodyWidth,
+                numberStyle: self.settings.numberFormat.formatterStyle)
         case .utilization:
             SubscriptionUtilizationChartMenuView(
                 dailySummaries: self.store.ledgerAllDailySummary(for: provider),

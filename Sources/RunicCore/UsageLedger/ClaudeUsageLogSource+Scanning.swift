@@ -131,15 +131,21 @@ extension ClaudeUsageLogSource {
 
             while let fileURL = enumerator?.nextObject() as? URL {
                 guard fileURL.pathExtension == "jsonl" else { continue }
-                if let minDate {
-                    let values = try? fileURL.resourceValues(forKeys: [.contentModificationDateKey])
-                    if let modifiedAt = values?.contentModificationDate, modifiedAt < minDate { continue }
-                }
+                // Stat once here; the mtime rides along on UsageFile so later
+                // filters don't have to stat the same file again.
+                let values = try? fileURL.resourceValues(forKeys: [.contentModificationDateKey])
+                let modifiedAt = values?.contentModificationDate
+                if let minDate, let modifiedAt, modifiedAt < minDate { continue }
                 let pathComponents = fileURL.pathComponents
                 guard let projectsIndex = pathComponents.lastIndex(of: "projects"),
                       projectsIndex + 2 < pathComponents.count
                 else {
-                    results.append(UsageFile(url: fileURL, projectID: nil, projectName: nil, sessionID: nil))
+                    results.append(UsageFile(
+                        url: fileURL,
+                        projectID: nil,
+                        projectName: nil,
+                        sessionID: nil,
+                        modifiedAt: modifiedAt))
                     continue
                 }
                 let projectID = pathComponents[projectsIndex + 1]
@@ -149,7 +155,8 @@ extension ClaudeUsageLogSource {
                     url: fileURL,
                     projectID: projectID,
                     projectName: projectName,
-                    sessionID: sessionID))
+                    sessionID: sessionID,
+                    modifiedAt: modifiedAt))
             }
         }
 

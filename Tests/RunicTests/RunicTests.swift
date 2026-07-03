@@ -152,6 +152,50 @@ struct RunicTests {
 
     @MainActor
     @Test
+    func `theme text colors keep 4point5 contrast on themed surfaces`() {
+        for theme in Theme.allCases {
+            let palette = theme.palette
+            let surfaces: [(String, Color)] = [
+                ("surface", palette.surface),
+                ("surfaceAlt", palette.surfaceAlt),
+                ("cardFill", palette.cardFill),
+                ("menuSubtleFill", palette.menuSubtleFill),
+            ]
+            for (name, background) in surfaces {
+                #expect(
+                    self.contrast(palette.primaryText, against: background, palette: palette) >= 4.5,
+                    "\(theme.rawValue) primaryText should hit 4.5:1 on \(name)")
+                #expect(
+                    self.contrast(palette.readableSecondaryText, against: background, palette: palette) >= 4.5,
+                    "\(theme.rawValue) readableSecondaryText should hit 4.5:1 on \(name)")
+                // The plain secondary tone mirrors macOS's secondaryLabelColor
+                // on the System theme, which Apple ships below 4.5:1 by
+                // design; opinionated bundled themes must clear it outright.
+                if theme != .system {
+                    #expect(
+                        self.contrast(palette.secondaryText, against: background, palette: palette) >= 4.5,
+                        "\(theme.rawValue) secondaryText should hit 4.5:1 on \(name)")
+                }
+            }
+        }
+    }
+
+    @MainActor
+    @Test
+    func `xai brand tint lifts to a readable tone on dark appearances`() {
+        let dark = ProviderBrandIcon.resolvedBrandHex(for: .xai, prefersDark: true)
+        let light = ProviderBrandIcon.resolvedBrandHex(for: .xai, prefersDark: false)
+
+        #expect(light == "#141414", "xAI keeps its near-black brand mark on light appearances")
+        #expect(dark != "#141414", "xAI must not render black-on-black on dark appearances")
+
+        // The lifted tone should actually be bright, not marginally lighter.
+        let component = Int(dark.dropFirst().prefix(2), radix: 16) ?? 0
+        #expect(component > 180, "Lifted xAI tone should be clearly readable on dark surfaces: \(dark)")
+    }
+
+    @MainActor
+    @Test
     func `selected icon colors keep contrast against selected fills`() {
         for theme in Theme.allCases {
             let palette = theme.palette

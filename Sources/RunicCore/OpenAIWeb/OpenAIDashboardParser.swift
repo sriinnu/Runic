@@ -266,12 +266,17 @@ public enum OpenAIDashboardParser {
     }
 
     private static func parsePercent(from line: String) -> (value: Double, isRemaining: Bool)? {
-        guard let percent = TextParsing.firstNumber(pattern: #"([0-9]{1,3})\s*%"#, text: line) else { return nil }
+        guard let percent = TextParsing.firstNumber(pattern: #"([0-9]{1,3}(?:\.[0-9]+)?)\s*%"#, text: line)
+        else { return nil }
         let lower = line.lowercased()
         let isRemaining = lower.contains("remaining") || lower.contains("left")
         let isUsed = lower.contains("used") || lower.contains("spent") || lower.contains("consumed")
         if isUsed { return (percent, false) }
         if isRemaining { return (percent, true) }
+        // No keyword on this line: the OpenAI dashboard consistently phrases limits
+        // as "N% remaining" (see OpenAIDashboardParserTests fixtures), so a bare
+        // percent most likely lost its "remaining" keyword to a line break during
+        // text extraction. Default to remaining to match the dashboard convention.
         return (percent, true)
     }
 

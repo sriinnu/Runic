@@ -20,12 +20,18 @@ struct WeeklyActivityChartMenuView: View {
 
     private let dailySummaries: [UsageLedgerDailySummary]
     private let width: CGFloat
+    private let numberStyle: UsageFormatter.NumberStyle
     @State private var selectedDayID: String?
     @Environment(\.runicTheme) private var runicTheme
 
-    init(dailySummaries: [UsageLedgerDailySummary], width: CGFloat) {
+    init(
+        dailySummaries: [UsageLedgerDailySummary],
+        width: CGFloat,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated)
+    {
         self.dailySummaries = dailySummaries
         self.width = width
+        self.numberStyle = numberStyle
     }
 
     var body: some View {
@@ -41,16 +47,17 @@ struct WeeklyActivityChartMenuView: View {
                 Spacer()
                 if model.bars.count > 1 {
                     let avg = model.totalTokens / max(1, model.bars.count(where: { $0.totalTokens > 0 }))
-                    Text("\(UsageFormatter.tokenCountString(avg)) avg")
+                    Text("\(UsageFormatter.tokenCountString(avg, style: self.numberStyle)) avg")
                         .font(self.fonts.caption)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
-                Text("No usage in the last 7 days.")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText)
+                RunicEmptyStateView(
+                    mood: .resting,
+                    title: "No usage in the last 7 days.",
+                    hint: "A quiet week — the chart fills in as you work.")
                     .frame(height: 80)
             } else {
                 let detail = self.detailText(model: model)
@@ -76,6 +83,9 @@ struct WeeklyActivityChartMenuView: View {
                             .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
+                                // Axis tick labels stay abbreviated regardless of
+                                // the number-format setting: fully grouped digits
+                                // don't fit the narrow tick gutter.
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
@@ -214,6 +224,6 @@ struct WeeklyActivityChartMenuView: View {
         else {
             return "Hover a day for tokens"
         }
-        return "\(bar.dayLabel): \(UsageFormatter.tokenCountString(bar.totalTokens)) tokens"
+        return "\(bar.dayLabel): \(UsageFormatter.tokenCountString(bar.totalTokens, style: self.numberStyle)) tokens"
     }
 }

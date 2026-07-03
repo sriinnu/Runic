@@ -50,6 +50,33 @@ extension UsageStore {
         self.errors[provider] != nil
     }
 
+    /// A successful snapshot older than this is still worth a background ping
+    /// when the user opens the menu. Matches the slowest auto-refresh cadence
+    /// (`RefreshFrequency.fifteenMinutes`): once a snapshot is a full
+    /// slowest-cycle interval old, something (sleep, a dropped timer, an
+    /// inactive-provider skip) has kept it from refreshing on its own.
+    static let menuOpenSnapshotMaxAge: TimeInterval = 15 * 60
+
+    /// Whether opening a menu should trigger a background refresh ping.
+    ///
+    /// Error-stale and missing-snapshot providers always ping. A provider
+    /// whose last fetch SUCCEEDED but whose snapshot has aged past
+    /// `menuOpenSnapshotMaxAge` pings too — `isStale` is error-keyed only, so
+    /// stale-but-successful data used to never re-ping on menu open. With no
+    /// specific provider (merged/fallback menus), any aged snapshot counts.
+    func shouldPingOnMenuOpen(provider: UsageProvider?, now: Date = Date()) -> Bool {
+        func aged(_ snapshot: UsageSnapshot) -> Bool {
+            now.timeIntervalSince(snapshot.updatedAt) > Self.menuOpenSnapshotMaxAge
+        }
+        if let provider {
+            if self.isStale(provider: provider) { return true }
+            guard let snapshot = self.snapshots[provider] else { return true }
+            return aged(snapshot)
+        }
+        if self.isStale { return true }
+        return self.snapshots.values.contains(where: aged)
+    }
+
     func isEnabled(_ provider: UsageProvider) -> Bool {
         let enabled = self.settings.isProviderEnabledCached(
             provider: provider,
@@ -129,7 +156,7 @@ extension UsageStore {
         return true
     }
 
-    private func refreshProvider(_ provider: UsageProvider, trigger _: RefreshTrigger) async {
+    func refreshProvider(_ provider: UsageProvider, trigger _: RefreshTrigger) async {
         guard let spec = self.providerSpecs[provider] else { return }
 
         if !spec.isEnabled() {
@@ -149,6 +176,7 @@ extension UsageStore {
                 self.lastUsageDeltaAt.removeValue(forKey: provider)
                 self.lastLedgerActivityAt.removeValue(forKey: provider)
                 self.ledgerCompactions.removeValue(forKey: provider)
+                self.providerCredits.removeValue(forKey: provider)
             }
             return
         }
@@ -180,6 +208,16 @@ extension UsageStore {
             await MainActor.run {
                 self.handleSessionQuotaTransition(provider: provider, snapshot: scoped)
                 self.snapshots[provider] = scoped
+                // Providers whose fetchers attach a credits snapshot (DeepSeek,
+                // OpenRouter, Vercel AI, ...) surface it per provider; a nil
+                // result keeps the last-known snapshot, mirroring how usage
+                // snapshots survive transient gaps. Codex is excluded: its
+                // accessor reads the dedicated `credits` slot (see
+                // `credits(for:)`), so a `providerCredits[.codex]` entry would
+                // only be a stale duplicate for anything iterating the map.
+                if let credits = result.credits, provider != .codex {
+                    self.providerCredits[provider] = credits
+                }
                 self.lastSourceLabels[provider] = result.sourceLabel
                 self.errors[provider] = nil
                 self.failureGates[provider]?.recordSuccess()
@@ -190,24 +228,47 @@ extension UsageStore {
             }
         case let .failure(error):
             await MainActor.run {
-                let hadPriorData = self.snapshots[provider] != nil
-                let shouldSurface = self.failureGates[provider]?
-                    .shouldSurfaceError(onFailureWithPriorData: hadPriorData) ?? true
-                if shouldSurface {
-                    self.errors[provider] = error.localizedDescription
-                    self.snapshots.removeValue(forKey: provider)
-                } else {
-                    self.errors[provider] = nil
-                }
+                self.recordProviderFetchFailure(provider, message: error.localizedDescription)
             }
         }
+    }
+
+    /// Record a fetch failure without discarding the last-known-good snapshot.
+    ///
+    /// The menu card keeps rendering the stale usage bars (dated by the kept
+    /// snapshot's `updatedAt`) with the error header surfaced alongside once the
+    /// failure gate lets it through. Wiping the snapshot here used to flip the
+    /// card from usage bars to error-text-only on the first surfaced failure.
+    func recordProviderFetchFailure(_ provider: UsageProvider, message: String) {
+        let hadPriorData = self.snapshots[provider] != nil
+        let shouldSurface = self.failureGates[provider]?
+            .shouldSurfaceError(onFailureWithPriorData: hadPriorData) ?? true
+        self.errors[provider] = shouldSurface ? message : nil
     }
 
     private func handleSessionQuotaTransition(provider: UsageProvider, snapshot: UsageSnapshot) {
         let currentRemaining = snapshot.primary.remainingPercent
         let previousRemaining = self.lastKnownSessionRemaining[provider]
 
+        // A 0%-remaining window with no real quota evidence (no window duration,
+        // no reset time, no reset/balance text) is a hardcoded stub, not a
+        // measurement. Bail before recording it: posting would spam a phantom
+        // depletion alert, and remembering it as "previous = 0" would fire a
+        // phantom "restored" alert once real data arrives.
+        if SessionQuotaNotificationLogic.isDepleted(currentRemaining),
+           !SessionQuotaNotificationLogic.hasRealQuota(snapshot.primary)
+        {
+            let providerText = provider.rawValue
+            self.sessionQuotaLogger.debug("ignoring stub depleted window: provider=\(providerText)")
+            return
+        }
+
         defer { self.lastKnownSessionRemaining[provider] = currentRemaining }
+
+        let quotaKind = SessionQuotaNotificationLogic.quotaKind(
+            windowMinutes: snapshot.primary.windowMinutes,
+            resetsAt: snapshot.primary.resetsAt,
+            supportsCredits: self.metadata(for: provider).supportsCredits)
 
         guard self.settings.sessionQuotaNotificationsEnabled else {
             if SessionQuotaNotificationLogic.isDepleted(currentRemaining) ||
@@ -227,7 +288,7 @@ extension UsageStore {
                 let providerText = provider.rawValue
                 let message = "startup depleted: provider=\(providerText) curr=\(currentRemaining)"
                 self.sessionQuotaLogger.info(message)
-                self.sessionQuotaNotifier.post(transition: .depleted, provider: provider)
+                self.sessionQuotaNotifier.post(transition: .depleted, provider: provider, quotaKind: quotaKind)
             }
             return
         }
@@ -255,6 +316,6 @@ extension UsageStore {
             "prev=\(previousRemaining ?? -1) curr=\(currentRemaining)"
         self.sessionQuotaLogger.info(message)
 
-        self.sessionQuotaNotifier.post(transition: transition, provider: provider)
+        self.sessionQuotaNotifier.post(transition: transition, provider: provider, quotaKind: quotaKind)
     }
 }
