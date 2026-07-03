@@ -163,9 +163,15 @@ struct StatusMenuTests {
         controller.menuWillOpen(menu)
         let usageItem = menu.items.first { ($0.representedObject as? String) == "menuCardUsage" }
         let creditsItem = menu.items.first { ($0.representedObject as? String) == "menuCardCredits" }
-        #expect(usageItem?.submenu?.items
+        // Chart submenu content is deferred: the id appears once the submenu
+        // opens (before that the placeholder carries the deferred content box).
+        let usageSubmenu = try #require(usageItem?.submenu)
+        let creditsSubmenu = try #require(creditsItem?.submenu)
+        controller.menuWillOpen(usageSubmenu)
+        controller.menuWillOpen(creditsSubmenu)
+        #expect(usageSubmenu.items
             .contains { ($0.representedObject as? String) == "usageBreakdownChart" } == true)
-        #expect(creditsItem?.submenu?.items
+        #expect(creditsSubmenu.items
             .contains { ($0.representedObject as? String) == "creditsHistoryChart" } == true)
     }
 

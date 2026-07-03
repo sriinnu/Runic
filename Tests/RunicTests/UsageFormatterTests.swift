@@ -99,6 +99,26 @@ struct UsageFormatterTests {
     }
 
     @Test
+    func `token count promotes at unit boundaries`() {
+        // A value that ROUNDS to 1000 of a unit promotes ("1M"), never "1000K".
+        #expect(UsageFormatter.tokenCountString(999_499) == "999K")
+        #expect(UsageFormatter.tokenCountString(999_949) == "1M")
+        #expect(UsageFormatter.tokenCountString(999_950) == "1M")
+        #expect(UsageFormatter.tokenCountString(999_999) == "1M")
+        #expect(UsageFormatter.tokenCountString(1_000_000) == "1M")
+        #expect(UsageFormatter.tokenCountString(999_999_999) == "1B")
+        #expect(UsageFormatter.tokenCountString(1_000_000_000) == "1B")
+    }
+
+    @Test
+    func `credit short promotes at thousand boundary`() {
+        #expect(UsageFormatter.creditShort(999.4) == "999")
+        #expect(UsageFormatter.creditShort(999.6) == "1.0k")
+        #expect(UsageFormatter.creditShort(1000) == "1.0k")
+        #expect(UsageFormatter.creditShort(1500) == "1.5k")
+    }
+
+    @Test
     func `token summary includes breakdown`() {
         let totals = UsageLedgerTotals(
             inputTokens: 1000,
