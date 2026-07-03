@@ -39,6 +39,7 @@ struct InlineUsageChartView: View {
     let hourlySummaries: [UsageLedgerHourlySummary]
     let chartStyle: ChartStyle
     let width: CGFloat
+    var numberStyle: UsageFormatter.NumberStyle = .abbreviated
     @State private var selectedRange: TimeRange = .sevenDays
     @Environment(\.menuItemHighlighted) private var isHighlighted
     @Environment(\.runicTheme) private var runicTheme
@@ -59,14 +60,10 @@ struct InlineUsageChartView: View {
 
             // Chart area
             if points.isEmpty {
-                HStack {
-                    Spacer()
-                    Text("No data")
-                        .font(self.fonts.caption2)
-                        .foregroundStyle(self.runicTheme.chartAxisLabelColor)
-                    Spacer()
-                }
-                .frame(height: 70)
+                RunicEmptyStateView(
+                    mood: .searching,
+                    title: "No data in this range yet.")
+                    .frame(height: 70)
             } else {
                 // Capture `now` once so a clock jump between calls can't put
                 // domain.upperBound below lowerBound. Theme-branch the chart
@@ -120,6 +117,9 @@ struct InlineUsageChartView: View {
                                 .foregroundStyle(self.runicTheme.chartGridColor)
                             AxisValueLabel {
                                 if let tokens = value.as(Int.self) {
+                                    // Axis tick labels stay abbreviated regardless
+                                    // of the number-format setting: fully grouped
+                                    // digits don't fit the narrow tick gutter.
                                     Text(UsageFormatter.tokenCountString(tokens))
                                         .font(self.fonts.system(size: 8))
                                         .foregroundStyle(self.runicTheme.chartAxisLabelColor)
@@ -139,7 +139,7 @@ struct InlineUsageChartView: View {
 
                     // Peak badge
                     if let peak = points.max(by: { $0.tokens < $1.tokens }), peak.tokens > 0 {
-                        Text("Peak \(UsageFormatter.tokenCountString(peak.tokens))")
+                        Text("Peak \(UsageFormatter.tokenCountString(peak.tokens, style: self.numberStyle))")
                             .font(self.fonts.system(size: 8, weight: .medium))
                             .foregroundStyle(self.runicTheme.secondaryText)
                             .padding(.horizontal, 4)

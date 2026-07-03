@@ -67,13 +67,17 @@ struct UsageMenuCardView: View {
         struct Metric: Identifiable {
             let id: String
             let title: String
-            let percent: Double
+            /// Percent shown in the gauge; `nil` for informational windows
+            /// (balances/counters without a limit) that must not render a
+            /// fake percent bar.
+            let percent: Double?
             let percentStyle: PercentStyle
             let resetText: String?
             let detailText: String?
 
-            var percentLabel: String {
-                String(format: "%.0f%% %@", self.percent, self.percentStyle.labelSuffix)
+            var percentLabel: String? {
+                guard let percent = self.percent else { return nil }
+                return String(format: "%.0f%% %@", percent, self.percentStyle.labelSuffix)
             }
         }
 
@@ -96,7 +100,9 @@ struct UsageMenuCardView: View {
 
         struct ProviderCostSection {
             let title: String
-            let percentUsed: Double
+            /// Percent of the spend limit used; `nil` when the limit is
+            /// unlimited/unknown (spend is shown without a gauge).
+            let percentUsed: Double?
             let spendLine: String
         }
 

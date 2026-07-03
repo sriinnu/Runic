@@ -36,12 +36,18 @@ struct UsageHeatmapMenuView: View {
 
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
+    private let numberStyle: UsageFormatter.NumberStyle
     @State private var selectedCellID: String?
     @Environment(\.runicTheme) private var runicTheme
 
-    init(hourlySummaries: [UsageLedgerHourlySummary], width: CGFloat) {
+    init(
+        hourlySummaries: [UsageLedgerHourlySummary],
+        width: CGFloat,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated)
+    {
         self.hourlySummaries = hourlySummaries
         self.width = width
+        self.numberStyle = numberStyle
     }
 
     var body: some View {
@@ -52,9 +58,10 @@ struct UsageHeatmapMenuView: View {
                 .fontWeight(.semibold)
 
             if model.isEmpty {
-                Text("No heatmap data.")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText)
+                RunicEmptyStateView(
+                    mood: .searching,
+                    title: "No heatmap data.",
+                    hint: "Hourly activity paints this grid over time.")
             } else {
                 ScrollView(.horizontal, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -203,7 +210,8 @@ struct UsageHeatmapMenuView: View {
             return "\(cell.weekdayLabel) \(cell.hourLabel): No usage"
         }
 
-        return "\(cell.weekdayLabel) \(cell.hourLabel): \(UsageFormatter.tokenCountString(cell.totalTokens)) tokens"
+        let count = UsageFormatter.tokenCountString(cell.totalTokens, style: self.numberStyle)
+        return "\(cell.weekdayLabel) \(cell.hourLabel): \(count) tokens"
     }
 }
 

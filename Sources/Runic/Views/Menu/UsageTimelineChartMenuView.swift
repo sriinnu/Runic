@@ -53,6 +53,7 @@ struct UsageTimelineChartMenuView: View {
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
     private let chartStyle: ChartStyle
+    private let numberStyle: UsageFormatter.NumberStyle
     private let selectedTimeRangeBinding: Binding<TimeRange>?
     private let onRangeChange: (TimeRange) -> Void
     @State private var localTimeRange: TimeRange
@@ -64,6 +65,7 @@ struct UsageTimelineChartMenuView: View {
         hourlySummaries: [UsageLedgerHourlySummary] = [],
         width: CGFloat,
         chartStyle: ChartStyle = .line,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated,
         selectedTimeRange: Binding<TimeRange>? = nil,
         onRangeChange: @escaping (TimeRange) -> Void = { _ in })
     {
@@ -71,6 +73,7 @@ struct UsageTimelineChartMenuView: View {
         self.hourlySummaries = hourlySummaries
         self.width = width
         self.chartStyle = chartStyle
+        self.numberStyle = numberStyle
         self.selectedTimeRangeBinding = selectedTimeRange
         self.onRangeChange = onRangeChange
         self._localTimeRange = State(initialValue: selectedTimeRange?.wrappedValue ?? .sevenDays)
@@ -97,9 +100,10 @@ struct UsageTimelineChartMenuView: View {
             .pickerStyle(.segmented)
 
             if model.points.isEmpty {
-                Text("No data for selected range.")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText)
+                RunicEmptyStateView(
+                    mood: .searching,
+                    title: "No data for this range.",
+                    hint: "Try a wider window.")
                     .frame(height: 100)
             } else {
                 let detail = self.detailText(model: model)
@@ -162,6 +166,9 @@ struct UsageTimelineChartMenuView: View {
                             .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
+                                // Axis tick labels stay abbreviated regardless of
+                                // the number-format setting: fully grouped digits
+                                // don't fit the narrow tick gutter.
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
@@ -210,11 +217,15 @@ struct UsageTimelineChartMenuView: View {
 
                 // Stats row
                 HStack(spacing: RunicSpacing.md) {
-                    StatCell(label: "Total", value: UsageFormatter.tokenCountString(model.totalTokens))
+                    StatCell(
+                        label: "Total",
+                        value: UsageFormatter.tokenCountString(model.totalTokens, style: self.numberStyle))
                     StatCell(
                         label: selectedRange.usesHourlyData ? "Avg/hr" : "Avg/day",
-                        value: UsageFormatter.tokenCountString(model.averagePerPeriod))
-                    StatCell(label: "Peak", value: UsageFormatter.tokenCountString(model.peakTokens))
+                        value: UsageFormatter.tokenCountString(model.averagePerPeriod, style: self.numberStyle))
+                    StatCell(
+                        label: "Peak",
+                        value: UsageFormatter.tokenCountString(model.peakTokens, style: self.numberStyle))
                     if let cost = model.totalCostUSD, cost > 0 {
                         StatCell(label: "Cost", value: UsageFormatter.usdString(cost))
                     }
@@ -439,7 +450,7 @@ struct UsageTimelineChartMenuView: View {
         guard let key = self.selectedKey, let point = model.pointsByKey[key] else {
             return "Hover for details"
         }
-        let tokens = UsageFormatter.tokenCountString(point.totalTokens)
+        let tokens = UsageFormatter.tokenCountString(point.totalTokens, style: self.numberStyle)
         if model.isHourly {
             let timeLabel = point.date.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute())
             return "\(timeLabel): \(tokens) tokens"

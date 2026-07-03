@@ -22,12 +22,18 @@ struct HourlyActivityChartMenuView: View {
 
     private let hourlySummaries: [UsageLedgerHourlySummary]
     private let width: CGFloat
+    private let numberStyle: UsageFormatter.NumberStyle
     @State private var selectedHour: Int?
     @Environment(\.runicTheme) private var runicTheme
 
-    init(hourlySummaries: [UsageLedgerHourlySummary], width: CGFloat) {
+    init(
+        hourlySummaries: [UsageLedgerHourlySummary],
+        width: CGFloat,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated)
+    {
         self.hourlySummaries = hourlySummaries
         self.width = width
+        self.numberStyle = numberStyle
     }
 
     var body: some View {
@@ -49,9 +55,10 @@ struct HourlyActivityChartMenuView: View {
             }
 
             if model.bars.allSatisfy({ $0.totalTokens == 0 }) {
-                Text("No usage recorded today.")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText)
+                RunicEmptyStateView(
+                    mood: .resting,
+                    title: "No usage recorded today.",
+                    hint: "Activity shows up here as it happens.")
                     .frame(height: 80)
             } else {
                 let detail = self.detailText(model: model)
@@ -70,7 +77,7 @@ struct HourlyActivityChartMenuView: View {
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 2]))
                             .foregroundStyle(self.runicTheme.primaryText.opacity(0.30))
                             .annotation(position: .top, spacing: 4) {
-                                Text(UsageFormatter.tokenCountString(bar.totalTokens))
+                                Text(UsageFormatter.tokenCountString(bar.totalTokens, style: self.numberStyle))
                                     .font(self.fonts.caption2)
                                     .fontWeight(.medium)
                                     .padding(.horizontal, 6)
@@ -99,6 +106,9 @@ struct HourlyActivityChartMenuView: View {
                             .foregroundStyle(self.runicTheme.chartGridColor)
                         AxisValueLabel {
                             if let tokens = value.as(Int.self) {
+                                // Axis tick labels stay abbreviated regardless of
+                                // the number-format setting: fully grouped digits
+                                // don't fit the narrow tick gutter.
                                 Text(UsageFormatter.tokenCountString(tokens))
                                     .font(self.fonts.caption2)
                                     .foregroundStyle(self.runicTheme.chartAxisLabelColor)
@@ -132,7 +142,7 @@ struct HourlyActivityChartMenuView: View {
                         Text("Today")
                             .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.chartAxisLabelColor)
-                        Text(UsageFormatter.tokenCountString(model.totalTokens))
+                        Text(UsageFormatter.tokenCountString(model.totalTokens, style: self.numberStyle))
                             .font(self.fonts.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(self.runicTheme.primaryText)
@@ -245,6 +255,7 @@ struct HourlyActivityChartMenuView: View {
         else {
             return "Hover an hour for tokens"
         }
-        return "\(Self.hourAxisLabel(bar.hour)): \(UsageFormatter.tokenCountString(bar.totalTokens)) tokens"
+        let tokens = UsageFormatter.tokenCountString(bar.totalTokens, style: self.numberStyle)
+        return "\(Self.hourAxisLabel(bar.hour)): \(tokens) tokens"
     }
 }

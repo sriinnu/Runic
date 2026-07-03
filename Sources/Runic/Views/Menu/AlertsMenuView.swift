@@ -17,13 +17,15 @@ struct AlertsMenuView: View {
     @State private var alerts: [AlertEntry] = []
     @State private var isRefreshing = false
     private let width: CGFloat
+    private let dateStyle: UsageFormatter.DateStyle
     @Environment(\.menuItemHighlighted) private var isHighlighted
     @Environment(\.runicTheme) private var runicTheme
 
     // MARK: - Initialization
 
-    init(width: CGFloat = 320) {
+    init(width: CGFloat = 320, dateStyle: UsageFormatter.DateStyle = .relative) {
         self.width = width
+        self.dateStyle = dateStyle
     }
 
     // MARK: - Body
@@ -99,7 +101,7 @@ struct AlertsMenuView: View {
     private var alertsList: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             ForEach(self.alerts) { alert in
-                AlertRow(alert: alert) {
+                AlertRow(alert: alert, dateStyle: self.dateStyle) {
                     await self.acknowledgeAlert(alert.id)
                 }
             }
@@ -109,17 +111,11 @@ struct AlertsMenuView: View {
     // MARK: - Empty State
 
     private var emptyStateView: some View {
-        VStack(spacing: RunicSpacing.xs) {
-            Image(systemName: "checkmark.shield")
-                .font(self.fonts.title2)
-                .foregroundStyle(self.secondaryTextColor)
-
-            Text("No active alerts")
-                .font(self.fonts.subheadline)
-                .foregroundStyle(self.secondaryTextColor)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, RunicSpacing.sm)
+        RunicEmptyStateView(
+            mood: .zen,
+            title: "All quiet",
+            hint: "No alerts triggered.")
+            .padding(.vertical, RunicSpacing.xxs)
     }
 
     // MARK: - Data Loading
@@ -155,6 +151,7 @@ struct AlertsMenuView: View {
 private struct AlertRow: View {
     @Environment(\.runicFonts) private var fonts
     let alert: AlertsMenuView.AlertEntry
+    let dateStyle: UsageFormatter.DateStyle
     let onAcknowledge: () async -> Void
 
     @State private var isAcknowledging = false
@@ -255,6 +252,11 @@ private struct AlertRow: View {
 
     private func timeAgo(from date: Date) -> String {
         let now = Date()
+        // Honor the app-wide date-format preference: absolute renders a
+        // timestamp, relative keeps the compact "5m ago" phrasing.
+        if self.dateStyle == .absolute {
+            return UsageFormatter.absoluteTimestampString(from: date, now: now)
+        }
         let interval = now.timeIntervalSince(date)
 
         if interval < 60 {

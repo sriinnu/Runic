@@ -80,9 +80,16 @@ extension StatusItemController {
         }
 
         func measuredHeight(width: CGFloat) -> CGFloat {
-            let controller = NSHostingController(rootView: self.rootView)
-            let measured = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-            return measured.height
+            // Measure with THIS hosting view instead of instantiating a second
+            // NSHostingController just for sizing — that built (and rendered)
+            // every SwiftUI card hierarchy twice per menu open.
+            if self.frame.width != width {
+                self.frame = NSRect(
+                    origin: .zero,
+                    size: NSSize(width: width, height: max(1, self.frame.height)))
+            }
+            self.layoutSubtreeIfNeeded()
+            return self.fittingSize.height
         }
 
         func setHighlighted(_ highlighted: Bool) {
@@ -155,12 +162,15 @@ extension StatusItemController {
         private let titleField: NSTextField
         private let stack = NSStackView()
         private let highlightLayer = CALayer()
-        private let onSelect: () -> Void
+        var onSelect: () -> Void
         private let theme: RunicThemePalette
         private var isHighlighted = false
+        private let originalTitle: String
+        private var flashResetTask: Task<Void, Never>?
 
-        init(title: String, image: NSImage?, theme: RunicThemePalette, onSelect: @escaping () -> Void) {
+        init(title: String, image: NSImage?, theme: RunicThemePalette, onSelect: @escaping () -> Void = {}) {
             self.titleField = NSTextField(labelWithString: title)
+            self.originalTitle = title
             self.onSelect = onSelect
             self.theme = theme
             super.init(frame: .zero)
@@ -225,6 +235,19 @@ extension StatusItemController {
         func setHighlighted(_ highlighted: Bool) {
             self.isHighlighted = highlighted
             self.updateColors()
+        }
+
+        /// Briefly swaps the title (e.g. "Refreshing…") and reverts. Used as
+        /// lightweight feedback for the persistent refresh row, which keeps the
+        /// menu open on click and would otherwise appear to do nothing.
+        func flashTitle(_ temporaryTitle: String, revertAfter seconds: Double = 1.2) {
+            self.flashResetTask?.cancel()
+            self.titleField.stringValue = temporaryTitle
+            self.flashResetTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(seconds))
+                guard !Task.isCancelled else { return }
+                self?.titleField.stringValue = self?.originalTitle ?? temporaryTitle
+            }
         }
 
         private func updateColors() {
@@ -300,19 +323,12 @@ extension StatusItemController {
         let ledgerRouting = self.store.ledgerRoutingRecommendation(for: target)
         let ledgerError = self.store.ledgerError(for: target)
         let ledgerUpdatedAt = self.store.ledgerUpdatedAt(for: target)
+        credits = self.store.credits(for: target)
+        creditsError = self.store.creditsError(for: target)
         if target == .codex {
-            credits = self.store.credits
-            creditsError = self.store.lastCreditsError
             dashboard = self.store.openAIDashboardRequiresLogin ? nil : self.store.openAIDashboard
             dashboardError = self.store.lastOpenAIDashboardError
-        } else if target == .claude {
-            credits = nil
-            creditsError = nil
-            dashboard = nil
-            dashboardError = nil
         } else {
-            credits = nil
-            creditsError = nil
             dashboard = nil
             dashboardError = nil
         }
@@ -342,14 +358,16 @@ extension StatusItemController {
             ledgerUpdatedAt: ledgerUpdatedAt,
             providerContextStatus: providerContextStatus,
             account: self.account,
-            isRefreshing: self.store.isRefreshing,
+            isRefreshing: self.store.refreshingProviders.contains(target),
             lastError: self.store.error(for: target),
             usageBarsShowUsed: self.settings.usageBarsShowUsed,
             usageMetricDisplayMode: self.settings.usageMetricDisplayMode,
             menuMode: self.settings.menuMode,
             tokenCostUsageEnabled: self.settings.isCostUsageEffectivelyEnabled(for: target),
             showOptionalCreditsAndExtraUsage: self.settings.showOptionalCreditsAndExtraUsage,
-            now: Date())
+            now: Date(),
+            numberStyle: self.settings.numberFormat.formatterStyle,
+            dateStyle: self.settings.dateFormat.formatterStyle)
         return UsageMenuCardView.Model.make(input)
     }
 
@@ -363,8 +381,19 @@ extension StatusItemController {
             accessibilityDescription: nil)
         image?.isTemplate = true
         image?.size = NSSize(width: 16, height: 16)
-        let view = MenuActionButtonView(title: title, image: image, theme: self.settings.theme.palette) { [weak self] in
-            self?.refreshNow()
+        let view = MenuActionButtonView(title: title, image: image, theme: self.settings.theme.palette)
+        view.onSelect = { [weak self, weak view] in
+            guard let self else { return }
+            // Flash keeps roughly the same width as "Ping now" so the frozen
+            // row frame doesn't truncate it.
+            if self.isRefreshInFlight {
+                // UsageStore.refresh() no-ops while a refresh is in flight —
+                // surface that instead of doing nothing.
+                view?.flashTitle("Pinging\u{2026}")
+                return
+            }
+            view?.flashTitle("Pinging\u{2026}")
+            self.refreshNow()
         }
         let size = view.fittingSize
         if size.height <= 1 {
@@ -377,6 +406,10 @@ extension StatusItemController {
         let item = NSMenuItem()
         item.view = view
         item.isEnabled = true
+        // Keyboard access: Return on the highlighted row must work even though
+        // the row hosts a custom view (clicks go through the view's gesture).
+        item.target = self
+        item.action = #selector(self.refreshNow)
         return item
     }
 

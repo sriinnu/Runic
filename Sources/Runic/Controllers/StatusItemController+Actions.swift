@@ -4,8 +4,27 @@ import RunicCore
 extension StatusItemController {
     // MARK: - Actions reachable from menus
 
+    /// The provider "Ping now" should target: the provider whose menu was last
+    /// opened, with the same fallback chain as `openDashboard`. Returns nil
+    /// when no single provider is in focus (merged menu on the Overview tab)
+    /// so `refreshNow` performs a full refresh of every provider instead of
+    /// silently pinging codex — which may not even be enabled.
+    func refreshTargetProvider() -> UsageProvider? {
+        if let last = self.lastMenuProvider { return last }
+        if self.shouldMergeIcons, self.selectedMenuProvider == nil { return nil }
+        return self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first
+    }
+
+    /// True when a refresh is already running (global or single-provider — both
+    /// set `isRefreshing`). Callers use this to surface feedback instead of the
+    /// silent no-op inside `UsageStore.refresh()`.
+    var isRefreshInFlight: Bool {
+        self.store.isRefreshing
+    }
+
     @objc func refreshNow() {
-        let provider = self.selectedMenuProvider
+        guard !self.isRefreshInFlight else { return }
+        let provider = self.refreshTargetProvider()
         if let provider {
             Task {
                 await self.store.refreshSingleProvider(provider)

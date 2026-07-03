@@ -87,6 +87,9 @@ struct UsageStoreLedgerInsightLoader {
         }
 
         let load = await self.loadLedgerEntries(from: sources)
+        // Live context-window fill piggybacks on this refresh (small tail
+        // reads only) so menu open never does transcript IO synchronously.
+        self.refreshLiveContextFill(providers: load.providers, now: now)
         let timeZone = TimeZone.current
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone

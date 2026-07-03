@@ -14,9 +14,10 @@ extension StatusItemController {
         let snapshot = self.store.snapshot(for: primaryProvider)
 
         // IconRenderer treats these values as a left-to-right "progress fill" percentage. Depending on the
-        // user setting, pass either "percent left" or "percent used".
-        var primary = showUsed ? snapshot?.primary.usedPercent : snapshot?.primary.remainingPercent
-        var weekly = showUsed ? snapshot?.secondary?.usedPercent : snapshot?.secondary?.remainingPercent
+        // user setting, pass either "percent left" or "percent used". Windows without a real limit
+        // yield nil so the plain icon renders instead of a fake full/empty gauge.
+        var primary = snapshot?.primary.gaugePercent(showUsed: showUsed)
+        var weekly = snapshot?.secondary?.gaugePercent(showUsed: showUsed)
         var credits: Double? = primaryProvider == .codex ? self.store.credits?.remaining : nil
         var stale = self.store.isStale(provider: primaryProvider)
         var morphProgress: Double?
@@ -96,8 +97,8 @@ extension StatusItemController {
             self.setButtonTitle(percentText, for: button)
             return
         }
-        var primary = showUsed ? snapshot?.primary.usedPercent : snapshot?.primary.remainingPercent
-        var weekly = showUsed ? snapshot?.secondary?.usedPercent : snapshot?.secondary?.remainingPercent
+        var primary = snapshot?.primary.gaugePercent(showUsed: showUsed)
+        var weekly = snapshot?.secondary?.gaugePercent(showUsed: showUsed)
         var credits: Double? = provider == .codex ? self.store.credits?.remaining : nil
         var stale = self.store.isStale(provider: provider)
         var morphProgress: Double?
@@ -199,16 +200,17 @@ extension StatusItemController {
     }
 
     private func menuBarPercentText(for provider: UsageProvider, snapshot: UsageSnapshot?) -> String? {
-        guard let window = self.menuBarPercentWindow(for: provider, snapshot: snapshot) else { return nil }
-        let percent = self.settings.usageBarsShowUsed ? window.usedPercent : window.remainingPercent
-        let clamped = min(100, max(0, percent))
-        return String(format: "%.0f%%", clamped)
+        guard let window = self.menuBarPercentWindow(for: provider, snapshot: snapshot),
+              let percent = window.gaugePercent(showUsed: self.settings.usageBarsShowUsed)
+        else { return nil }
+        return String(format: "%.0f%%", percent)
     }
 
     private func menuBarPercentWindow(for provider: UsageProvider, snapshot: UsageSnapshot?) -> RateWindow? {
-        if provider == .factory {
-            return snapshot?.secondary ?? snapshot?.primary
-        }
-        return snapshot?.primary ?? snapshot?.secondary
+        let ordered: [RateWindow?] = provider == .factory
+            ? [snapshot?.secondary, snapshot?.primary]
+            : [snapshot?.primary, snapshot?.secondary]
+        let windows = ordered.compactMap(\.self)
+        return windows.first { $0.hasKnownLimit != false } ?? windows.first
     }
 }

@@ -20,6 +20,20 @@ struct ProviderTabBarView: View {
     let width: CGFloat
     let onSelect: (UsageProvider?) -> Void
     @Environment(\.runicTheme) private var runicTheme
+    @State private var contentFrame: CGRect = .zero
+    @State private var containerWidth: CGFloat = 0
+
+    private static let edgeFadeWidth: CGFloat = 20
+
+    /// Content extends past the leading edge (user has scrolled right).
+    private var hasLeadingOverflow: Bool {
+        self.contentFrame.minX < -1
+    }
+
+    /// Content extends past the trailing edge (more tabs offscreen).
+    private var hasTrailingOverflow: Bool {
+        self.containerWidth > 0 && self.contentFrame.maxX > self.containerWidth + 1
+    }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -78,6 +92,36 @@ struct ProviderTabBarView: View {
             }
             .padding(.horizontal, MenuCardMetrics.horizontalPadding)
             .padding(.vertical, RunicSpacing.xs)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: TabBarContentFramePreferenceKey.self,
+                        value: proxy.frame(in: .named("runicProviderTabBarScroll")))
+                })
+        }
+        .coordinateSpace(name: "runicProviderTabBarScroll")
+        .onPreferenceChange(TabBarContentFramePreferenceKey.self) { frame in
+            self.contentFrame = frame
+        }
+        .mask(self.overflowFadeMask)
+        .overlay(alignment: .trailing) {
+            if self.hasTrailingOverflow {
+                self.overflowChevron(systemName: "chevron.compact.right")
+            }
+        }
+        .overlay(alignment: .leading) {
+            if self.hasLeadingOverflow {
+                self.overflowChevron(systemName: "chevron.compact.left")
+            }
+        }
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: TabBarContainerWidthPreferenceKey.self,
+                    value: proxy.size.width)
+            })
+        .onPreferenceChange(TabBarContainerWidthPreferenceKey.self) { width in
+            self.containerWidth = width
         }
         .frame(minWidth: self.width, maxWidth: .infinity)
         .background {
@@ -90,6 +134,32 @@ struct ProviderTabBarView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Provider tabs")
+    }
+
+    /// Fades the clipped edge(s) so offscreen tabs are discoverable.
+    private var overflowFadeMask: some View {
+        HStack(spacing: 0) {
+            LinearGradient(
+                colors: [self.hasLeadingOverflow ? .clear : .black, .black],
+                startPoint: .leading,
+                endPoint: .trailing)
+                .frame(width: Self.edgeFadeWidth)
+            Rectangle().fill(.black)
+            LinearGradient(
+                colors: [.black, self.hasTrailingOverflow ? .clear : .black],
+                startPoint: .leading,
+                endPoint: .trailing)
+                .frame(width: Self.edgeFadeWidth)
+        }
+    }
+
+    private func overflowChevron(systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(self.runicTheme.secondaryText)
+            .padding(.horizontal, RunicSpacing.xxxs)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     /// Glass-flavoured glow halos for tab capsules. Terminal stays solid,
@@ -144,6 +214,22 @@ struct ProviderTabBarView: View {
 
     private func standardForegroundStyle(for tab: TabItem) -> Color {
         tab.isSelected ? self.runicTheme.primaryText : self.runicTheme.primaryText.opacity(0.66)
+    }
+}
+
+private struct TabBarContentFramePreferenceKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
+private struct TabBarContainerWidthPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

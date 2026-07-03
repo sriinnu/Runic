@@ -11,6 +11,9 @@ extension StatusItemController {
         let width: CGFloat
         let sidebar: MenuCardSidebarConfig?
         let webItems: OpenAIWebMenuItems
+        /// False on refresh-driven repopulates of an already-open menu so the
+        /// entrance cascade doesn't replay mid-view.
+        let animateEntrance: Bool
     }
 
     func makeMenuCardItem(
@@ -125,7 +128,8 @@ extension StatusItemController {
                 to: menu,
                 provider: provider,
                 width: width,
-                sidebar: sidebar)
+                sidebar: sidebar,
+                animateEntrance: request.animateEntrance)
         }
 
         if hasCredits || hasExtraUsage || hasCost || hasInsights {
@@ -219,7 +223,8 @@ extension StatusItemController {
         to menu: NSMenu,
         provider: UsageProvider,
         width: CGFloat,
-        sidebar: MenuCardSidebarConfig?)
+        sidebar: MenuCardSidebarConfig?,
+        animateEntrance: Bool)
     {
         let daily = self.store.ledgerDailySummary(for: provider)
         let hourlySummaries = self.store.ledgerHourlySummary(for: provider)
@@ -234,7 +239,7 @@ extension StatusItemController {
                     tokenCount: daily.totals.totalTokens,
                     costUSD: daily.totals.costUSD,
                     width: $0)
-                    .menuCardEntrance(index: 0)
+                    .menuCardEntrance(index: 0, animated: animateEntrance)
             }
             menu.addItem(self.makeMenuCardItem(heroView, id: "heroTodayStat", width: width))
         }
@@ -246,8 +251,9 @@ extension StatusItemController {
                     dailySummaries: allDaily,
                     hourlySummaries: hourlySummaries,
                     chartStyle: self.settings.chartStyle,
-                    width: $0)
-                    .menuCardEntrance(index: 1)
+                    width: $0,
+                    numberStyle: self.settings.numberFormat.formatterStyle)
+                    .menuCardEntrance(index: 1, animated: animateEntrance)
             }
             menu.addItem(self.makeMenuCardItem(chartView, id: "inlineUsageChart", width: width))
         }
@@ -312,7 +318,7 @@ extension StatusItemController {
                     weekTotalTokens: UsageFormatter.tokenCountString(weekTotal),
                     dailySparkline: dailySparkline,
                     width: $0)
-                    .menuCardEntrance(index: 2)
+                    .menuCardEntrance(index: 2, animated: animateEntrance)
             }
             menu.addItem(self.makeMenuCardItem(cardsView, id: "glassStatCards", width: width))
         }
@@ -326,7 +332,7 @@ extension StatusItemController {
         if let updatedAt {
             let timestampView = self.menuCardContent(width: width, sidebar: sidebar, showIcons: true) {
                 UpdatedTimestampView(updatedAt: updatedAt, width: $0)
-                    .menuCardEntrance(index: 3)
+                    .menuCardEntrance(index: 3, animated: animateEntrance)
             }
             menu.addItem(self.makeMenuCardItem(timestampView, id: "updatedTimestamp", width: width))
         }

@@ -280,7 +280,7 @@ struct UsageStoreProviderHistorySupport {
     }
 }
 
-private struct CachedOTelProviderHistorySource: UsageLedgerSource {
+struct CachedOTelProviderHistorySource: UsageLedgerSource {
     private let commonFiles: [URL]
     private let providerSpecificFiles: [URL]
     private let options: OTelGenAIIngestionOptions
@@ -316,7 +316,24 @@ private struct CachedOTelProviderHistorySource: UsageLedgerSource {
         let historyCovered = coveredDays >= requestedCoverageDays
         let historyStart = calendar.startOfDay(
             for: calendar.date(byAdding: .day, value: -requestedCoverageDays, to: self.now) ?? self.now)
-        let minTimestamp = historyCovered ? todayStart : historyStart
+        // A covered refresh used to be today-only, which permanently lost any
+        // day the app was closed during: usage kept landing in the OTel files,
+        // but `lastScanDate` still advanced, so the gap became invisible and
+        // those days stayed blank forever. Mirror the log sources' scanGapDays
+        // catch-up: anchor the scan window to the last scan date so exactly the
+        // missed days are backfilled. Additive on purpose — this is NOT a
+        // history rebuild: days outside the window are never touched, and a gap
+        // day whose raw entries have since rotated away keeps its cached
+        // aggregate (see mergeDailies below).
+        let gapDays = await self.cache.scanGapDays(provider: self.provider.rawValue, now: self.now)
+        let minTimestamp = historyCovered
+            ? Self.gapScanStart(
+                gapDays: gapDays,
+                requestedCoverageDays: requestedCoverageDays,
+                now: self.now,
+                calendar: calendar)
+            : historyStart
+        let isGapCatchUp = historyCovered && minTimestamp < todayStart
 
         let commonOptions = OTelGenAIIngestionOptions(
             enabled: self.options.enabled,
@@ -345,14 +362,46 @@ private struct CachedOTelProviderHistorySource: UsageLedgerSource {
                 scanDate: self.now,
                 coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
         } else {
+            // Steady state passes todayKey so existing pre-today days stay
+            // frozen (relay contract). During a gap catch-up the freshly
+            // recounted gap days must REPLACE their aggregates — a day the app
+            // was closed halfway through was only partially counted, and
+            // replacing the recomputed total (instead of freezing or adding)
+            // is what keeps it from being double-counted. Merge only touches
+            // days present in `dailies`, so a gap day that produced no entries
+            // keeps its existing aggregate. The archive boundary is ALWAYS
+            // today: relay rows take precedence for their day, so archiving
+            // today's still-partial aggregate (as the nil-todayKey catch-up
+            // used to, every morning rollover) pinned today at the catch-up
+            // moment's count for the rest of the day.
             await self.cache.mergeDailies(
                 provider: self.provider.rawValue,
                 newDailies: dailies,
                 scanDate: self.now,
-                todayKey: historyCovered ? LedgerCache.dayKey(for: self.now) : nil,
+                todayKey: historyCovered && !isGapCatchUp ? LedgerCache.dayKey(for: self.now) : nil,
+                archiveBoundaryDayKey: LedgerCache.dayKey(for: self.now),
                 coveredMaxAgeDays: historyCovered ? nil : requestedCoverageDays)
         }
         return entries
+    }
+
+    /// Lower bound for a covered refresh scan.
+    ///
+    /// - Scanned today (gap 1 or unknown): today only (steady state, costs nothing).
+    /// - Last scan N days ago: the start of that N-day gap window, bounded by
+    ///   the retention window, so days missed while the app was closed are
+    ///   additively backfilled.
+    static func gapScanStart(
+        gapDays: Int?,
+        requestedCoverageDays: Int,
+        now: Date,
+        calendar: Calendar) -> Date
+    {
+        let todayStart = calendar.startOfDay(for: now)
+        let catchUpDays = min(max(1, gapDays ?? 1), requestedCoverageDays)
+        guard catchUpDays > 1 else { return todayStart }
+        let start = calendar.date(byAdding: .day, value: -(catchUpDays - 1), to: todayStart) ?? todayStart
+        return calendar.startOfDay(for: start)
     }
 
     private static func cachedDailies(from entries: [UsageLedgerEntry]) -> [CachedDaily] {
@@ -388,7 +437,11 @@ private struct CachedOTelProviderHistorySource: UsageLedgerSource {
                 cacheReadTokens: bucket.cacheRead,
                 costUSD: bucket.cost > 0 ? bucket.cost : nil,
                 requestCount: bucket.requests,
-                modelsUsed: Array(bucket.models))
+                // Sorted for determinism: Set order varies across launches, and
+                // `mergeDailies` detects changed days by CachedDaily equality —
+                // an unstable order made every multi-model day look "changed"
+                // and re-archive on each refresh.
+                modelsUsed: bucket.models.sorted())
         }
     }
 }

@@ -68,8 +68,13 @@ final class UsageStore {
     var ledgerCompactions: [UsageProvider: UsageLedgerCompactionSummary] = [:]
     var ledgerErrors: [UsageProvider: String] = [:]
     var ledgerUpdatedAt: [UsageProvider: Date] = [:]
+    /// Codex credits slot, fed by the Codex CLI/RPC probe and the OpenAI
+    /// web-dashboard fallback. Non-codex providers use `providerCredits`.
     var credits: CreditsSnapshot?
     var lastCreditsError: String?
+    /// Live credits per provider, populated from fetch results whose
+    /// strategies attach a `CreditsSnapshot` (DeepSeek, OpenRouter, Vercel AI, ...).
+    var providerCredits: [UsageProvider: CreditsSnapshot] = [:]
     var openAIDashboard: OpenAIDashboardSnapshot?
     var lastOpenAIDashboardError: String?
     var openAIDashboardRequiresLogin: Bool = false
@@ -176,6 +181,18 @@ final class UsageStore {
             codexFetcher: fetcher,
             claudeFetcher: claudeFetcher)
         self.bindSettings()
+    }
+
+    /// Live credits for a provider. Codex keeps its dedicated slot (probe +
+    /// web-dashboard fallback with caching); every other provider reads the
+    /// snapshot captured from its latest successful fetch.
+    func credits(for provider: UsageProvider) -> CreditsSnapshot? {
+        if provider == .codex { return self.credits }
+        return self.providerCredits[provider]
+    }
+
+    func creditsError(for provider: UsageProvider) -> String? {
+        provider == .codex ? self.lastCreditsError : nil
     }
 
     func startRuntime() {

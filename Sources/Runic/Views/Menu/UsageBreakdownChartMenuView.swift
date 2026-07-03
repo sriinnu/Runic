@@ -34,9 +34,10 @@ struct UsageBreakdownChartMenuView: View {
         let serviceColors = model.services.indices.map { self.runicTheme.chartColor(at: $0) }
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if model.points.isEmpty {
-                Text("No usage breakdown data.")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText)
+                RunicEmptyStateView(
+                    mood: .searching,
+                    title: "No usage breakdown data.",
+                    hint: "Per-service credits appear here once reported.")
             } else {
                 Chart {
                     ForEach(model.points) { point in
@@ -137,16 +138,8 @@ struct UsageBreakdownChartMenuView: View {
         let dayDates: [(dayKey: String, date: Date)]
         let peakPoint: (date: Date, creditsUsed: Double)?
         let services: [String]
-        let serviceColors: [Color]
         let axisDates: [Date]
         let maxCreditsUsed: Double
-
-        func color(for service: String) -> Color {
-            guard let idx = self.services.firstIndex(of: service), idx < self.serviceColors.count else {
-                return .secondary
-            }
-            return self.serviceColors[idx]
-        }
     }
 
     private static func makeModel(from breakdown: [OpenAIDashboardDailyBreakdown]) -> Model {
@@ -183,7 +176,6 @@ struct UsageBreakdownChartMenuView: View {
         }
 
         let services = Self.serviceOrder(from: sorted)
-        let colors = services.map { Self.colorForService($0) }
         let axisDates = Self.axisDates(fromSortedDays: sorted)
 
         return Model(
@@ -192,7 +184,6 @@ struct UsageBreakdownChartMenuView: View {
             dayDates: dayDates,
             peakPoint: peak,
             services: services,
-            serviceColors: colors,
             axisDates: axisDates,
             maxCreditsUsed: maxCreditsUsed)
     }
@@ -215,18 +206,6 @@ struct UsageBreakdownChartMenuView: View {
                 return lhs.value > rhs.value
             }
             .map(\.key)
-    }
-
-    private static func colorForService(_ service: String) -> Color {
-        let lower = service.lowercased()
-        if lower == "cli" {
-            return RunicColors.chartPalette[0]
-        }
-        if lower.contains("github"), lower.contains("review") {
-            return RunicColors.chartPalette[1]
-        }
-        let idx = abs(service.hashValue) % RunicColors.chartPalette.count
-        return RunicColors.chartPalette[idx]
     }
 
     private static func axisDates(fromSortedDays sortedDays: [OpenAIDashboardDailyBreakdown]) -> [Date] {

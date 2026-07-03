@@ -49,14 +49,20 @@ struct EfficiencyMetricsMenuView: View {
 
     private let modelSummaries: [UsageLedgerModelSummary]
     private let width: CGFloat
+    private let numberStyle: UsageFormatter.NumberStyle
     @State private var sortColumn: SortColumn = .tokensPerRequest
     @State private var sortAscending = false
     @State private var hoveredModelID: String?
     @Environment(\.runicTheme) private var runicTheme
 
-    init(modelSummaries: [UsageLedgerModelSummary], width: CGFloat) {
+    init(
+        modelSummaries: [UsageLedgerModelSummary],
+        width: CGFloat,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated)
+    {
         self.modelSummaries = modelSummaries
         self.width = width
+        self.numberStyle = numberStyle
     }
 
     var body: some View {
@@ -71,9 +77,10 @@ struct EfficiencyMetricsMenuView: View {
                 .fontWeight(.semibold)
 
             if model.isEmpty {
-                Text("No efficiency metrics available.")
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText)
+                RunicEmptyStateView(
+                    mood: .searching,
+                    title: "No efficiency metrics available.",
+                    hint: "Per-model stats appear after some usage.")
             } else {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     // Header
@@ -120,6 +127,7 @@ struct EfficiencyMetricsMenuView: View {
                             ForEach(model) { metrics in
                                 MetricsRow(
                                     metrics: metrics,
+                                    numberStyle: self.numberStyle,
                                     isHovered: self.hoveredModelID == metrics.id)
                                     .onHover { hovering in
                                         self.hoveredModelID = hovering ? metrics.id : nil
@@ -148,7 +156,9 @@ struct EfficiencyMetricsMenuView: View {
                         Text("Avg Tokens/Req")
                             .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.secondaryText)
-                        Text(UsageFormatter.tokenCountString(Self.averageTokensPerRequest(model)))
+                        Text(UsageFormatter.tokenCountString(
+                            Self.averageTokensPerRequest(model),
+                            style: self.numberStyle))
                             .font(self.fonts.caption)
                             .fontWeight(.medium)
                     }
@@ -260,6 +270,7 @@ private struct SortableColumnHeader: View {
 private struct MetricsRow: View {
     @Environment(\.runicFonts) private var fonts
     let metrics: EfficiencyMetricsMenuView.ModelMetrics
+    let numberStyle: UsageFormatter.NumberStyle
     let isHovered: Bool
     @Environment(\.runicTheme) private var runicTheme
 
@@ -279,7 +290,7 @@ private struct MetricsRow: View {
                 }
             }
             .frame(width: 140, alignment: .leading)
-            Text(UsageFormatter.tokenCountString(Int(self.metrics.tokensPerRequest)))
+            Text(UsageFormatter.tokenCountString(Int(self.metrics.tokensPerRequest), style: self.numberStyle))
                 .font(self.fonts.caption)
                 .frame(width: 90, alignment: .leading)
             if let cost = metrics.costPerRequest {

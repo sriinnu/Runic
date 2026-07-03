@@ -47,6 +47,11 @@ extension EnhancedUsageCommand {
         for providerData in data.providers {
             print(providerData.providerName)
             for window in providerData.windows {
+                if window.hasKnownLimit == false {
+                    let info = window.resetDescription ?? "No usage limit reported"
+                    print("  \(window.name): \(info)")
+                    continue
+                }
                 let bar = self.progressBar(
                     used: window.usedPercent,
                     width: 20,
@@ -77,9 +82,13 @@ extension EnhancedUsageCommand {
                 if let used = window.used, let limit = window.limit {
                     print("    Used: \(self.formatNumber(used)) / \(self.formatNumber(limit))")
                 }
-                print("    Percent: \(String(format: "%.1f", window.usedPercent))%")
-                if let reset = window.resetDescription {
-                    print("    Reset: \(reset)")
+                if window.hasKnownLimit == false {
+                    print("    \(window.resetDescription ?? "No usage limit reported")")
+                } else {
+                    print("    Percent: \(String(format: "%.1f", window.usedPercent))%")
+                    if let reset = window.resetDescription {
+                        print("    Reset: \(reset)")
+                    }
                 }
             }
         }
@@ -113,8 +122,7 @@ extension EnhancedUsageCommand {
     }
 
     static func progressBar(used: Double, width: Int, useColor: Bool) -> String {
-        let filled = Int((used / 100.0) * Double(width))
-        let empty = width - filled
+        let (filled, empty) = RunicCLI.progressBarCounts(usedPercent: used, width: width)
         let bar = String(repeating: "█", count: filled) + String(repeating: "░", count: empty)
 
         guard useColor else { return "[\(bar)]" }

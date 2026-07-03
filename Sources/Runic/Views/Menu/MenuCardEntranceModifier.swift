@@ -3,11 +3,22 @@ import SwiftUI
 /// Staggered fade+slide entrance animation for menu card sections.
 /// Each section slides up from a slight offset and fades in, with a delay
 /// proportional to its index for a cascading "liquid" reveal.
+///
+/// Pass `animated: false` for refresh-driven repopulates of an already-open
+/// menu: the cascade should only play on first open, not replay every time a
+/// background store write rebuilds the visible menu.
 struct MenuCardEntranceModifier: ViewModifier {
     let index: Int
-    @State private var appeared = false
+    let animated: Bool
+    @State private var appeared: Bool
     @Environment(\.runicTheme) private var runicTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(index: Int, animated: Bool) {
+        self.index = index
+        self.animated = animated
+        self._appeared = State(initialValue: !animated)
+    }
 
     func body(content: Content) -> some View {
         content
@@ -15,6 +26,7 @@ struct MenuCardEntranceModifier: ViewModifier {
             .offset(y: self.reduceMotion || self.appeared ? 0 : 8)
             .scaleEffect(self.reduceMotion || self.appeared ? 1 : 0.97, anchor: .top)
             .onAppear {
+                guard !self.appeared else { return }
                 let delay = Double(self.index) * RunicAnimation.cardEntranceStagger
                 withAnimation(self.runicTheme.motion.delayedCurve(reduceMotion: self.reduceMotion, delay: delay)) {
                     self.appeared = true
@@ -59,9 +71,10 @@ struct GlassShimmerModifier: ViewModifier {
 }
 
 extension View {
-    /// Apply staggered entrance animation. `index` controls the delay.
-    func menuCardEntrance(index: Int) -> some View {
-        self.modifier(MenuCardEntranceModifier(index: index))
+    /// Apply staggered entrance animation. `index` controls the delay;
+    /// `animated: false` renders the settled state immediately.
+    func menuCardEntrance(index: Int, animated: Bool = true) -> some View {
+        self.modifier(MenuCardEntranceModifier(index: index, animated: animated))
     }
 
     /// Apply a single shimmer sweep across a glass surface.

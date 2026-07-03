@@ -39,8 +39,12 @@ extension UsageStore {
     func lastRefreshStatusLine(now: Date = .now) -> String? {
         guard let trigger = self.lastRefreshTrigger,
               let refreshedAt = self.lastRefreshAt else { return nil }
-        let relative = refreshedAt.relativeDescription(now: now)
-        return "Last refresh: \(trigger.menuLabel) • \(relative)"
+        // Honor the app-wide date-format preference like the menu cards do.
+        let when = switch self.settings.dateFormat.formatterStyle {
+        case .relative: refreshedAt.relativeDescription(now: now)
+        case .absolute: UsageFormatter.absoluteTimestampString(from: refreshedAt, now: now)
+        }
+        return "Last refresh: \(trigger.menuLabel) • \(when)"
     }
 
     func autoRefreshSwitchLine(now: Date = .now) -> String? {

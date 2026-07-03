@@ -65,7 +65,9 @@ extension MenuPopoverView {
             chartPoints: model.chartPoints,
             totalTodayTokens: model.totalTodayTokens,
             totalProviders: providers.count,
-            width: self.contentWidth)
+            width: self.contentWidth,
+            showsUsed: self.settings.usageBarsShowUsed,
+            numberStyle: self.settings.numberFormat.formatterStyle)
     }
 
     func overviewModel(providers: [UsageProvider])
@@ -78,8 +80,10 @@ extension MenuPopoverView {
         let todayStart = calendar.startOfDay(for: Date())
         let weekAgo = calendar.date(byAdding: .day, value: -7, to: todayStart) ?? todayStart
         var summaries: [OverviewMenuView.ProviderSummary] = []
+        var activeIDs: Set<String> = []
         var chartPoints: [OverviewMenuView.DailyPoint] = []
         var totalToday = 0
+        let showsUsed = self.settings.usageBarsShowUsed
 
         for provider in providers {
             let meta = self.store.metadata(for: provider)
@@ -94,17 +98,25 @@ extension MenuPopoverView {
             let topModel = self.store.ledgerTopModel(for: provider)
             let context = ProviderContextWindowRegistry.shared.contextLabel(for: provider, model: topModel?.model)?.text
 
+            let hasQuota = OverviewMenuView.windowHasQuota(snapshot?.primary)
+            // "Active" stays anchored on raw consumption so the used/left
+            // toggle doesn't change which providers the overview lists.
+            if (snapshot?.primary.usedPercent ?? 0) > 0 || todayTokens > 0 {
+                activeIDs.insert(provider.rawValue)
+            }
+
             summaries.append(OverviewMenuView.ProviderSummary(
                 id: provider.rawValue,
                 provider: provider,
                 name: meta.displayName,
                 icon: ProviderBrandIcon.image(for: provider, size: 20),
-                usedPercent: snapshot?.primary.usedPercent ?? 0,
+                usedPercent: OverviewMenuView.displayPercent(for: snapshot?.primary, showsUsed: showsUsed),
                 todayTokens: todayTokens,
                 brandColor: brandColor,
                 resetDescription: snapshot?.primary.resetDescription,
                 windowLabel: snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines),
-                topModelContext: context))
+                topModelContext: context,
+                hasQuota: hasQuota))
 
             for summary in self.store.ledgerAllDailySummary(for: provider) where summary.dayStart >= weekAgo {
                 chartPoints.append(OverviewMenuView.DailyPoint(
@@ -116,19 +128,11 @@ extension MenuPopoverView {
             }
         }
 
-        let activeSummaries = summaries.filter { $0.usedPercent > 0 || $0.todayTokens > 0 }
+        let activeSummaries = summaries.filter { activeIDs.contains($0.id) }
         return (activeSummaries.isEmpty ? summaries : activeSummaries, chartPoints, totalToday)
     }
 
     static func abbreviatedProviderName(_ name: String) -> String {
-        if name.count <= 8 { return name }
-        let abbreviations: [String: String] = [
-            "Antigravity": "AntiG",
-            "OpenRouter": "ORouter",
-            "Perplexity": "Perplx",
-            "SambaNova": "SambaN",
-            "Azure OpenAI": "Azure",
-        ]
-        return abbreviations[name] ?? String(name.prefix(6))
+        ProviderNameAbbreviator.abbreviate(name)
     }
 }

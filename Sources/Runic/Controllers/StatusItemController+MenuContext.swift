@@ -13,6 +13,9 @@ struct MenuPopulationContext {
     let webItems: StatusItemController.OpenAIWebMenuItems
     let useSidebarSwitcher: Bool
     let sidebarConfig: StatusItemController.MenuCardSidebarConfig?
+    /// Entrance cascades play only on first open; refresh-driven repopulates
+    /// of an already-open menu render the settled state immediately.
+    let animateEntrance: Bool
 
     var hasOpenAIWebMenuItems: Bool {
         self.webItems.hasUsageBreakdown || self.webItems.hasCreditsHistory || self.webItems.hasCostHistory
@@ -77,7 +80,11 @@ extension StatusItemController {
                 enabledProviders: enabledProviders,
                 selectedProvider: selectedProvider,
                 useSidebarSwitcher: useSidebarSwitcher,
-                menu: menu))
+                menu: menu),
+            // The menu is only in `openMenus` while it is on screen, which is
+            // exactly the repopulate-while-open case that must not replay the
+            // entrance cascade.
+            animateEntrance: self.openMenus[ObjectIdentifier(menu)] == nil)
     }
 
     func sidebarConfig(

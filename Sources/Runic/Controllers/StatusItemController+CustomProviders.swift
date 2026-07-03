@@ -2,6 +2,17 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+// MARK: - Custom provider usage display
+
+enum CustomProviderUsageDisplay {
+    /// Display percent for used/quota, rounded (not truncated) and clamped to 0-100.
+    static func percentUsed(used: Double, quota: Double) -> Int {
+        guard quota > 0 else { return 0 }
+        let percent = (used / quota) * 100
+        return Int(min(max(percent, 0), 100).rounded())
+    }
+}
+
 // MARK: - Custom providers section
 
 extension StatusItemController {
@@ -34,7 +45,7 @@ extension StatusItemController {
     {
         let title: String
         if let quota = snapshot.usageData.quota, let used = snapshot.usageData.used, quota > 0 {
-            let percent = Int((used / quota) * 100)
+            let percent = CustomProviderUsageDisplay.percentUsed(used: used, quota: quota)
             title = "\(provider.name): \(percent)% used"
         } else if let remaining = snapshot.usageData.remaining {
             title = "\(provider.name): \(Int(remaining)) remaining"

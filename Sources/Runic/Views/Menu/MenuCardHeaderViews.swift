@@ -2,6 +2,39 @@ import AppKit
 import RunicCore
 import SwiftUI
 
+/// Coarse classification of provider error strings so the menu card can offer
+/// a recovery action instead of only showing raw error text.
+enum MenuCardErrorClassifier {
+    private static let authMarkers: [String] = [
+        "auth", // covers auth/authentication/unauthorized/oauth
+        "401",
+        "403",
+        "forbidden",
+        "log in",
+        "login",
+        "logged out",
+        "sign in",
+        "signed out",
+        "credential",
+        "api key",
+        "apikey",
+        "token expired",
+        "expired token",
+        "session expired",
+        "cookie",
+        "keychain",
+        "invalid_grant",
+        "no account",
+        "not signed",
+        "not logged",
+    ]
+
+    static func isAuthLike(_ message: String) -> Bool {
+        let lower = message.lowercased()
+        return self.authMarkers.contains { lower.contains($0) }
+    }
+}
+
 struct UsageMenuCardHeaderView: View {
     @Environment(\.runicFonts) private var fonts
     let model: UsageMenuCardView.Model
@@ -69,11 +102,34 @@ struct UsageMenuCardHeaderView: View {
                 }
             }
 
+            if self.model.subtitleStyle == .error,
+               MenuCardErrorClassifier.isAuthLike(self.model.subtitleText)
+            {
+                Button {
+                    SettingsWindowBridge.open(tab: .providers, selection: nil)
+                } label: {
+                    HStack(spacing: RunicSpacing.xxs) {
+                        Image(systemName: "person.badge.key")
+                            .font(self.fonts.caption.weight(.semibold))
+                        Text("Add Account\u{2026}")
+                            .font(self.fonts.caption.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(self.runicTheme.accent)
+                .accessibilityLabel("Add account in provider settings")
+            }
+
             if let topModelLine = self.model.topModelLine {
+                // This packs several stats onto one line (model · tokens ·
+                // req · context · cost · rate) and regularly overflows a
+                // single line at the card's fixed width — wrap instead of
+                // silently clipping trailing stats.
                 Text(topModelLine)
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.horizontal, RunicSpacing.xs)
@@ -361,20 +417,36 @@ struct MenuEmptyStateView: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-            HStack(spacing: RunicSpacing.xxs) {
-                Image(systemName: "sparkles")
-                    .font(self.fonts.caption.weight(.semibold))
-                Text("Connect \(self.providerName)")
-                    .font(self.fonts.subheadline.weight(.semibold))
+        HStack(alignment: .center, spacing: RunicSpacing.sm) {
+            RunicDoodle(mood: .resting, size: 46)
+            VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                HStack(spacing: RunicSpacing.xxs) {
+                    Image(systemName: "sparkles")
+                        .font(self.fonts.caption.weight(.semibold))
+                    Text("Connect \(self.providerName)")
+                        .font(self.fonts.subheadline.weight(.semibold))
+                }
+                Text(self.placeholder)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                Text("Add credentials, then refresh.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    SettingsWindowBridge.open(tab: .providers, selection: nil)
+                } label: {
+                    HStack(spacing: RunicSpacing.xxs) {
+                        Image(systemName: "gearshape")
+                            .font(self.fonts.caption.weight(.semibold))
+                        Text("Open Settings → Providers")
+                            .font(self.fonts.footnote.weight(.semibold))
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(self.runicTheme.accent)
+                .accessibilityLabel("Open provider settings")
             }
-            Text(self.placeholder)
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.secondaryText)
-            Text("Open Settings → Providers, add credentials, then refresh.")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

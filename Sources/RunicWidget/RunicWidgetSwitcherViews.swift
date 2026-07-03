@@ -101,13 +101,13 @@ struct SwitcherSmallUsageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                percentLeft: self.entry.primary?.remainingPercent,
+                window: self.entry.primary,
                 color: WidgetColors.color(for: self.entry.provider))
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                percentLeft: self.entry.secondary?.remainingPercent,
+                window: self.entry.secondary,
                 color: WidgetColors.color(for: self.entry.provider))
             if let codeReview = entry.codeReviewRemainingPercent {
                 UsageBarRow(
@@ -124,13 +124,13 @@ struct SwitcherMediumUsageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                percentLeft: self.entry.primary?.remainingPercent,
+                window: self.entry.primary,
                 color: WidgetColors.color(for: self.entry.provider))
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                percentLeft: self.entry.secondary?.remainingPercent,
+                window: self.entry.secondary,
                 color: WidgetColors.color(for: self.entry.provider))
             if let credits = entry.creditsRemaining {
                 ValueLine(title: "Credits", value: WidgetFormat.credits(credits))
@@ -149,13 +149,13 @@ struct SwitcherLargeUsageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                percentLeft: self.entry.primary?.remainingPercent,
+                window: self.entry.primary,
                 color: WidgetColors.color(for: self.entry.provider))
-            UsageBarRow(
+            WindowUsageRow(
                 title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                percentLeft: self.entry.secondary?.remainingPercent,
+                window: self.entry.secondary,
                 color: WidgetColors.color(for: self.entry.provider))
             if let codeReview = entry.codeReviewRemainingPercent {
                 UsageBarRow(

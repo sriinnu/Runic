@@ -18,22 +18,34 @@ extension UsageMenuCardView.Model {
         let compaction = input.ledgerCompaction?.provider == input.provider ? input.ledgerCompaction : nil
         let connection = Self.connectionLines(input: input)
         let context = Self.contextHealthLines(input: input, daily: daily, block: block, topModel: topModel)
-        let compactionLines = Self.compactionLines(compaction)
+        let compactionLines = Self.compactionLines(
+            compaction,
+            numberStyle: input.numberStyle,
+            dateStyle: input.dateStyle)
         let hasData = connection.line != nil || context.line != nil || compactionLines.line != nil || daily != nil ||
             block != nil || topModel != nil || topProject != nil || spendForecast != nil || anomaly != nil
         if !hasData, error?.isEmpty ?? true {
             return nil
         }
 
-        let today = Self.todayInsightLines(daily)
+        let today = Self.todayInsightLines(daily, numberStyle: input.numberStyle)
         let forecastLine = Self.forecastInsightLine(spendForecast)
-        let activeBlock = Self.activeBlockInsightLines(block, now: input.now)
-        let modelLine = Self.modelInsightLine(topModel, contextLabel: input.ledgerTopModelContextLabel)
-        let project = Self.projectInsightLines(topProject, forecast: topProjectSpendForecast, now: input.now)
-        let anomalyLines = Self.anomalyInsightLines(anomaly)
+        let activeBlock = Self.activeBlockInsightLines(block, now: input.now, numberStyle: input.numberStyle)
+        let modelLine = Self.modelInsightLine(
+            topModel,
+            contextLabel: input.ledgerTopModelContextLabel,
+            numberStyle: input.numberStyle)
+        let project = Self.projectInsightLines(
+            topProject,
+            forecast: topProjectSpendForecast,
+            now: input.now,
+            numberStyle: input.numberStyle)
+        let anomalyLines = Self.anomalyInsightLines(anomaly, numberStyle: input.numberStyle)
         let reliability = Self.reliabilityInsightLines(input.ledgerReliability)
         let routing = Self.routingInsightLines(input.ledgerRouting)
-        let updatedLine = input.ledgerUpdatedAt.map { UsageFormatter.updatedString(from: $0, now: input.now) }
+        let updatedLine = input.ledgerUpdatedAt.map {
+            UsageFormatter.updatedString(from: $0, style: input.dateStyle, now: input.now)
+        }
 
         return InsightsSection(
             title: "Insights",
@@ -61,20 +73,23 @@ extension UsageMenuCardView.Model {
             errorLine: (error?.isEmpty ?? true) ? nil : error)
     }
 
-    private static func todayInsightLines(_ daily: UsageLedgerDailySummary?) -> (line: String?, detail: String?) {
+    private static func todayInsightLines(
+        _ daily: UsageLedgerDailySummary?,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> (line: String?, detail: String?)
+    {
         guard let daily else { return (nil, nil) }
-        let tokens = UsageFormatter.tokenCountString(daily.totals.totalTokens)
+        let tokens = UsageFormatter.tokenCountString(daily.totals.totalTokens, style: numberStyle)
         let line = "Today: \(tokens) tokens"
         var details: [String] = []
-        let input = UsageFormatter.tokenCountString(daily.totals.inputTokens)
-        let output = UsageFormatter.tokenCountString(daily.totals.outputTokens)
+        let input = UsageFormatter.tokenCountString(daily.totals.inputTokens, style: numberStyle)
+        let output = UsageFormatter.tokenCountString(daily.totals.outputTokens, style: numberStyle)
         var flowParts = ["In \(input)", "Out \(output)"]
         if daily.totals.cacheReadTokens > 0 {
-            let cacheRead = UsageFormatter.tokenCountString(daily.totals.cacheReadTokens)
+            let cacheRead = UsageFormatter.tokenCountString(daily.totals.cacheReadTokens, style: numberStyle)
             flowParts.append("Cache read \(cacheRead)")
         }
         if daily.totals.cacheCreationTokens > 0 {
-            let cacheWrite = UsageFormatter.tokenCountString(daily.totals.cacheCreationTokens)
+            let cacheWrite = UsageFormatter.tokenCountString(daily.totals.cacheCreationTokens, style: numberStyle)
             flowParts.append("Cache write \(cacheWrite)")
         }
         details.append(flowParts.joined(separator: " · "))
@@ -104,22 +119,23 @@ extension UsageMenuCardView.Model {
 
     private static func activeBlockInsightLines(
         _ block: UsageLedgerBlockSummary?,
-        now: Date) -> (line: String?, detail: String?)
+        now: Date,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> (line: String?, detail: String?)
     {
         guard let block, block.isActive else { return (nil, nil) }
-        let tokens = UsageFormatter.tokenCountString(block.totals.totalTokens)
+        let tokens = UsageFormatter.tokenCountString(block.totals.totalTokens, style: numberStyle)
         let line = "Active block: \(tokens) tokens · \(block.entryCount) req"
         var details: [String] = []
         details.append("Ends \(UsageFormatter.resetCountdownDescription(from: block.end, now: now))")
         if let rate = block.tokensPerMinute {
-            let rateText = UsageFormatter.tokenCountString(Int(rate.rounded()))
+            let rateText = UsageFormatter.tokenCountString(Int(rate.rounded()), style: numberStyle)
             details.append("\(rateText) tok/min")
         }
         if let projected = block.projectedTotalTokens {
-            details.append("Proj \(UsageFormatter.tokenCountString(projected))")
+            details.append("Proj \(UsageFormatter.tokenCountString(projected, style: numberStyle))")
         }
-        let inputTokens = UsageFormatter.tokenCountString(block.totals.inputTokens)
-        let outputTokens = UsageFormatter.tokenCountString(block.totals.outputTokens)
+        let inputTokens = UsageFormatter.tokenCountString(block.totals.inputTokens, style: numberStyle)
+        let outputTokens = UsageFormatter.tokenCountString(block.totals.outputTokens, style: numberStyle)
         details.append("In \(inputTokens) · Out \(outputTokens)")
         if let cost = block.totals.costUSD {
             var spendParts = Self.spendDetailParts(cost: cost, tokens: block.totals.totalTokens)
@@ -140,10 +156,11 @@ extension UsageMenuCardView.Model {
 
     private static func modelInsightLine(
         _ summary: UsageLedgerModelSummary?,
-        contextLabel: String?) -> String?
+        contextLabel: String?,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> String?
     {
         guard let summary else { return nil }
-        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens, style: numberStyle)
         let modelName = UsageFormatter.modelDisplayName(summary.model)
         var parts = ["Top model: \(modelName) · \(tokens) tokens · \(summary.entryCount) req"]
         if let contextLabel {
@@ -158,11 +175,12 @@ extension UsageMenuCardView.Model {
     private static func projectInsightLines(
         _ summary: UsageLedgerProjectSummary?,
         forecast: UsageLedgerSpendForecast?,
-        now: Date) -> (line: String?, detail: String?)
+        now: Date,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> (line: String?, detail: String?)
     {
         guard let summary else { return (nil, nil) }
         let name = Self.insightsProjectDisplayName(summary)
-        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens, style: numberStyle)
         var parts = ["Top project: \(name) · \(tokens) tokens · \(summary.entryCount) req"]
         if let cost = summary.totals.costUSD {
             parts.append(contentsOf: Self.costInsightParts(cost: cost, tokens: summary.totals.totalTokens))
@@ -185,13 +203,17 @@ extension UsageMenuCardView.Model {
     }
 
     private static func anomalyInsightLines(
-        _ anomaly: UsageLedgerAnomalySummary?) -> (line: String?, detail: String?)
+        _ anomaly: UsageLedgerAnomalySummary?,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> (line: String?, detail: String?)
     {
         guard let anomaly, let primary = anomaly.primaryAnomaly else { return (nil, nil) }
         let line = "Anomaly: \(primary.severity.label) \(primary.metric.label) spike"
-        var details = [Self.anomalyMetricDetail(primary, baselineDays: anomaly.baselineDays)]
+        var details = [Self.anomalyMetricDetail(primary, baselineDays: anomaly.baselineDays, numberStyle: numberStyle)]
         if let secondary = anomaly.secondaryAnomaly(excluding: primary.metric) {
-            details.append(Self.anomalyMetricDetail(secondary, baselineDays: anomaly.baselineDays))
+            details.append(Self.anomalyMetricDetail(
+                secondary,
+                baselineDays: anomaly.baselineDays,
+                numberStyle: numberStyle))
         }
         return (line, details.joined(separator: "\n"))
     }
@@ -238,14 +260,17 @@ extension UsageMenuCardView.Model {
 
     private static func anomalyMetricDetail(
         _ anomaly: UsageLedgerAnomalySummary.MetricAnomaly,
-        baselineDays: Int) -> String
+        baselineDays: Int,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> String
     {
         let percentText = "\(Int((anomaly.percentIncrease * 100).rounded()))%"
         let baselineLabel = "\(baselineDays)d avg"
         switch anomaly.metric {
         case .tokens:
-            let todayTokens = UsageFormatter.tokenCountString(Int(anomaly.todayValue.rounded()))
-            let baselineTokens = UsageFormatter.tokenCountString(Int(anomaly.baselineAverage.rounded()))
+            let todayTokens = UsageFormatter.tokenCountString(Int(anomaly.todayValue.rounded()), style: numberStyle)
+            let baselineTokens = UsageFormatter.tokenCountString(
+                Int(anomaly.baselineAverage.rounded()),
+                style: numberStyle)
             return "Tokens \(todayTokens) today · +\(percentText) vs \(baselineLabel) \(baselineTokens)"
         case .spend:
             let todaySpend = UsageFormatter.usdString(anomaly.todayValue)
@@ -277,9 +302,11 @@ extension UsageMenuCardView.Model {
             detailParts.append("Account \(email)")
         }
         if let updatedAt = input.snapshot?.updatedAt {
-            detailParts.append("Last fetch \(UsageFormatter.updatedString(from: updatedAt, now: input.now))")
+            detailParts.append(
+                "Last fetch \(UsageFormatter.updatedString(from: updatedAt, style: input.dateStyle, now: input.now))")
         } else if let ledgerUpdatedAt = input.ledgerUpdatedAt {
-            detailParts.append("Ledger \(UsageFormatter.updatedString(from: ledgerUpdatedAt, now: input.now))")
+            detailParts.append(
+                "Ledger \(UsageFormatter.updatedString(from: ledgerUpdatedAt, style: input.dateStyle, now: input.now))")
         }
         if let coverage = input.metadata.usageCoverage.summaryLabel {
             detailParts.append(coverage)
@@ -294,6 +321,16 @@ extension UsageMenuCardView.Model {
         block: UsageLedgerBlockSummary?,
         topModel: UsageLedgerModelSummary?) -> (line: String?, detail: String?)
     {
+        // REAL context fill from the live session transcript (Claude/Codex)
+        // replaces the volume heuristic when a fresh sample exists. Providers
+        // without transcripts, and idle sessions, keep the disclaimed
+        // heuristic below.
+        if let fill = ProviderContextFillStore.shared.fill(for: input.provider),
+           let live = liveContextFillLines(fill: fill, now: input.now, numberStyle: input.numberStyle)
+        {
+            return live
+        }
+
         guard input.providerContextStatus != nil || topModel != nil || daily != nil || block != nil else {
             return (nil, nil)
         }
@@ -301,7 +338,9 @@ extension UsageMenuCardView.Model {
         let status = input.providerContextStatus
         let maxContext = status?.text ?? "unknown"
         let observedTokens = block?.totals.totalTokens ?? daily?.totals.totalTokens ?? topModel?.totals.totalTokens ?? 0
-        let observed = observedTokens > 0 ? UsageFormatter.tokenCountString(observedTokens) : "no observed tokens"
+        let observed = observedTokens > 0
+            ? UsageFormatter.tokenCountString(observedTokens, style: input.numberStyle)
+            : "no observed tokens"
         var parts: [String] = []
         if let block, block.isActive,
            let maxTokens = status?.maxTokens,
@@ -332,6 +371,50 @@ extension UsageMenuCardView.Model {
         return (line, details.joined(separator: " · "))
     }
 
+    /// Formats the live context-window fill line ("Context: 62% · 124K/200K").
+    /// Returns nil when the sample is idle-stale (transcript entry older than
+    /// `ProviderContextFillStore.maxSampleAge`) — an idle session's fill is
+    /// noise — so the caller falls back to the volume heuristic.
+    static func liveContextFillLines(
+        fill: ResolvedContextFill,
+        now: Date,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> (line: String, detail: String)?
+    {
+        guard fill.occupiedTokens > 0,
+              now.timeIntervalSince(fill.sampledAt) <= ProviderContextFillStore.maxSampleAge
+        else {
+            return nil
+        }
+
+        let occupied = UsageFormatter.tokenCountString(fill.occupiedTokens, style: numberStyle)
+        let line: String
+        if let maxTokens = fill.maxTokens, maxTokens > 0 {
+            let maxText = UsageFormatter.tokenCountString(maxTokens, style: numberStyle)
+            if fill.occupiedTokens <= maxTokens {
+                let percent = Int((Double(fill.occupiedTokens) / Double(maxTokens) * 100).rounded())
+                line = "Context: \(percent)% · \(occupied)/\(maxText)"
+            } else {
+                // Occupancy above the resolved window means the denominator is
+                // wrong (e.g. a long-context beta session); don't show a bogus %.
+                line = "Context: \(occupied) used · above ctx \(maxText) (larger window likely)"
+            }
+        } else {
+            line = "Context: \(occupied) in window"
+        }
+
+        var details = ["Live session context from local transcript"]
+        if let model = fill.model {
+            details.append("Model \(UsageFormatter.modelDisplayName(model))")
+        }
+        details.append(Self.sampledAgoText(from: fill.sampledAt, now: now))
+        return (line, details.joined(separator: " · "))
+    }
+
+    private static func sampledAgoText(from date: Date, now: Date) -> String {
+        let minutes = Int(max(0, now.timeIntervalSince(date)) / 60)
+        return minutes < 1 ? "Sampled just now" : "Sampled \(minutes)m ago"
+    }
+
     private static func contextPressureText(observed: Int, maxTokens: Int) -> String {
         guard observed > 0, maxTokens > 0 else { return "unknown pressure" }
         let ratio = Double(observed) / Double(maxTokens)
@@ -349,13 +432,15 @@ extension UsageMenuCardView.Model {
     }
 
     private static func compactionLines(
-        _ summary: UsageLedgerCompactionSummary?) -> (line: String?, detail: String?)
+        _ summary: UsageLedgerCompactionSummary?,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated,
+        dateStyle: UsageFormatter.DateStyle = .relative) -> (line: String?, detail: String?)
     {
         guard let summary else {
             return (nil, nil)
         }
 
-        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens, style: numberStyle)
         let eventLabel = summary.eventCount == 1 ? "event" : "events"
         let line = "Compaction tax: \(tokens) tokens · \(summary.eventCount) \(eventLabel)"
 
@@ -368,7 +453,7 @@ extension UsageMenuCardView.Model {
         } else {
             details.append("Source: observed compaction entries")
         }
-        details.append("Last \(UsageFormatter.updatedString(from: summary.lastEventAt))")
+        details.append("Last \(UsageFormatter.updatedString(from: summary.lastEventAt, style: dateStyle))")
         return (line, details.joined(separator: " · "))
     }
 

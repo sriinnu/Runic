@@ -96,10 +96,15 @@ extension UsageExporter {
             if let snapshot = store.snapshot(for: provider) {
                 root["usageWindows"] = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
                     .map { window -> [String: Any] in
+                        // Windows without a real limit export a null percent so
+                        // consumers can't mistake the placeholder for 0% used.
                         var entry: [String: Any] = [
                             "label": window.label ?? "Usage window",
-                            "usedPercent": window.usedPercent,
+                            "usedPercent": window.hasKnownLimit == false ? NSNull() : window.usedPercent,
                         ]
+                        if let hasKnownLimit = window.hasKnownLimit {
+                            entry["hasKnownLimit"] = hasKnownLimit
+                        }
                         if let reset = window.resetDescription {
                             entry["resetDescription"] = reset
                         }

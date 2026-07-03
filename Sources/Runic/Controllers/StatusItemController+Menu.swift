@@ -29,6 +29,9 @@ extension StatusItemController {
     }
 
     func menuWillOpen(_ menu: NSMenu) {
+        // Lazy chart submenus: build the hosted view only when the submenu is
+        // actually about to open, not on every populateMenu.
+        self.materializeDeferredSubmenuContent(in: menu)
         if self.isHostedSubviewMenu(menu) {
             self.refreshHostedSubviewHeights(in: menu)
             self.openMenus[ObjectIdentifier(menu)] = menu
@@ -41,7 +44,10 @@ extension StatusItemController {
         var provider: UsageProvider?
         if self.shouldMergeIcons {
             self.selectedMenuProvider = self.resolvedMenuProvider()
-            self.lastMenuProvider = self.selectedMenuProvider ?? .codex
+            // No codex fallback: when the merged menu shows the Overview tab
+            // there is no specific provider, and nil keeps provider-targeted
+            // actions (Ping now, dashboards) on their own fallback chains.
+            self.lastMenuProvider = self.selectedMenuProvider
             provider = self.selectedMenuProvider
         } else {
             if let menuProvider = self.menuProviders[ObjectIdentifier(menu)] {

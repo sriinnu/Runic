@@ -38,6 +38,8 @@ extension UsageMenuCardView.Model {
         let tokenCostUsageEnabled: Bool
         let showOptionalCreditsAndExtraUsage: Bool
         let now: Date
+        var numberStyle: UsageFormatter.NumberStyle = .abbreviated
+        var dateStyle: UsageFormatter.DateStyle = .relative
     }
 
     static func make(_ input: Input) -> UsageMenuCardView.Model {
@@ -60,7 +62,7 @@ extension UsageMenuCardView.Model {
             Self.creditsLine(metadata: input.metadata, credits: input.credits, error: input.creditsError)
         }
         let creditsHintText = Self.dashboardHint(provider: input.provider, error: input.dashboardError)
-        let providerCost: ProviderCostSection? = if input.provider == .claude, !input.showOptionalCreditsAndExtraUsage {
+        let providerCost: ProviderCostSection? = if !input.showOptionalCreditsAndExtraUsage {
             nil
         } else {
             Self.providerCostSection(provider: input.provider, cost: input.snapshot?.providerCost)
@@ -69,13 +71,19 @@ extension UsageMenuCardView.Model {
             provider: input.provider,
             enabled: input.tokenCostUsageEnabled,
             snapshot: input.tokenSnapshot,
-            error: input.tokenError)
-        let topModelLine = Self.topModelLine(input.ledgerTopModel, contextLabel: input.ledgerTopModelContextLabel)
+            error: input.tokenError,
+            numberStyle: input.numberStyle,
+            dateStyle: input.dateStyle)
+        let topModelLine = Self.topModelLine(
+            input.ledgerTopModel,
+            contextLabel: input.ledgerTopModelContextLabel,
+            numberStyle: input.numberStyle)
         let insights = Self.removingModelLine(from: Self.insightsSection(input: input), when: topModelLine != nil)
         let subtitle = Self.subtitle(
             snapshot: input.snapshot,
             isRefreshing: input.isRefreshing,
-            lastError: normalizedError)
+            lastError: normalizedError,
+            dateStyle: input.dateStyle)
         let headerBadge: HeaderBadge? = if input.isRefreshing {
             HeaderBadge(text: "Refreshing", style: .info)
         } else if normalizedError != nil {
@@ -98,7 +106,12 @@ extension UsageMenuCardView.Model {
             usageMetricDisplayMode: input.usageMetricDisplayMode,
             menuMode: input.menuMode,
             creditsText: creditsText,
-            creditsRemaining: input.credits?.remaining,
+            // The credits gauge reads "remaining of 1,000 credits" — a
+            // codex-specific scale. Other providers' CreditsSnapshots carry
+            // currency-like balances with no unit or denominator information,
+            // so they render as a text line only (no bar against an invented
+            // 1K-credit scale).
+            creditsRemaining: input.provider == .codex ? input.credits?.remaining : nil,
             creditsHintText: creditsHintText,
             creditsHintCopyText: (input.dashboardError?.isEmpty ?? true) ? nil : input.dashboardError,
             providerCost: providerCost,
@@ -108,10 +121,14 @@ extension UsageMenuCardView.Model {
             progressColor: Self.progressColor(for: input.provider))
     }
 
-    private static func topModelLine(_ summary: UsageLedgerModelSummary?, contextLabel: String?) -> String? {
+    private static func topModelLine(
+        _ summary: UsageLedgerModelSummary?,
+        contextLabel: String?,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> String?
+    {
         guard let summary else { return nil }
         let modelName = UsageFormatter.modelDisplayName(summary.model)
-        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens)
+        let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens, style: numberStyle)
         var parts = ["Top model: \(modelName)", "\(tokens) tokens", "\(summary.entryCount) req"]
         if let contextLabel {
             parts.append(contextLabel)
@@ -202,7 +219,8 @@ extension UsageMenuCardView.Model {
     private static func subtitle(
         snapshot: UsageSnapshot?,
         isRefreshing: Bool,
-        lastError: String?) -> (text: String, style: SubtitleStyle)
+        lastError: String?,
+        dateStyle: UsageFormatter.DateStyle = .relative) -> (text: String, style: SubtitleStyle)
     {
         if let lastError, !lastError.isEmpty {
             return (lastError.trimmingCharacters(in: .whitespacesAndNewlines), .error)
@@ -213,7 +231,7 @@ extension UsageMenuCardView.Model {
         }
 
         if let updated = snapshot?.updatedAt {
-            return (UsageFormatter.updatedString(from: updated), .info)
+            return (UsageFormatter.updatedString(from: updated, style: dateStyle), .info)
         }
 
         return ("Not fetched yet", .info)
@@ -224,13 +242,12 @@ extension UsageMenuCardView.Model {
         var metrics: [Metric] = []
         let percentStyle: PercentStyle = input.usageBarsShowUsed ? .used : .left
         let zaiUsage = input.provider == .zai ? snapshot.zaiUsage : nil
-        let zaiTokenDetail = Self.zaiLimitDetailText(limit: zaiUsage?.tokenLimit)
-        let zaiTimeDetail = Self.zaiLimitDetailText(limit: zaiUsage?.timeLimit)
+        let zaiTokenDetail = Self.zaiLimitDetailText(limit: zaiUsage?.tokenLimit, numberStyle: input.numberStyle)
+        let zaiTimeDetail = Self.zaiLimitDetailText(limit: zaiUsage?.timeLimit, numberStyle: input.numberStyle)
         metrics.append(Metric(
             id: "primary",
             title: input.metadata.sessionLabel,
-            percent: Self.clamped(
-                input.usageBarsShowUsed ? snapshot.primary.usedPercent : snapshot.primary.remainingPercent),
+            percent: Self.metricPercent(for: snapshot.primary, showUsed: input.usageBarsShowUsed),
             percentStyle: percentStyle,
             resetText: Self.resetText(for: snapshot.primary, prefersCountdown: true),
             detailText: input.provider == .zai ? zaiTokenDetail : nil))
@@ -239,18 +256,24 @@ extension UsageMenuCardView.Model {
             metrics.append(Metric(
                 id: "secondary",
                 title: input.metadata.weeklyLabel,
-                percent: Self.clamped(input.usageBarsShowUsed ? weekly.usedPercent : weekly.remainingPercent),
+                percent: Self.metricPercent(for: weekly, showUsed: input.usageBarsShowUsed),
                 percentStyle: percentStyle,
                 resetText: Self.resetText(for: weekly, prefersCountdown: true),
                 detailText: input.provider == .zai ? zaiTimeDetail : paceText))
         }
-        if input.metadata.supportsOpus, let opus = snapshot.tertiary {
+        if let tertiary = snapshot.tertiary {
+            // Render the tertiary window whenever the snapshot has one (Copilot
+            // Chat, Gemini's third model, ...), not just for opus-style
+            // providers. Opus-style providers keep their metadata label so
+            // Claude/Antigravity cards are unchanged.
+            let fallbackTitle = input.metadata.opusLabel ?? "Sonnet"
+            let title = input.metadata.supportsOpus ? fallbackTitle : (tertiary.label ?? fallbackTitle)
             metrics.append(Metric(
                 id: "tertiary",
-                title: input.metadata.opusLabel ?? "Sonnet",
-                percent: Self.clamped(input.usageBarsShowUsed ? opus.usedPercent : opus.remainingPercent),
+                title: title,
+                percent: Self.metricPercent(for: tertiary, showUsed: input.usageBarsShowUsed),
                 percentStyle: percentStyle,
-                resetText: Self.resetText(for: opus, prefersCountdown: true),
+                resetText: Self.resetText(for: tertiary, prefersCountdown: true),
                 detailText: nil))
         }
 
@@ -267,11 +290,22 @@ extension UsageMenuCardView.Model {
         return metrics
     }
 
-    private static func zaiLimitDetailText(limit: ZaiLimitEntry?) -> String? {
+    /// Percent for a metric gauge, honoring the used/left toggle.
+    /// Returns `nil` for informational windows without a real limit so the
+    /// card shows their text (balance, counters) instead of a fake 0% bar.
+    private static func metricPercent(for window: RateWindow, showUsed: Bool) -> Double? {
+        guard window.hasKnownLimit != false else { return nil }
+        return self.clamped(showUsed ? window.usedPercent : window.remainingPercent)
+    }
+
+    private static func zaiLimitDetailText(
+        limit: ZaiLimitEntry?,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated) -> String?
+    {
         guard let limit else { return nil }
-        let currentStr = UsageFormatter.tokenCountString(limit.currentValue)
-        let usageStr = UsageFormatter.tokenCountString(limit.usage)
-        let remainingStr = UsageFormatter.tokenCountString(limit.remaining)
+        let currentStr = UsageFormatter.tokenCountString(limit.currentValue, style: numberStyle)
+        let usageStr = UsageFormatter.tokenCountString(limit.usage, style: numberStyle)
+        let remainingStr = UsageFormatter.tokenCountString(limit.remaining, style: numberStyle)
         return "\(currentStr) / \(usageStr) (\(remainingStr) remaining)"
     }
 
@@ -300,7 +334,9 @@ extension UsageMenuCardView.Model {
         provider: UsageProvider,
         enabled: Bool,
         snapshot: CostUsageTokenSnapshot?,
-        error: String?) -> TokenUsageSection?
+        error: String?,
+        numberStyle: UsageFormatter.NumberStyle = .abbreviated,
+        dateStyle: UsageFormatter.DateStyle = .relative) -> TokenUsageSection?
     {
         guard provider == .codex || provider == .claude else { return nil }
         guard enabled else { return nil }
@@ -308,7 +344,7 @@ extension UsageMenuCardView.Model {
 
         let sessionCostValue = snapshot.sessionCostUSD
         let sessionCost = sessionCostValue.map { UsageFormatter.usdString($0) } ?? "—"
-        let sessionTokens = snapshot.sessionTokens.map { UsageFormatter.tokenCountString($0) }
+        let sessionTokens = snapshot.sessionTokens.map { UsageFormatter.tokenCountString($0, style: numberStyle) }
         let sessionLine: String = {
             if let sessionTokens {
                 return "Today: \(sessionCost) · \(sessionTokens) tokens"
@@ -330,7 +366,7 @@ extension UsageMenuCardView.Model {
         let monthCost = monthCostValue.map { UsageFormatter.usdString($0) } ?? "—"
         let fallbackTokens = snapshot.daily.compactMap(\.totalTokens).reduce(0, +)
         let monthTokensValue = snapshot.last30DaysTokens ?? (fallbackTokens > 0 ? fallbackTokens : nil)
-        let monthTokens = monthTokensValue.map { UsageFormatter.tokenCountString($0) }
+        let monthTokens = monthTokensValue.map { UsageFormatter.tokenCountString($0, style: numberStyle) }
         let monthLine: String = {
             if let monthTokens {
                 return "Last 30 days: \(monthCost) · \(monthTokens) tokens"
@@ -351,12 +387,12 @@ extension UsageMenuCardView.Model {
                 let avgCostPerDay = cost / Double(days)
                 let avgTokensPerDay = Int((Double(tokens) / Double(days)).rounded())
                 parts.append("Avg \(UsageFormatter.usdRateString(avgCostPerDay))/day")
-                parts.append("Avg \(UsageFormatter.tokenCountString(avgTokensPerDay)) tok/day")
+                parts.append("Avg \(UsageFormatter.tokenCountString(avgTokensPerDay, style: numberStyle)) tok/day")
             }
 
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }()
-        let updatedLine = UsageFormatter.updatedString(from: snapshot.updatedAt)
+        let updatedLine = UsageFormatter.updatedString(from: snapshot.updatedAt, style: dateStyle)
         let err = (error?.isEmpty ?? true) ? nil : error
         let hintLine = err == nil ? "Token totals are estimates and may lag provider dashboards." : nil
         return TokenUsageSection(
@@ -387,16 +423,27 @@ extension UsageMenuCardView.Model {
         provider: UsageProvider,
         cost: ProviderCostSnapshot?) -> ProviderCostSection?
     {
-        guard provider == .claude else { return nil }
+        guard provider == .claude || provider == .cursor else { return nil }
         guard let cost else { return nil }
-        guard cost.limit > 0 else { return nil }
-
+        let title = provider == .cursor ? "On-demand usage" : "Extra usage"
         let used = UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode)
+
+        guard cost.limit > 0 else {
+            // Cursor reports on-demand spend without a limit when the plan is
+            // unlimited — show the spend without a fabricated gauge. Claude
+            // keeps requiring a limit, matching its previous behavior.
+            guard provider == .cursor, cost.used > 0 else { return nil }
+            return ProviderCostSection(
+                title: title,
+                percentUsed: nil,
+                spendLine: "This month: \(used)")
+        }
+
         let limit = UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode)
         let percentUsed = Self.clamped((cost.used / cost.limit) * 100)
 
         return ProviderCostSection(
-            title: "Extra usage",
+            title: title,
             percentUsed: percentUsed,
             spendLine: "This month: \(used) / \(limit)")
     }

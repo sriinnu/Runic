@@ -8,71 +8,60 @@ extension StatusItemController {
         guard !breakdown.isEmpty else { return false }
 
         let width = Self.menuCardBaseWidth
-        let submenu = NSMenu()
-        submenu.delegate = self
-        let chartView = self.themedHostedMenuRoot(ProjectBreakdownMenuView(breakdown: breakdown, width: width))
-        let hosting = MenuHostingView(rootView: chartView)
-        let controller = NSHostingController(rootView: chartView)
-        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-        hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-        let chartItem = NSMenuItem()
-        chartItem.view = hosting
-        chartItem.isEnabled = false
-        chartItem.representedObject = "projectBreakdownChart"
-        submenu.addItem(chartItem)
-
-        let item = NSMenuItem(title: "Projects", action: nil, keyEquivalent: "")
-        item.isEnabled = true
-        item.submenu = submenu
-        menu.addItem(item)
+        self.addDeferredChartSubmenu(
+            title: "Projects",
+            id: "projectBreakdownChart",
+            to: menu,
+            width: width)
+        {
+            ProjectBreakdownMenuView(breakdown: breakdown, width: width)
+        }
         return true
     }
 
     func addModelBreakdownSubmenu(to menu: NSMenu, provider: UsageProvider) -> Bool {
         let breakdown = self.store.ledgerModelBreakdown(for: provider)
-        let submenu = NSMenu()
-        submenu.delegate = self
 
         if !breakdown.isEmpty {
             let width = Self.menuCardBaseWidth
-            let chartView = self.themedHostedMenuRoot(ModelBreakdownMenuView(breakdown: breakdown, width: width))
-            let hosting = MenuHostingView(rootView: chartView)
-            let controller = NSHostingController(rootView: chartView)
-            let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
-            hosting.frame = NSRect(origin: .zero, size: NSSize(width: width, height: size.height))
-
-            let chartItem = NSMenuItem()
-            chartItem.view = hosting
-            chartItem.isEnabled = false
-            chartItem.representedObject = "modelBreakdownChart"
-            submenu.addItem(chartItem)
-        } else {
-            let quotaWindows = self.modelQuotaWindows(for: provider)
-            guard !quotaWindows.isEmpty else { return false }
-
-            let titleItem = NSMenuItem(title: "Quota windows", action: nil, keyEquivalent: "")
-            titleItem.isEnabled = false
-            submenu.addItem(titleItem)
-
-            for window in quotaWindows {
-                let rawLabel = window.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Model"
-                let label = UsageFormatter.modelDisplayName(rawLabel)
-                let used = Int(window.usedPercent.rounded())
-                let remaining = Int(window.remainingPercent.rounded())
-                var line = "\(label): \(used)% used · \(remaining)% left"
-                if let resetsAt = window.resetsAt {
-                    line += " · reset \(UsageFormatter.resetCountdownDescription(from: resetsAt))"
-                } else if let resetDescription = window.resetDescription?
-                    .trimmingCharacters(in: .whitespacesAndNewlines),
-                    !resetDescription.isEmpty
-                {
-                    line += " · \(resetDescription)"
-                }
-                let detailItem = NSMenuItem(title: line, action: nil, keyEquivalent: "")
-                detailItem.isEnabled = false
-                submenu.addItem(detailItem)
+            self.addDeferredChartSubmenu(
+                title: "Models",
+                id: "modelBreakdownChart",
+                to: menu,
+                width: width)
+            {
+                ModelBreakdownMenuView(breakdown: breakdown, width: width)
             }
+            return true
+        }
+
+        // Quota-window fallback: plain text rows, cheap enough to keep eager.
+        let quotaWindows = self.modelQuotaWindows(for: provider)
+        guard !quotaWindows.isEmpty else { return false }
+
+        let submenu = NSMenu()
+        submenu.delegate = self
+        let titleItem = NSMenuItem(title: "Quota windows", action: nil, keyEquivalent: "")
+        titleItem.isEnabled = false
+        submenu.addItem(titleItem)
+
+        for window in quotaWindows {
+            let rawLabel = window.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Model"
+            let label = UsageFormatter.modelDisplayName(rawLabel)
+            let used = Int(window.usedPercent.rounded())
+            let remaining = Int(window.remainingPercent.rounded())
+            var line = "\(label): \(used)% used · \(remaining)% left"
+            if let resetsAt = window.resetsAt {
+                line += " · reset \(UsageFormatter.resetCountdownDescription(from: resetsAt))"
+            } else if let resetDescription = window.resetDescription?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !resetDescription.isEmpty
+            {
+                line += " · \(resetDescription)"
+            }
+            let detailItem = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+            detailItem.isEnabled = false
+            submenu.addItem(detailItem)
         }
 
         let item = NSMenuItem(title: "Models", action: nil, keyEquivalent: "")

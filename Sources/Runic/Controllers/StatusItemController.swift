@@ -121,6 +121,9 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     var animationDriver: DisplayLinkDriver?
     var animationPhase: Double = 0
     var animationPattern: LoadingPattern = .knightRider
+    /// Providers rendered with an animation frame on the last tick, so a
+    /// provider leaving the animating set gets exactly one static repaint.
+    var animatingProviders: Set<UsageProvider> = []
     let loginLogger = RunicLog.logger("login")
     var selectedMenuProvider: UsageProvider? {
         get { self.settings.selectedMenuProvider }
@@ -167,12 +170,10 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
         // Ensure the icon is rendered at 1:1 without resampling (crisper edges for template images).
         item.button?.imageScaling = .scaleNone
         self.statusItem = item
-        for provider in UsageProvider.allCases {
-            let providerItem = bar.statusItem(withLength: NSStatusItem.variableLength)
-            // Ensure the icon is rendered at 1:1 without resampling (crisper edges for template images).
-            providerItem.button?.imageScaling = .scaleNone
-            self.statusItems[provider] = providerItem
-        }
+        // Per-provider NSStatusItems are created lazily via
+        // `ensureStatusItem(for:)`: eagerly allocating one menubar slot per
+        // provider (~28) at init paid for every provider regardless of
+        // whether it was ever enabled.
         super.init()
         self.wireBindings()
         self.updateIcons()
@@ -252,11 +253,6 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     private func invalidateMenus() {
         self.menuContentVersion &+= 1
         self.refreshOpenMenusIfNeeded()
-        Task { @MainActor in
-            // AppKit can ignore menu mutations while tracking; retry on the next run loop.
-            await Task.yield()
-            self.refreshOpenMenusIfNeeded()
-        }
     }
 
     private func updateIcons() {
@@ -269,6 +265,24 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
         }
         self.updateAnimationState()
         self.updateBlinkingState()
+    }
+
+    /// Returns the provider's status item, creating it on first use. Items are
+    /// created only for providers that actually need a menubar presence
+    /// (enabled/fallback/debug), so menubar ordering follows enablement order.
+    @discardableResult
+    func ensureStatusItem(for provider: UsageProvider) -> NSStatusItem {
+        if let existing = self.statusItems[provider] {
+            return existing
+        }
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // Ensure the icon is rendered at 1:1 without resampling (crisper edges for template images).
+        item.button?.imageScaling = .scaleNone
+        self.statusItems[provider] = item
+        // Paint immediately; the periodic updateIcons() pass only reaches
+        // items that already exist.
+        self.applyIcon(for: provider, phase: nil)
+        return item
     }
 
     private func updateVisibility() {
@@ -284,9 +298,12 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
             self.statusItem.isVisible = false
             let fallback = self.fallbackProvider
             for provider in UsageProvider.allCases {
-                let item = self.statusItems[provider]
-                let isEnabled = self.isEnabled(provider)
-                item?.isVisible = isEnabled || fallback == provider || force
+                let shouldShow = self.isEnabled(provider) || fallback == provider || force
+                if shouldShow {
+                    self.ensureStatusItem(for: provider).isVisible = true
+                } else {
+                    self.statusItems[provider]?.isVisible = false
+                }
             }
             self.attachMenus(fallback: fallback)
         }
@@ -325,7 +342,11 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
 
     private func attachMenus(fallback: UsageProvider? = nil) {
         for provider in UsageProvider.allCases {
-            guard let item = self.statusItems[provider] else { continue }
+            // Providers that need a menu get their status item created here
+            // (lazy creation); providers without one have nothing to detach.
+            let needsUI = self.isEnabled(provider) || fallback == provider
+            let existing = needsUI ? self.ensureStatusItem(for: provider) : self.statusItems[provider]
+            guard let item = existing else { continue }
             if self.usesSwiftUIPopoverMenu, self.isEnabled(provider) || fallback == provider {
                 self.attachPopover(to: item)
                 continue

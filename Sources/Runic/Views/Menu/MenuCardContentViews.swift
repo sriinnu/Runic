@@ -14,17 +14,21 @@ struct ProviderCostContent: View {
             Text(self.section.title)
                 .font(self.fonts.body)
                 .fontWeight(.medium)
-            UsageProgressBar(
-                percent: self.section.percentUsed,
-                tint: self.progressColor,
-                accessibilityLabel: "Extra usage spent")
+            if let percentUsed = self.section.percentUsed {
+                UsageProgressBar(
+                    percent: percentUsed,
+                    tint: self.progressColor,
+                    accessibilityLabel: "Extra usage spent")
+            }
             HStack(alignment: .firstTextBaseline) {
                 Text(self.section.spendLine)
                     .font(self.fonts.footnote)
                 Spacer()
-                Text(String(format: "%.0f%% used", min(100, max(0, self.section.percentUsed))))
-                    .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText)
+                if let percentUsed = self.section.percentUsed {
+                    Text(String(format: "%.0f%% used", min(100, max(0, percentUsed))))
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                }
             }
         }
     }
@@ -187,16 +191,16 @@ struct UsageMenuMetricCard: View {
                 }
             }
 
-            if self.displayMode.showsBars {
+            if self.displayMode.showsBars, let percent = self.metric.percent {
                 UsageProgressBar(
-                    percent: self.metric.percent,
+                    percent: percent,
                     tint: self.tint,
                     accessibilityLabel: self.metric.percentStyle.accessibilityLabel)
             }
 
-            if self.displayMode.showsPercent {
+            if self.displayMode.showsPercent, let percentLabel = self.metric.percentLabel {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
-                    Text(self.metric.percentLabel)
+                    Text(percentLabel)
                         .font(self.percentFont)
                         .lineLimit(1)
                         .minimumScaleFactor(0.88)
@@ -236,7 +240,11 @@ struct UsageMenuMetricCard: View {
 
 struct CreditsBarContent: View {
     @Environment(\.runicFonts) private var fonts
-    private static let fullScaleTokens: Double = 1000
+    /// Bar full-scale: the bar reads "remaining out of 1,000 credits". This
+    /// scale is codex-specific — the model factory passes `creditsRemaining`
+    /// only for codex, so every other provider takes the text-only branch
+    /// below (their balances are currency amounts with no 1K denominator).
+    private static let fullScaleCredits: Double = 1000
 
     let creditsText: String
     let creditsRemaining: Double?
@@ -248,13 +256,12 @@ struct CreditsBarContent: View {
 
     private var percentLeft: Double? {
         guard let creditsRemaining else { return nil }
-        let percent = (creditsRemaining / Self.fullScaleTokens) * 100
+        let percent = (creditsRemaining / Self.fullScaleCredits) * 100
         return min(100, max(0, percent))
     }
 
     private var scaleText: String {
-        let scale = UsageFormatter.tokenCountString(Int(Self.fullScaleTokens))
-        return "\(scale) tokens"
+        "of \(UsageFormatter.tokenCountString(Int(Self.fullScaleCredits))) credits"
     }
 
     var body: some View {
@@ -307,11 +314,14 @@ struct ClickToCopyOverlay: NSViewRepresentable {
 
 final class ClickToCopyView: NSView {
     var copyText: String
+    private var feedbackField: NSTextField?
+    private var feedbackResetTask: Task<Void, Never>?
 
     init(copyText: String) {
         self.copyText = copyText
         super.init(frame: .zero)
         self.wantsLayer = false
+        self.toolTip = "Click to copy"
     }
 
     @available(*, unavailable)
@@ -323,10 +333,43 @@ final class ClickToCopyView: NSView {
         true
     }
 
+    override func resetCursorRects() {
+        // Hover affordance: signal that the text underneath is clickable.
+        self.addCursorRect(self.bounds, cursor: .pointingHand)
+    }
+
     override func mouseDown(with event: NSEvent) {
         _ = event
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(self.copyText, forType: .string)
+        self.showCopiedFeedback()
+    }
+
+    /// Brief "✓ Copied" badge mirroring CopyIconButton's checkmark feedback.
+    private func showCopiedFeedback() {
+        self.feedbackResetTask?.cancel()
+        self.feedbackField?.removeFromSuperview()
+
+        let field = NSTextField(labelWithString: "✓ Copied")
+        field.font = RunicFont.nsFont(size: NSFont.smallSystemFontSize, weight: .semibold)
+        field.textColor = .labelColor
+        field.drawsBackground = true
+        field.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.92)
+        field.isBezeled = false
+        field.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(field)
+        NSLayoutConstraint.activate([
+            field.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            field.topAnchor.constraint(equalTo: self.topAnchor),
+        ])
+        self.feedbackField = field
+
+        self.feedbackResetTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(0.9))
+            guard !Task.isCancelled else { return }
+            self?.feedbackField?.removeFromSuperview()
+            self?.feedbackField = nil
+        }
     }
 }
