@@ -5,8 +5,11 @@ public struct UsageLedgerSpendForecast: Sendable, Codable, Hashable {
     public let projectKey: String?
     public let projectID: String?
     public let projectName: String?
+    /// Count of days with observed spend (activity days, for display).
     public let observedDays: Int
     public let observedCostUSD: Double
+    /// Spend per CALENDAR day over the observed span (idle days count as $0),
+    /// not per active day — projections and ETAs multiply/divide by calendar days.
     public let averageDailyCostUSD: Double
     public let projected30DayCostUSD: Double
     public let projectedCostP50USD: Double?
@@ -76,6 +79,9 @@ public struct UsageLedgerSpendForecast: Sendable, Codable, Hashable {
         }
 
         let willBreach = self.projected30DayCostUSD > monthlyLimitUSD
+        // Calendar-day denominated: `averageDailyCostUSD` is spend per calendar
+        // day (idle days count as $0), so this ETA reads directly as "days from
+        // now", matching how the UI displays it.
         let etaDays: Double? = {
             guard willBreach, self.averageDailyCostUSD > 0 else { return nil }
             if self.observedCostUSD >= monthlyLimitUSD { return 0 }

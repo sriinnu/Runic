@@ -4,13 +4,31 @@ import OSLog
 extension LedgerCache {
     func materializedRelayState(provider: String) -> UsageRelayMaterializedState {
         let url = self.relayFileURL(provider: provider)
-        guard FileManager.default.fileExists(atPath: url.path) else {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+        guard let attributes else {
+            self.relayStateMemo.removeValue(forKey: provider)
             return UsageRelayMaterializedState(dailies: [], touchedDayKeys: [])
+        }
+
+        // Memoized fast path: one `loadEntries` cycle consults the relay state
+        // ~5 times; re-parsing the whole JSONL each time was pure waste. The
+        // memo is validated against (size, mtime) so appends/compactions from
+        // this or any other process are still picked up. The stat is taken
+        // BEFORE parsing, so a write racing the parse simply invalidates the
+        // memo on the next call.
+        let sizeBytes = (attributes[.size] as? Int64) ?? -1
+        let modifiedAt = attributes[.modificationDate] as? Date
+        if let memo = self.relayStateMemo[provider],
+           memo.sizeBytes == sizeBytes,
+           memo.modifiedAt == modifiedAt
+        {
+            return memo.state
         }
 
         var eventsByDaySnapshot: [String: [String: [String: UsageRelayEvent]]] = [:]
         var latestSnapshotByDay: [String: UsageRelaySnapshotMarker] = [:]
         var sequence = 0
+        let decoder = JSONDecoder()
 
         do {
             try CostUsageJsonl.scan(
@@ -26,7 +44,7 @@ extension LedgerCache {
                 // silently dropped every existing day — the exact "renders as zero"
                 // failure the relay exists to prevent.
                 guard
-                    let record = try? JSONDecoder().decode(UsageRelayRecord.self, from: line.bytes),
+                    let record = try? decoder.decode(UsageRelayRecord.self, from: line.bytes),
                     record.provider == provider,
                     record.schemaVersion <= Self.relaySchemaVersion
                 else {
@@ -107,8 +125,13 @@ extension LedgerCache {
         }
         .sorted { $0.dayKey < $1.dayKey }
 
-        return UsageRelayMaterializedState(
+        let state = UsageRelayMaterializedState(
             dailies: dailies,
             touchedDayKeys: Set(selectedByDay.keys))
+        self.relayStateMemo[provider] = RelayStateMemoEntry(
+            sizeBytes: sizeBytes,
+            modifiedAt: modifiedAt,
+            state: state)
+        return state
     }
 }

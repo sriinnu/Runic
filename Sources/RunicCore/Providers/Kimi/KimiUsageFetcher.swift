@@ -99,12 +99,16 @@ extension KimiBalanceResponse {
         }
         let detail = parts.isEmpty ? summary : "\(summary) (\(parts.joined(separator: ", ")))"
 
+        // The balance API exposes no limit, so there is no denominator for a
+        // percentage — mark the window as limit-less so UIs show the balance
+        // text instead of a fake 0% gauge.
         return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: detail),
+                resetDescription: detail,
+                hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
             updatedAt: Date(),

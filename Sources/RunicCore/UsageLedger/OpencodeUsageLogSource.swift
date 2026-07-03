@@ -279,6 +279,12 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
         let input = max(0, tokens.input ?? 0)
         // Reasoning tokens are output-side; fold them in so totals stay accurate.
+        // NOTE: open question — for Responses-API models OpenAI's output_tokens
+        // ALREADY includes reasoning tokens, so if opencode passes that through
+        // unchanged this addition double-counts reasoning. Every observed local
+        // opencode message carries reasoning: 0, so the actual upstream semantics
+        // (subset vs. separate) could not be verified; left as-is rather than
+        // guessed. Revisit if a Responses-API provider shows inflated output.
         let output = max(0, tokens.output ?? 0) + max(0, tokens.reasoning ?? 0)
         let cacheRead = max(0, tokens.cache?.read ?? 0)
         let cacheWrite = max(0, tokens.cache?.write ?? 0)

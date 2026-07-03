@@ -80,6 +80,8 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         var seenKeys = Set<String>()
         var sourceWatermarks = window.completionWatermarks
         var readFailures: [String] = []
+        var mergeScanDate = self.now
+        let isGapCatchUp = if case .refreshToday = scanMode { catchUpDays > 1 } else { false }
 
         let parser = CodexUsageLogParser()
         for file in filesToScan {
@@ -113,6 +115,20 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
                 throw CodexUsageLogError.readFailed(readFailures.joined(separator: ", "))
             }
 
+            // During a multi-day gap catch-up, a busy file may span ANY day in
+            // the window (a resumed rollout interleaves days) and there is no
+            // way to know which days the unreadable file covers. Merging what
+            // parsed would seal those gap days with partial data FOREVER: the
+            // scan anchor advances, so they are never rescanned. Chosen fix:
+            // abort the gap portion of the merge entirely — keep only today's
+            // entries (today is mutable and re-read every refresh) and keep the
+            // OLD scan anchor, so the whole catch-up retries on the next
+            // refresh once the busy file is readable again.
+            if isGapCatchUp {
+                entries = entries.filter { LedgerCache.dayKey(for: $0.timestamp) == todayKey }
+                mergeScanDate = await cache.lastScanDate(provider: "codex") ?? self.now
+            }
+
             // A partial scan must NOT seal any day as empty: a day that produced no
             // entries may only look empty because its file was busy, and an empty
             // snapshot tells the relay to clear that day. Keep watermarks only for
@@ -129,7 +145,7 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         await cache.mergeEntries(
             provider: "codex",
             entries: entries,
-            scanDate: self.now,
+            scanDate: mergeScanDate,
             todayKey: window.relayTodayKey,
             coveredMaxAgeDays: window.coveredMaxAgeDays,
             sourceWatermarks: sourceWatermarks)

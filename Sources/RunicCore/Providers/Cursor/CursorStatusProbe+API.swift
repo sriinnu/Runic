@@ -75,6 +75,15 @@ extension CursorStatusProbe {
         let planPercentUsed: Double = if planLimitRaw > 0 {
             (planUsedRaw / planLimitRaw) * 100
         } else if let totalPercentUsed = summary.individualUsage?.plan?.totalPercentUsed {
+            // The units of totalPercentUsed are ambiguous: the field name says
+            // percent, but real payloads have been observed carrying a 0-1
+            // fraction (e.g. 0.40625 alongside used/limit). Exactly 1.0 is
+            // ambiguous both ways, and the tie DELIBERATELY breaks toward
+            // "fraction": a fraction-based plan reports exactly 1.0 at the
+            // moment its quota is fully used, and reading that as 1% would show
+            // an exhausted plan as nearly untouched — the worst direction to
+            // fail. Misreading a genuine 1%-as-1.0 as 100% merely over-warns.
+            // Values above 1.0 pass through as already-scaled percents.
             totalPercentUsed <= 1 ? totalPercentUsed * 100 : totalPercentUsed
         } else {
             0

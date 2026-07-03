@@ -1,6 +1,20 @@
 import Foundation
 
 public enum UsageFormatter {
+    /// How large numbers should render: compact ("45.2K") or fully grouped ("45,234").
+    /// Plumbed from the app's "Number format" preference at call sites; RunicCore holds no global state.
+    public enum NumberStyle: Sendable {
+        case abbreviated
+        case full
+    }
+
+    /// How timestamps should render: relative ("2h ago") or absolute ("Jan 31, 2:30 PM").
+    /// Plumbed from the app's "Date format" preference at call sites; RunicCore holds no global state.
+    public enum DateStyle: Sendable {
+        case relative
+        case absolute
+    }
+
     public static func usageLine(remaining: Double, used: Double) -> String {
         String(format: "%.0f%% left", remaining)
     }
@@ -63,6 +77,25 @@ public enum UsageFormatter {
         }
     }
 
+    /// Style-aware variant of `updatedString(from:now:)`.
+    /// `.relative` preserves the existing behavior; `.absolute` always renders a timestamp.
+    public static func updatedString(from date: Date, style: DateStyle, now: Date = .init()) -> String {
+        switch style {
+        case .relative:
+            self.updatedString(from: date, now: now)
+        case .absolute:
+            "Updated \(self.absoluteTimestampString(from: date, now: now))"
+        }
+    }
+
+    /// Absolute timestamp like "Jan 31, 2:30 PM" (same-day dates omit the date part).
+    public static func absoluteTimestampString(from date: Date, now: Date = .init()) -> String {
+        if Calendar.current.isDate(date, inSameDayAs: now) {
+            return date.formatted(date: .omitted, time: .shortened)
+        }
+        return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
+    }
+
     public static func creditsString(from value: Double) -> String {
         let number = NumberFormatter()
         number.numberStyle = .decimal
@@ -77,7 +110,11 @@ public enum UsageFormatter {
         formatter.currencyCode = "USD"
         formatter.maximumFractionDigits = 2
         formatter.minimumFractionDigits = 2
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        // en_US (not en_US_POSIX): POSIX's currency style drops grouping
+        // separators and inserts a stray space after the symbol ("$ 1234.56"
+        // instead of "$1,234.56"). en_US keeps the same "." decimal point
+        // (still locale-independent/deterministic) but formats correctly.
+        formatter.locale = Locale(identifier: "en_US")
         return formatter.string(from: NSNumber(value: value)) ?? String(format: "$%.2f", value)
     }
 
@@ -88,6 +125,11 @@ public enum UsageFormatter {
         }
         if normalized >= 0.01 {
             return String(format: "$%.3f", normalized)
+        }
+        // A nonzero rate this small still rounds to "$0.0000" at 4 decimals,
+        // which reads as free/zero-cost rather than "too small to show".
+        if normalized > 0, normalized < 0.0001 {
+            return "<$0.0001"
         }
         return String(format: "$%.4f", normalized)
     }
@@ -129,7 +171,8 @@ public enum UsageFormatter {
         formatter.currencyCode = currencyCode
         formatter.maximumFractionDigits = 2
         formatter.minimumFractionDigits = 2
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        // See usdString: en_US_POSIX breaks currency grouping/symbol spacing.
+        formatter.locale = Locale(identifier: "en_US")
         return formatter.string(from: NSNumber(value: value)) ?? "\(currencyCode) \(String(format: "%.2f", value))"
     }
 
@@ -143,8 +186,16 @@ public enum UsageFormatter {
             (1000, 1000, "K"),
         ]
 
-        for unit in units where absValue >= unit.threshold {
-            let scaled = Double(absValue) / unit.divisor
+        for (index, unit) in units.enumerated() where absValue >= unit.threshold {
+            var scaled = Double(absValue) / unit.divisor
+            var suffix = unit.suffix
+            // A value that ROUNDS to 1000 of this unit (999,950 → "1000K") must
+            // promote to the next unit ("1M") instead of overflowing the display.
+            if index > 0, scaled.rounded() >= 1000 {
+                let promoted = units[index - 1]
+                scaled = Double(absValue) / promoted.divisor
+                suffix = promoted.suffix
+            }
             let formatted: String
             if scaled >= 10 {
                 formatted = String(format: "%.0f", scaled)
@@ -153,7 +204,7 @@ public enum UsageFormatter {
                 if s.hasSuffix(".0") { s.removeLast(2) }
                 formatted = s
             }
-            return "\(sign)\(formatted)\(unit.suffix)"
+            return "\(sign)\(formatted)\(suffix)"
         }
 
         let formatter = NumberFormatter()
@@ -161,6 +212,23 @@ public enum UsageFormatter {
         formatter.usesGroupingSeparator = true
         formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
+
+    /// Style-aware variant of `tokenCountString(_:)`.
+    /// `.abbreviated` preserves the existing behavior; `.full` renders grouped
+    /// digits ("45,234") using the user's locale grouping. `locale` is
+    /// injectable for tests and defaults to `Locale.current`.
+    public static func tokenCountString(_ value: Int, style: NumberStyle, locale: Locale = .current) -> String {
+        switch style {
+        case .abbreviated:
+            return self.tokenCountString(value)
+        case .full:
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.usesGroupingSeparator = true
+            formatter.locale = locale
+            return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+        }
     }
 
     public static func tokenSummaryString(_ totals: UsageLedgerTotals, includeBreakdown: Bool = true) -> String {
@@ -205,7 +273,9 @@ public enum UsageFormatter {
     }
 
     public static func creditShort(_ value: Double) -> String {
-        if value >= 1000 {
+        // A value that ROUNDS to 1000 (999.6 → "1000") promotes to "1.0k" so the
+        // display never shows a four-digit non-k value next to "1.0k" peers.
+        if value.rounded() >= 1000 {
             let k = value / 1000
             return String(format: "%.1fk", k)
         }

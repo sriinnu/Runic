@@ -3,11 +3,45 @@ import Foundation
 extension ClaudeUsageLogSource {
     /// Parse a single JSONL file, returning usage entries.
     func parseFile(_ file: UsageFile, minDate: Date?, dayKey: String?) throws -> ParsedUsageFile {
-        var entries: [UsageLedgerEntry] = []
         var seenKeys = Set<String>()
         let sourceMetadata = self.sourceMetadata(for: file.url)
         let sourceFingerprint = self.sourceFingerprint(for: sourceMetadata)
+        let resumeKey = "claude|\(sourceMetadata.path)"
 
+        // Byte-offset resume: skip the already-parsed prefix of an append-only
+        // project JSONL and carry forward the entries parsed by earlier scans.
+        // Any mismatch (rotation, truncation, wider scan window) falls back to
+        // a full re-read via `resumableState`.
+        var startOffset: Int64 = 0
+        var carriedEntries: [UsageLedgerEntry] = []
+        let fingerprint: (hash: UInt64, length: Int)?
+        if let prior = self.resumeStore.resumableState(
+            forKey: resumeKey,
+            url: file.url,
+            currentSizeBytes: sourceMetadata.sizeBytes,
+            minDate: minDate)
+        {
+            startOffset = prior.resumeOffset
+            carriedEntries = prior.entries
+            fingerprint = (prior.fingerprint, prior.fingerprintLength)
+        } else {
+            fingerprint = LedgerScanResumeStore.prefixFingerprint(url: file.url)
+        }
+
+        // Register carried entries so a re-parsed torn final line (the resume
+        // offset stops at the last newline) dedupes against them. Totals
+        // invariant: carried-in-window + newly-parsed tail == a from-scratch
+        // scan of the whole file.
+        var entries: [UsageLedgerEntry] = []
+        entries.reserveCapacity(carriedEntries.count)
+        for carried in carriedEntries {
+            if let minDate, carried.timestamp < minDate { continue }
+            let key = self.dedupeKey(forEntry: carried)
+            guard seenKeys.insert(key).inserted else { continue }
+            entries.append(carried)
+        }
+
+        var newEntries: [UsageLedgerEntry] = []
         func consume(_ lineData: Data) {
             guard !lineData.isEmpty,
                   let line = String(data: lineData, encoding: .utf8)?
@@ -21,13 +55,15 @@ extension ClaudeUsageLogSource {
                 sourceFingerprint: sourceFingerprint,
                 seenKeys: &seenKeys)
             {
-                entries.append(entry)
+                newEntries.append(entry)
             }
         }
 
+        let resumeOffset: Int64
         do {
-            try CostUsageJsonl.scan(
+            resumeOffset = try CostUsageJsonl.scan(
                 fileURL: file.url,
+                offset: startOffset,
                 maxLineBytes: 512 * 1024,
                 prefixBytes: 512 * 1024)
             { line in
@@ -35,8 +71,10 @@ extension ClaudeUsageLogSource {
                 consume(line.bytes)
             }
         } catch {
+            self.resumeStore.removeState(forKey: resumeKey)
             throw ClaudeUsageLogError.readFailed("\(file.url.path): \(error.localizedDescription)")
         }
+        entries.append(contentsOf: newEntries)
         let latestMetadata = self.sourceMetadata(for: file.url)
         // A live session appends to its project JSONL continuously, so the file
         // usually GROWS during a read. That is safe for an append-only log: we
@@ -46,11 +84,42 @@ extension ClaudeUsageLogSource {
            let after = latestMetadata.sizeBytes,
            after < before
         {
+            self.resumeStore.removeState(forKey: resumeKey)
             throw ClaudeUsageLogError.readFailed("Claude usage log truncated while scanning: \(sourceMetadata.path)")
+        }
+
+        if let fingerprint, let latestSize = latestMetadata.sizeBytes {
+            self.resumeStore.setState(
+                LedgerScanResumeStore.FileState(
+                    fingerprint: fingerprint.hash,
+                    fingerprintLength: fingerprint.length,
+                    sizeBytes: latestSize,
+                    resumeOffset: resumeOffset,
+                    minDate: minDate,
+                    entries: entries,
+                    codexCursor: nil),
+                forKey: resumeKey)
+        } else {
+            self.resumeStore.removeState(forKey: resumeKey)
         }
         return ParsedUsageFile(
             entries: entries,
             watermark: self.sourceWatermark(for: sourceMetadata, dayKey: dayKey))
+    }
+
+    /// Reconstructs the dedupe key for an already-built entry (Claude entries
+    /// store token classes exactly as parsed, so this is a direct mapping).
+    func dedupeKey(forEntry entry: UsageLedgerEntry) -> String {
+        self.dedupeKey(
+            requestID: entry.requestID,
+            messageID: entry.messageID,
+            sessionID: entry.sessionID,
+            timestamp: entry.timestamp,
+            tokens: DedupeTokens(
+                input: entry.inputTokens,
+                output: entry.outputTokens,
+                cacheCreation: entry.cacheCreationTokens,
+                cacheRead: entry.cacheReadTokens))
     }
 
     func dedupeKey(
@@ -60,11 +129,17 @@ extension ClaudeUsageLogSource {
         timestamp: Date,
         tokens: DedupeTokens) -> String
     {
-        if let requestID, !requestID.isEmpty {
-            return "req:\(requestID)"
+        // ccusage convention: the unique unit is messageId+requestId. A retried
+        // request reuses its requestId across DISTINCT usage-bearing messages, so
+        // keying on requestId alone would silently drop the retry's usage.
+        if let messageID, !messageID.isEmpty, let requestID, !requestID.isEmpty {
+            return "msg:\(messageID)|req:\(requestID)"
         }
         if let messageID, !messageID.isEmpty {
             return "msg:\(messageID)"
+        }
+        if let requestID, !requestID.isEmpty {
+            return "req:\(requestID)"
         }
         return [
             "ts:\(timestamp.timeIntervalSince1970)",

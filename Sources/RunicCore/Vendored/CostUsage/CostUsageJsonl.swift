@@ -6,6 +6,15 @@ enum CostUsageJsonl {
         let wasTruncated: Bool
     }
 
+    /// Streams newline-delimited lines starting at `offset`.
+    ///
+    /// Returns the byte offset just past the last NEWLINE-TERMINATED line — the
+    /// safe position for a later scan to resume from. A trailing line without a
+    /// newline is still flushed to `onLine` (it may be a complete record whose
+    /// writer simply hasn't appended the terminator yet), but it is NOT counted
+    /// into the returned offset: resuming after a torn partial line would start
+    /// mid-record and silently lose whatever the writer appends to finish it.
+    /// Callers that resume must therefore dedupe a possibly re-seen final line.
     @discardableResult
     static func scan(
         fileURL: URL,
@@ -27,7 +36,8 @@ enum CostUsageJsonl {
         current.reserveCapacity(4 * 1024)
         var lineBytes = 0
         var truncated = false
-        var bytesRead: Int64 = 0
+        var consumed: Int64 = startOffset
+        var resumeOffset: Int64 = startOffset
 
         func flushLine() {
             guard lineBytes > 0 else { return }
@@ -46,8 +56,6 @@ enum CostUsageJsonl {
                 break
             }
 
-            bytesRead += Int64(chunk.count)
-
             var cursor = chunk.startIndex
             while cursor < chunk.endIndex {
                 if Task.isCancelled { throw CancellationError() }
@@ -64,7 +72,10 @@ enum CostUsageJsonl {
                     }
                 }
 
+                consumed += Int64(linePart.count)
                 if newline < chunk.endIndex {
+                    consumed += 1 // the newline byte
+                    resumeOffset = consumed
                     flushLine()
                     cursor = chunk.index(after: newline)
                 } else {
@@ -73,6 +84,6 @@ enum CostUsageJsonl {
             }
         }
 
-        return startOffset + bytesRead
+        return resumeOffset
     }
 }

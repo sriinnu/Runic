@@ -12,6 +12,12 @@ struct CodexUsageParsedFile {
 }
 
 struct CodexUsageLogParser {
+    let resumeStore: LedgerScanResumeStore
+
+    init(resumeStore: LedgerScanResumeStore = .shared) {
+        self.resumeStore = resumeStore
+    }
+
     private struct SourceFileMetadata: Equatable {
         let path: String
         let modifiedAt: Date?
@@ -35,6 +41,34 @@ struct CodexUsageLogParser {
         var currentProjectID: String?
         var currentProjectName: String?
         var previousTotals: CodexTotals?
+
+        init() {}
+
+        /// Rehydrate the mid-file parse state captured by a previous scan so a
+        /// resumed read continues the legacy cumulative-delta path (and the
+        /// streamed turn context) exactly where the last read stopped.
+        init(cursor: LedgerScanResumeStore.CodexCursor?) {
+            guard let cursor else { return }
+            self.currentModel = cursor.currentModel
+            self.currentProjectID = cursor.currentProjectID
+            self.currentProjectName = cursor.currentProjectName
+            if let input = cursor.previousTotalsInput,
+               let cached = cursor.previousTotalsCached,
+               let output = cursor.previousTotalsOutput
+            {
+                self.previousTotals = CodexTotals(input: input, cached: cached, output: output)
+            }
+        }
+
+        var cursor: LedgerScanResumeStore.CodexCursor {
+            LedgerScanResumeStore.CodexCursor(
+                currentModel: self.currentModel,
+                currentProjectID: self.currentProjectID,
+                currentProjectName: self.currentProjectName,
+                previousTotalsInput: self.previousTotals?.input,
+                previousTotalsCached: self.previousTotals?.cached,
+                previousTotalsOutput: self.previousTotals?.output)
+        }
     }
 
     private struct ParseContext {
@@ -107,7 +141,6 @@ struct CodexUsageLogParser {
         seenKeys: inout Set<String>) throws -> CodexUsageParsedFile
     {
         var state = ParseState()
-        var entries: [UsageLedgerEntry] = []
         let sourceMetadata = self.sourceMetadata(for: file.url)
         let context = ParseContext(
             file: file,
@@ -115,20 +148,68 @@ struct CodexUsageLogParser {
             sourceFingerprint: self.sourceFingerprint(for: sourceMetadata))
         let maxLineBytes = 256 * 1024
         let prefixBytes = 32 * 1024
+        let resumeKey = "codex|\(sourceMetadata.path)"
 
-        _ = try CostUsageJsonl.scan(
-            fileURL: file.url,
-            offset: 0,
-            maxLineBytes: maxLineBytes,
-            prefixBytes: prefixBytes,
-            onLine: { line in
-                self.consumeLine(
-                    line,
-                    context: context,
-                    state: &state,
-                    seenKeys: &seenKeys,
-                    entries: &entries)
-            })
+        // Byte-offset resume: skip the already-parsed prefix of an append-only
+        // rollout and carry forward the entries parsed by earlier scans, so a
+        // multi-GB live session is not re-read from byte 0 every refresh. Any
+        // mismatch (rotation, truncation, wider scan window) falls back to a
+        // full re-read via `resumableState`.
+        var startOffset: Int64 = 0
+        var carriedEntries: [UsageLedgerEntry] = []
+        let fingerprint: (hash: UInt64, length: Int)?
+        if let prior = self.resumeStore.resumableState(
+            forKey: resumeKey,
+            url: file.url,
+            currentSizeBytes: sourceMetadata.sizeBytes,
+            minDate: minDate)
+        {
+            startOffset = prior.resumeOffset
+            carriedEntries = prior.entries
+            state = ParseState(cursor: prior.codexCursor)
+            fingerprint = (prior.fingerprint, prior.fingerprintLength)
+        } else {
+            fingerprint = LedgerScanResumeStore.prefixFingerprint(url: file.url)
+        }
+
+        // Re-register carried entries so (a) each is emitted exactly once per
+        // scan even across files, and (b) a re-parsed torn final line (the
+        // resume offset stops at the last newline) dedupes against them.
+        // Totals invariant: emitted = carried-in-window + newly-parsed tail ==
+        // what a from-scratch scan of the whole file would produce.
+        var entries: [UsageLedgerEntry] = []
+        var retainedEntries: [UsageLedgerEntry] = []
+        retainedEntries.reserveCapacity(carriedEntries.count)
+        for carried in carriedEntries {
+            if let minDate, carried.timestamp < minDate { continue }
+            retainedEntries.append(carried)
+            let key = self.dedupeKey(forEntry: carried)
+            guard !seenKeys.contains(key) else { continue }
+            seenKeys.insert(key)
+            entries.append(carried)
+        }
+
+        var newEntries: [UsageLedgerEntry] = []
+        let resumeOffset: Int64
+        do {
+            resumeOffset = try CostUsageJsonl.scan(
+                fileURL: file.url,
+                offset: startOffset,
+                maxLineBytes: maxLineBytes,
+                prefixBytes: prefixBytes,
+                onLine: { line in
+                    self.consumeLine(
+                        line,
+                        context: context,
+                        state: &state,
+                        seenKeys: &seenKeys,
+                        entries: &newEntries)
+                })
+        } catch {
+            self.resumeStore.removeState(forKey: resumeKey)
+            throw error
+        }
+        entries.append(contentsOf: newEntries)
         let latestMetadata = self.sourceMetadata(for: file.url)
         // A live, multi-day Codex session writes to its rollout file continuously,
         // so the file almost always GROWS during a read. That is safe for an
@@ -140,12 +221,43 @@ struct CodexUsageLogParser {
            let after = latestMetadata.sizeBytes,
            after < before
         {
+            self.resumeStore.removeState(forKey: resumeKey)
             throw CodexUsageLogSource.CodexUsageLogError.readFailed(
                 "Codex usage log truncated while scanning: \(sourceMetadata.path)")
+        }
+
+        if let fingerprint, let latestSize = latestMetadata.sizeBytes {
+            self.resumeStore.setState(
+                LedgerScanResumeStore.FileState(
+                    fingerprint: fingerprint.hash,
+                    fingerprintLength: fingerprint.length,
+                    sizeBytes: latestSize,
+                    resumeOffset: resumeOffset,
+                    minDate: minDate,
+                    entries: retainedEntries + newEntries,
+                    codexCursor: state.cursor),
+                forKey: resumeKey)
+        } else {
+            self.resumeStore.removeState(forKey: resumeKey)
         }
         return CodexUsageParsedFile(
             entries: entries,
             watermark: self.sourceWatermark(for: sourceMetadata, dayKey: dayKey))
+    }
+
+    /// Reconstructs the dedupe key for an already-built entry. Codex entries
+    /// store input as the NON-cached remainder (cached tokens are split out),
+    /// so the raw input the key was originally built from is
+    /// `inputTokens + cacheReadTokens`.
+    private func dedupeKey(forEntry entry: UsageLedgerEntry) -> String {
+        self.dedupeKey(
+            requestID: entry.requestID,
+            sessionID: entry.sessionID,
+            timestamp: entry.timestamp,
+            tokens: DedupeTokens(
+                input: entry.inputTokens + entry.cacheReadTokens,
+                output: entry.outputTokens,
+                cacheRead: entry.cacheReadTokens))
     }
 
     private func consumeLine(
@@ -155,13 +267,19 @@ struct CodexUsageLogParser {
         seenKeys: inout Set<String>,
         entries: inout [UsageLedgerEntry])
     {
-        guard let parsed = self.parseLine(line, minDate: context.minDate) else { return }
+        guard let parsed = self.parseLine(line) else { return }
         if parsed.type == "turn_context" {
             self.applyTurnContext(parsed.payload, state: &state)
             return
         }
 
         guard let record = self.tokenRecord(from: parsed, context: context, state: &state) else { return }
+        // Pre-window lines must still flow through tokenRecord so the cumulative
+        // cursor (state.previousTotals) advances past them — otherwise the first
+        // in-window legacy total_token_usage line has no prior totals and books
+        // the file's ENTIRE history as one delta. They advance the cursor but are
+        // never emitted.
+        if let minDate = context.minDate, record.timestamp < minDate { return }
         let cachedClamp = min(record.tokens.cached, record.tokens.input)
         let key = self.dedupeKey(
             requestID: record.requestID,
@@ -187,7 +305,11 @@ struct CodexUsageLogParser {
             projectID: record.projectID,
             projectName: record.projectName,
             model: record.model,
-            inputTokens: record.tokens.input,
+            // OpenAI reports cached tokens as a SUBSET of input_tokens (the cost
+            // path already prices input - cached at the full rate). Ledger entries
+            // sum input/output/cache as DISJOINT classes, so store only the
+            // non-cached remainder as input.
+            inputTokens: record.tokens.input - cachedClamp,
             outputTokens: record.tokens.output,
             cacheCreationTokens: 0,
             cacheReadTokens: cachedClamp,
@@ -207,7 +329,7 @@ struct CodexUsageLogParser {
             sourceFingerprint: context.sourceFingerprint))
     }
 
-    private func parseLine(_ line: CostUsageJsonl.Line, minDate: Date?) -> ParsedLine? {
+    private func parseLine(_ line: CostUsageJsonl.Line) -> ParsedLine? {
         guard self.shouldParse(line) else { return nil }
         guard
             let object = (try? JSONSerialization.jsonObject(with: line.bytes)) as? [String: Any],
@@ -217,7 +339,6 @@ struct CodexUsageLogParser {
         else {
             return nil
         }
-        if let minDate, timestamp < minDate { return nil }
         return ParsedLine(
             object: object,
             type: type,

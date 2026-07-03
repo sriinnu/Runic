@@ -119,14 +119,30 @@ public struct QwenUsageSnapshot: Sendable {
 }
 
 extension QwenUsageSnapshot {
+    /// Human-readable roll-up of the fetched totals (tokens, requests, and
+    /// estimated cost) for display on the usage card.
+    public var usageSummaryText: String {
+        var parts = ["\(UsageFormatter.tokenCountString(self.totalTokens)) tokens"]
+        if self.totalRequests > 0 {
+            parts.append("\(self.totalRequests) req")
+        }
+        if self.totalEstimatedCostUSD > 0 {
+            parts.append("~\(UsageFormatter.usdString(self.totalEstimatedCostUSD)) est.")
+        }
+        return parts.joined(separator: " · ")
+    }
+
     public func toUsageSnapshot() -> UsageSnapshot {
-        // Build a usage percent based on token consumption (no hard cap from API,
-        // so we report a simple token metric).
+        // The DashScope usage API reports consumption with no hard cap, so
+        // there is no denominator for a percentage — surface the token,
+        // request, and estimated-cost totals as text and mark the window as
+        // limit-less so UIs don't render a fake 0% gauge.
         let primary = RateWindow(
             usedPercent: 0,
             windowMinutes: nil,
             resetsAt: nil,
-            resetDescription: nil)
+            resetDescription: self.usageSummaryText,
+            hasKnownLimit: false)
 
         let identity = ProviderIdentitySnapshot(
             providerID: .qwen,

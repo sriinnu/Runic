@@ -23,12 +23,16 @@ struct AuggieUsageMetrics {
         }
 
         let summary = parts.isEmpty ? "Usage fetched from analytics API." : parts.joined(separator: " · ")
+        // The analytics API reports counters with no quota limit, so there is
+        // no denominator for a percentage — mark the window as limit-less so
+        // UIs show the daily metrics instead of a fake 0% gauge.
         return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: summary),
+                resetDescription: summary,
+                hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
             updatedAt: Date(),

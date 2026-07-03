@@ -32,7 +32,7 @@ public struct CachedLedger: Codable, Sendable {
     }
 }
 
-public struct CachedDaily: Codable, Sendable {
+public struct CachedDaily: Codable, Sendable, Equatable {
     public let dayKey: String
     public let inputTokens: Int
     public let outputTokens: Int
@@ -41,13 +41,6 @@ public struct CachedDaily: Codable, Sendable {
     public let costUSD: Double?
     public let requestCount: Int
     public let modelsUsed: [String]
-
-    private static let dayKeyParser: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
-        return formatter
-    }()
 
     public init(
         dayKey: String,
@@ -74,7 +67,7 @@ public struct CachedDaily: Codable, Sendable {
     }
 
     public func toLedgerDailySummary(provider: UsageProvider) -> UsageLedgerDailySummary? {
-        guard let dayStart = Self.dayKeyParser.date(from: self.dayKey) else { return nil }
+        guard let dayStart = LedgerCache.dayDate(fromKey: self.dayKey) else { return nil }
         return UsageLedgerDailySummary(
             provider: provider,
             projectID: nil,

@@ -70,12 +70,17 @@ extension DeepSeekBalanceResponse {
     }
 
     func toUsageSnapshot() -> UsageSnapshot {
+        // The balance API exposes no limit, so there is no denominator for a
+        // percentage — mark the window as limit-less so UIs show the balance
+        // text instead of a fake 0% gauge. The live balance itself flows to
+        // the UI through `toCreditsSnapshot()`.
         UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: "Balance: \(String(format: "%.2f", self.remainingBalance)) \(self.currencyCode)"),
+                resetDescription: "Balance: \(String(format: "%.2f", self.remainingBalance)) \(self.currencyCode)",
+                hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
             updatedAt: Date(),

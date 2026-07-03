@@ -63,7 +63,9 @@ extension UsageLedgerAggregator {
             accumulator.forecast(
                 provider: key.provider,
                 projectKey: key.projectKey,
-                projectionDays: projectionDays)
+                projectionDays: projectionDays,
+                todayStart: calendar.startOfDay(for: now),
+                calendar: calendar)
         }
         .sorted { lhs, rhs in
             if lhs.projected30DayCostUSD != rhs.projected30DayCostUSD {

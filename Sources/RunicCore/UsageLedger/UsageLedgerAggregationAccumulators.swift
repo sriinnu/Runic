@@ -145,17 +145,43 @@ struct SpendForecastAccumulator {
     func forecast(
         provider: UsageProvider,
         projectKey: String?,
-        projectionDays: Int) -> UsageLedgerSpendForecast?
+        projectionDays: Int,
+        todayStart: Date? = nil,
+        calendar: Calendar = .current) -> UsageLedgerSpendForecast?
     {
         guard !self.observedDayStarts.isEmpty else { return nil }
         guard self.observedCostUSD.isFinite else { return nil }
         let observedDays = self.observedDayStarts.count
         guard observedDays > 0 else { return nil }
-        let averageDailyCostUSD = self.observedCostUSD / Double(observedDays)
+
+        // The projection uses a CALENDAR-day average, not an active-day average:
+        // dividing by active days made a weekend-only user at $50/day across 8
+        // active days project ~$1,500/30d instead of the true ~$430, tripping
+        // false budget-breach alerts. Idle days count as $0, so the denominator
+        // is the span of complete calendar days from the first observed day
+        // through yesterday. Today's partial day is excluded from both sides of
+        // the division (it would bias the rate down in the morning); when today
+        // is the only observed day it's all we have, so project it as a full day.
+        var completedCostUSD = self.observedCostUSD
+        var spanDays = 1
+        let firstDay = self.observedDayStarts.min() ?? .distantFuture
+        if let todayStart, firstDay < todayStart {
+            completedCostUSD -= self.dailyCostByDayStart[todayStart] ?? 0
+            let daysThroughYesterday = calendar.dateComponents([.day], from: firstDay, to: todayStart).day ?? 1
+            spanDays = max(1, daysThroughYesterday)
+        } else if todayStart == nil, let lastDay = self.observedDayStarts.max() {
+            // No reference date available: span the observed days themselves.
+            let span = calendar.dateComponents([.day], from: firstDay, to: lastDay).day ?? 0
+            spanDays = max(1, span + 1)
+        }
+        let averageDailyCostUSD = completedCostUSD / Double(spanDays)
         guard averageDailyCostUSD.isFinite else { return nil }
         let projected30DayCostUSD = averageDailyCostUSD * Double(projectionDays)
         guard projected30DayCostUSD.isFinite else { return nil }
-        let projectedQuantiles = self.projectedCostQuantiles(projectionDays: projectionDays)
+        let projectedQuantiles = self.projectedCostQuantiles(
+            projectionDays: projectionDays,
+            todayStart: todayStart,
+            calendar: calendar)
 
         return UsageLedgerSpendForecast(
             provider: provider,
@@ -172,12 +198,33 @@ struct SpendForecastAccumulator {
             projectionDays: projectionDays)
     }
 
-    private func projectedCostQuantiles(projectionDays: Int) -> (p50: Double, p80: Double, p95: Double)? {
+    private func projectedCostQuantiles(
+        projectionDays: Int,
+        todayStart: Date?,
+        calendar: Calendar) -> (p50: Double, p80: Double, p95: Double)?
+    {
         guard projectionDays > 0 else { return nil }
-        let dailyCosts = self.dailyCostByDayStart.values
-            .filter(\.isFinite)
-            .sorted()
-        guard dailyCosts.count >= 3 else { return nil }
+        // Quantiles share the mean's CALENDAR-day basis: idle days in the
+        // observed span are real $0 days and enter the sample set as $0.
+        // Sampling only active days made a weekend-only $50/day user project
+        // P50 ≈ $1,500/30d while the (already-fixed) mean said ~$430. Today's
+        // partial day is excluded exactly as it is from the mean. At least 3
+        // ACTIVE days are still required before quantiles mean anything.
+        var costsByDay = self.dailyCostByDayStart
+        var spanDays = costsByDay.count
+        let firstDay = self.observedDayStarts.min() ?? .distantFuture
+        if let todayStart, firstDay < todayStart {
+            costsByDay.removeValue(forKey: todayStart)
+            let daysThroughYesterday = calendar.dateComponents([.day], from: firstDay, to: todayStart).day ?? 1
+            spanDays = max(1, daysThroughYesterday)
+        } else if todayStart == nil, let lastDay = self.observedDayStarts.max() {
+            let span = calendar.dateComponents([.day], from: firstDay, to: lastDay).day ?? 0
+            spanDays = max(1, span + 1)
+        }
+        let activeCosts = costsByDay.values.filter(\.isFinite)
+        guard activeCosts.count >= 3 else { return nil }
+        let idleDays = max(0, spanDays - activeCosts.count)
+        let dailyCosts = (activeCosts + Array(repeating: 0.0, count: idleDays)).sorted()
         let projectionScale = Double(projectionDays)
         let p50 = self.percentile(sortedValues: dailyCosts, quantile: 0.50) * projectionScale
         let p80 = self.percentile(sortedValues: dailyCosts, quantile: 0.80) * projectionScale

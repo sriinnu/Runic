@@ -81,6 +81,9 @@ extension LedgerCache {
         guard !combined.isEmpty else { return }
 
         let provider = records[0].provider
+        // Belt-and-braces alongside the (size, mtime) validation: never serve a
+        // memo that predates our own write.
+        self.relayStateMemo.removeValue(forKey: provider)
         try self.withProviderFileLock(provider: provider) {
             if FileManager.default.fileExists(atPath: url.path),
                let handle = try? FileHandle(forWritingTo: url)
@@ -118,6 +121,8 @@ extension LedgerCache {
         let url = self.relayFileURL(provider: provider)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let lineCap = 512 * 1024
+        self.relayStateMemo.removeValue(forKey: provider)
+        let decoder = JSONDecoder()
 
         // Pass 1: find the newest snapshot per day from watermark records. Streamed
         // in constant memory — the file this targets can be hundreds of MB (it
@@ -131,7 +136,7 @@ extension LedgerCache {
                 // compaction counted/kept a future-schema record the reader skips,
                 // it could drop the snapshot the reader would have selected.
                 guard !line.wasTruncated, !line.bytes.isEmpty,
-                      let record = try? JSONDecoder().decode(UsageRelayRecord.self, from: line.bytes),
+                      let record = try? decoder.decode(UsageRelayRecord.self, from: line.bytes),
                       record.provider == provider,
                       record.schemaVersion <= Self.relaySchemaVersion
                 else {
@@ -173,7 +178,7 @@ extension LedgerCache {
         do {
             try CostUsageJsonl.scan(fileURL: url, maxLineBytes: lineCap, prefixBytes: lineCap) { line in
                 guard writeError == nil, !line.wasTruncated, !line.bytes.isEmpty,
-                      let record = try? JSONDecoder().decode(UsageRelayRecord.self, from: line.bytes),
+                      let record = try? decoder.decode(UsageRelayRecord.self, from: line.bytes),
                       record.provider == provider,
                       record.schemaVersion <= Self.relaySchemaVersion
                 else {

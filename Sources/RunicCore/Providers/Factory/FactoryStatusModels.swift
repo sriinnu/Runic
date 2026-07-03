@@ -96,6 +96,10 @@ public struct FactoryStatusSnapshot: Sendable {
     public let premiumOrgTokens: Int64
     /// Premium token allowance
     public let premiumAllowance: Int64
+    /// API-reported fraction of the standard allowance used (0...1)
+    public let standardUsedRatio: Double?
+    /// API-reported fraction of the premium allowance used (0...1)
+    public let premiumUsedRatio: Double?
     /// Billing period start
     public let periodStart: Date?
     /// Billing period end
@@ -120,6 +124,8 @@ public struct FactoryStatusSnapshot: Sendable {
         premiumUserTokens: Int64,
         premiumOrgTokens: Int64,
         premiumAllowance: Int64,
+        standardUsedRatio: Double? = nil,
+        premiumUsedRatio: Double? = nil,
         periodStart: Date?,
         periodEnd: Date?,
         planName: String?,
@@ -135,6 +141,8 @@ public struct FactoryStatusSnapshot: Sendable {
         self.premiumUserTokens = premiumUserTokens
         self.premiumOrgTokens = premiumOrgTokens
         self.premiumAllowance = premiumAllowance
+        self.standardUsedRatio = standardUsedRatio
+        self.premiumUsedRatio = premiumUsedRatio
         self.periodStart = periodStart
         self.periodEnd = periodEnd
         self.planName = planName
@@ -147,27 +155,31 @@ public struct FactoryStatusSnapshot: Sendable {
 
     /// Convert to UsageSnapshot for the common provider interface
     public func toUsageSnapshot() -> UsageSnapshot {
-        // Primary: Standard tokens used (as percentage of allowance, capped reasonably)
-        let standardPercent = self.calculateUsagePercent(
+        // Primary: Standard tokens used (as percentage of allowance)
+        let standardUsage = self.calculateUsage(
             used: self.standardUserTokens,
-            allowance: self.standardAllowance)
+            allowance: self.standardAllowance,
+            usedRatio: self.standardUsedRatio)
 
         let primary = RateWindow(
-            usedPercent: standardPercent,
+            usedPercent: standardUsage.usedPercent,
             windowMinutes: nil,
             resetsAt: self.periodEnd,
-            resetDescription: self.periodEnd.map { Self.formatResetDate($0) })
+            resetDescription: self.periodEnd.map { Self.formatResetDate($0) },
+            hasKnownLimit: standardUsage.hasKnownLimit)
 
         // Secondary: Premium tokens used
-        let premiumPercent = self.calculateUsagePercent(
+        let premiumUsage = self.calculateUsage(
             used: self.premiumUserTokens,
-            allowance: self.premiumAllowance)
+            allowance: self.premiumAllowance,
+            usedRatio: self.premiumUsedRatio)
 
         let secondary = RateWindow(
-            usedPercent: premiumPercent,
+            usedPercent: premiumUsage.usedPercent,
             windowMinutes: nil,
             resetsAt: self.periodEnd,
-            resetDescription: self.periodEnd.map { Self.formatResetDate($0) })
+            resetDescription: self.periodEnd.map { Self.formatResetDate($0) },
+            hasKnownLimit: premiumUsage.hasKnownLimit)
 
         // Format login method as tier + plan
         let loginMethod: String? = {
@@ -195,17 +207,25 @@ public struct FactoryStatusSnapshot: Sendable {
             identity: identity)
     }
 
-    private func calculateUsagePercent(used: Int64, allowance: Int64) -> Double {
-        // Treat very large allowances (> 1 trillion) as unlimited
-        let unlimitedThreshold: Int64 = 1_000_000_000_000
-        if allowance > unlimitedThreshold {
-            // For unlimited, show a token count-based pseudo-percentage (capped at 100%)
-            // Use 100M tokens as a reference point for "100%"
-            let referenceTokens: Double = 100_000_000
-            return min(100, Double(used) / referenceTokens * 100)
+    private func calculateUsage(
+        used: Int64,
+        allowance: Int64,
+        usedRatio: Double?) -> (usedPercent: Double, hasKnownLimit: Bool?)
+    {
+        // Prefer the API's own used ratio whenever it reports one — it is the
+        // provider's measurement against the real allowance.
+        if let usedRatio {
+            return (min(100, max(0, usedRatio * 100)), nil)
         }
-        guard allowance > 0 else { return 0 }
-        return min(100, Double(used) / Double(allowance) * 100)
+        // Treat very large allowances (> 1 trillion) as unlimited. Without a
+        // real denominator we don't fabricate a percentage (the old code
+        // scaled against an arbitrary 100M-token reference) — mark the window
+        // as limit-less instead.
+        let unlimitedThreshold: Int64 = 1_000_000_000_000
+        if allowance > unlimitedThreshold || allowance <= 0 {
+            return (0, false)
+        }
+        return (min(100, Double(used) / Double(allowance) * 100), nil)
     }
 
     private static func formatResetDate(_ date: Date) -> String {
