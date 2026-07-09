@@ -36,16 +36,60 @@ public struct MiniMaxBaseResponse: Decodable {
     }
 }
 
+/// A single model's quota entry from `model_remains`. MiniMax's coding plan
+/// tracks separate quotas per model (for example a standard model alongside
+/// a "spark"/preview tier), so callers keep every entry instead of just the
+/// first one.
+public struct MiniMaxModelQuota: Sendable {
+    public let total: Int
+    public let used: Int
+    public let modelName: String?
+
+    public init(total: Int, used: Int, modelName: String? = nil) {
+        self.total = total
+        self.used = used
+        self.modelName = modelName
+    }
+
+    // MiniMax's `coding_plan/remains` endpoint reports remaining allowance here.
+    // Example: 4500/4500 means the quota is untouched, so used is 0%.
+    fileprivate var remaining: Int { max(0, min(self.used, self.total)) }
+
+    fileprivate var usedPercent: Double {
+        let usedCount = max(0, self.total - self.remaining)
+        return self.total > 0 ? (Double(usedCount) / Double(self.total)) * 100.0 : 0.0
+    }
+
+    fileprivate func toRateWindow() -> RateWindow {
+        RateWindow(
+            usedPercent: self.usedPercent,
+            windowMinutes: 24 * 60,
+            resetsAt: nil,
+            resetDescription: "\(self.remaining) / \(self.total) remaining",
+            label: self.modelName?.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+}
+
 public struct MiniMaxUsageSnapshot: Sendable {
     public let total: Int
     public let used: Int
     public let modelName: String?
+    /// Additional per-model quotas beyond the primary one (for example a
+    /// "spark"/preview tier reported alongside the standard model).
+    public let additionalModels: [MiniMaxModelQuota]
     public let updatedAt: Date
 
-    public init(total: Int, used: Int, modelName: String? = nil, updatedAt: Date) {
+    public init(
+        total: Int,
+        used: Int,
+        modelName: String? = nil,
+        additionalModels: [MiniMaxModelQuota] = [],
+        updatedAt: Date)
+    {
         self.total = total
         self.used = used
         self.modelName = modelName
+        self.additionalModels = additionalModels
         self.updatedAt = updatedAt
     }
 
@@ -56,18 +100,12 @@ public struct MiniMaxUsageSnapshot: Sendable {
 
 extension MiniMaxUsageSnapshot {
     public func toUsageSnapshot() -> UsageSnapshot {
-        // MiniMax's `coding_plan/remains` endpoint reports remaining allowance here.
-        // Example: 4500/4500 means the quota is untouched, so used is 0%.
-        let remaining = max(0, min(self.used, self.total))
-        let usedCount = max(0, self.total - remaining)
-        let percent = self.total > 0 ? (Double(usedCount) / Double(self.total)) * 100.0 : 0.0
-
-        let primary = RateWindow(
-            usedPercent: percent,
-            windowMinutes: 24 * 60,
-            resetsAt: nil,
-            resetDescription: "\(remaining) / \(self.total) remaining",
-            label: self.modelName?.trimmingCharacters(in: .whitespacesAndNewlines))
+        let primaryQuota = MiniMaxModelQuota(total: self.total, used: self.used, modelName: self.modelName)
+        let primary = primaryQuota.toRateWindow()
+        // Only one extra slot (tertiary) is available on UsageSnapshot, so a
+        // third-plus model quota is not shown yet — surfacing at least the
+        // second model beats always dropping it.
+        let tertiary = self.additionalModels.first?.toRateWindow()
 
         let identity = ProviderIdentitySnapshot(
             providerID: .minimax,
@@ -78,7 +116,7 @@ extension MiniMaxUsageSnapshot {
         return UsageSnapshot(
             primary: primary,
             secondary: nil,
-            tertiary: nil,
+            tertiary: tertiary,
             providerCost: nil,
             updatedAt: self.updatedAt,
             identity: identity)
@@ -126,14 +164,22 @@ public struct MiniMaxUsageFetcher: Sendable {
                 throw MiniMaxUsageError.apiError(apiResponse.baseResponse.statusMsg)
             }
 
-            guard let firstModel = apiResponse.modelRemains?.first else {
+            guard let models = apiResponse.modelRemains, let firstModel = models.first else {
                 throw MiniMaxUsageError.parseFailed("No model quota found")
+            }
+
+            let additionalModels = models.dropFirst().map {
+                MiniMaxModelQuota(
+                    total: $0.currentIntervalTotalCount,
+                    used: $0.currentIntervalUsageCount,
+                    modelName: $0.modelName)
             }
 
             return MiniMaxUsageSnapshot(
                 total: firstModel.currentIntervalTotalCount,
                 used: firstModel.currentIntervalUsageCount,
                 modelName: firstModel.modelName,
+                additionalModels: Array(additionalModels),
                 updatedAt: Date())
 
         } catch {

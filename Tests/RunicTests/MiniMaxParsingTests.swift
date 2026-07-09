@@ -79,4 +79,46 @@ struct MiniMaxParsingTests {
         #expect(usage.primary.remainingPercent == 100)
         #expect(usage.primary.resetDescription == "4500 / 4500 remaining")
     }
+
+    @Test
+    func `parse remains response with model array surfaces both models`() throws {
+        let json = """
+        {
+          "base_resp": { "retcode": 0, "msg": "ok", "success": true },
+          "data": {
+            "model_remains": [
+              { "used": 20, "total": 100, "model_name": "MiniMax-M2" },
+              { "used": 5, "total": 50, "model_name": "MiniMax-M2-Spark" }
+            ],
+            "plan_name": "MiniMax Pro"
+          }
+        }
+        """
+        let parsed = try MiniMaxWebParsing.parseRemainsResponse(Data(json.utf8))
+        #expect(parsed.usedPercent == 20)
+        #expect(parsed.modelName == "MiniMax-M2")
+        #expect(parsed.secondaryModel?.modelName == "MiniMax-M2-Spark")
+        #expect(parsed.secondaryModel?.usedPercent == 10)
+
+        let usage = parsed.toUsageSnapshot(updatedAt: Date(timeIntervalSince1970: 0))
+        #expect(usage.tertiary?.label == "MiniMax-M2-Spark")
+        #expect(usage.tertiary?.usedPercent == 10)
+    }
+
+    @Test
+    func `api snapshot surfaces a second model quota as tertiary`() {
+        let snapshot = MiniMaxUsageSnapshot(
+            total: 100,
+            used: 100,
+            modelName: "MiniMax-M2",
+            additionalModels: [
+                MiniMaxModelQuota(total: 50, used: 25, modelName: "MiniMax-M2-Spark"),
+            ],
+            updatedAt: Date(timeIntervalSince1970: 0))
+
+        let usage = snapshot.toUsageSnapshot()
+
+        #expect(usage.tertiary?.label == "MiniMax-M2-Spark")
+        #expect(usage.tertiary?.usedPercent == 50)
+    }
 }
