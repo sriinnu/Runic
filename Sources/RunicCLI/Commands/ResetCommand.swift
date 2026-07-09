@@ -224,10 +224,14 @@ public enum ResetCommand {
                 window: secondary))
         }
 
-        // Tertiary window (Opus)
-        if metadata.supportsOpus, let tertiary = snapshot.tertiary {
+        // Tertiary window (Opus-style providers keep their metadata label;
+        // others — a second MiniMax model, Gemini's third model — use the
+        // window's own label instead of a misleading "Opus" fallback).
+        if let tertiary = snapshot.tertiary {
+            let fallbackName = metadata.opusLabel ?? "Opus"
+            let windowName = metadata.supportsOpus ? fallbackName : (tertiary.label ?? fallbackName)
             windows.append(self.buildWindowInfo(
-                windowName: metadata.opusLabel ?? "Opus",
+                windowName: windowName,
                 window: tertiary))
         }
 

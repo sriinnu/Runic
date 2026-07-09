@@ -168,7 +168,14 @@ public struct MiniMaxUsageFetcher: Sendable {
                 throw MiniMaxUsageError.parseFailed("No model quota found")
             }
 
-            let additionalModels = models.dropFirst().map {
+            // Only surface additional entries that have a real, distinct model
+            // name — an unnamed entry has no meaningful label to show and
+            // would otherwise render as a misleading "Sonnet"/"Opus" fallback
+            // title downstream.
+            let additionalModels = models.dropFirst().filter {
+                let name = $0.modelName.trimmingCharacters(in: .whitespacesAndNewlines)
+                return !name.isEmpty && name != firstModel.modelName.trimmingCharacters(in: .whitespacesAndNewlines)
+            }.map {
                 MiniMaxModelQuota(
                     total: $0.currentIntervalTotalCount,
                     used: $0.currentIntervalUsageCount,
@@ -179,7 +186,7 @@ public struct MiniMaxUsageFetcher: Sendable {
                 total: firstModel.currentIntervalTotalCount,
                 used: firstModel.currentIntervalUsageCount,
                 modelName: firstModel.modelName,
-                additionalModels: Array(additionalModels),
+                additionalModels: additionalModels,
                 updatedAt: Date())
 
         } catch {

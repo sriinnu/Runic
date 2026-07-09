@@ -106,6 +106,27 @@ struct MiniMaxParsingTests {
     }
 
     @Test
+    func `parse remains response ignores an unnamed second model instead of mislabeling it`() throws {
+        let json = """
+        {
+          "base_resp": { "retcode": 0, "msg": "ok", "success": true },
+          "data": {
+            "model_remains": [
+              { "used": 20, "total": 100, "model_name": "MiniMax-M2" },
+              { "used": 5, "total": 50 }
+            ],
+            "plan_name": "MiniMax Pro"
+          }
+        }
+        """
+        let parsed = try MiniMaxWebParsing.parseRemainsResponse(Data(json.utf8))
+        #expect(parsed.secondaryModel == nil)
+
+        let usage = parsed.toUsageSnapshot(updatedAt: Date(timeIntervalSince1970: 0))
+        #expect(usage.tertiary == nil)
+    }
+
+    @Test
     func `api snapshot surfaces a second model quota as tertiary`() {
         let snapshot = MiniMaxUsageSnapshot(
             total: 100,

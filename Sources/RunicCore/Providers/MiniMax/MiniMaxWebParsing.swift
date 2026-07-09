@@ -105,8 +105,17 @@ enum MiniMaxWebParsing {
         let usage = modelRemains.usedPercent
         // MiniMax may report more than one model quota (for example a
         // "spark"/preview tier alongside the standard model) — keep the
-        // second one instead of always dropping it.
-        let secondaryModel = allModelRemains.dropFirst().first { $0.modelName != modelRemains.modelName }
+        // second one instead of always dropping it. Require a real, distinct
+        // name: an unnamed entry has nothing meaningful to label it with and
+        // would otherwise render as a misleading "Sonnet"/"Opus" fallback
+        // title downstream, and `nil != nil` would falsely look distinct.
+        let secondaryModel = allModelRemains.dropFirst().first { candidate in
+            guard let candidateName = candidate.modelName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !candidateName.isEmpty
+            else { return false }
+            let primaryName = modelRemains.modelName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return candidateName != primaryName
+        }
 
         let startTime = self.timestamp(payload["start_time"])
         let endTime = self.timestamp(payload["end_time"])
