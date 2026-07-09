@@ -6,7 +6,7 @@ import FoundationNetworking
 public struct AntigravityStatusProbe: Sendable {
     public var timeout: TimeInterval = 8.0
 
-    private static let processName = "language_server_macos"
+    private static let processName = "language_server"
     private static let getUserStatusPath = "/exa.language_server_pb.LanguageServerService/GetUserStatus"
     private static let commandModelConfigPath =
         "/exa.language_server_pb.LanguageServerService/GetCommandModelConfigs"
@@ -104,7 +104,9 @@ public struct AntigravityStatusProbe: Sendable {
             sawAntigravity = true
             guard let token = Self.extractFlag("--csrf_token", from: match.command) else { continue }
             let port = Self.extractPort("--extension_server_port", from: match.command)
-            return ProcessInfoResult(pid: match.pid, extensionPort: port, csrfToken: token, commandLine: match.command)
+                ?? Self.extractPort("--https_server_port", from: match.command)
+            let effectivePort = port.flatMap { $0 > 0 ? $0 : nil }
+            return ProcessInfoResult(pid: match.pid, extensionPort: effectivePort, csrfToken: token, commandLine: match.command)
         }
 
         if sawAntigravity {

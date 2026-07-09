@@ -86,11 +86,16 @@ enum MiniMaxWebParsing {
         }
 
         if let base = json["base_resp"] as? [String: Any] {
-            let retcode = self.doubleValue(base["retcode"]).map(Int.init) ?? 0
+            let statusCode = (base["status_code"] as? Int)
+                ?? self.doubleValue(base["status_code"]).map(Int.init)
+                ?? self.doubleValue(base["retcode"]).map(Int.init)
+                ?? 0
             let success = base["success"] as? Bool
-            if success == false || retcode != 0 {
-                let msg = base["msg"] as? String ?? "unknown error"
-                if retcode == 1004 {
+            if success == false || statusCode != 0 {
+                let msg = (base["status_msg"] as? String)
+                    ?? (base["msg"] as? String)
+                    ?? "unknown error"
+                if statusCode == 1004 {
                     throw MiniMaxWebUsageError.notLoggedIn(msg)
                 }
                 throw MiniMaxWebUsageError.apiError(msg)
@@ -297,14 +302,40 @@ enum MiniMaxWebParsing {
 
     private static func extractUsagePercent(from value: Any) -> ModelRemainsUsage? {
         guard let dict = value as? [String: Any] else { return nil }
+        let modelName = self.firstString(in: dict, keys: ["model_name", "model", "name", "label"])
+
+        // Pre-computed remaining percent (token_plan provides this directly).
+        if let remainingPct = self.doubleValue(dict["current_interval_remaining_percent"]) {
+            return ModelRemainsUsage(
+                usedPercent: min(100, max(0, 100 - remainingPct)),
+                modelName: modelName)
+        }
+
+        // Real API fields: current_interval_total_count / current_interval_usage_count.
+        // For coding_plan, usage_count = remaining; for token_plan, usage_count = used.
+        // Without knowing which endpoint we hit, fall back to the coding_plan
+        // interpretation (count = remaining) since that's what the web fetcher calls.
+        if let total = self.doubleValue(dict["current_interval_total_count"]),
+           total > 0
+        {
+            if let count = self.doubleValue(dict["current_interval_usage_count"]) {
+                let remaining = min(count, total)
+                let used = total - remaining
+                return ModelRemainsUsage(
+                    usedPercent: min(100, max(0, used / total * 100)),
+                    modelName: modelName)
+            }
+            return nil
+        }
+
+        // Legacy fallback keys (pre-token_plan field names, kept for older endpoints).
         let used = self.doubleValue(dict["used"] ?? dict["used_quota"] ?? dict["usedQuota"])
         let total = self.doubleValue(dict["total"] ?? dict["total_quota"] ?? dict["totalQuota"])
         let remaining = self.doubleValue(dict["remaining"] ?? dict["remaining_quota"] ?? dict["remainingQuota"])
-        let modelName = self.firstString(in: dict, keys: ["model_name", "model", "name", "label"])
 
         if let used, let total, total > 0 {
             return ModelRemainsUsage(
-                usedPercent: min(100, max(0, used / total * 100)),
+                usedPercent: min(100, max(0, (total - used) / total * 100)),
                 modelName: modelName)
         }
         if let remaining, let total, total > 0 {
