@@ -29,8 +29,13 @@ extension RunicCLI {
             }
         }
 
-        if meta.supportsOpus, let tertiary = snapshot.tertiary {
-            lines.append(Self.rateLine(title: meta.opusLabel ?? "Sonnet", window: tertiary, useColor: useColor))
+        if let tertiary = snapshot.tertiary {
+            // Opus-style providers keep their metadata label; others (a
+            // second MiniMax model, Gemini's third model, Copilot Chat) use
+            // the window's own label so it isn't mislabeled "Sonnet".
+            let fallbackTitle = meta.opusLabel ?? "Sonnet"
+            let title = meta.supportsOpus ? fallbackTitle : (tertiary.label ?? fallbackTitle)
+            lines.append(Self.rateLine(title: title, window: tertiary, useColor: useColor))
             if tertiary.hasKnownLimit != false, let reset = tertiary.resetDescription {
                 lines.append(Self.resetLine(reset))
             }

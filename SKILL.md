@@ -17,6 +17,7 @@ Runic is a SwiftPM macOS menu bar app with a bundled CLI. It shows AI provider u
 - `docs/architecture.md`: module map and app data flow.
 - `docs/providers.md`: provider fetch strategy overview.
 - `docs/provider.md`: provider implementation workflow and guardrails.
+- `docs/<provider>.md`: per-provider reference (29 files, one per provider) — auth model, endpoints, parsing, key files. Read the relevant provider doc before touching its code.
 - `docs/cli.md`: CLI commands and output contracts.
 - `docs/releasing.md`: release, signing, notarization, Sparkle, and Homebrew flow.
 
@@ -44,7 +45,7 @@ Use `./Scripts/compile_and_run.sh --wait` when the user needs a locally installe
 
 ## Provider Change Workflow
 
-1. Read `docs/provider.md` and `docs/providers.md`.
+1. Read `docs/provider.md`, `docs/providers.md`, and the per-provider doc at `docs/<provider>.md`.
 2. Keep provider identity siloed: never mix emails, org IDs, plans, login methods, cookies, or tokens across providers.
 3. Add or update the provider descriptor/fetcher in `Sources/RunicCore/Providers/<Provider>/`.
 4. Add settings UI through provider setting descriptors in `Sources/Runic/Providers/<Provider>/`.

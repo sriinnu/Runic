@@ -13,6 +13,9 @@ struct MiniMaxParsedUsage {
     let resetDescription: String?
     let planName: String?
     let modelName: String?
+    /// A second model's quota, when MiniMax reports more than one entry (for
+    /// example a "spark"/preview tier alongside the standard model).
+    let secondaryModel: MiniMaxWebParsing.ModelRemainsUsage?
 
     func toUsageSnapshot(updatedAt: Date) -> UsageSnapshot {
         let primary = RateWindow(
@@ -21,6 +24,17 @@ struct MiniMaxParsedUsage {
             resetsAt: self.resetsAt,
             resetDescription: self.resetDescription,
             label: self.modelName)
+        // Only one extra slot (tertiary) is available on UsageSnapshot, so a
+        // third-plus model quota is not shown yet — surfacing at least the
+        // second model beats always dropping it.
+        let tertiary = self.secondaryModel.map { model in
+            RateWindow(
+                usedPercent: min(100, max(0, model.usedPercent)),
+                windowMinutes: self.windowMinutes,
+                resetsAt: self.resetsAt,
+                resetDescription: self.resetDescription,
+                label: model.modelName)
+        }
         let identity = ProviderIdentitySnapshot(
             providerID: .minimax,
             accountEmail: nil,
@@ -29,7 +43,7 @@ struct MiniMaxParsedUsage {
         return UsageSnapshot(
             primary: primary,
             secondary: nil,
-            tertiary: nil,
+            tertiary: tertiary,
             providerCost: nil,
             updatedAt: updatedAt,
             identity: identity)
@@ -62,7 +76,8 @@ enum MiniMaxWebParsing {
             resetsAt: resetInfo?.resetsAt,
             resetDescription: resetInfo?.resetDescription,
             planName: planName,
-            modelName: nil)
+            modelName: nil,
+            secondaryModel: nil)
     }
 
     static func parseRemainsResponse(_ data: Data, now: Date = Date()) throws -> MiniMaxParsedUsage {
@@ -71,11 +86,16 @@ enum MiniMaxWebParsing {
         }
 
         if let base = json["base_resp"] as? [String: Any] {
-            let retcode = self.doubleValue(base["retcode"]).map(Int.init) ?? 0
+            let statusCode = (base["status_code"] as? Int)
+                ?? self.doubleValue(base["status_code"]).map(Int.init)
+                ?? self.doubleValue(base["retcode"]).map(Int.init)
+                ?? 0
             let success = base["success"] as? Bool
-            if success == false || retcode != 0 {
-                let msg = base["msg"] as? String ?? "unknown error"
-                if retcode == 1004 {
+            if success == false || statusCode != 0 {
+                let msg = (base["status_msg"] as? String)
+                    ?? (base["msg"] as? String)
+                    ?? "unknown error"
+                if statusCode == 1004 {
                     throw MiniMaxWebUsageError.notLoggedIn(msg)
                 }
                 throw MiniMaxWebUsageError.apiError(msg)
@@ -83,10 +103,24 @@ enum MiniMaxWebParsing {
         }
 
         let payload = (json["data"] as? [String: Any]) ?? json
-        guard let modelRemains = self.extractModelRemains(from: payload) else {
+        let allModelRemains = self.extractAllModelRemains(from: payload)
+        guard let modelRemains = allModelRemains.first else {
             throw MiniMaxWebUsageError.parseFailed("Missing model_remains usage")
         }
         let usage = modelRemains.usedPercent
+        // MiniMax may report more than one model quota (for example a
+        // "spark"/preview tier alongside the standard model) — keep the
+        // second one instead of always dropping it. Require a real, distinct
+        // name: an unnamed entry has nothing meaningful to label it with and
+        // would otherwise render as a misleading "Sonnet"/"Opus" fallback
+        // title downstream, and `nil != nil` would falsely look distinct.
+        let secondaryModel = allModelRemains.dropFirst().first { candidate in
+            guard let candidateName = candidate.modelName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !candidateName.isEmpty
+            else { return false }
+            let primaryName = modelRemains.modelName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return candidateName != primaryName
+        }
 
         let startTime = self.timestamp(payload["start_time"])
         let endTime = self.timestamp(payload["end_time"])
@@ -102,7 +136,8 @@ enum MiniMaxWebParsing {
             resetsAt: resetsAt,
             resetDescription: resetDescription,
             planName: planName,
-            modelName: modelRemains.modelName)
+            modelName: modelRemains.modelName,
+            secondaryModel: secondaryModel)
     }
 
     private static func extractCookieHeader(from text: String) -> String? {
@@ -233,48 +268,80 @@ enum MiniMaxWebParsing {
         }
     }
 
-    private struct ModelRemainsUsage {
+    struct ModelRemainsUsage {
         let usedPercent: Double
         let modelName: String?
     }
 
-    private static func extractModelRemains(from payload: [String: Any]) -> ModelRemainsUsage? {
+    /// Returns every model quota entry found under `model_remains` (or its
+    /// aliases). MiniMax may report more than one model — for example a
+    /// "spark"/preview tier alongside the standard model — so callers should
+    /// not assume only the first entry matters.
+    private static func extractAllModelRemains(from payload: [String: Any]) -> [ModelRemainsUsage] {
         if let model = payload["model_remains"] {
-            return self.extractUsagePercent(from: model)
+            return self.extractAllUsagePercents(from: model)
         }
         if let model = payload["model_remain"] {
-            return self.extractUsagePercent(from: model)
+            return self.extractAllUsagePercents(from: model)
         }
         if let model = payload["remains"] {
-            return self.extractUsagePercent(from: model)
+            return self.extractAllUsagePercents(from: model)
         }
-        return nil
+        return []
+    }
+
+    private static func extractAllUsagePercents(from value: Any) -> [ModelRemainsUsage] {
+        if let dicts = value as? [[String: Any]] {
+            return dicts.compactMap { self.extractUsagePercent(from: $0) }
+        }
+        if let single = self.extractUsagePercent(from: value) {
+            return [single]
+        }
+        return []
     }
 
     private static func extractUsagePercent(from value: Any) -> ModelRemainsUsage? {
-        if let dict = value as? [String: Any] {
-            let used = self.doubleValue(dict["used"] ?? dict["used_quota"] ?? dict["usedQuota"])
-            let total = self.doubleValue(dict["total"] ?? dict["total_quota"] ?? dict["totalQuota"])
-            let remaining = self.doubleValue(dict["remaining"] ?? dict["remaining_quota"] ?? dict["remainingQuota"])
-            let modelName = self.firstString(in: dict, keys: ["model_name", "model", "name", "label"])
+        guard let dict = value as? [String: Any] else { return nil }
+        let modelName = self.firstString(in: dict, keys: ["model_name", "model", "name", "label"])
 
-            if let used, let total, total > 0 {
+        // Pre-computed remaining percent (token_plan provides this directly).
+        if let remainingPct = self.doubleValue(dict["current_interval_remaining_percent"]) {
+            return ModelRemainsUsage(
+                usedPercent: min(100, max(0, 100 - remainingPct)),
+                modelName: modelName)
+        }
+
+        // Real API fields: current_interval_total_count / current_interval_usage_count.
+        // For coding_plan, usage_count = remaining; for token_plan, usage_count = used.
+        // Without knowing which endpoint we hit, fall back to the coding_plan
+        // interpretation (count = remaining) since that's what the web fetcher calls.
+        if let total = self.doubleValue(dict["current_interval_total_count"]),
+           total > 0
+        {
+            if let count = self.doubleValue(dict["current_interval_usage_count"]) {
+                let remaining = min(count, total)
+                let used = total - remaining
                 return ModelRemainsUsage(
                     usedPercent: min(100, max(0, used / total * 100)),
                     modelName: modelName)
             }
-            if let remaining, let total, total > 0 {
-                return ModelRemainsUsage(
-                    usedPercent: min(100, max(0, (total - remaining) / total * 100)),
-                    modelName: modelName)
-            }
+            return nil
         }
-        if let dicts = value as? [[String: Any]] {
-            for entry in dicts {
-                if let percent = self.extractUsagePercent(from: entry) {
-                    return percent
-                }
-            }
+
+        // Legacy fallback keys (pre-token_plan field names, kept for older endpoints).
+        let used = self.doubleValue(dict["used"] ?? dict["used_quota"] ?? dict["usedQuota"])
+        let total = self.doubleValue(dict["total"] ?? dict["total_quota"] ?? dict["totalQuota"])
+        let remaining = self.doubleValue(dict["remaining"] ?? dict["remaining_quota"] ?? dict["remainingQuota"])
+
+        if let used, let total, total > 0 {
+            return ModelRemainsUsage(
+                usedPercent: min(100, max(0, (total - used) / total * 100)),
+                modelName: modelName)
+        }
+        if let remaining, let total, total > 0 {
+            return ModelRemainsUsage(
+                usedPercent: min(100, max(0, (total - remaining) / total * 100)),
+                modelName: modelName)
         }
         return nil
     }
