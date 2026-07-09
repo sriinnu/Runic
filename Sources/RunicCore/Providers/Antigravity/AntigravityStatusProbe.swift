@@ -106,7 +106,12 @@ public struct AntigravityStatusProbe: Sendable {
             let port = Self.extractPort("--extension_server_port", from: match.command)
                 ?? Self.extractPort("--https_server_port", from: match.command)
             let effectivePort = port.flatMap { $0 > 0 ? $0 : nil }
-            return ProcessInfoResult(pid: match.pid, extensionPort: effectivePort, csrfToken: token, commandLine: match.command)
+            let result = ProcessInfoResult(pid: match.pid, extensionPort: effectivePort, csrfToken: token, commandLine: match.command)
+            self.log.info("Antigravity process detected", metadata: [
+                "pid": "\(result.pid)",
+                "httpPort": result.extensionPort.map(String.init) ?? "none",
+            ])
+            return result
         }
 
         if sawAntigravity {
@@ -190,9 +195,13 @@ public struct AntigravityStatusProbe: Sendable {
         csrfToken: String,
         timeout: TimeInterval) async throws -> Int
     {
+        Self.log.info("Probing Antigravity ports", metadata: ["ports": "\(ports)"])
         for port in ports {
             let ok = await Self.testPortConnectivity(port: port, csrfToken: csrfToken, timeout: timeout)
-            if ok { return port }
+            if ok {
+                Self.log.info("Antigravity port connected", metadata: ["port": "\(port)"])
+                return port
+            }
         }
         throw AntigravityStatusProbeError.portDetectionFailed("no working API port found")
     }
@@ -214,9 +223,9 @@ public struct AntigravityStatusProbe: Sendable {
                     timeout: timeout))
             return true
         } catch {
-            self.log.debug("Port probe failed", metadata: [
+            self.log.debug("Antigravity port probe failed", metadata: [
                 "port": "\(port)",
-                "error": error.localizedDescription,
+                "error": "\(error)",
             ])
             return false
         }
@@ -325,9 +334,20 @@ public struct AntigravityStatusProbe: Sendable {
 
 private final class InsecureSessionDelegate: NSObject {}
 
-extension InsecureSessionDelegate: URLSessionTaskDelegate {}
+extension InsecureSessionDelegate: URLSessionDelegate, URLSessionTaskDelegate {}
 
 extension InsecureSessionDelegate {
+    // macOS 26+ delivers SSL challenges at the session level.
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void)
+    {
+        completionHandler(self.challengeResult(challenge).disposition,
+                          self.challengeResult(challenge).credential)
+    }
+
+    // Older macOS / task-level fallback.
     func urlSession(
         _ session: URLSession,
         task: URLSessionTask,
