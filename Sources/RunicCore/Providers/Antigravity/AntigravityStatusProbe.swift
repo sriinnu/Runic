@@ -18,52 +18,97 @@ public struct AntigravityStatusProbe: Sendable {
     }
 
     public func fetch() async throws -> AntigravityStatusSnapshot {
-        let processInfo = try await Self.detectProcessInfo(timeout: self.timeout)
-        let ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: self.timeout)
-        let connectPort = try await Self.findWorkingPort(
-            ports: ports,
-            csrfToken: processInfo.csrfToken,
-            timeout: self.timeout)
-        let context = RequestContext(
-            httpsPort: connectPort,
-            httpPort: processInfo.extensionPort,
-            csrfToken: processInfo.csrfToken,
-            timeout: self.timeout)
+        let processes = try await Self.detectAllProcessInfos(timeout: self.timeout)
+        var lastError: Error = AntigravityStatusProbeError.notRunning
 
-        do {
-            let response = try await Self.makeRequest(
-                payload: RequestPayload(
-                    path: Self.getUserStatusPath,
-                    body: Self.defaultRequestBody()),
-                context: context)
-            return try Self.parseUserStatusResponse(response)
-        } catch {
-            let response = try await Self.makeRequest(
-                payload: RequestPayload(
-                    path: Self.commandModelConfigPath,
-                    body: Self.defaultRequestBody()),
-                context: context)
-            return try Self.parseCommandModelResponse(response)
-        }
-    }
+        for processInfo in processes {
+            let ports: [Int]
+            do {
+                ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: self.timeout)
+            } catch {
+                lastError = error
+                continue
+            }
 
-    public func fetchPlanInfoSummary() async throws -> AntigravityPlanInfoSummary? {
-        let processInfo = try await Self.detectProcessInfo(timeout: self.timeout)
-        let ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: self.timeout)
-        let connectPort = try await Self.findWorkingPort(
-            ports: ports,
-            csrfToken: processInfo.csrfToken,
-            timeout: self.timeout)
-        let response = try await Self.makeRequest(
-            payload: RequestPayload(
-                path: Self.getUserStatusPath,
-                body: Self.defaultRequestBody()),
-            context: RequestContext(
+            guard let connectPort = await Self.findFirstWorkingPort(
+                ports: ports, csrfToken: processInfo.csrfToken)
+            else {
+                continue
+            }
+
+            let context = RequestContext(
                 httpsPort: connectPort,
                 httpPort: processInfo.extensionPort,
                 csrfToken: processInfo.csrfToken,
-                timeout: self.timeout))
-        return try Self.parsePlanInfoSummary(response)
+                timeout: self.timeout)
+
+            do {
+                let response = try await Self.makeRequest(
+                    payload: RequestPayload(
+                        path: Self.getUserStatusPath,
+                        body: Self.defaultRequestBody()),
+                    context: context)
+                return try Self.parseUserStatusResponse(response)
+            } catch {
+                // On 401/403 the CSRF token may have rotated — try the next
+                // process instead of falling through to the command-config
+                // fallback which uses the same stale token.
+                if Self.isAuthError(error) { continue }
+                // Try command-config fallback with the same context.
+                do {
+                    let response = try await Self.makeRequest(
+                        payload: RequestPayload(
+                            path: Self.commandModelConfigPath,
+                            body: Self.defaultRequestBody()),
+                        context: context)
+                    return try Self.parseCommandModelResponse(response)
+                } catch {
+                    lastError = error
+                    continue
+                }
+            }
+        }
+
+        throw lastError
+    }
+
+    private static func isAuthError(_ error: Error) -> Bool {
+        let message = String(describing: error)
+        return message.contains("401") || message.contains("403")
+    }
+
+    public func fetchPlanInfoSummary() async throws -> AntigravityPlanInfoSummary? {
+        let processes = try await Self.detectAllProcessInfos(timeout: self.timeout)
+        var lastError: Error = AntigravityStatusProbeError.notRunning
+
+        for processInfo in processes {
+            let ports: [Int]
+            do {
+                ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: self.timeout)
+            } catch { lastError = error; continue }
+
+            guard let connectPort = await Self.findFirstWorkingPort(
+                ports: ports, csrfToken: processInfo.csrfToken)
+            else { continue }
+
+            do {
+                let response = try await Self.makeRequest(
+                    payload: RequestPayload(
+                        path: Self.getUserStatusPath,
+                        body: Self.defaultRequestBody()),
+                    context: RequestContext(
+                        httpsPort: connectPort,
+                        httpPort: processInfo.extensionPort,
+                        csrfToken: processInfo.csrfToken,
+                        timeout: self.timeout))
+                return try Self.parsePlanInfoSummary(response)
+            } catch {
+                lastError = error
+                continue
+            }
+        }
+
+        throw lastError
     }
 
     public static func isRunning(timeout: TimeInterval = 4.0) async -> Bool {
@@ -84,7 +129,9 @@ public struct AntigravityStatusProbe: Sendable {
         let commandLine: String
     }
 
-    private static func detectProcessInfo(timeout: TimeInterval) async throws -> ProcessInfoResult {
+    /// Returns every matching Antigravity process so that if one instance has
+    /// stale ports or an expired CSRF token, the probe can try the next.
+    private static func detectAllProcessInfos(timeout: TimeInterval) async throws -> [ProcessInfoResult] {
         let env = ProcessInfo.processInfo.environment
         let result = try await SubprocessRunner.run(
             binary: "/bin/ps",
@@ -93,9 +140,9 @@ public struct AntigravityStatusProbe: Sendable {
             timeout: timeout,
             label: "antigravity-ps")
 
-        let lines = result.stdout.split(separator: "\n")
+        var matches: [ProcessInfoResult] = []
         var sawAntigravity = false
-        for line in lines {
+        for line in result.stdout.split(separator: "\n") {
             let text = String(line)
             guard let match = Self.matchProcessLine(text) else { continue }
             let lower = match.command.lowercased()
@@ -106,18 +153,31 @@ public struct AntigravityStatusProbe: Sendable {
             let port = Self.extractPort("--extension_server_port", from: match.command)
                 ?? Self.extractPort("--https_server_port", from: match.command)
             let effectivePort = port.flatMap { $0 > 0 ? $0 : nil }
-            let result = ProcessInfoResult(pid: match.pid, extensionPort: effectivePort, csrfToken: token, commandLine: match.command)
+            let info = ProcessInfoResult(pid: match.pid, extensionPort: effectivePort, csrfToken: token, commandLine: match.command)
             self.log.info("Antigravity process detected", metadata: [
-                "pid": "\(result.pid)",
-                "httpPort": result.extensionPort.map(String.init) ?? "none",
+                "pid": "\(info.pid)",
+                "httpPort": info.extensionPort.map(String.init) ?? "none",
             ])
-            return result
+            matches.append(info)
         }
 
-        if sawAntigravity {
+        if matches.isEmpty && sawAntigravity {
             throw AntigravityStatusProbeError.missingCSRFToken
         }
-        throw AntigravityStatusProbeError.notRunning
+        if matches.isEmpty {
+            throw AntigravityStatusProbeError.notRunning
+        }
+        return matches
+    }
+
+    /// Single-process lookup used by `isRunning` / `detectVersion`. Returns the
+    /// first match only.
+    private static func detectProcessInfo(timeout: TimeInterval) async throws -> ProcessInfoResult {
+        let all = try await self.detectAllProcessInfos(timeout: timeout)
+        guard let first = all.first else {
+            throw AntigravityStatusProbeError.notRunning
+        }
+        return first
     }
 
     private struct ProcessLineMatch {
@@ -172,9 +232,18 @@ public struct AntigravityStatusProbe: Sendable {
 
         let ports = Self.parseListeningPorts(result.stdout)
         if ports.isEmpty {
+            // The process may have exited between ps and lsof.
+            if !Self.isPIDAlive(pid) {
+                throw AntigravityStatusProbeError.portDetectionFailed(
+                    "Antigravity (pid \(pid)) exited; restart Antigravity and retry.")
+            }
             throw AntigravityStatusProbeError.portDetectionFailed("no listening ports found")
         }
         return ports
+    }
+
+    private static func isPIDAlive(_ pid: Int) -> Bool {
+        Darwin.kill(Int32(pid), 0) == 0
     }
 
     private static func parseListeningPorts(_ output: String) -> [Int] {
@@ -190,26 +259,31 @@ public struct AntigravityStatusProbe: Sendable {
         return ports.sorted()
     }
 
-    private static func findWorkingPort(
+    /// Maximum number of ports probed before giving up.
+    private static let maxPortProbeCount = 5
+    /// Per-port timeout (seconds) — much shorter than the overall fetch timeout
+    /// so that a non-HTTPS port doesn't stall the probe for 8 seconds.
+    private static let portProbeTimeout: TimeInterval = 2.0
+
+    private static func findFirstWorkingPort(
         ports: [Int],
-        csrfToken: String,
-        timeout: TimeInterval) async throws -> Int
+        csrfToken: String) async -> Int?
     {
-        Self.log.info("Probing Antigravity ports", metadata: ["ports": "\(ports)"])
-        for port in ports {
-            let ok = await Self.testPortConnectivity(port: port, csrfToken: csrfToken, timeout: timeout)
+        let budget = min(ports.count, Self.maxPortProbeCount)
+        Self.log.info("Probing Antigravity ports", metadata: ["ports": "\(ports.prefix(budget))"])
+        for port in ports.prefix(budget) {
+            let ok = await Self.testPortConnectivity(port: port, csrfToken: csrfToken)
             if ok {
                 Self.log.info("Antigravity port connected", metadata: ["port": "\(port)"])
                 return port
             }
         }
-        throw AntigravityStatusProbeError.portDetectionFailed("no working API port found")
+        return nil
     }
 
     private static func testPortConnectivity(
         port: Int,
-        csrfToken: String,
-        timeout: TimeInterval) async -> Bool
+        csrfToken: String) async -> Bool
     {
         do {
             _ = try await self.makeRequest(
@@ -220,7 +294,7 @@ public struct AntigravityStatusProbe: Sendable {
                     httpsPort: port,
                     httpPort: nil,
                     csrfToken: csrfToken,
-                    timeout: timeout))
+                    timeout: Self.portProbeTimeout))
             return true
         } catch {
             self.log.debug("Antigravity port probe failed", metadata: [
@@ -343,8 +417,8 @@ extension InsecureSessionDelegate {
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void)
     {
-        completionHandler(self.challengeResult(challenge).disposition,
-                          self.challengeResult(challenge).credential)
+        let result = Self.resolveChallenge(challenge)
+        completionHandler(result.disposition, result.credential)
     }
 
     // Older macOS / task-level fallback.
@@ -354,19 +428,24 @@ extension InsecureSessionDelegate {
         didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping @MainActor @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void)
     {
-        let result = self.challengeResult(challenge)
+        let result = Self.resolveChallenge(challenge)
         Task { @MainActor in
             completionHandler(result.disposition, result.credential)
         }
     }
 
-    private func challengeResult(_ challenge: URLAuthenticationChallenge) -> (
+    private static func resolveChallenge(_ challenge: URLAuthenticationChallenge) -> (
         disposition: URLSession.AuthChallengeDisposition,
         credential: URLCredential?)
     {
         #if canImport(FoundationNetworking)
         return (.performDefaultHandling, nil)
         #else
+        // Only trust self-signed certs on localhost — never on any other host.
+        let host = challenge.protectionSpace.host
+        guard host == "127.0.0.1" || host == "localhost" else {
+            return (.performDefaultHandling, nil)
+        }
         if let trust = challenge.protectionSpace.serverTrust {
             return (.useCredential, URLCredential(trust: trust))
         }
