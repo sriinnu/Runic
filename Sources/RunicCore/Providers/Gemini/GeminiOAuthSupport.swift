@@ -136,30 +136,62 @@ extension GeminiStatusProbe {
 
     private static func extractOAuthCredentials() -> GeminiOAuthClientCredentials? {
         let env = ProcessInfo.processInfo.environment
+        let fm = FileManager.default
 
-        guard let geminiPath = BinaryLocator.resolveGeminiBinary(
+        // Collect every candidate Gemini binary — PATH may find a wrapper
+        // before the real CLI (e.g. a Python script shadowing the Homebrew
+        // Node.js binary).
+        var candidates: [String] = []
+        if let path = BinaryLocator.resolveGeminiBinary(
             env: env,
             loginPATH: LoginShellPathCache.shared.current)
             ?? TTYCommandRunner.which("gemini")
-        else {
-            return nil
+        {
+            candidates.append(path)
+        }
+        // Homebrew (ARM Mac).
+        if fm.isExecutableFile(atPath: "/opt/homebrew/bin/gemini") {
+            candidates.append("/opt/homebrew/bin/gemini")
+        }
+        // Homebrew (Intel Mac).
+        if fm.isExecutableFile(atPath: "/usr/local/bin/gemini") {
+            candidates.append("/usr/local/bin/gemini")
         }
 
-        let fm = FileManager.default
-        var realPath = geminiPath
-        if let resolved = try? fm.destinationOfSymbolicLink(atPath: geminiPath) {
-            if resolved.hasPrefix("/") {
-                realPath = resolved
-            } else {
-                realPath = (geminiPath as NSString).deletingLastPathComponent + "/" + resolved
+        for geminiPath in candidates {
+            var realPath = geminiPath
+            if let resolved = try? fm.destinationOfSymbolicLink(atPath: geminiPath) {
+                if resolved.hasPrefix("/") {
+                    realPath = resolved
+                } else {
+                    realPath = (geminiPath as NSString).deletingLastPathComponent + "/" + resolved
+                }
             }
+
+            self.oauthLog.info("Trying Gemini candidate", metadata: [
+                "original": geminiPath,
+                "resolved": realPath,
+            ])
+
+            if let creds = self.searchOAuthFile(realPath: realPath, fm: fm) {
+                return creds
+            }
+            self.oauthLog.warning("No OAuth file found at candidate", metadata: [
+                "resolved": realPath,
+            ])
         }
 
-        // Homebrew path: .../libexec/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js
-        // Bun/npm path: .../node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js (sibling package)
+        self.oauthLog.error("No OAuth credentials in any Gemini candidate", metadata: [
+            "count": "\(candidates.count)",
+        ])
+        return nil
+    }
+
+    private static func searchOAuthFile(realPath: String, fm: FileManager) -> GeminiOAuthClientCredentials? {
         let binDir = (realPath as NSString).deletingLastPathComponent
         let baseDir = (binDir as NSString).deletingLastPathComponent
 
+        // Old path: .../libexec/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js
         let oauthSubpath =
             "node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/oauth2.js"
         let oauthFile = "dist/src/code_assist/oauth2.js"
@@ -173,6 +205,19 @@ extension GeminiStatusProbe {
         for path in possiblePaths {
             if let content = try? String(contentsOfFile: path, encoding: .utf8) {
                 return self.parseOAuthCredentials(from: content)
+            }
+        }
+
+        // Gemini CLI 0.43+ bundles OAuth into a single file with a hash suffix.
+        let bundleBase = "\(baseDir)/libexec/lib/node_modules/@google/gemini-cli/bundle"
+        if let bundleFiles = try? fm.contentsOfDirectory(atPath: bundleBase) {
+            for file in bundleFiles where file.hasPrefix("oauth2") && file.hasSuffix(".js") {
+                let path = "\(bundleBase)/\(file)"
+                if let content = try? String(contentsOfFile: path, encoding: .utf8) {
+                    if let creds = self.parseOAuthCredentials(from: content) {
+                        return creds
+                    }
+                }
             }
         }
 
