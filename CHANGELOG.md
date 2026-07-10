@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.1 — 2026-07-10
+- MiniMax: switched to `token_plan/remains` endpoint (Bearer auth), added weekly quota display, fixed web parsing field names to match real API response. Multi-model quotas now surface correctly.
+- Antigravity: fixed process detection for v2.2.1+ (renamed binary), added URLSessionDelegate for macOS 27 SSL challenges, multi-process probing with cumulative deadline, TLS host validation, port-probe timeout caps.
+- Gemini: extended OAuth credential search to Homebrew paths and Gemini CLI 0.43+ bundled format.
+- UI: menu card padding uniformity — header/content/empty-state sections all align at 12px, section spacing unified.
+- Docs: 29 provider documentation files covering every supported provider.
+- Internal: 13 code-review findings fixed across 3 independent adversarial reviews. Model name tolerance, network error retry, symlink chain resolution.
+
 ## 2.5.0 — 2026-07-03
 - Illustrations: added Runi, a vector mascot drawn entirely in SwiftUI (no bitmap art) that now appears across every empty state instead of bare "no data" text, with four moods and full Reduce Motion support.
 - Usage: fixed a critical bug where reopening the app after it had been closed overnight could seal today's still-in-progress data into the permanent history archive during gap catch-up — history now stays correct across app restarts. Also fixed a Codex token-accounting bug that double-counted cached input tokens.
