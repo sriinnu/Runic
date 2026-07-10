@@ -272,15 +272,16 @@ public struct MiniMaxUsageFetcher: Sendable {
                 }
 
             // Build weekly quota when the endpoint supplies a non-zero total.
-            let weeklyQuota: MiniMaxModelQuota?
-            if let weeklyTotal = primaryModel.currentWeeklyTotalCount, weeklyTotal > 0 {
-                weeklyQuota = MiniMaxModelQuota(
+            let weeklyQuota: MiniMaxModelQuota? = if let weeklyTotal = primaryModel.currentWeeklyTotalCount,
+                                                     weeklyTotal > 0
+            {
+                MiniMaxModelQuota(
                     total: weeklyTotal,
                     used: primaryModel.currentWeeklyUsageCount ?? 0,
                     modelName: primaryName,
                     remainingPercent: primaryModel.currentWeeklyRemainingPercent)
             } else {
-                weeklyQuota = nil
+                nil
             }
 
             let sessionWindowMinutes = Self.windowMinutes(
