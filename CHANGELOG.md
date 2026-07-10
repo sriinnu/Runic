@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.2 — 2026-07-10
+- Antigravity: show all reported models sorted by most-constrained first, pick Claude variant with most remaining quota instead of arbitrary first match.
+- z.ai: fixed provider not appearing in the main panel after entering API key — availability check now reads Keychain directly and reacts to settings changes immediately.
+- UI: menu item hover highlight now fills edge-to-edge (removed 6px horizontal inset), card header and content sections align uniformly at 12px padding.
+
 ## 2.5.1 — 2026-07-10
 - MiniMax: switched to `token_plan/remains` endpoint (Bearer auth), added weekly quota display, fixed web parsing field names to match real API response. Multi-model quotas now surface correctly.
 - Antigravity: fixed process detection for v2.2.1+ (renamed binary), added URLSessionDelegate for macOS 27 SSL challenges, multi-process probing with cumulative deadline, TLS host validation, port-probe timeout caps.
