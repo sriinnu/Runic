@@ -50,8 +50,11 @@ public enum ProviderTokenResolver {
         self.zaiResolution(environment: environment)?.token
     }
 
-    public static func copilotToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
-        self.copilotResolution(environment: environment)?.token
+    public static func copilotToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        allowKeychain: Bool = true) -> String?
+    {
+        self.copilotResolution(environment: environment, allowKeychain: allowKeychain)?.token
     }
 
     public static func copilotCLIToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
@@ -169,9 +172,12 @@ public enum ProviderTokenResolver {
     }
 
     public static func copilotResolution(
-        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        allowKeychain: Bool = true) -> ProviderTokenResolution?
     {
-        if let token = self.keychainToken(service: self.keychainService, account: self.copilotAccount) {
+        if allowKeychain,
+           let token = self.keychainToken(service: self.keychainService, account: self.copilotAccount)
+        {
             return ProviderTokenResolution(token: token, source: .keychain, sourceKey: "copilot-api-token")
         }
         if let token = self.cleaned(environment["COPILOT_API_TOKEN"]) {

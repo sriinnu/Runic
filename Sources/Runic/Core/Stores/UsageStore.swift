@@ -106,6 +106,8 @@ final class UsageStore {
     var lastAutoRefreshDisableAt: Date?
     @ObservationIgnored var autoRefreshRunCount: Int = 0
     @ObservationIgnored var autoRefreshWarningSent: Bool = false
+    @ObservationIgnored var menuOpenRefreshCount: Int = 0
+    @ObservationIgnored var lastMenuOpenRefreshAt: Date?
     @ObservationIgnored var suppressNextSettingsRefresh: Bool = false
     @ObservationIgnored var lastUsageDeltaAt: [UsageProvider: Date] = [:]
     @ObservationIgnored var lastLedgerActivityAt: [UsageProvider: Date] = [:]

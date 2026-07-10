@@ -50,6 +50,56 @@ struct UsageStoreMenuOpenPingTests {
         #expect(store.shouldPingOnMenuOpen(provider: .codex, now: Date()) == true)
     }
 
+    @Test
+    func `menu-open ping budget is capped per session`() {
+        let store = self.makeStore(suiteName: "UsageStoreMenuOpenPingTests-budget")
+        let now = Date()
+        let age = UsageStore.menuOpenSnapshotMaxAge + 1
+        store.snapshots[.codex] = self.snapshot(updatedAt: now.addingTimeInterval(-age))
+
+        #expect(store.shouldPingOnMenuOpen(provider: .codex, now: now) == true)
+        store.menuOpenRefreshCount = PerformanceConstants.maxPingsPerSession
+        #expect(store.shouldPingOnMenuOpen(provider: .codex, now: now) == false)
+    }
+
+    @Test
+    func `menu-open ping budget resets after stale window`() {
+        let store = self.makeStore(suiteName: "UsageStoreMenuOpenPingTests-budget-reset")
+        let now = Date()
+        let age = UsageStore.menuOpenSnapshotMaxAge + 1
+        store.snapshots[.codex] = self.snapshot(updatedAt: now.addingTimeInterval(-age))
+        store.menuOpenRefreshCount = PerformanceConstants.maxPingsPerSession
+        store.lastMenuOpenRefreshAt = now.addingTimeInterval(-(UsageStore.menuOpenSnapshotMaxAge + 1))
+
+        #expect(store.shouldPingOnMenuOpen(provider: .codex, now: now) == true)
+    }
+
+    @Test
+    func `menu-open age threshold honors configured refresh cadence`() {
+        let store = self.makeStore(suiteName: "UsageStoreMenuOpenPingTests-cadence")
+        store.settings.refreshFrequency = .fifteenMinutes
+        let now = Date()
+        store.snapshots[.codex] = self.snapshot(updatedAt: now.addingTimeInterval(-301))
+        #expect(store.shouldPingOnMenuOpen(provider: .codex, now: now) == false)
+
+        store.snapshots[.codex] = self.snapshot(updatedAt: now.addingTimeInterval(-901))
+        #expect(store.shouldPingOnMenuOpen(provider: .codex, now: now) == true)
+    }
+
+    @Test
+    func `stale and missing states bypass menu-open aged budget cap`() {
+        let store = self.makeStore(suiteName: "UsageStoreMenuOpenPingTests-cap-bypass")
+        let now = Date()
+        store.menuOpenRefreshCount = PerformanceConstants.maxPingsPerSession
+
+        store.errors[.codex] = "boom"
+        #expect(store.shouldPingOnMenuOpen(provider: .codex, now: now) == true)
+
+        store.errors.removeValue(forKey: .codex)
+        store.snapshots.removeValue(forKey: .codex)
+        #expect(store.shouldPingOnMenuOpen(provider: .codex, now: now) == true)
+    }
+
     private func snapshot(updatedAt: Date) -> UsageSnapshot {
         UsageSnapshot(
             primary: RateWindow(

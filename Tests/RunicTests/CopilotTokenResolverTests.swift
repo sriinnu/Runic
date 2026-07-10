@@ -10,7 +10,7 @@ struct CopilotTokenResolverTests {
             "GITHUB_TOKEN": "github-token",
             "GH_TOKEN": "gh-fallback-token",
         ]
-        let resolution = ProviderTokenResolver.copilotResolution(environment: env)
+        let resolution = ProviderTokenResolver.copilotResolution(environment: env, allowKeychain: false)
         #expect(resolution?.token == "copilot-env-token")
         #expect(resolution?.source == .environment)
         #expect(resolution?.sourceKey == "COPILOT_API_TOKEN")
@@ -22,7 +22,7 @@ struct CopilotTokenResolverTests {
             "GITHUB_TOKEN": "github-token",
             "GH_TOKEN": "gh-fallback-token",
         ]
-        let resolution = ProviderTokenResolver.copilotResolution(environment: env)
+        let resolution = ProviderTokenResolver.copilotResolution(environment: env, allowKeychain: false)
         #expect(resolution?.token == "github-token")
         #expect(resolution?.sourceKey == "GITHUB_TOKEN")
     }
@@ -33,7 +33,7 @@ struct CopilotTokenResolverTests {
             "GH_TOKEN": "gh-fallback-token",
             "GITHUB_TOKEN": "",
         ]
-        let resolution = ProviderTokenResolver.copilotResolution(environment: env)
+        let resolution = ProviderTokenResolver.copilotResolution(environment: env, allowKeychain: false)
         #expect(resolution?.token == "gh-fallback-token")
         #expect(resolution?.sourceKey == "GH_TOKEN")
     }
@@ -57,7 +57,7 @@ struct CopilotTokenResolverTests {
             "GH_CONFIG_DIR": tempDir.path,
             "GH_TOKEN": "",
         ]
-        let resolution = ProviderTokenResolver.copilotResolution(environment: env)
+        let resolution = ProviderTokenResolver.copilotResolution(environment: env, allowKeychain: false)
         #expect(resolution?.token == token)
         #expect(resolution?.source == .environment)
         #expect(resolution?.sourceKey == "gh-cli")
@@ -68,7 +68,7 @@ struct CopilotTokenResolverTests {
         let env = [
             "COPILOT_API_TOKEN": "\"quoted-token\"",
         ]
-        let token = ProviderTokenResolver.copilotToken(environment: env)
+        let token = ProviderTokenResolver.copilotToken(environment: env, allowKeychain: false)
         #expect(token == "quoted-token")
     }
 }
