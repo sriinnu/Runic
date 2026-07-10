@@ -58,7 +58,7 @@ public struct AntigravityStatusSnapshot: Sendable {
     /// (primary/secondary/tertiary) show what's closest to running out.
     /// No hand-picked selection — every model Antigravity reports is surfaced.
     private static func selectModels(_ models: [AntigravityModelQuota]) -> [AntigravityModelQuota] {
-        return models.sorted { $0.remainingPercent < $1.remainingPercent }
+        models.sorted { $0.remainingPercent < $1.remainingPercent }
     }
 
     private static func formattedModelLabel(_ quota: AntigravityModelQuota) -> String {
