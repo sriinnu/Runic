@@ -51,11 +51,11 @@ extension UsageStore {
     }
 
     /// A successful snapshot older than this is still worth a background ping
-    /// when the user opens the menu. Matches the slowest auto-refresh cadence
-    /// (`RefreshFrequency.fifteenMinutes`): once a snapshot is a full
-    /// slowest-cycle interval old, something (sleep, a dropped timer, an
-    /// inactive-provider skip) has kept it from refreshing on its own.
-    static let menuOpenSnapshotMaxAge: TimeInterval = 15 * 60
+    /// when the user opens the menu.
+    ///
+    /// This is the lower bound; slower configured refresh cadences expand the
+    /// effective menu-open ping threshold so we do not over-refresh.
+    static let menuOpenSnapshotMaxAge: TimeInterval = PerformanceConstants.staleDuration
 
     /// Whether opening a menu should trigger a background refresh ping.
     ///
@@ -65,16 +65,19 @@ extension UsageStore {
     /// stale-but-successful data used to never re-ping on menu open. With no
     /// specific provider (merged/fallback menus), any aged snapshot counts.
     func shouldPingOnMenuOpen(provider: UsageProvider?, now: Date = Date()) -> Bool {
+        self.resetMenuOpenRefreshBudgetIfNeeded(now: now)
+        let budgetAvailable = self.menuOpenRefreshCount < PerformanceConstants.maxPingsPerSession
+        let maxAge = self.menuOpenPingWindow()
         func aged(_ snapshot: UsageSnapshot) -> Bool {
-            now.timeIntervalSince(snapshot.updatedAt) > Self.menuOpenSnapshotMaxAge
+            now.timeIntervalSince(snapshot.updatedAt) > maxAge
         }
         if let provider {
             if self.isStale(provider: provider) { return true }
             guard let snapshot = self.snapshots[provider] else { return true }
-            return aged(snapshot)
+            return budgetAvailable && aged(snapshot)
         }
         if self.isStale { return true }
-        return self.snapshots.values.contains(where: aged)
+        return budgetAvailable && self.snapshots.values.contains(where: aged)
     }
 
     func isEnabled(_ provider: UsageProvider) -> Bool {
@@ -96,6 +99,9 @@ extension UsageStore {
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
         guard !self.isRefreshing else { return }
         let now = Date()
+        if trigger == .menuOpen {
+            self.resetMenuOpenRefreshBudgetIfNeeded(now: now)
+        }
         if trigger.isAuto, !self.shouldRunAutoRefresh(trigger: trigger, now: now) {
             return
         }
@@ -140,6 +146,24 @@ extension UsageStore {
 
         await self.refreshCustomProviders()
         self.persistWidgetSnapshot(reason: "refresh")
+        if trigger == .menuOpen {
+            self.menuOpenRefreshCount += 1
+            self.lastMenuOpenRefreshAt = now
+        }
+    }
+
+    private func resetMenuOpenRefreshBudgetIfNeeded(now: Date) {
+        guard let last = self.lastMenuOpenRefreshAt else { return }
+        guard now.timeIntervalSince(last) >= self.menuOpenPingWindow() else { return }
+        self.menuOpenRefreshCount = 0
+        self.lastMenuOpenRefreshAt = nil
+    }
+
+    private func menuOpenPingWindow() -> TimeInterval {
+        guard let cadenceSeconds = self.settings.refreshFrequency.seconds else {
+            return Self.menuOpenSnapshotMaxAge
+        }
+        return max(Self.menuOpenSnapshotMaxAge, TimeInterval(cadenceSeconds))
     }
 
     func bindSettings() {
