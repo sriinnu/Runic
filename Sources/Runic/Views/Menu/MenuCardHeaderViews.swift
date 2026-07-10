@@ -132,8 +132,8 @@ struct UsageMenuCardHeaderView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, RunicSpacing.xs)
-        .padding(.vertical, RunicSpacing.xs)
+        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+        .padding(.vertical, RunicSpacing.sm)
         .background(self.headerBackground)
         .overlay(self.headerBorder)
     }

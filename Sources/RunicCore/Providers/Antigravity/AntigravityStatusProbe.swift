@@ -18,13 +18,17 @@ public struct AntigravityStatusProbe: Sendable {
     }
 
     public func fetch() async throws -> AntigravityStatusSnapshot {
+        let deadline = Date().addingTimeInterval(self.timeout)
         let processes = try await Self.detectAllProcessInfos(timeout: self.timeout)
         var lastError: Error = AntigravityStatusProbeError.notRunning
 
         for processInfo in processes {
+            guard Date() < deadline else { break }
+
             let ports: [Int]
             do {
-                ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: self.timeout)
+                let lsofTimeout = min(self.timeout, 3.0)
+                ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: lsofTimeout)
             } catch {
                 lastError = error
                 continue
@@ -33,14 +37,18 @@ public struct AntigravityStatusProbe: Sendable {
             guard let connectPort = await Self.findFirstWorkingPort(
                 ports: ports, csrfToken: processInfo.csrfToken)
             else {
+                lastError = AntigravityStatusProbeError.portDetectionFailed(
+                    "no working API port found for pid \(processInfo.pid)")
                 continue
             }
+
+            guard Date() < deadline else { break }
 
             let context = RequestContext(
                 httpsPort: connectPort,
                 httpPort: processInfo.extensionPort,
                 csrfToken: processInfo.csrfToken,
-                timeout: self.timeout)
+                timeout: min(self.timeout, deadline.timeIntervalSinceNow))
 
             do {
                 let response = try await Self.makeRequest(
@@ -73,23 +81,36 @@ public struct AntigravityStatusProbe: Sendable {
     }
 
     private static func isAuthError(_ error: Error) -> Bool {
-        let message = String(describing: error)
-        return message.contains("401") || message.contains("403")
+        if let apiErr = error as? AntigravityStatusProbeError,
+           case let .apiError(message) = apiErr,
+           message.contains("HTTP 401") || message.contains("HTTP 403") {
+            return true
+        }
+        return false
     }
 
     public func fetchPlanInfoSummary() async throws -> AntigravityPlanInfoSummary? {
+        let deadline = Date().addingTimeInterval(self.timeout)
         let processes = try await Self.detectAllProcessInfos(timeout: self.timeout)
         var lastError: Error = AntigravityStatusProbeError.notRunning
 
         for processInfo in processes {
+            guard Date() < deadline else { break }
+
             let ports: [Int]
             do {
-                ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: self.timeout)
+                ports = try await Self.listeningPorts(pid: processInfo.pid, timeout: min(self.timeout, 3.0))
             } catch { lastError = error; continue }
 
             guard let connectPort = await Self.findFirstWorkingPort(
                 ports: ports, csrfToken: processInfo.csrfToken)
-            else { continue }
+            else {
+                lastError = AntigravityStatusProbeError.portDetectionFailed(
+                    "no working API port found for pid \(processInfo.pid)")
+                continue
+            }
+
+            guard Date() < deadline else { break }
 
             do {
                 let response = try await Self.makeRequest(
@@ -100,7 +121,7 @@ public struct AntigravityStatusProbe: Sendable {
                         httpsPort: connectPort,
                         httpPort: processInfo.extensionPort,
                         csrfToken: processInfo.csrfToken,
-                        timeout: self.timeout))
+                        timeout: min(self.timeout, deadline.timeIntervalSinceNow)))
                 return try Self.parsePlanInfoSummary(response)
             } catch {
                 lastError = error

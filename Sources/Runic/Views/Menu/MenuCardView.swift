@@ -2,28 +2,33 @@ import RunicCore
 import SwiftUI
 
 /// **Menu Card Layout Metrics**
-/// Defines all spacing and padding constants for the menu card UI.
-/// These values are carefully tuned for readability and visual hierarchy.
+///
+/// Architecture: the card's outer VStack owns vertical padding only.
+/// Horizontal padding is the responsibility of each child section
+/// (header, content, empty-state) so they all use the same inset and
+/// their backgrounds fill the full card width uniformly.
 enum MenuCardMetrics {
-    /// Horizontal padding on left/right edges of card content
+    /// Shared horizontal inset used by every card child section.
     static let horizontalPadding: CGFloat = RunicSpacing.sm // 12
 
-    /// Top padding for the header section (provider name, email)
-    static let headerTopPadding: CGFloat = RunicSpacing.xxs // 4
+    // MARK: - Outer card padding (vertical only — owned by the card)
 
-    /// Bottom padding for the header section
-    static let headerBottomPadding: CGFloat = RunicSpacing.xxs // 4
+    static let cardTopPadding: CGFloat = RunicSpacing.xs // 8
+    static let cardBottomPadding: CGFloat = RunicSpacing.xs // 8
 
-    /// Top padding for content sections (usage, credits, cost)
+    // MARK: - Section-specific padding (backward-compatible aliases)
+
+    static let headerTopPadding: CGFloat = cardTopPadding
+    static let headerBottomPadding: CGFloat = cardBottomPadding
     static let sectionTopPadding: CGFloat = RunicSpacing.xs // 8
+    static let sectionBottomPadding: CGFloat = RunicSpacing.xs // 8
 
-    /// Bottom padding for content sections
-    static let sectionBottomPadding: CGFloat = RunicSpacing.xxs // 4
+    // MARK: - Internal spacing
 
     /// Vertical spacing between major sections (e.g., Session vs Weekly)
-    static let sectionSpacing: CGFloat = RunicSpacing.xs // 8
+    static let sectionSpacing: CGFloat = RunicSpacing.sm // 12
 
-    /// Spacing between related blocks of content
+    /// Vertical spacing between related blocks of content within a section.
     static let blockSpacing: CGFloat = RunicSpacing.xs // 8
 
     /// Spacing between individual text lines within a section
@@ -185,6 +190,7 @@ struct UsageMenuCardView: View {
                         providerName: self.model.providerName,
                         placeholder: placeholder,
                         isHighlighted: self.isHighlighted)
+                        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
                 }
             } else {
                 let hasUsage = !self.model.metrics.isEmpty
@@ -296,12 +302,12 @@ struct UsageMenuCardView: View {
                         InsightsContent(section: insights)
                     }
                 }
+                .padding(.horizontal, MenuCardMetrics.horizontalPadding)
                 .padding(.bottom, self.model.creditsText == nil ? MenuCardMetrics.tailPadding : 0)
             }
         }
-        .padding(.horizontal, MenuCardMetrics.horizontalPadding)
-        .padding(.top, MenuCardMetrics.headerTopPadding)
-        .padding(.bottom, MenuCardMetrics.headerBottomPadding)
+        .padding(.top, MenuCardMetrics.cardTopPadding)
+        .padding(.bottom, MenuCardMetrics.cardBottomPadding)
         .frame(width: self.width, alignment: .leading)
     }
 

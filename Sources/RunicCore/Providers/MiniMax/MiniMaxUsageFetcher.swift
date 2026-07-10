@@ -15,7 +15,7 @@ public struct MiniMaxQuotaResponse: Decodable {
 }
 
 public struct MiniMaxModelRemain: Decodable {
-    public let modelName: String
+    public let modelName: String?
     public let currentIntervalTotalCount: Int
     public let currentIntervalUsageCount: Int
     public let currentIntervalRemainingPercent: Double?
@@ -250,15 +250,18 @@ public struct MiniMaxUsageFetcher: Sendable {
                 throw MiniMaxUsageError.parseFailed("No model quota found")
             }
 
-            let primaryName = primaryModel.modelName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let primaryName = primaryModel.modelName?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
             // Only surface additional entries that have a real, distinct model
             // name and a non-zero quota.
             let additionalModels: [MiniMaxModelQuota] = models
                 .filter { $0.modelName != primaryModel.modelName }
                 .filter {
-                    let name = $0.modelName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    return !name.isEmpty && $0.currentIntervalTotalCount > 0
+                    let name = ($0.modelName ?? "")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    return !name.isEmpty && name != primaryName
+                        && $0.currentIntervalTotalCount > 0
                 }
                 .map {
                     MiniMaxModelQuota(
@@ -312,16 +315,29 @@ public struct MiniMaxUsageFetcher: Sendable {
 
     // MARK: - HTTP helpers
 
-    /// Single retry for transient server errors (5xx) with a 2-second backoff.
+    /// Single retry for transient failures (5xx + common network errors)
+    /// with a 2-second backoff.
     private static func performRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        func shouldRetry(_ error: Error?, statusCode: Int?) -> Bool {
+            if let code = statusCode, (500...599).contains(code) { return true }
+            if let urlError = error as? URLError {
+                switch urlError.code {
+                case .timedOut, .cannotConnectToHost, .networkConnectionLost,
+                     .dnsLookupFailed, .notConnectedToInternet:
+                    return true
+                default: break
+                }
+            }
+            return false
+        }
+
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 return (data, response)
             }
-            // Retry once on server errors.
-            if (500...599).contains(http.statusCode) {
-                Self.log.debug("MiniMax 5xx, retrying after 2s", metadata: [
+            if shouldRetry(nil, statusCode: http.statusCode) {
+                Self.log.debug("MiniMax retrying after 2s", metadata: [
                     "status": "\(http.statusCode)",
                 ])
                 try await Task.sleep(nanoseconds: 2_000_000_000)
@@ -329,6 +345,13 @@ public struct MiniMaxUsageFetcher: Sendable {
             }
             return (data, response)
         } catch {
+            if shouldRetry(error, statusCode: nil) {
+                Self.log.debug("MiniMax retrying after network error", metadata: [
+                    "error": "\(error)",
+                ])
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+                return try await URLSession.shared.data(for: request)
+            }
             throw error
         }
     }

@@ -305,7 +305,11 @@ enum MiniMaxWebParsing {
         let modelName = self.firstString(in: dict, keys: ["model_name", "model", "name", "label"])
 
         // Pre-computed remaining percent (token_plan provides this directly).
-        if let remainingPct = self.doubleValue(dict["current_interval_remaining_percent"]) {
+        // Only trusted when a non-zero total is also present — a lone
+        // remaining_percent with no quota context is ambiguous.
+        if let remainingPct = self.doubleValue(dict["current_interval_remaining_percent"]),
+           let totalVal = self.doubleValue(dict["current_interval_total_count"]), totalVal > 0
+        {
             return ModelRemainsUsage(
                 usedPercent: min(100, max(0, 100 - remainingPct)),
                 modelName: modelName)
