@@ -3,6 +3,26 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.5.1</title>
+            <pubDate>Fri, 10 Jul 2026 11:11:47 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>82</sparkle:version>
+            <sparkle:shortVersionString>2.5.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.5.1</h2>
+<ul>
+<li>MiniMax: switched to <code>token_plan/remains</code> endpoint (Bearer auth), added weekly quota display, fixed web parsing field names to match real API response. Multi-model quotas now surface correctly.</li>
+<li>Antigravity: fixed process detection for v2.2.1+ (renamed binary), added URLSessionDelegate for macOS 27 SSL challenges, multi-process probing with cumulative deadline, TLS host validation, port-probe timeout caps.</li>
+<li>Gemini: extended OAuth credential search to Homebrew paths and Gemini CLI 0.43+ bundled format.</li>
+<li>UI: menu card padding uniformity — header/content/empty-state sections all align at 12px, section spacing unified.</li>
+<li>Docs: 29 provider documentation files covering every supported provider.</li>
+<li>Internal: 13 code-review findings fixed across 3 independent adversarial reviews. Model name tolerance, network error retry, symlink chain resolution.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.1/Runic-2.5.1.zip" length="33996925" type="application/octet-stream" sparkle:edSignature="WAlIRuePFEsg/oirqWyVsFSQSwbDl24MH5hc0WvYP5qVHwW58+QAqje4ivzvScnqw2i7z6zDvwh5MbAAv3+eDQ=="/>
+        </item>
+        <item>
             <title>2.5.0</title>
             <pubDate>Fri, 03 Jul 2026 13:43:50 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -46,18 +66,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic71-69.delta" sparkle:deltaFrom="69" length="3627598" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LnVT/UJbmvm8tf5GWdoFNk+yuST4pYNCUKfD1Tv4/YcjJPl6gHbalxMRIgQU3SqZaaBFwGoDnZwKC6SRHBQABg=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic71-67.delta" sparkle:deltaFrom="67" length="12643870" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Qd7Dk5ISQpexWoiPYhHg2TZXtLYsnu7u/E9qB9UpsUpCq195AeOXFW7FPKXNd2MCEFe7XD/sGfzzlVXrON+sDg=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.4.0</title>
-            <pubDate>Sun, 21 Jun 2026 23:14:27 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>69</sparkle:version>
-            <sparkle:shortVersionString>2.4.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic-2.4.0.zip" length="33061806" type="application/octet-stream" sparkle:edSignature="g4phYm/aLxl3LIfgZDD5+BmDAgbxwTF8pmLNalOSSyjMwc0M6PT5UYnlnKmVgCjcIC2A1xlSUtvTtwZv2nxGDQ=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.0/Runic69-67.delta" sparkle:deltaFrom="67" length="12548898" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="OTBsaJsYr3FHHAWWuleU4grTQ8V7di8NwlAnSUtnxmG4ZrqVYrYpNF7EEJUoBZbZYx77FbnxfstIKfv11lzEBQ=="/>
             </sparkle:deltas>
         </item>
         <item>

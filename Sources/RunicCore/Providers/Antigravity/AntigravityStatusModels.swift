@@ -54,40 +54,11 @@ public struct AntigravityStatusSnapshot: Sendable {
             label: self.formattedModelLabel(quota))
     }
 
+    /// Sorts all models by most-constrained first so the top 3 slots
+    /// (primary/secondary/tertiary) show what's closest to running out.
+    /// No hand-picked selection — every model Antigravity reports is surfaced.
     private static func selectModels(_ models: [AntigravityModelQuota]) -> [AntigravityModelQuota] {
-        var ordered: [AntigravityModelQuota] = []
-        if let claude = models.first(where: { Self.isClaudeWithoutThinking($0.label) }) {
-            ordered.append(claude)
-        }
-        if let pro = models.first(where: { Self.isGeminiProLow($0.label) }),
-           !ordered.contains(where: { $0.label == pro.label })
-        {
-            ordered.append(pro)
-        }
-        if let flash = models.first(where: { Self.isGeminiFlash($0.label) }),
-           !ordered.contains(where: { $0.label == flash.label })
-        {
-            ordered.append(flash)
-        }
-        if ordered.isEmpty {
-            ordered.append(contentsOf: models.sorted(by: { $0.remainingPercent < $1.remainingPercent }))
-        }
-        return ordered
-    }
-
-    private static func isClaudeWithoutThinking(_ label: String) -> Bool {
-        let lower = label.lowercased()
-        return lower.contains("claude") && !lower.contains("thinking")
-    }
-
-    private static func isGeminiProLow(_ label: String) -> Bool {
-        let lower = label.lowercased()
-        return lower.contains("pro") && lower.contains("low")
-    }
-
-    private static func isGeminiFlash(_ label: String) -> Bool {
-        let lower = label.lowercased()
-        return lower.contains("gemini") && lower.contains("flash")
+        return models.sorted { $0.remainingPercent < $1.remainingPercent }
     }
 
     private static func formattedModelLabel(_ quota: AntigravityModelQuota) -> String {
