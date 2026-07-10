@@ -3,6 +3,23 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.5.2</title>
+            <pubDate>Fri, 10 Jul 2026 12:47:03 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>83</sparkle:version>
+            <sparkle:shortVersionString>2.5.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.5.2</h2>
+<ul>
+<li>Antigravity: show all reported models sorted by most-constrained first, pick Claude variant with most remaining quota instead of arbitrary first match.</li>
+<li>z.ai: fixed provider not appearing in the main panel after entering API key — availability check now reads Keychain directly and reacts to settings changes immediately.</li>
+<li>UI: menu item hover highlight now fills edge-to-edge (removed 6px horizontal inset), card header and content sections align uniformly at 12px padding.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.2/Runic-2.5.2.zip" length="33985216" type="application/octet-stream" sparkle:edSignature="wtKuoYgvDukAl3tK5kKOUrJM8mSUBGIB5xjCfsC9g4bfbWVhwawmtwbBPxsO4VFkV4e8M5f70NYAPC6MwhnLCA=="/>
+        </item>
+        <item>
             <title>2.5.1</title>
             <pubDate>Fri, 10 Jul 2026 11:11:47 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -46,27 +63,6 @@
 <p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
 ]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.0/Runic-2.5.0.zip" length="33863633" type="application/octet-stream" sparkle:edSignature="u1kLdmfB2Gqi1WjYuiLNkd7b/ZyJcuPXomMGQ/7SMmjJzgbjjr0vj9TL/MjJmLm/oseqjB4vzhqprv/+zCxOCg=="/>
-        </item>
-        <item>
-            <title>2.4.1</title>
-            <pubDate>Sat, 27 Jun 2026 03:05:32 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>71</sparkle:version>
-            <sparkle:shortVersionString>2.4.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.4.1</h2>
-<ul>
-<li>Kimi: you can now point the provider at the right region. Subscriptions bought on the China platform (api.moonshot.cn), or routed through a reseller/proxy, no longer fail to load — set an optional "API base URL" in Preferences → Providers → Kimi (defaults to api.moonshot.ai, also honors MOONSHOT_BASE_URL / KIMI_BASE_URL). Kimi also now shows your real account balance from the Moonshot balance API instead of only listing available models.</li>
-<li>Custom providers: adding or editing a provider now reports failures inline in the editor instead of silently doing nothing, keeps your input when a save fails, and no longer loses the second of two stacked dialogs — fixing a case where the add/edit sheet could appear to do nothing.</li>
-<li>Provider icons: corrected four logos. Kimi's mark was invisible on light backgrounds and now renders in its brand color; Gemini uses its current "spark" mark; Auggie shows the real Augment logo; and Factory shows Factory.ai's emblem instead of an unrelated placeholder.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic-2.4.1.zip" length="33099736" type="application/octet-stream" sparkle:edSignature="yMZRWGMrZLVydmIcb2CS6U5gJPIsQvrIxElgfvC44cp3aymXcdEXp4ilUT/Z02d/j6pIgxCIyv9PkZwRLGFmDg=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic71-69.delta" sparkle:deltaFrom="69" length="3627598" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LnVT/UJbmvm8tf5GWdoFNk+yuST4pYNCUKfD1Tv4/YcjJPl6gHbalxMRIgQU3SqZaaBFwGoDnZwKC6SRHBQABg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.4.1/Runic71-67.delta" sparkle:deltaFrom="67" length="12643870" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="862864" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Qd7Dk5ISQpexWoiPYhHg2TZXtLYsnu7u/E9qB9UpsUpCq195AeOXFW7FPKXNd2MCEFe7XD/sGfzzlVXrON+sDg=="/>
-            </sparkle:deltas>
         </item>
         <item>
             <title>0.14.0</title>
