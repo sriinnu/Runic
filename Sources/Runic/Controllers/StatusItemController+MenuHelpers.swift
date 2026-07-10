@@ -126,7 +126,6 @@ extension StatusItemController {
                             cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
                             style: .continuous)
                             .fill(self.runicTheme.accent.opacity(0.18))
-                            .padding(.horizontal, RunicSpacing.compact)
                             .padding(.vertical, RunicSpacing.xxxs)
                     }
                 }
