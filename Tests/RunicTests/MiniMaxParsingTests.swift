@@ -89,7 +89,8 @@ struct MiniMaxParsingTests {
           "data": {
             "model_remains": [
               { "current_interval_total_count": 100, "current_interval_usage_count": 20, "model_name": "MiniMax-M2" },
-              { "current_interval_total_count": 50, "current_interval_usage_count": 5, "model_name": "MiniMax-M2-Spark" }
+              { "current_interval_total_count": 50, "current_interval_usage_count": 5,
+                "model_name": "MiniMax-M2-Spark" }
             ],
             "plan_name": "MiniMax Pro"
           }
