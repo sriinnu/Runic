@@ -148,8 +148,11 @@ extension UsageStore {
 
     private func isProviderAvailable(_ provider: UsageProvider) -> Bool {
         if provider == .zai {
-            // Read directly from Keychain + env, not from settings.zaiAPIToken
-            // which is never populated unless the user types in the field.
+            // Check settings property first (reactive to user input), then
+            // fall back to Keychain/env (catches tokens stored by CLI).
+            if !self.settings.zaiAPIToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return true
+            }
             return ProviderTokenResolver.zaiToken(environment: self.processEnvironment) != nil
         }
         return true
