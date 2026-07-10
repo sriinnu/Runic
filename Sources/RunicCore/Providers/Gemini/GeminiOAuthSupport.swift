@@ -140,33 +140,27 @@ extension GeminiStatusProbe {
 
         // Collect every candidate Gemini binary — PATH may find a wrapper
         // before the real CLI (e.g. a Python script shadowing the Homebrew
-        // Node.js binary).
-        var candidates: [String] = []
+        // Node.js binary). Use a Set so duplicates don't cause redundant I/O.
+        var candidateSet = Set<String>()
         if let path = BinaryLocator.resolveGeminiBinary(
             env: env,
             loginPATH: LoginShellPathCache.shared.current)
             ?? TTYCommandRunner.which("gemini")
         {
-            candidates.append(path)
+            candidateSet.insert(path)
         }
         // Homebrew (ARM Mac).
         if fm.isExecutableFile(atPath: "/opt/homebrew/bin/gemini") {
-            candidates.append("/opt/homebrew/bin/gemini")
+            candidateSet.insert("/opt/homebrew/bin/gemini")
         }
         // Homebrew (Intel Mac).
         if fm.isExecutableFile(atPath: "/usr/local/bin/gemini") {
-            candidates.append("/usr/local/bin/gemini")
+            candidateSet.insert("/usr/local/bin/gemini")
         }
 
-        for geminiPath in candidates {
-            var realPath = geminiPath
-            if let resolved = try? fm.destinationOfSymbolicLink(atPath: geminiPath) {
-                if resolved.hasPrefix("/") {
-                    realPath = resolved
-                } else {
-                    realPath = (geminiPath as NSString).deletingLastPathComponent + "/" + resolved
-                }
-            }
+        for geminiPath in candidateSet {
+            // Resolve all symlink hops, not just the first one.
+            let realPath = (geminiPath as NSString).resolvingSymlinksInPath
 
             self.oauthLog.info("Trying Gemini candidate", metadata: [
                 "original": geminiPath,
@@ -182,7 +176,7 @@ extension GeminiStatusProbe {
         }
 
         self.oauthLog.error("No OAuth credentials in any Gemini candidate", metadata: [
-            "count": "\(candidates.count)",
+            "count": "\(candidateSet.count)",
         ])
         return nil
     }
