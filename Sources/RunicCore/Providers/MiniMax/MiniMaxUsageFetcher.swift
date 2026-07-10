@@ -213,10 +213,11 @@ public struct MiniMaxUsageFetcher: Sendable {
 
         var request = URLRequest(url: URL(string: quotaAPIURL)!)
         request.httpMethod = "GET"
+        request.timeoutInterval = 15
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await Self.performRequest(request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw MiniMaxUsageError.networkError("Invalid response")
@@ -306,6 +307,29 @@ public struct MiniMaxUsageFetcher: Sendable {
         } catch {
             Self.log.error("MiniMax parsing error: \(error.localizedDescription)")
             throw MiniMaxUsageError.parseFailed(error.localizedDescription)
+        }
+    }
+
+    // MARK: - HTTP helpers
+
+    /// Single retry for transient server errors (5xx) with a 2-second backoff.
+    private static func performRequest(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                return (data, response)
+            }
+            // Retry once on server errors.
+            if (500...599).contains(http.statusCode) {
+                Self.log.debug("MiniMax 5xx, retrying after 2s", metadata: [
+                    "status": "\(http.statusCode)",
+                ])
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+                return try await URLSession.shared.data(for: request)
+            }
+            return (data, response)
+        } catch {
+            throw error
         }
     }
 
