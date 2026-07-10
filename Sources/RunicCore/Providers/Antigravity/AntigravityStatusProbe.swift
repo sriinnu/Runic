@@ -83,7 +83,8 @@ public struct AntigravityStatusProbe: Sendable {
     private static func isAuthError(_ error: Error) -> Bool {
         if let apiErr = error as? AntigravityStatusProbeError,
            case let .apiError(message) = apiErr,
-           message.contains("HTTP 401") || message.contains("HTTP 403") {
+           message.contains("HTTP 401") || message.contains("HTTP 403")
+        {
             return true
         }
         return false
@@ -174,7 +175,11 @@ public struct AntigravityStatusProbe: Sendable {
             let port = Self.extractPort("--extension_server_port", from: match.command)
                 ?? Self.extractPort("--https_server_port", from: match.command)
             let effectivePort = port.flatMap { $0 > 0 ? $0 : nil }
-            let info = ProcessInfoResult(pid: match.pid, extensionPort: effectivePort, csrfToken: token, commandLine: match.command)
+            let info = ProcessInfoResult(
+                pid: match.pid,
+                extensionPort: effectivePort,
+                csrfToken: token,
+                commandLine: match.command)
             self.log.info("Antigravity process detected", metadata: [
                 "pid": "\(info.pid)",
                 "httpPort": info.extensionPort.map(String.init) ?? "none",
@@ -182,7 +187,7 @@ public struct AntigravityStatusProbe: Sendable {
             matches.append(info)
         }
 
-        if matches.isEmpty && sawAntigravity {
+        if matches.isEmpty, sawAntigravity {
             throw AntigravityStatusProbeError.missingCSRFToken
         }
         if matches.isEmpty {
@@ -315,7 +320,7 @@ public struct AntigravityStatusProbe: Sendable {
                     httpsPort: port,
                     httpPort: nil,
                     csrfToken: csrfToken,
-                    timeout: Self.portProbeTimeout))
+                    timeout: self.portProbeTimeout))
             return true
         } catch {
             self.log.debug("Antigravity port probe failed", metadata: [
@@ -432,7 +437,7 @@ private final class InsecureSessionDelegate: NSObject {}
 extension InsecureSessionDelegate: URLSessionDelegate, URLSessionTaskDelegate {}
 
 extension InsecureSessionDelegate {
-    // macOS 26+ delivers SSL challenges at the session level.
+    /// macOS 26+ delivers SSL challenges at the session level.
     func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
@@ -442,7 +447,7 @@ extension InsecureSessionDelegate {
         completionHandler(result.disposition, result.credential)
     }
 
-    // Older macOS / task-level fallback.
+    /// Older macOS / task-level fallback.
     func urlSession(
         _ session: URLSession,
         task: URLSessionTask,
