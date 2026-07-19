@@ -105,8 +105,6 @@ Runic is open source. Sponsorship is optional and should fund maintenance, signi
 
 MPL-2.0. See [LICENSE](LICENSE).
 
-Historical releases published before this license change retain their original license terms.
-
 <div align="center">
 
 Built by [Srinivas Pendela](https://github.com/sriinnu)
