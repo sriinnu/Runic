@@ -194,6 +194,7 @@ struct UsageMenuCardView: View {
                     MenuEmptyStateView(
                         providerName: self.model.providerName,
                         placeholder: placeholder,
+                        needsCredentials: self.model.needsCredentials,
                         isHighlighted: self.isHighlighted)
                         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
                 }
