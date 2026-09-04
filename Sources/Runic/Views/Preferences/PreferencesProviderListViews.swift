@@ -28,7 +28,7 @@ struct ProviderListView: View {
                 let isFirstProvider = provider == self.providers.first
                 let isLastProvider = provider == self.providers.last
                 let shouldShowDivider = provider != self.providers.last
-                let cnSibling = ProviderRegionalGrouping.cnSiblingByParent[provider]
+                let cnSibling = provider.chinaSibling
                 let hasTrailingContent = (isEnabled && !(fields.isEmpty && toggles.isEmpty)) || cnSibling != nil
                 let showDividerOnProviderRow = shouldShowDivider && !hasTrailingContent
                 let providerAddsBottomPadding = isLastProvider && !hasTrailingContent

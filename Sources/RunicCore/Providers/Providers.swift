@@ -12,7 +12,9 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case antigravity
     case copilot
     case zai
+    case zaiCN
     case minimax
+    case minimaxCN
     case openrouter
     case vercelai
     case groq
@@ -22,8 +24,6 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case perplexity
     case kimi
     case kimiCN
-    case zaiCN
-    case minimaxCN
     case stepfun
     case stepfunCN
     case auggie

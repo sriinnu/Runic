@@ -12,18 +12,15 @@ struct ProvidersPane: View {
     @State private var settingsLastAppActiveRunAtByID: [String: Date] = [:]
     @State private var activeConfirmation: ProviderSettingsConfirmationState?
     @State private var sidebarSelection: UsageProvider?
+    @State private var sidebarRegion: ProviderRegion = .international
     @Environment(\.runicTheme) private var runicTheme
 
+    /// One entry per brand. A brand with a China platform (Kimi, GLM, MiniMax,
+    /// Qwen, StepFun) is a single row here; its two account slots live inside
+    /// that row — nested in the list layout (`ProviderListView.regionalSiblingSection`),
+    /// behind a region switch in the sidebar detail.
     private var providers: [UsageProvider] {
-        self.settings.orderedProviders()
-    }
-
-    /// The list layout nests region-specific siblings (e.g. Kimi China) under
-    /// their parent instead of showing them as independent top-level cards —
-    /// see `ProviderListView.regionalSiblingSection`. Sidebar layout keeps the
-    /// full flat list.
-    private var listLayoutProviders: [UsageProvider] {
-        self.providers.filter { !ProviderRegionalGrouping.cnSiblingIDs.contains($0) }
+        self.settings.orderedBrandProviders()
     }
 
     var body: some View {
@@ -71,7 +68,7 @@ struct ProvidersPane: View {
                 }
 
                 ProviderListView(
-                    providers: self.listLayoutProviders,
+                    providers: self.providers,
                     store: self.store,
                     isEnabled: { provider in self.binding(for: provider) },
                     subtitle: { provider in self.providerSubtitle(provider) },
@@ -143,6 +140,23 @@ struct ProvidersPane: View {
 
     // MARK: - Sidebar layout
 
+    /// International | China switch for a brand with two account slots. Each
+    /// region is its own provider slot underneath, so usage, history, and the
+    /// key field all follow the selection.
+    private func regionSwitcher(for brand: UsageProvider) -> some View {
+        Picker("Account", selection: self.$sidebarRegion) {
+            ForEach(ProviderRegion.allCases) { region in
+                Text(region.displayName).tag(region)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(maxWidth: 360)
+        .padding(.horizontal, ProviderListMetrics.contentInset)
+        .padding(.top, RunicSpacing.sm)
+        .accessibilityLabel("\(self.store.metadata(for: brand).displayName) account region")
+    }
+
     private var sidebarLayout: some View {
         NavigationSplitView {
             List(selection: self.$sidebarSelection) {
@@ -176,21 +190,31 @@ struct ProvidersPane: View {
             .onChange(of: self.providers) { _, _ in
                 self.normalizeSidebarSelection()
             }
+            .onChange(of: self.sidebarSelection) { _, selected in
+                if selected?.chinaSibling == nil { self.sidebarRegion = .international }
+            }
         } detail: {
             if let selected = self.sidebarSelection {
-                ProviderSidebarDetailView(
-                    provider: selected,
-                    store: self.store,
-                    isEnabled: self.binding(for: selected),
-                    subtitle: self.providerSubtitle(selected),
-                    usageStatus: self.providerUsageStatus(selected),
-                    sourceLabel: self.providerSourceLabel(selected),
-                    statusLabel: self.providerStatusLabel(selected),
-                    settingsToggles: self.extraSettingsToggles(for: selected),
-                    settingsFields: self.extraSettingsFields(for: selected),
-                    errorDisplay: self.providerErrorDisplay(selected),
-                    isErrorExpanded: self.expandedBinding(for: selected),
-                    onCopyError: { text in self.copyToPasteboard(text) })
+                let detailProvider = selected.slot(for: self.sidebarRegion) ?? selected
+                VStack(spacing: 0) {
+                    if selected.chinaSibling != nil {
+                        self.regionSwitcher(for: selected)
+                    }
+                    ProviderSidebarDetailView(
+                        provider: detailProvider,
+                        store: self.store,
+                        isEnabled: self.binding(for: detailProvider),
+                        subtitle: self.providerSubtitle(detailProvider),
+                        usageStatus: self.providerUsageStatus(detailProvider),
+                        sourceLabel: self.providerSourceLabel(detailProvider),
+                        statusLabel: self.providerStatusLabel(detailProvider),
+                        settingsToggles: self.extraSettingsToggles(for: detailProvider),
+                        settingsFields: self.extraSettingsFields(for: detailProvider),
+                        errorDisplay: self.providerErrorDisplay(detailProvider),
+                        isErrorExpanded: self.expandedBinding(for: detailProvider),
+                        onCopyError: { text in self.copyToPasteboard(text) })
+                        .id(detailProvider)
+                }
             } else {
                 Text("Select a provider")
                     .font(self.fonts.title3)

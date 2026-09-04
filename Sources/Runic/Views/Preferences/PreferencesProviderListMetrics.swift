@@ -12,22 +12,6 @@ struct ProviderUsageStatus {
     }
 }
 
-/// Providers that are region-specific siblings of another provider (separate
-/// account/API key, same brand — e.g. Kimi vs Kimi China). The Providers list
-/// nests the sibling under its parent instead of showing it as an
-/// independent top-level card, and hides it behind an "Add <region>" link
-/// until a credential exists.
-enum ProviderRegionalGrouping {
-    static let cnSiblingByParent: [UsageProvider: UsageProvider] = [
-        .kimi: .kimiCN,
-        .zai: .zaiCN,
-        .minimax: .minimaxCN,
-        .stepfun: .stepfunCN,
-        .qwen: .qwenCN,
-    ]
-    static let cnSiblingIDs: Set<UsageProvider> = Set(cnSiblingByParent.values)
-}
-
 enum ProviderListMetrics {
     static let contentInset: CGFloat = 16
     static let listHeaderCornerRadius: CGFloat = RunicCornerRadius.md

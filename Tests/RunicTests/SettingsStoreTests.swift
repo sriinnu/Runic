@@ -432,4 +432,55 @@ struct SettingsStoreTests {
 
         #expect(storeB.orderedProviders().first == .antigravity)
     }
+
+    @Test
+    func `china slots stay pinned after their parent even when saved order scatters them`() throws {
+        let suite = "SettingsStoreTests-providerOrder-regional"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defaults.set(true, forKey: "providerDetectionCompleted")
+        // Mimic a saved order from a build that appended the new cases at the end.
+        defaults.set(
+            [UsageProvider.kimiCN.rawValue, UsageProvider.zai.rawValue, UsageProvider.kimi.rawValue],
+            forKey: "providerOrder")
+
+        let store = SettingsStore(
+            userDefaults: defaults,
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+
+        let ordered = store.orderedProviders()
+        for (parent, sibling) in UsageProvider.chinaSiblingByParent {
+            let parentIndex = try #require(ordered.firstIndex(of: parent))
+            #expect(ordered[parentIndex + 1] == sibling, "\(sibling) must follow \(parent)")
+        }
+        // Saved brand order is respected (zai before kimi) with each pair adjacent.
+        let zaiIndex = try #require(ordered.firstIndex(of: .zai))
+        let kimiIndex = try #require(ordered.firstIndex(of: .kimi))
+        #expect(zaiIndex < kimiIndex)
+        #expect(ordered.filter(\.isChinaSlot).count == UsageProvider.chinaSiblingByParent.count)
+        #expect(store.orderedBrandProviders().allSatisfy { !$0.isChinaSlot })
+
+        // Moving by brand offset keeps the pair together.
+        let kimiBrandIndex = try #require(store.orderedBrandProviders().firstIndex(of: .kimi))
+        store.moveProvider(fromOffsets: IndexSet(integer: kimiBrandIndex), toOffset: 0)
+        #expect(Array(store.orderedProviders().prefix(2)) == [.kimi, .kimiCN])
+    }
+
+    @Test
+    func `regional pairs are symmetric and compact names collapse the China suffix`() {
+        for (parent, sibling) in UsageProvider.chinaSiblingByParent {
+            #expect(sibling.regionalParent == parent)
+            #expect(parent.chinaSibling == sibling)
+            #expect(parent.slot(for: .china) == sibling)
+            #expect(sibling.slot(for: .international) == parent)
+            #expect(sibling.brandRoot == parent)
+        }
+        #expect(UsageProvider.compactDisplayName("Kimi (China)") == "Kimi CN")
+        #expect(UsageProvider.compactDisplayName("Kimi") == "Kimi")
+    }
 }

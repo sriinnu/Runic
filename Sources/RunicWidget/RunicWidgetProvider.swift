@@ -10,9 +10,11 @@ enum ProviderChoice: String, AppEnum {
     case antigravity
     case cursor
     case zai
+    case zaiCN
     case factory
     case copilot
     case minimax
+    case minimaxCN
     case openrouter
     case vercelai
     case groq
@@ -22,8 +24,6 @@ enum ProviderChoice: String, AppEnum {
     case perplexity
     case kimi
     case kimiCN
-    case zaiCN
-    case minimaxCN
     case stepfun
     case stepfunCN
     case auggie

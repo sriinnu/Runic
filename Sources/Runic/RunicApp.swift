@@ -282,6 +282,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if self.startScreenshotRendererIfRequested() { return }
         if Self.terminateIfDuplicateInstance() { return }
         AppNotifications.shared.requestAuthorizationOnStartup()
+        self.settings?.migrateKimiChinaOverrideIfNeeded()
         self.applyInitialConfig()
         self.store?.startRuntime()
         self.ensureStatusController()
