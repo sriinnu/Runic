@@ -207,6 +207,9 @@ final class UsageStore {
         self.runtimeStarted = true
         self.detectVersions()
         self.refreshPathDebugInfo()
+        // Keys already present (Keychain or env) add their provider before the
+        // first refresh, so a fresh install with KIMI_API_KEY exported shows Kimi.
+        self.autoEnableProvidersWithCredentials()
         LoginShellPathCache.shared.captureOnce { [weak self] _ in
             Task { @MainActor in self?.refreshPathDebugInfo() }
         }

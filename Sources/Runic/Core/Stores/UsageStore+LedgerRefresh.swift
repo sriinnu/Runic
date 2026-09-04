@@ -107,12 +107,18 @@ extension UsageStore {
         // kimi/deepseek calls routed through Claude Code) arrive via entry.provider
         // and land in the per-provider buckets even though they have no source of
         // their own; without unioning the data keys here, that usage would be
-        // computed and then silently dropped. Gate on enabled so disabled
-        // providers don't accumulate state.
+        // computed and then silently dropped. A provider the user never toggled
+        // is switched on by that evidence; one the user explicitly disabled stays
+        // off and accumulates nothing. Ledger data needs no live credential, so
+        // gate on the saved toggle rather than on live-fetch availability.
         var providers = Set(result.providers)
         providers.formUnion(result.dailyByProvider.keys)
         providers.formUnion(result.modelBreakdownsByProvider.keys)
-        for provider in providers where self.isEnabled(provider) {
+        for provider in providers {
+            self.autoEnableProviderWithLedgerData(provider)
+            guard self.settings.isProviderEnabledCached(
+                provider: provider, metadataByProvider: self.providerMetadata)
+            else { continue }
             self.applyLedgerRefreshResult(result, provider: provider)
         }
         self.sendBudgetNotificationsIfNeeded()

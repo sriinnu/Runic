@@ -39,6 +39,9 @@ public enum ProviderCredentialKeychainMigration {
     ]
 
     public static func migrateKnownLegacyItems() -> ProviderCredentialMigrationSummary {
+        guard RunicKeychainAccessPolicy.processMayUseKeychain else {
+            return ProviderCredentialMigrationSummary(migratedAccounts: [], blockedAccounts: [], failedAccounts: [])
+        }
         #if canImport(Security)
         guard self.legacyMigrationEnabled else {
             return ProviderCredentialMigrationSummary(migratedAccounts: [], blockedAccounts: [], failedAccounts: [])
@@ -76,6 +79,7 @@ public enum ProviderCredentialKeychainMigration {
 
     public static func token(account: String) -> String? {
         #if canImport(Security)
+        guard RunicKeychainAccessPolicy.processMayUseKeychain else { return nil }
         if let token = self.read(service: RunicKeychainService.providerCredentials, account: account).token {
             return token
         }

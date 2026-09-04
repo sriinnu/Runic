@@ -561,21 +561,68 @@ public enum ProviderTokenResolver {
         return nil
     }
 
+    /// Resolve the API credential for any key-based provider (Keychain first, then
+    /// its environment variables). Nil for providers that don't authenticate with an
+    /// API key (Codex, Claude, Gemini, Cursor, …) or when nothing is configured.
+    /// This is the one place that knows which resolver belongs to which provider —
+    /// startup discovery uses it to switch on providers that already have a key.
+    ///
+    /// Pass `allowKeychain: false` to consult only the environment — safe to call
+    /// in bulk without touching the keychain at all.
+    public static func credentialResolution(
+        for provider: UsageProvider,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        allowKeychain: Bool = true) -> ProviderTokenResolution?
+    {
+        guard let resolver = self.credentialResolvers[provider] else { return nil }
+        if allowKeychain { return resolver(environment) }
+        return self.$keychainReadsAllowed.withValue(false) { resolver(environment) }
+    }
+
+    private typealias CredentialResolver = @Sendable ([String: String]) -> ProviderTokenResolution?
+
+    private static let credentialResolvers: [UsageProvider: CredentialResolver] = [
+        .zai: { ProviderTokenResolver.zaiResolution(environment: $0) },
+        .zaiCN: { ProviderTokenResolver.zaiCNResolution(environment: $0) },
+        .copilot: { ProviderTokenResolver.copilotResolution(environment: $0) },
+        .minimax: { ProviderTokenResolver.minimaxResolution(environment: $0) },
+        .minimaxCN: { ProviderTokenResolver.minimaxCNResolution(environment: $0) },
+        .openrouter: { ProviderTokenResolver.openRouterResolution(environment: $0) },
+        .vercelai: { ProviderTokenResolver.vercelAIResolution(environment: $0) },
+        .groq: { ProviderTokenResolver.groqResolution(environment: $0) },
+        .deepseek: { ProviderTokenResolver.deepSeekResolution(environment: $0) },
+        .fireworks: { ProviderTokenResolver.fireworksResolution(environment: $0) },
+        .mistral: { ProviderTokenResolver.mistralResolution(environment: $0) },
+        .perplexity: { ProviderTokenResolver.perplexityResolution(environment: $0) },
+        .kimi: { ProviderTokenResolver.kimiResolution(environment: $0) },
+        .kimiCN: { ProviderTokenResolver.kimiCNResolution(environment: $0) },
+        .stepfun: { ProviderTokenResolver.stepfunResolution(environment: $0) },
+        .stepfunCN: { ProviderTokenResolver.stepfunCNResolution(environment: $0) },
+        .auggie: { ProviderTokenResolver.auggieResolution(environment: $0) },
+        .together: { ProviderTokenResolver.togetherResolution(environment: $0) },
+        .cohere: { ProviderTokenResolver.cohereResolution(environment: $0) },
+        .xai: { ProviderTokenResolver.xaiResolution(environment: $0) },
+        .cerebras: { ProviderTokenResolver.cerebrasResolution(environment: $0) },
+        .sambanova: { ProviderTokenResolver.sambaNovaResolution(environment: $0) },
+        .azure: { ProviderTokenResolver.azureOpenAIResolution(environment: $0) },
+        .qwen: { ProviderTokenResolver.qwenResolution(environment: $0) },
+        .qwenCN: { ProviderTokenResolver.qwenCNResolution(environment: $0) },
+    ]
+
     /// Whether the given provider currently resolves a credential (keychain or env).
     /// Used to hide unconfigured China variants from the menu *synchronously* — in
     /// manual-refresh mode there is no async refresh to reveal an empty provider, so
     /// the menu reads the keychain directly instead of waiting on fetch attempts.
+    /// Providers without an API-key resolver report `true` (nothing to check).
     public static func hasCredential(
         for provider: UsageProvider,
         environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool
     {
         switch provider {
-        case .kimiCN: self.kimiCNResolution(environment: environment) != nil
-        case .zaiCN: self.zaiCNResolution(environment: environment) != nil
-        case .minimaxCN: self.minimaxCNResolution(environment: environment) != nil
-        case .stepfunCN: self.stepfunCNResolution(environment: environment) != nil
-        case .qwenCN: self.qwenCNResolution(environment: environment) != nil
-        default: true
+        case .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN:
+            self.credentialResolution(for: provider, environment: environment) != nil
+        default:
+            true
         }
     }
 

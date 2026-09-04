@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct AppDelegateTests {
     @Test
-    func `builds status controller after launch`() {
+    func `builds status controller after launch`() throws {
         let appDelegate = AppDelegate()
         var factoryCalls = 0
 
@@ -21,7 +21,14 @@ struct AppDelegateTests {
             AppDelegate.duplicateInstanceCheckDisabledForTests = false
         }
 
+        // Isolated defaults: launching runs provider discovery, which must never
+        // write toggles into the developer's real Runic preferences.
+        let suite = "AppDelegateTests-launch"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defaults.set(true, forKey: "providerDetectionCompleted")
         let settings = SettingsStore(
+            userDefaults: defaults,
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),

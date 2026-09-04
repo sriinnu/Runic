@@ -74,6 +74,13 @@ extension SettingsStore {
         self.runInitialProviderDetectionIfNeeded(force: true)
     }
 
+    /// Whether the user (or a previous auto-enable) has ever saved a toggle for
+    /// this provider. False means the provider still runs on its descriptor default.
+    func hasSavedProviderToggle(cliName: String) -> Bool {
+        let toggles = (self.userDefaults.dictionary(forKey: "providerToggles") as? [String: Bool]) ?? [:]
+        return toggles[cliName] != nil
+    }
+
     /// Auto-enable a provider when the user enters a non-empty API token.
     func autoEnableProviderIfNeeded(cliName: String) {
         let toggles = (self.userDefaults.dictionary(forKey: "providerToggles") as? [String: Bool]) ?? [:]

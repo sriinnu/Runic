@@ -19,7 +19,14 @@ extension ProviderTokenResolver {
         return value.isEmpty ? nil : value
     }
 
+    /// When false, every resolver behaves as if the Keychain were empty and only
+    /// environment variables are consulted. Startup discovery runs this way: it
+    /// probes ~25 accounts in a row, and an unattended Keychain read can block on
+    /// an ACL prompt (seen from the test bundle, which isn't signed as the app).
+    @TaskLocal static var keychainReadsAllowed = true
+
     static func keychainToken(service: String, account: String) -> String? {
+        guard self.keychainReadsAllowed, RunicKeychainAccessPolicy.processMayUseKeychain else { return nil }
         #if canImport(Security)
         if service == RunicKeychainService.providerCredentials {
             return ProviderCredentialKeychainMigration.token(account: account)
