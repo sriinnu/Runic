@@ -108,7 +108,7 @@ extension MenuPopoverView {
             summaries.append(OverviewMenuView.ProviderSummary(
                 id: provider.rawValue,
                 provider: provider,
-                name: meta.displayName,
+                name: UsageProvider.compactDisplayName(meta.displayName),
                 icon: ProviderBrandIcon.image(for: provider, size: 20),
                 usedPercent: OverviewMenuView.displayPercent(for: snapshot?.primary, showsUsed: showsUsed),
                 todayTokens: todayTokens,
@@ -123,7 +123,7 @@ extension MenuPopoverView {
                     id: "\(provider.rawValue)-\(summary.dayKey)",
                     date: summary.dayStart,
                     tokens: summary.totals.totalTokens,
-                    provider: meta.displayName,
+                    provider: UsageProvider.compactDisplayName(meta.displayName),
                     color: brandColor))
             }
         }

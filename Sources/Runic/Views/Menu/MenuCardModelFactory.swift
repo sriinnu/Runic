@@ -132,7 +132,8 @@ extension UsageMenuCardView.Model {
             tokenUsage: tokenUsage,
             insights: insights,
             placeholder: placeholder,
-            progressColor: Self.progressColor(for: input.provider))
+            progressColor: Self.progressColor(for: input.provider),
+            needsCredentials: !input.liveFetchWasAvailable)
     }
 
     private static func topModelLine(

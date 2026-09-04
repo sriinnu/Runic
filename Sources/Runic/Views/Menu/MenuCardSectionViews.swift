@@ -38,6 +38,7 @@ struct UsageMenuCardUsageSectionView: View {
                     MenuEmptyStateView(
                         providerName: self.model.providerName,
                         placeholder: placeholder,
+                        needsCredentials: self.model.needsCredentials,
                         isHighlighted: self.isHighlighted)
                 }
             } else {

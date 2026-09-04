@@ -168,6 +168,11 @@ struct UsageMenuCardView: View {
         let insights: InsightsSection?
         let placeholder: String?
         let progressColor: Color
+        /// True when the last refresh found no usable credential for the provider
+        /// (no fetch strategy was available). False when a key exists or the
+        /// provider has simply never been refreshed — the empty state then asks
+        /// for a ping, not for credentials.
+        var needsCredentials: Bool = false
     }
 
     let model: Model
