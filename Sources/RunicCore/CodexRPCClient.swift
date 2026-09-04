@@ -118,7 +118,7 @@ final class CodexRPCClient: @unchecked Sendable {
 
     init(
         executable: String = "codex",
-        arguments: [String] = ["-s", "read-only", "-a", "untrusted", "app-server"]) throws
+        arguments: [String] = ["-s", "read-only", "-a", "never", "app-server"]) throws
     {
         var stdoutContinuation: AsyncStream<Data>.Continuation!
         self.stdoutLineStream = AsyncStream<Data> { continuation in

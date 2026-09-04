@@ -204,7 +204,7 @@ extension SettingsStore {
         self.credentialPersistTasks.zaiCN = self.makeCredentialPersistTask(
             value: self.zaiCNAPIToken,
             loggerName: "zai-cn-token-store",
-            failureMessage: "Failed to persist GLM (China) token")
+            failureMessage: "Failed to persist z.ai (China) token")
         { token in
             try tokenStore.storeToken(token)
         }

@@ -155,7 +155,7 @@ public enum ClaudeOAuthCredentialsStore {
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         switch status {
         case errSecSuccess:
             guard let data = result as? Data else {

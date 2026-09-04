@@ -63,12 +63,12 @@ private func saveTeamSyncKeyToKeychain(key: String, data: Data) {
     ]
     var deleteQuery = baseQuery
     RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &deleteQuery)
-    SecItemDelete(deleteQuery as CFDictionary)
+    RunicKeychainGate.delete(deleteQuery as CFDictionary)
 
     var addQuery = baseQuery
     addQuery[kSecValueData as String] = data
     addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-    SecItemAdd(addQuery as CFDictionary, nil)
+    RunicKeychainGate.add(addQuery as CFDictionary)
 }
 
 private func loadTeamSyncKeyFromKeychain(key: String) -> Data? {
@@ -82,7 +82,7 @@ private func loadTeamSyncKeyFromKeychain(key: String) -> Data? {
     ]
     RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
     var result: AnyObject?
-    let status = SecItemCopyMatching(query as CFDictionary, &result)
+    let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
     if status == errSecInteractionNotAllowed {
         return nil
     }

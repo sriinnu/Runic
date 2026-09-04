@@ -114,7 +114,7 @@ public struct CodexStatusProbe {
                 rows: rows,
                 cols: cols,
                 timeout: timeout,
-                extraArgs: ["-s", "read-only", "-a", "untrusted"]))
+                extraArgs: ["-s", "read-only", "-a", "never"]))
         return try Self.parse(text: result.text)
     }
 

@@ -69,7 +69,7 @@ struct KeychainCohereTokenStore: CohereTokenStoring {
         addQuery[kSecValueData as String] = data
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
-        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        let addStatus = RunicKeychainGate.add(addQuery as CFDictionary)
         guard addStatus == errSecSuccess else {
             Self.log.error("Keychain add failed: \(addStatus)")
             throw CohereTokenStoreError.keychainStatus(addStatus)
@@ -85,7 +85,7 @@ struct KeychainCohereTokenStore: CohereTokenStoring {
         query[kSecReturnData as String] = true
         RunicKeychainQuery.disallowAuthenticationUI(in: &query)
 
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound || status == errSecInteractionNotAllowed {
             return nil
         }
@@ -103,7 +103,7 @@ struct KeychainCohereTokenStore: CohereTokenStoring {
     private func deleteToken(dataProtection: Bool) throws {
         var query = self.baseQuery(dataProtection: dataProtection)
         RunicKeychainQuery.disallowAuthenticationUI(in: &query)
-        let status = SecItemDelete(query as CFDictionary)
+        let status = RunicKeychainGate.delete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound { return }
         Self.log.error("Keychain delete failed: \(status)")
         throw CohereTokenStoreError.keychainStatus(status)

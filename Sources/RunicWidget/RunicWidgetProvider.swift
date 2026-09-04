@@ -60,7 +60,7 @@ enum ProviderChoice: String, AppEnum {
         .perplexity: DisplayRepresentation(title: "Perplexity"),
         .kimi: DisplayRepresentation(title: "Kimi"),
         .kimiCN: DisplayRepresentation(title: "Kimi (China)"),
-        .zaiCN: DisplayRepresentation(title: "GLM (China)"),
+        .zaiCN: DisplayRepresentation(title: "z.ai (China)"),
         .minimaxCN: DisplayRepresentation(title: "MiniMax (China)"),
         .stepfun: DisplayRepresentation(title: "StepFun"),
         .stepfunCN: DisplayRepresentation(title: "StepFun (China)"),

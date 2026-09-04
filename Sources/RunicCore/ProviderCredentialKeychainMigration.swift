@@ -141,7 +141,7 @@ public enum ProviderCredentialKeychainMigration {
         }
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         if status == errSecInteractionNotAllowed { return .blocked }
         if status == errSecItemNotFound { return .missing }
         guard status == errSecSuccess,
@@ -166,7 +166,7 @@ public enum ProviderCredentialKeychainMigration {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
         ]
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
-        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+        return RunicKeychainGate.add(query as CFDictionary) == errSecSuccess
     }
 
     private static func deleteLegacy(account: String) {
@@ -184,7 +184,7 @@ public enum ProviderCredentialKeychainMigration {
             query[kSecUseDataProtectionKeychain as String] = true
         }
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
-        _ = SecItemDelete(query as CFDictionary)
+        _ = RunicKeychainGate.delete(query as CFDictionary)
     }
     #endif
 }

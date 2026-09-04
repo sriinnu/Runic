@@ -641,7 +641,7 @@ public enum ProviderTokenResolver {
         }
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound || status == errSecInteractionNotAllowed {
             return nil
         }

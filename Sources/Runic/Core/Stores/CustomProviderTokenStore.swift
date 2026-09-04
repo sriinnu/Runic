@@ -22,7 +22,7 @@ struct KeychainCustomProviderTokenStore: CustomProviderTokenStoring {
         addQuery[kSecValueData as String] = data
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        let status = RunicKeychainGate.add(addQuery as CFDictionary)
         guard status == errSecSuccess else {
             Self.log.error("Keychain add failed for custom provider token \(account): \(status)")
             throw CustomProviderTokenStoreError.keychainStatus(status)
@@ -47,7 +47,7 @@ struct KeychainCustomProviderTokenStore: CustomProviderTokenStoring {
     private func deleteToken(account: String, dataProtection: Bool) throws {
         var query = self.baseQuery(account: account, dataProtection: dataProtection)
         RunicKeychainQuery.disallowAuthenticationUI(in: &query)
-        let status = SecItemDelete(query as CFDictionary)
+        let status = RunicKeychainGate.delete(query as CFDictionary)
         if status == errSecSuccess || status == errSecItemNotFound { return }
         Self.log.error("Keychain delete failed for custom provider token \(account): \(status)")
         throw CustomProviderTokenStoreError.keychainStatus(status)

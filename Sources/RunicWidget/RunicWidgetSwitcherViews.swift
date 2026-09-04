@@ -82,7 +82,7 @@ struct ProviderSwitchChip: View {
         case .perplexity: "PPLX"
         case .kimi: "Kimi"
         case .kimiCN: "Kimi CN"
-        case .zaiCN: "GLM CN"
+        case .zaiCN: "z.ai CN"
         case .minimaxCN: "MiniMax CN"
         case .stepfun: "StepFun"
         case .stepfunCN: "StepFun CN"

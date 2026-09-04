@@ -184,7 +184,7 @@ public enum CopilotVSCodeTokenReader {
         RunicCoreKeychainQueryPolicy.setAuthenticationUI(allowUserInteraction, in: &query)
 
         var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess, let data = result as? Data else {
             return nil
         }
