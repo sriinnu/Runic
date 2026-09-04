@@ -52,6 +52,8 @@ struct SettingsStoreDefaultsSnapshot {
     let vertexaiProject: String
     let vertexaiLocation: String
     let kimiBaseURL: String
+    let qwenBaseURL: String
+    let qwenCNBaseURL: String
     let selectedMenuProviderRaw: String?
     let providerDetectionCompleted: Bool
 
@@ -178,6 +180,8 @@ struct SettingsStoreDefaultsSnapshot {
             vertexaiProject: userDefaults.string(forKey: "vertexaiProject") ?? "",
             vertexaiLocation: userDefaults.string(forKey: "vertexaiLocation") ?? "",
             kimiBaseURL: userDefaults.string(forKey: "kimiBaseURL") ?? "",
+            qwenBaseURL: userDefaults.string(forKey: "qwenBaseURL") ?? "",
+            qwenCNBaseURL: userDefaults.string(forKey: "qwenCNBaseURL") ?? "",
             selectedMenuProviderRaw: selectedMenuProviderRaw,
             providerDetectionCompleted: Self.bool(
                 "providerDetectionCompleted",

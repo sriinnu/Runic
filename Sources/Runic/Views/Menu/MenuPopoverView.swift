@@ -55,7 +55,7 @@ struct MenuPopoverView: View {
     var body: some View {
         let palette = self.settings.theme.palette
         let popoverRadius = min(palette.shape.cornerRadius(18), 14)
-        let enabledProviders = self.store.enabledProviders()
+        let enabledProviders = self.store.menuVisibleProviders()
         let provider = self.effectiveProvider(enabledProviders: enabledProviders)
         let isOverview = provider == nil && enabledProviders.count > 1
 

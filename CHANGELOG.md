@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.0 — 2026-09-04
+- Providers: added China-platform siblings as separate accounts you can track alongside the international ones — Kimi (China, api.moonshot.cn), GLM (China, open.bigmodel.cn), MiniMax (China, minimaxi.com), Qwen (China, DashScope) — plus StepFun as a new provider with both global (platform.stepfun.ai) and China (platform.stepfun.com) slots. Each has its own Keychain-stored key and env var (KIMI_CN_API_KEY, BIGMODEL_API_KEY, MINIMAXI_API_KEY, DASHSCOPE_CN_API_KEY, STEPFUN_API_KEY, STEPFUN_CN_API_KEY).
+- Preferences: China siblings nest under their parent provider behind an "Add <region>" link instead of cluttering the list as top-level cards, and stay hidden from the menu switcher until they have a key of their own.
+- Usage: models routed through Claude Code (qwen, glm, kimi, minimax, deepseek…) are now attributed to their own provider in the timeline and breakdowns instead of being counted as Claude.
+- Qwen: optional API base URL for regional or custom DashScope gateways (also honors DASHSCOPE_BASE_URL). A missing usage endpoint (token/coding plans 404) no longer paints the card red; a rejected key still does.
+- Config: new hot-reload `~/Library/Application Support/Runic/config.json` for provider endpoint overrides, extra log paths, and rolling-window quota gauges (e.g. a DashScope Token Plan request budget) reconstructed from log-derived usage — edits apply live, no restart. Open/reveal/reload buttons live in Preferences → General.
+- Menu: a provider whose usage comes only from logs (no key configured) no longer shows an "Issue" badge for the missing credential; a configured credential that fails still does.
+- Settings: editing a provider key re-fetches automatically once the Keychain write lands, so a new key takes effect without a relaunch. The Settings window now reliably comes to the front when opened from the menu.
+
 ## 2.5.2 — 2026-07-10
 - Antigravity: show all reported models sorted by most-constrained first, pick Claude variant with most remaining quota instead of arbitrary first match.
 - z.ai: fixed provider not appearing in the main panel after entering API key — availability check now reads Keychain directly and reacts to settings changes immediately.

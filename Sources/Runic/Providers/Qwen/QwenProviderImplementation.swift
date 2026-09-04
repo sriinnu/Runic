@@ -19,6 +19,15 @@ struct QwenProviderImplementation: ProviderImplementation {
                 binding: context.stringBinding(\.qwenAPIToken),
                 actions: [],
                 isVisible: nil),
+            ProviderSettingsFieldDescriptor(
+                id: "qwen-base-url",
+                title: "API base URL (optional)",
+                subtitle: "Defaults to https://dashscope.aliyuncs.com. Set a regional or custom gateway host.",
+                kind: .plain,
+                placeholder: "https://dashscope.aliyuncs.com",
+                binding: context.stringBinding(\.qwenBaseURL),
+                actions: [],
+                isVisible: nil),
         ]
     }
 }

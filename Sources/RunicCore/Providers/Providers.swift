@@ -21,6 +21,11 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case mistral
     case perplexity
     case kimi
+    case kimiCN
+    case zaiCN
+    case minimaxCN
+    case stepfun
+    case stepfunCN
     case auggie
     case together
     case cohere
@@ -31,6 +36,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case bedrock
     case vertexai
     case qwen
+    case qwenCN
     case localLLM = "local-llm"
 }
 
@@ -55,6 +61,7 @@ public enum IconStyle: Sendable, Hashable {
     case mistral
     case perplexity
     case kimi
+    case stepfun
     case auggie
     case together
     case cohere

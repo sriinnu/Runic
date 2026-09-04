@@ -18,6 +18,14 @@ struct ProvidersPane: View {
         self.settings.orderedProviders()
     }
 
+    /// The list layout nests region-specific siblings (e.g. Kimi China) under
+    /// their parent instead of showing them as independent top-level cards —
+    /// see `ProviderListView.regionalSiblingSection`. Sidebar layout keeps the
+    /// full flat list.
+    private var listLayoutProviders: [UsageProvider] {
+        self.providers.filter { !ProviderRegionalGrouping.cnSiblingIDs.contains($0) }
+    }
+
     var body: some View {
         Group {
             if self.settings.providersPaneSidebar {
@@ -63,7 +71,7 @@ struct ProvidersPane: View {
                 }
 
                 ProviderListView(
-                    providers: self.providers,
+                    providers: self.listLayoutProviders,
                     store: self.store,
                     isEnabled: { provider in self.binding(for: provider) },
                     subtitle: { provider in self.providerSubtitle(provider) },
@@ -242,6 +250,11 @@ struct ProvidersPane: View {
             .mistral,
             .perplexity,
             .kimi,
+            .kimiCN,
+            .zaiCN,
+            .minimaxCN,
+            .stepfun,
+            .stepfunCN,
             .auggie,
             .together,
             .cohere,
@@ -250,6 +263,8 @@ struct ProvidersPane: View {
             .sambanova,
             .azure,
             .bedrock,
+            .qwen,
+            .qwenCN,
         ]
         if apiBackedProviders.contains(provider) {
             return "api\(coverageSuffix)"

@@ -21,6 +21,11 @@ enum ProviderChoice: String, AppEnum {
     case mistral
     case perplexity
     case kimi
+    case kimiCN
+    case zaiCN
+    case minimaxCN
+    case stepfun
+    case stepfunCN
     case auggie
     case together
     case cohere
@@ -31,6 +36,7 @@ enum ProviderChoice: String, AppEnum {
     case bedrock
     case vertexai
     case qwen
+    case qwenCN
     case localLLM
 
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Provider")
@@ -53,6 +59,11 @@ enum ProviderChoice: String, AppEnum {
         .mistral: DisplayRepresentation(title: "Mistral"),
         .perplexity: DisplayRepresentation(title: "Perplexity"),
         .kimi: DisplayRepresentation(title: "Kimi"),
+        .kimiCN: DisplayRepresentation(title: "Kimi (China)"),
+        .zaiCN: DisplayRepresentation(title: "GLM (China)"),
+        .minimaxCN: DisplayRepresentation(title: "MiniMax (China)"),
+        .stepfun: DisplayRepresentation(title: "StepFun"),
+        .stepfunCN: DisplayRepresentation(title: "StepFun (China)"),
         .auggie: DisplayRepresentation(title: "Auggie"),
         .together: DisplayRepresentation(title: "Together"),
         .cohere: DisplayRepresentation(title: "Cohere"),
@@ -63,6 +74,7 @@ enum ProviderChoice: String, AppEnum {
         .bedrock: DisplayRepresentation(title: "Amazon Bedrock"),
         .vertexai: DisplayRepresentation(title: "Vertex AI"),
         .qwen: DisplayRepresentation(title: "Qwen"),
+        .qwenCN: DisplayRepresentation(title: "Qwen (China)"),
         .localLLM: DisplayRepresentation(title: "Local LLM"),
     ]
 

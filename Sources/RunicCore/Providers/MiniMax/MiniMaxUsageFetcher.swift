@@ -163,7 +163,7 @@ public struct MiniMaxUsageSnapshot: Sendable {
 }
 
 extension MiniMaxUsageSnapshot {
-    public func toUsageSnapshot() -> UsageSnapshot {
+    public func toUsageSnapshot(providerID: UsageProvider = .minimax) -> UsageSnapshot {
         let primaryQuota = MiniMaxModelQuota(
             total: self.total,
             used: self.used,
@@ -182,7 +182,7 @@ extension MiniMaxUsageSnapshot {
         let tertiary = self.additionalModels.first?.toRateWindow()
 
         let identity = ProviderIdentitySnapshot(
-            providerID: .minimax,
+            providerID: providerID,
             accountEmail: nil,
             accountOrganization: nil,
             loginMethod: "api-key")
@@ -203,10 +203,14 @@ public struct MiniMaxUsageFetcher: Sendable {
 
     /// token_plan/remains accepts Bearer-token auth and includes
     /// pre-computed `remaining_percent` alongside weekly quota fields.
-    private static let quotaAPIURL = "https://www.minimax.io/v1/token_plan/remains"
+    /// Default international host. Overridable per the user's subscription region.
+    public static let defaultQuotaAPIURL = "https://www.minimax.io/v1/token_plan/remains"
 
     /// Fetches usage stats from MiniMax using the provided API key.
-    public static func fetchUsage(apiKey: String) async throws -> MiniMaxUsageSnapshot {
+    public static func fetchUsage(
+        apiKey: String,
+        quotaAPIURL: String = Self.defaultQuotaAPIURL) async throws -> MiniMaxUsageSnapshot
+    {
         guard !apiKey.isEmpty else {
             throw MiniMaxUsageError.invalidCredentials
         }

@@ -76,6 +76,15 @@ public struct ProviderSettingsSnapshot: Sendable {
         }
     }
 
+    public struct QwenProviderSettings: Sendable {
+        /// Base URL override (a regional or custom DashScope gateway). Nil uses the default host.
+        public let baseURL: String?
+
+        public init(baseURL: String?) {
+            self.baseURL = baseURL
+        }
+    }
+
     public let debugMenuEnabled: Bool
     public let codex: CodexProviderSettings?
     public let claude: ClaudeProviderSettings?
@@ -85,6 +94,8 @@ public struct ProviderSettingsSnapshot: Sendable {
     public let bedrock: BedrockProviderSettings?
     public let vertexai: VertexAIProviderSettings?
     public let kimi: KimiProviderSettings?
+    public let qwen: QwenProviderSettings?
+    public let qwenCN: QwenProviderSettings?
 
     public init(
         debugMenuEnabled: Bool,
@@ -95,7 +106,9 @@ public struct ProviderSettingsSnapshot: Sendable {
         azure: AzureProviderSettings?,
         bedrock: BedrockProviderSettings?,
         vertexai: VertexAIProviderSettings? = nil,
-        kimi: KimiProviderSettings? = nil)
+        kimi: KimiProviderSettings? = nil,
+        qwen: QwenProviderSettings? = nil,
+        qwenCN: QwenProviderSettings? = nil)
     {
         self.debugMenuEnabled = debugMenuEnabled
         self.codex = codex
@@ -106,5 +119,7 @@ public struct ProviderSettingsSnapshot: Sendable {
         self.bedrock = bedrock
         self.vertexai = vertexai
         self.kimi = kimi
+        self.qwen = qwen
+        self.qwenCN = qwenCN
     }
 }

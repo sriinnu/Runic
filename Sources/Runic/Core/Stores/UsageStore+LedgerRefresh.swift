@@ -96,12 +96,23 @@ extension UsageStore {
                 guard let self else { return }
                 self.applyLedgerRefreshResult(result)
             }
+            await self.recomputeQuotaGauges()
         }
     }
 
     private func applyLedgerRefreshResult(_ result: LedgerRefreshResult) {
         self.ledgerRefreshTask = nil
-        for provider in result.providers {
+        // Apply every provider that produced data — not just the ones we queried
+        // a source for. Models attributed OUT of another source's logs (qwen/glm/
+        // kimi/deepseek calls routed through Claude Code) arrive via entry.provider
+        // and land in the per-provider buckets even though they have no source of
+        // their own; without unioning the data keys here, that usage would be
+        // computed and then silently dropped. Gate on enabled so disabled
+        // providers don't accumulate state.
+        var providers = Set(result.providers)
+        providers.formUnion(result.dailyByProvider.keys)
+        providers.formUnion(result.modelBreakdownsByProvider.keys)
+        for provider in providers where self.isEnabled(provider) {
             self.applyLedgerRefreshResult(result, provider: provider)
         }
         self.sendBudgetNotificationsIfNeeded()

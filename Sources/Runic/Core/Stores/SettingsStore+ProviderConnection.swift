@@ -10,6 +10,8 @@ struct SettingsStoreProviderConnectionValues {
     var vertexaiProject: String
     var vertexaiLocation: String
     var kimiBaseURL: String
+    var qwenBaseURL: String
+    var qwenCNBaseURL: String
 
     init(defaults: SettingsStoreDefaultsSnapshot) {
         self.azureOpenAIEndpoint = defaults.azureOpenAIEndpoint
@@ -21,6 +23,8 @@ struct SettingsStoreProviderConnectionValues {
         self.vertexaiProject = defaults.vertexaiProject
         self.vertexaiLocation = defaults.vertexaiLocation
         self.kimiBaseURL = defaults.kimiBaseURL
+        self.qwenBaseURL = defaults.qwenBaseURL
+        self.qwenCNBaseURL = defaults.qwenCNBaseURL
     }
 }
 
@@ -106,6 +110,30 @@ extension SettingsStore {
         set {
             self.providerConnectionValues.kimiBaseURL = newValue
             self.userDefaults.set(newValue, forKey: "kimiBaseURL")
+        }
+    }
+
+    /// Qwen / DashScope API base URL override (stored in UserDefaults).
+    ///
+    /// Empty falls back to the default international host. Set to a regional or custom
+    /// gateway host (for example `https://token-plan.ap-southeast-1.maas.aliyuncs.com`).
+    var qwenBaseURL: String {
+        get { self.providerConnectionValues.qwenBaseURL }
+        set {
+            self.providerConnectionValues.qwenBaseURL = newValue
+            self.userDefaults.set(newValue, forKey: "qwenBaseURL")
+        }
+    }
+
+    /// Qwen (China) / DashScope API base URL override (stored in UserDefaults).
+    ///
+    /// Empty falls back to the default host. Set for subscriptions bought on a China
+    /// platform or any reseller/proxy host.
+    var qwenCNBaseURL: String {
+        get { self.providerConnectionValues.qwenCNBaseURL }
+        set {
+            self.providerConnectionValues.qwenCNBaseURL = newValue
+            self.userDefaults.set(newValue, forKey: "qwenCNBaseURL")
         }
     }
 }

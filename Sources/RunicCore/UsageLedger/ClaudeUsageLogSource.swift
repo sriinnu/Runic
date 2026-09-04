@@ -205,13 +205,32 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
             }
         }
 
+        // Attribute the relay merge per entry-provider so qwen/glm/kimi/… usage
+        // routed through Claude Code lands under its own provider partition —
+        // the live breakdowns key off entry.provider and the relay partitions off
+        // this string. The Claude-log SOURCE bookkeeping (heal, scan anchor,
+        // watermarks) stays under "claude", which the scan/heal logic reads, so
+        // we always merge "claude" (even empty) and merge each attributed provider
+        // under its own key with entries-driven watermarks. Per-(provider, day)
+        // aggregates keep the relay bounded.
+        let claudeKey = UsageProvider.claude.rawValue
+        let entriesByProvider = Dictionary(grouping: entries, by: { $0.provider.rawValue })
         await cache.mergeEntries(
-            provider: "claude",
-            entries: entries,
+            provider: claudeKey,
+            entries: entriesByProvider[claudeKey] ?? [],
             scanDate: mergeScanDate,
             todayKey: window.relayTodayKey,
             coveredMaxAgeDays: window.coveredMaxAgeDays,
             sourceWatermarks: sourceWatermarks)
+        for (providerKey, providerEntries) in entriesByProvider where providerKey != claudeKey {
+            await cache.mergeEntries(
+                provider: providerKey,
+                entries: providerEntries,
+                scanDate: mergeScanDate,
+                todayKey: window.relayTodayKey,
+                coveredMaxAgeDays: window.coveredMaxAgeDays,
+                sourceWatermarks: [])
+        }
 
         if markHealed { await cache.markCatchUpHealed(provider: "claude") }
         return entries

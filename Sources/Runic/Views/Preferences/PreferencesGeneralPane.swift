@@ -24,6 +24,56 @@ struct GeneralPane: View {
             }
             .liquidEntrance(appeared: self.appeared, index: 0)
 
+            LiquidSection(title: "Configuration") {
+                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                        Text("Config file")
+                            .font(self.preferenceTitleFont)
+
+                        Text(
+                            "Provider endpoint URLs and log paths live in one JSON file that Runic watches. " +
+                                "Edit it and changes apply instantly — no rebuild, no restart.")
+                            .font(self.preferenceHelpFont)
+                            .foregroundStyle(self.preferenceHelpColor)
+                            .lineSpacing(self.preferenceHelpLineSpacing)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text(RunicConfigStore.storageURL.path)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(self.preferenceHelpColor)
+                            .textSelection(.enabled)
+                    }
+
+                    HStack(spacing: RunicSpacing.sm) {
+                        Button {
+                            RunicConfigStore.openInEditor()
+                        } label: {
+                            Label("Open Config", systemImage: "doc.text")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            RunicConfigStore.revealInFinder()
+                        } label: {
+                            Label("Reveal in Finder", systemImage: "folder")
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            self.reloadConfig()
+                        } label: {
+                            Label("Reload Now", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    Text(self.configStatusLine)
+                        .font(self.preferenceHelpFont)
+                        .foregroundStyle(self.preferenceHelpColor)
+                }
+            }
+            .liquidEntrance(appeared: self.appeared, index: 1)
+
             LiquidSection(title: "Usage") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                     VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -95,7 +145,7 @@ struct GeneralPane: View {
                     }
                 }
             }
-            .liquidEntrance(appeared: self.appeared, index: 1)
+            .liquidEntrance(appeared: self.appeared, index: 2)
 
             LiquidSection(title: "Status") {
                 PreferenceToggleRow(
@@ -107,7 +157,7 @@ struct GeneralPane: View {
                     subtitle: "Shows usage pressure in the menu bar.",
                     binding: self.$settings.menuBarVibrantIconEnabled)
             }
-            .liquidEntrance(appeared: self.appeared, index: 2)
+            .liquidEntrance(appeared: self.appeared, index: 3)
 
             LiquidSection(title: "Notifications") {
                 PreferenceToggleRow(
@@ -115,7 +165,7 @@ struct GeneralPane: View {
                     subtitle: "Warns when session quota resets.",
                     binding: self.$settings.sessionQuotaNotificationsEnabled)
             }
-            .liquidEntrance(appeared: self.appeared, index: 3)
+            .liquidEntrance(appeared: self.appeared, index: 4)
 
             LiquidSection(title: "Display Settings") {
                 VStack(alignment: .leading, spacing: RunicSpacing.sm) {
@@ -260,7 +310,7 @@ struct GeneralPane: View {
                     }
                 }
             }
-            .liquidEntrance(appeared: self.appeared, index: 4)
+            .liquidEntrance(appeared: self.appeared, index: 5)
 
             LiquidSection(title: "Operations") {
                 RunicOperationsCenterView(
@@ -271,7 +321,7 @@ struct GeneralPane: View {
                     onCopyDiagnostics: self.copyDiagnostics,
                     onInstallGuardrails: self.installGuardrails)
             }
-            .liquidEntrance(appeared: self.appeared, index: 5)
+            .liquidEntrance(appeared: self.appeared, index: 6)
 
             HStack {
                 Spacer()
@@ -279,11 +329,23 @@ struct GeneralPane: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
             }
-            .liquidEntrance(appeared: self.appeared, index: 6)
+            .liquidEntrance(appeared: self.appeared, index: 7)
         }
         .onAppear {
             guard !self.appeared else { return }
             withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) { self.appeared = true }
+        }
+    }
+
+    private var configStatusLine: String {
+        let count = self.store.appliedConfig.activeOverrideCount
+        let overrides = count == 1 ? "1 override active" : "\(count) overrides active"
+        return "Watching for changes · \(overrides)"
+    }
+
+    private func reloadConfig() {
+        Task { @MainActor in
+            await self.store.configChanged(RunicConfigStore.load())
         }
     }
 

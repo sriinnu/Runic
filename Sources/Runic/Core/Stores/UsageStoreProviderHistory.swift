@@ -58,6 +58,11 @@ struct UsageStoreProviderHistorySupport {
              .mistral,
              .perplexity,
              .kimi,
+             .kimiCN,
+             .zaiCN,
+             .minimaxCN,
+             .stepfun,
+             .stepfunCN,
              .auggie,
              .together,
              .cohere,
@@ -68,6 +73,7 @@ struct UsageStoreProviderHistorySupport {
              .bedrock,
              .vertexai,
              .qwen,
+             .qwenCN,
              .localLLM:
             return self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:

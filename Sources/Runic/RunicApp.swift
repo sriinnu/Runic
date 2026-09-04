@@ -269,6 +269,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var preferencesSelection: PreferencesSelection?
     private var refreshLifecycleObservers: [NSObjectProtocol] = []
     private let performanceRetentionPruner = PerformanceRetentionPruner()
+    private var configWatcher: ConfigFileWatcher?
 
     func configure(store: UsageStore, settings: SettingsStore, account: AccountInfo, selection: PreferencesSelection) {
         self.store = store
@@ -281,15 +282,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if self.startScreenshotRendererIfRequested() { return }
         if Self.terminateIfDuplicateInstance() { return }
         AppNotifications.shared.requestAuthorizationOnStartup()
+        self.applyInitialConfig()
         self.store?.startRuntime()
         self.ensureStatusController()
         self.installAutoRefreshLifecycleObservers()
         self.performanceRetentionPruner.start()
+        self.startConfigWatcher()
         KeyboardShortcuts.onKeyUp(for: .openMenu) { [weak self] in
             Task { @MainActor [weak self] in
                 self?.statusController?.openMenuFromShortcut()
             }
         }
+    }
+
+    /// Apply the on-disk config to settings *before* the first refresh so the startup
+    /// fetch already uses any configured endpoints/log paths. A missing or empty config
+    /// is a no-op here (it never clobbers UI-set values).
+    private func applyInitialConfig() {
+        self.store?.applyConfigToSettings(RunicConfigStore.load())
+    }
+
+    /// Watch `config.json` for edits and hot-reload: re-apply + refresh on change.
+    private func startConfigWatcher() {
+        guard self.configWatcher == nil else { return }
+        let watcher = ConfigFileWatcher { [weak self] config in
+            Task { @MainActor [weak self] in
+                await self?.store?.configChanged(config)
+            }
+        }
+        watcher.start()
+        self.configWatcher = watcher
     }
 
     private func startScreenshotRendererIfRequested() -> Bool {

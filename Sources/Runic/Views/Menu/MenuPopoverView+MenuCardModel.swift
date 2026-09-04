@@ -50,6 +50,8 @@ extension MenuPopoverView {
             tokenCostUsageEnabled: self.settings.isCostUsageEffectivelyEnabled(for: provider),
             showOptionalCreditsAndExtraUsage: self.settings.showOptionalCreditsAndExtraUsage,
             now: Date(),
+            quotaWindows: self.store.quotaWindows[provider],
+            liveFetchWasAvailable: self.store.lastFetchAttempts[provider]?.contains(where: \.wasAvailable) ?? true,
             numberStyle: self.settings.numberFormat.formatterStyle,
             dateStyle: self.settings.dateFormat.formatterStyle)
         return UsageMenuCardView.Model.make(input)

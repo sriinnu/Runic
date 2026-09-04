@@ -228,15 +228,41 @@ private struct QwenModelUsageRaw: Decodable {
 public struct QwenUsageFetcher: Sendable {
     private static let log = RunicLog.logger("qwen-usage")
 
-    private static let usageAPIURL = "https://dashscope.aliyuncs.com/api/v1/usage"
+    /// Default international DashScope host. Overridable per subscription region or custom gateway.
+    static let defaultBaseURL = "https://dashscope.aliyuncs.com"
+    private static let usagePath = "/api/v1/usage"
+
+    /// Build the usage URL from an optional user-supplied base URL.
+    ///
+    /// Accepts hosts with or without a scheme or a trailing slash (for example
+    /// `https://token-plan.ap-southeast-1.maas.aliyuncs.com`). Empty/nil uses the default host.
+    static func usageURL(baseURL: String?) -> URL? {
+        var base = (baseURL?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
+            $0.isEmpty ? nil : $0
+        } ?? Self.defaultBaseURL
+
+        if !base.contains("://") {
+            base = "https://\(base)"
+        }
+        while base.hasSuffix("/") {
+            base.removeLast()
+        }
+        guard let url = URL(string: "\(base)\(Self.usagePath)"), url.host?.isEmpty == false else {
+            return nil
+        }
+        return url
+    }
 
     /// Fetches usage data from DashScope.
-    public static func fetchUsage(apiKey: String) async throws -> QwenUsageSnapshot {
+    public static func fetchUsage(apiKey: String, baseURL: String? = nil) async throws -> QwenUsageSnapshot {
         guard !apiKey.isEmpty else {
             throw QwenUsageError.invalidCredentials
         }
+        guard let url = self.usageURL(baseURL: baseURL) else {
+            throw QwenUsageError.networkError("Invalid DashScope base URL")
+        }
 
-        let request = self.makeRequest(url: self.usageAPIURL, apiKey: apiKey)
+        let request = self.makeRequest(url: url, apiKey: apiKey)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -245,6 +271,9 @@ public struct QwenUsageFetcher: Sendable {
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Self.log.error("DashScope usage API returned \(httpResponse.statusCode): \(errorMessage)")
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                throw QwenUsageError.invalidCredentials
+            }
             throw QwenUsageError.apiError("HTTP \(httpResponse.statusCode): \(errorMessage)")
         }
 
@@ -308,10 +337,34 @@ public struct QwenUsageFetcher: Sendable {
             updatedAt: Date())
     }
 
+    /// Like `fetchUsage`, but yields an empty snapshot when the usage endpoint is
+    /// unavailable instead of throwing. The DashScope usage API is plan-dependent —
+    /// token/coding plans expose no such endpoint, so it 404s — and usage for those
+    /// accounts comes from coding-tool logs. A live-probe failure is therefore
+    /// informational, not an error, and must never paint the card red over healthy
+    /// ledger data. Rejected credentials (401/403) still throw: a bad key is
+    /// actionable and must not be masked as "no usage".
+    static func fetchUsageOrEmpty(apiKey: String, baseURL: String? = nil) async throws -> QwenUsageSnapshot {
+        do {
+            return try await self.fetchUsage(apiKey: apiKey, baseURL: baseURL)
+        } catch QwenUsageError.invalidCredentials {
+            throw QwenUsageError.invalidCredentials
+        } catch {
+            return QwenUsageSnapshot(
+                modelEntries: [],
+                totalInputTokens: 0,
+                totalOutputTokens: 0,
+                totalTokens: 0,
+                totalRequests: 0,
+                totalEstimatedCostUSD: 0,
+                updatedAt: Date())
+        }
+    }
+
     // MARK: - Helpers
 
-    private static func makeRequest(url: String, apiKey: String) -> URLRequest {
-        var request = URLRequest(url: URL(string: url)!)
+    private static func makeRequest(url: URL, apiKey: String) -> URLRequest {
+        var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")

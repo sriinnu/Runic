@@ -186,6 +186,66 @@ extension SettingsStore {
         }
     }
 
+    func schedulePersistKimiCNAPIToken() {
+        self.credentialPersistTasks.kimiCN?.cancel()
+        let tokenStore = self.credentialStores.kimiCN
+        self.credentialPersistTasks.kimiCN = self.makeCredentialPersistTask(
+            value: self.kimiCNAPIToken,
+            loggerName: "kimi-cn-token-store",
+            failureMessage: "Failed to persist Kimi (China) token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
+    func schedulePersistZaiCNAPIToken() {
+        self.credentialPersistTasks.zaiCN?.cancel()
+        let tokenStore = self.credentialStores.zaiCN
+        self.credentialPersistTasks.zaiCN = self.makeCredentialPersistTask(
+            value: self.zaiCNAPIToken,
+            loggerName: "zai-cn-token-store",
+            failureMessage: "Failed to persist GLM (China) token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
+    func schedulePersistMiniMaxCNAPIToken() {
+        self.credentialPersistTasks.minimaxCN?.cancel()
+        let tokenStore = self.credentialStores.minimaxCN
+        self.credentialPersistTasks.minimaxCN = self.makeCredentialPersistTask(
+            value: self.minimaxCNAPIToken,
+            loggerName: "minimax-cn-token-store",
+            failureMessage: "Failed to persist MiniMax (China) token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
+    func schedulePersistStepFunAPIToken() {
+        self.credentialPersistTasks.stepfun?.cancel()
+        let tokenStore = self.credentialStores.stepfun
+        self.credentialPersistTasks.stepfun = self.makeCredentialPersistTask(
+            value: self.stepfunAPIToken,
+            loggerName: "stepfun-token-store",
+            failureMessage: "Failed to persist StepFun token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
+    func schedulePersistStepFunCNAPIToken() {
+        self.credentialPersistTasks.stepfunCN?.cancel()
+        let tokenStore = self.credentialStores.stepfunCN
+        self.credentialPersistTasks.stepfunCN = self.makeCredentialPersistTask(
+            value: self.stepfunCNAPIToken,
+            loggerName: "stepfun-cn-token-store",
+            failureMessage: "Failed to persist StepFun (China) token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
     func schedulePersistAuggieAPIToken() {
         self.credentialPersistTasks.auggie?.cancel()
         let tokenStore = self.credentialStores.auggie
@@ -277,6 +337,18 @@ extension SettingsStore {
             value: self.qwenAPIToken,
             loggerName: "qwen-token-store",
             failureMessage: "Failed to persist Qwen token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
+    func schedulePersistQwenCNAPIToken() {
+        self.credentialPersistTasks.qwenCN?.cancel()
+        let tokenStore = self.credentialStores.qwenCN
+        self.credentialPersistTasks.qwenCN = self.makeCredentialPersistTask(
+            value: self.qwenCNAPIToken,
+            loggerName: "qwen-cn-token-store",
+            failureMessage: "Failed to persist Qwen (China) token")
         { token in
             try tokenStore.storeToken(token)
         }

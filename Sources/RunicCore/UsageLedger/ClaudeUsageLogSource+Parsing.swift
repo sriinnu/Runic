@@ -210,7 +210,8 @@ extension ClaudeUsageLogSource {
             seenKeys.insert(key)
 
             return UsageLedgerEntry(
-                provider: .claude,
+                provider: payload.message.model
+                    .flatMap { OTelGenAILedgerAdapter.inferProvider(fromModel: $0) } ?? .claude,
                 timestamp: timestamp,
                 sessionID: sessionID,
                 projectID: file.projectID,

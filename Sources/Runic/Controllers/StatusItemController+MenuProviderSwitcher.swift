@@ -46,7 +46,7 @@ extension StatusItemController {
     /// rows so keyboard users can change providers.
     @objc func cycleMenuProvider(_ sender: NSMenuItem) {
         guard let menu = sender.menu else { return }
-        let providers = self.store.enabledProviders()
+        let providers = self.store.menuVisibleProviders()
         guard !providers.isEmpty else { return }
 
         var options: [UsageProvider?] = providers.count > 1 ? [nil] : []

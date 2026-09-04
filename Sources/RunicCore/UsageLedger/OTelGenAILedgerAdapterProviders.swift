@@ -39,6 +39,8 @@ extension OTelGenAILedgerAdapter {
         if lower.contains("qwen") { return .qwen }
         if lower.contains("kimi") { return .kimi }
         if lower.contains("moonshot") { return .kimi }
+        if lower.contains("glm") { return .zai }
+        if lower.contains("zhipu") { return .zai }
         if lower.contains("mistral") { return .mistral }
         if lower.contains("mixtral") { return .mistral }
         if lower.contains("groq") { return .groq }

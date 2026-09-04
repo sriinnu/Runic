@@ -38,6 +38,10 @@ extension UsageMenuCardView.Model {
         let tokenCostUsageEnabled: Bool
         let showOptionalCreditsAndExtraUsage: Bool
         let now: Date
+        var quotaWindows: [RateWindow]?
+        /// False when no live fetch strategy could run (no credential resolved).
+        /// Nil/true means a strategy ran — or the provider was never refreshed.
+        var liveFetchWasAvailable: Bool = true
         var numberStyle: UsageFormatter.NumberStyle = .abbreviated
         var dateStyle: UsageFormatter.DateStyle = .relative
     }
@@ -45,6 +49,14 @@ extension UsageMenuCardView.Model {
     static func make(_ input: Input) -> UsageMenuCardView.Model {
         let trimmedError = input.lastError?.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedError = (trimmedError?.isEmpty ?? true) ? nil : trimmedError
+        // A provider whose usage is attributed out of coding-tool logs (qwen/glm/
+        // kimi calls routed through Claude Code) is healthy even with no live
+        // credential of its own — "no strategy available" is not actionable when
+        // there's real ledger usage to show. Only that case is suppressed: a
+        // configured credential that then fails (expired OAuth, rejected key) is
+        // a real issue and stays visible even alongside ledger data.
+        let hasLedgerData = input.ledgerTopModel != nil || input.ledgerDaily != nil
+        let effectiveError = hasLedgerData && !input.liveFetchWasAvailable ? nil : normalizedError
         let email = Self.email(
             for: input.provider,
             snapshot: input.snapshot,
@@ -82,16 +94,18 @@ extension UsageMenuCardView.Model {
         let subtitle = Self.subtitle(
             snapshot: input.snapshot,
             isRefreshing: input.isRefreshing,
-            lastError: normalizedError,
+            lastError: effectiveError,
+            ledgerUpdatedAt: input.ledgerUpdatedAt,
             dateStyle: input.dateStyle)
         let headerBadge: HeaderBadge? = if input.isRefreshing {
             HeaderBadge(text: "Refreshing", style: .info)
-        } else if normalizedError != nil {
+        } else if effectiveError != nil {
             HeaderBadge(text: "Issue", style: .error)
         } else {
             nil
         }
-        let placeholder = input.snapshot == nil && !input.isRefreshing && normalizedError == nil ? "No usage yet" : nil
+        let placeholder = input.snapshot == nil && !input.isRefreshing && effectiveError == nil && !hasLedgerData
+            ? "No usage yet" : nil
 
         return UsageMenuCardView.Model(
             provider: input.provider,
@@ -220,6 +234,7 @@ extension UsageMenuCardView.Model {
         snapshot: UsageSnapshot?,
         isRefreshing: Bool,
         lastError: String?,
+        ledgerUpdatedAt: Date? = nil,
         dateStyle: UsageFormatter.DateStyle = .relative) -> (text: String, style: SubtitleStyle)
     {
         if let lastError, !lastError.isEmpty {
@@ -234,13 +249,31 @@ extension UsageMenuCardView.Model {
             return (UsageFormatter.updatedString(from: updated, style: dateStyle), .info)
         }
 
+        if let ledgerUpdated = ledgerUpdatedAt {
+            return (UsageFormatter.updatedString(from: ledgerUpdated, style: dateStyle), .info)
+        }
+
         return ("Not fetched yet", .info)
     }
 
     private static func metrics(input: Input) -> [Metric] {
+        let percentStyle: PercentStyle = input.usageBarsShowUsed ? .used : .left
+        // A configured rolling-window quota (e.g. a DashScope Token Plan request
+        // budget) overrides the live gauge: the provider's own API may expose no
+        // denominator, but Runic reconstructs one from log-derived usage.
+        if let quota = input.quotaWindows, !quota.isEmpty {
+            return quota.prefix(3).enumerated().map { idx, window in
+                Metric(
+                    id: "quota-\(idx)",
+                    title: Self.quotaWindowLabel(window),
+                    percent: Self.clamped(window.usedPercent),
+                    percentStyle: percentStyle,
+                    resetText: nil,
+                    detailText: window.resetDescription)
+            }
+        }
         guard let snapshot = input.snapshot else { return [] }
         var metrics: [Metric] = []
-        let percentStyle: PercentStyle = input.usageBarsShowUsed ? .used : .left
         let zaiUsage = input.provider == .zai ? snapshot.zaiUsage : nil
         let zaiTokenDetail = Self.zaiLimitDetailText(limit: zaiUsage?.tokenLimit, numberStyle: input.numberStyle)
         let zaiTimeDetail = Self.zaiLimitDetailText(limit: zaiUsage?.timeLimit, numberStyle: input.numberStyle)
@@ -296,6 +329,15 @@ extension UsageMenuCardView.Model {
     private static func metricPercent(for window: RateWindow, showUsed: Bool) -> Double? {
         guard window.hasKnownLimit != false else { return nil }
         return self.clamped(showUsed ? window.usedPercent : window.remainingPercent)
+    }
+
+    /// Compact label for a quota window, derived from its length in minutes.
+    private static func quotaWindowLabel(_ window: RateWindow) -> String {
+        if let label = window.label { return label }
+        guard let minutes = window.windowMinutes else { return "Quota" }
+        if minutes < 60 { return "\(minutes)m" }
+        if minutes < 1440 { return "\(minutes / 60)h" }
+        return "\(minutes / 1440)d"
     }
 
     private static func zaiLimitDetailText(
