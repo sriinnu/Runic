@@ -3,21 +3,44 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.6.0</title>
+            <pubDate>Sun, 06 Sep 2026 18:31:39 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>96</sparkle:version>
+            <sparkle:shortVersionString>2.6.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.6.0</h2>
+<ul>
+<li>Providers: added China-platform siblings as separate accounts you can track alongside the international ones — Kimi (China, api.moonshot.cn), GLM (China, open.bigmodel.cn), MiniMax (China, minimaxi.com), Qwen (China, DashScope) — plus StepFun as a new provider with both global (platform.stepfun.ai) and China (platform.stepfun.com) slots. Each has its own Keychain-stored key and env var (KIMI_CN_API_KEY, BIGMODEL_API_KEY, MINIMAXI_API_KEY, DASHSCOPE_CN_API_KEY, STEPFUN_API_KEY, STEPFUN_CN_API_KEY).</li>
+<li>Preferences: a brand with both platforms (Kimi, GLM, MiniMax, Qwen, StepFun) is one entry everywhere. The list layout nests the China account under its parent behind an "Add <region>" link; the sidebar shows one row per brand with an International | China switch in the detail. A China account always sits right after its international sibling in the provider order, the menu switcher, the Overview, and the widget, so pairs are never split across the list, and it stays hidden from the menu until it has a key of its own.</li>
+<li>Keychain: no more password prompts on every rebuild. Only binaries carrying Runic's own signing identity (the installed app, its helpers, the widget) touch the login keychain; <code>swift build</code> / <code>swift test</code> products and other ad-hoc binaries are environment-only, so they never trip the per-binary ACL dialog. Set <code>RUNIC_ALLOW_KEYCHAIN=1</code> to opt a local build back in.</li>
+<li>Menu: Overview rows use compact names ("z.ai CN", "Kimi CN") instead of truncating to "z.ai (…"; a provider card that has a key but hasn't been fetched yet says so and nudges "Ping now" instead of asking you to add credentials you already added.</li>
+<li>Codex: usage fetch works again with Codex CLI 0.153+, which dropped the <code>untrusted</code> approval policy Runic passed to <code>codex app-server</code> (every fetch failed with "invalid value 'untrusted'"). Runic now passes <code>never</code>, which every Codex version accepts and which is what a read-only probe wants anyway.</li>
+<li>CLI: <code>runic usage --provider</code> accepts every provider's CLI name and aliases from the descriptor registry (<code>kimi-cn</code>, <code>glm-cn</code>, <code>bigmodel</code>, <code>stepfun-cn</code>, …) instead of a hand-kept list that had drifted.</li>
+<li>z.ai: the China account is labelled "z.ai (China)" so the pair reads as one brand (CLI name stays <code>glm-cn</code>, aliases <code>bigmodel</code>, <code>zai-cn</code>).</li>
+<li>Providers: a provider you never toggled switches itself on the moment there's evidence for it — an exported API key (KIMI_API_KEY, DASHSCOPE_API_KEY, DEEPSEEK_API_KEY, …), a key already in the Keychain, or usage for it found in your coding-tool logs. A provider you explicitly turned off stays off.</li>
+<li>Kimi: the old "point the base URL at api.moonshot.cn" workaround is folded into the Kimi (China) account. On first launch a key configured that way moves to the China slot automatically (logged), and the base URL field is now for custom gateways or proxies only.</li>
+<li>Usage: models routed through Claude Code (qwen, glm, kimi, minimax, deepseek…) are now attributed to their own provider in the timeline and breakdowns instead of being counted as Claude.</li>
+<li>Qwen: optional API base URL for regional or custom DashScope gateways (also honors DASHSCOPE_BASE_URL). A missing usage endpoint (token/coding plans 404) no longer paints the card red; a rejected key still does.</li>
+<li>Config: new hot-reload <code>~/Library/Application Support/Runic/config.json</code> for provider endpoint overrides, extra log paths, and rolling-window quota gauges (e.g. a DashScope Token Plan request budget) reconstructed from log-derived usage — edits apply live, no restart. Open/reveal/reload buttons live in Preferences → General.</li>
+<li>Menu: a provider whose usage comes only from logs (no key configured) no longer shows an "Issue" badge for the missing credential; a configured credential that fails still does.</li>
+<li>Settings: editing a provider key re-fetches automatically once the Keychain write lands, so a new key takes effect without a relaunch. The Settings window now reliably comes to the front when opened from the menu.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.0/Runic-2.6.0.zip" length="34468019" type="application/octet-stream" sparkle:edSignature="rmL2CRqcoF/vFLY4bilPUX8Xa87drzB574cPGHHkR9ux2HAgXKnfY5mZrP0V48Lh7P1WCrgsqvIPDVcwx5fDBw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.0/Runic96-83.delta" sparkle:deltaFrom="83" length="6325426" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="lPYL+03IF4N1awuv6DQSGBa+O8fXhqjbC9L1rLhgQy2NJgKKRyyHc6Ru/RpwrabYicyeSgNrsDDi3EYH7dDGDA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.5.2</title>
             <pubDate>Fri, 10 Jul 2026 12:47:03 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>83</sparkle:version>
             <sparkle:shortVersionString>2.5.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.5.2</h2>
-<ul>
-<li>Antigravity: show all reported models sorted by most-constrained first, pick Claude variant with most remaining quota instead of arbitrary first match.</li>
-<li>z.ai: fixed provider not appearing in the main panel after entering API key — availability check now reads Keychain directly and reacts to settings changes immediately.</li>
-<li>UI: menu item hover highlight now fills edge-to-edge (removed 6px horizontal inset), card header and content sections align uniformly at 12px padding.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.2/Runic-2.5.2.zip" length="33985216" type="application/octet-stream" sparkle:edSignature="wtKuoYgvDukAl3tK5kKOUrJM8mSUBGIB5xjCfsC9g4bfbWVhwawmtwbBPxsO4VFkV4e8M5f70NYAPC6MwhnLCA=="/>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.0/Runic-2.5.2.zip" length="33985216" type="application/octet-stream" sparkle:edSignature="wtKuoYgvDukAl3tK5kKOUrJM8mSUBGIB5xjCfsC9g4bfbWVhwawmtwbBPxsO4VFkV4e8M5f70NYAPC6MwhnLCA=="/>
         </item>
         <item>
             <title>2.5.1</title>
@@ -38,31 +61,6 @@
 <p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
 ]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.1/Runic-2.5.1.zip" length="33996925" type="application/octet-stream" sparkle:edSignature="WAlIRuePFEsg/oirqWyVsFSQSwbDl24MH5hc0WvYP5qVHwW58+QAqje4ivzvScnqw2i7z6zDvwh5MbAAv3+eDQ=="/>
-        </item>
-        <item>
-            <title>2.5.0</title>
-            <pubDate>Fri, 03 Jul 2026 13:43:50 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>75</sparkle:version>
-            <sparkle:shortVersionString>2.5.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.5.0</h2>
-<ul>
-<li>Illustrations: added Runi, a vector mascot drawn entirely in SwiftUI (no bitmap art) that now appears across every empty state instead of bare "no data" text, with four moods and full Reduce Motion support.</li>
-<li>Usage: fixed a critical bug where reopening the app after it had been closed overnight could seal today's still-in-progress data into the permanent history archive during gap catch-up — history now stays correct across app restarts. Also fixed a Codex token-accounting bug that double-counted cached input tokens.</li>
-<li>Usage: session/weekly gauges no longer fake a 0% or 100% progress bar for providers or windows that don't actually have a known quota — they now show nothing (or a dash) instead of a misleading number, and Overview/CLI averages no longer get dragged down by those placeholder windows.</li>
-<li>Usage: fixed the credits bar rendering on providers where it mixed currency and 1K-token scales — it's now Codex-only, where the scale is correct.</li>
-<li>Menu: "Ping now" from the Overview tab now does a real full refresh instead of silently re-pinging whichever provider you last viewed. The Overview chart's legend can no longer drift out of sync with the chart's own color mapping.</li>
-<li>Menu: the Full/Abbreviated number format and Relative/Absolute date format preferences now apply consistently to insights panels, which previously ignored them and showed the other style.</li>
-<li>Preferences: fixed theme-card taglines truncating mid-word in the Terminal theme, the 7-card theme grid stranding the selected card alone on its own row, and provider status chips having inconsistent pill styling. Fixed currency amounts rendering without thousands separators and with a stray space after the $ sign, and a near-zero cost-per-1K rate rendering as a misleading "$0.0000".</li>
-<li>Preferences: normalized theme typography sizing — every theme was quietly running larger than its own declared base sizes for no stated reason, and Terminal now compensates for its locked Commit Mono face reading visually bigger than San Francisco at the same point size.</li>
-<li>Icons: menubar icon rebuilt as a single-path lemniscate SVG; app icon gradient now runs to the brand teal.</li>
-<li>Performance: menu submenus now build only when opened instead of eagerly on every refresh, ledger scans resume from a byte offset instead of rescanning provider logs from the start, and history archiving only touches days that actually changed.</li>
-<li>Build: local ad-hoc dev builds now sign with a stable local identity when available, instead of true ad-hoc signing — which was forcing a repeat Keychain password prompt on every rebuild since ad-hoc's designated requirement is pinned to the literal binary hash.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.0/Runic-2.5.0.zip" length="33863633" type="application/octet-stream" sparkle:edSignature="u1kLdmfB2Gqi1WjYuiLNkd7b/ZyJcuPXomMGQ/7SMmjJzgbjjr0vj9TL/MjJmLm/oseqjB4vzhqprv/+zCxOCg=="/>
         </item>
         <item>
             <title>0.14.0</title>
