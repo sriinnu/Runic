@@ -158,3 +158,12 @@ line_length:
 
 # Reporter type
 reporter: "xcode"
+
+custom_rules:
+  isolated_settings_store:
+    name: "Isolated SettingsStore in tests"
+    included: ".*/Tests/.*\\.swift"
+    regex: '\bSettingsStore\((?!\s*userDefaults:)'
+    message: "Tests must build SettingsStore on an isolated suite: SettingsStore(userDefaults: TestDefaults.isolated(), …). The standard domain is the developer's live Runic prefs."
+    severity: error
+

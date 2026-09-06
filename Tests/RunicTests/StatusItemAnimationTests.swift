@@ -8,6 +8,7 @@ struct StatusItemAnimationTests {
     @Test
     func `merged icon loading animation tracks selected provider only`() {
         let settings = SettingsStore(
+            userDefaults: TestDefaults.isolated(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),

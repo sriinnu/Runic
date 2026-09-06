@@ -13,6 +13,8 @@ struct ProvidersPane: View {
     @State private var activeConfirmation: ProviderSettingsConfirmationState?
     @State private var sidebarSelection: UsageProvider?
     @State private var sidebarRegion: ProviderRegion = .international
+    /// Provider to focus on first appearance (sidebar layout). See `PreferencesSelection.provider`.
+    var initialProvider: UsageProvider?
     @Environment(\.runicTheme) private var runicTheme
 
     /// One entry per brand. A brand with a China platform (Kimi, GLM, MiniMax,
@@ -234,6 +236,11 @@ struct ProvidersPane: View {
             return
         }
 
+        if let initial = self.initialProvider, self.providers.contains(initial.brandRoot) {
+            self.sidebarSelection = initial.brandRoot
+            self.sidebarRegion = initial.region
+            return
+        }
         self.sidebarSelection = self.providers.first
     }
 

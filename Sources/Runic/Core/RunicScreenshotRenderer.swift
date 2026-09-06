@@ -144,6 +144,10 @@ enum RunicScreenshotRenderer {
                 to: request.outputURL)
         case "prefs-providers":
             selection.tab = .providers
+            // RUNIC_SCREENSHOT_SIDEBAR_PROVIDER=<rawValue> focuses that brand in
+            // sidebar layout (a China slot also flips the region switch).
+            selection.provider = ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_SIDEBAR_PROVIDER"]
+                .flatMap(UsageProvider.init(rawValue:))
             try Self.writePreferences(
                 store: store,
                 settings: settings,

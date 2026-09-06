@@ -153,7 +153,10 @@ struct PreferencesView: View {
 
                     switch self.providersSection {
                     case .builtIn:
-                        ProvidersPane(settings: self.settings, store: self.store)
+                        ProvidersPane(
+                            settings: self.settings,
+                            store: self.store,
+                            initialProvider: self.selection.provider)
                     case .custom:
                         CustomProvidersPane(settings: self.settings, store: self.store)
                     }

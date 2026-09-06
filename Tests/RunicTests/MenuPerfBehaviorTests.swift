@@ -11,6 +11,7 @@ import Testing
 struct MenuPerfBehaviorTests {
     private func makeSettings() -> SettingsStore {
         let settings = SettingsStore(
+            userDefaults: TestDefaults.isolated(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),

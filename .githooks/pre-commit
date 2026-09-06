@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Runs the same gates release.sh enforces, on staged Swift files only, so a
+# commit never lands something the release gate would bounce.
+set -euo pipefail
+files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.swift' | grep -E '^(Sources|Tests)/' || true)
+[ -z "$files" ] && exit 0
+if command -v swiftformat >/dev/null; then
+  # shellcheck disable=SC2086
+  swiftformat --lint $files >/dev/null 2>&1 || { echo "pre-commit: swiftformat --lint failed. Run: swiftformat $files" >&2; exit 1; }
+fi
+if command -v swiftlint >/dev/null; then
+  # shellcheck disable=SC2086
+  swiftlint lint --strict --quiet $files || { echo "pre-commit: swiftlint --strict failed." >&2; exit 1; }
+fi
