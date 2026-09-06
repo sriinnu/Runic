@@ -55,4 +55,22 @@ generate_appcast \
   --link "$FEED_URL" \
   "$ZIP_DIR"
 
+# generate_appcast applies --download-url-prefix to EVERY entry it touches, so
+# the older releases it re-reads for delta generation come out pointing at
+# v${VERSION}/Runic-<old>.zip — a path that does not exist (each zip lives
+# under its own tag). Put every non-current entry back on its own release path.
+python3 - "$VERSION" <<'PY'
+import re, sys
+current = sys.argv[1]
+path = "appcast.xml"
+text = open(path).read()
+def fix(match):
+    version = match.group(1)
+    return match.group(0) if version == current else f'releases/download/v{version}/Runic-{version}.zip'
+fixed = re.sub(r'releases/download/v[0-9.]+/Runic-([0-9.]+)\.zip', fix, text)
+if fixed != text:
+    open(path, "w").write(fixed)
+    print("Restored older appcast entries to their own release paths.")
+PY
+
 echo "Appcast generated (appcast.xml). Upload alongside $ZIP at $FEED_URL"

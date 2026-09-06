@@ -54,9 +54,13 @@ BRANCH="runic-${MARKETING_VERSION}"
 git checkout -q -b "$BRANCH"
 git add "$CASK_RELPATH"
 git -c commit.gpgsign=false commit -m "runic ${MARKETING_VERSION}" --quiet
-git push -q -u origin "$BRANCH"
-PR_URL=$(gh pr create --title "runic ${MARKETING_VERSION}" \
-  --body "Bump cask to ${MARKETING_VERSION} (sha256 ${SHA}). Opened by Scripts/update-homebrew-cask.sh." 2>&1 | tail -1)
+# A branch from an earlier attempt may already exist; this run's content wins.
+git push -q --force-with-lease -u origin "$BRANCH" || git push -q -f -u origin "$BRANCH"
+PR_URL=$(gh pr list --head "$BRANCH" --json url --jq '.[0].url')
+if [[ -z "$PR_URL" ]]; then
+  PR_URL=$(gh pr create --head "$BRANCH" --base main --title "runic ${MARKETING_VERSION}" \
+    --body "Bump cask to ${MARKETING_VERSION} (sha256 ${SHA}). Opened by Scripts/update-homebrew-cask.sh." 2>&1 | tail -1)
+fi
 echo "Homebrew cask PR: ${PR_URL}"
 if gh pr merge "$BRANCH" --squash --admin >/dev/null 2>&1 || gh pr merge "$BRANCH" --squash >/dev/null 2>&1; then
   echo "Homebrew cask updated: ${TAP_REPO} -> runic ${MARKETING_VERSION}"
