@@ -3,19 +3,34 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.6.2</title>
+            <pubDate>Sun, 06 Sep 2026 19:58:47 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>98</sparkle:version>
+            <sparkle:shortVersionString>2.6.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.6.2</h2>
+<ul>
+<li>Licensing: the app bundle now carries THIRD-PARTY-NOTICES.md (Sparkle, KeyboardShortcuts, swift-log, swift-syntax, CryptoSwift, Silo, Helix, and the OFL fonts), as those licenses require for binary distribution. Regenerate with <code>Scripts/generate-third-party-notices.sh</code> after changing dependencies.</li>
+<li>Docs: README brought current (history coverage, China/international account pairs, hot-reload config, correct CLI install path, acknowledgements); docs/providers.md gains the seven providers it was missing plus regional-pair and auto-enable sections.</li>
+<li>Release tooling: the appcast generator no longer re-points older entries at the newest release path; the Homebrew cask bump lands through a PR and survives a leftover branch; the local ship script clears stale staging bundles before packaging.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic-2.6.2.zip" length="34485942" type="application/octet-stream" sparkle:edSignature="n6yh0J15mqrX5GOwW1EHjo478L8eWTiwfykuug6WKg7nIWdHmSgrFvSI8s6jVTelKWKVYBtjiRlJZk4/kWD7Dw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic98-97.delta" sparkle:deltaFrom="97" length="39566" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="L+SNoLOLEMYRrlTJN7BFJGgcwrmQv0Im17iNBV3HKnlPtzbMz6xwdJPtDPTs8CiaQ4XFRrI0olo58aBuZIEiAg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic98-96.delta" sparkle:deltaFrom="96" length="2645126" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="wSm0QASBDUyBx1JjvIq7RXDqnBbM/fD+zSDhyuAh8Dk+2Vu7WoSAVamJeIqx3vZV0yp05HlGoTa+VBUPe9h7CQ=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic98-83.delta" sparkle:deltaFrom="83" length="6403042" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4EWd8ehyBcyMlDht1jVmTz885HwB+DkMoUgBUR7qhWNsXK8WUveMkRYo1J5gjrzJUICD3/PwHuGuqNm7OnAtBw=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.6.1</title>
             <pubDate>Sun, 06 Sep 2026 19:15:45 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>97</sparkle:version>
             <sparkle:shortVersionString>2.6.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.6.1</h2>
-<ul>
-<li>Codex: usage from Codex CLI 0.153+ is counted again. Newer rollouts log each response as a <code>token_usage_record</code> line and no longer emit the <code>token_count</code> event Runic read, so sessions on gpt-6-astra (and recent gpt-5.6 sessions) showed no tokens, no model, and no cost. Existing installs run a one-time full rescan on the next refresh to recover the missed history.</li>
-<li>Codex: pricing and context windows for gpt-5.6 Sol / Terra / Luna and gpt-6-astra (272K context per Codex's own model cache); the Codex card's fallback context label now says GPT-6 Astra.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.1/Runic-2.6.1.zip" length="34478946" type="application/octet-stream" sparkle:edSignature="FANzMY5gdUhf3YPeH7c2aUd0staP4DXn6bGbEKVwoa+NqSj/zQ9JA1ZWf3sHEZKGQI2oA9ay80Wa5F4vaLw1Bg=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.1/Runic97-96.delta" sparkle:deltaFrom="96" length="2640306" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="w7r4G8WSLVYhUcAqzU49MWBm1ovSSgcAh+RpCzxfuZFcz95lMCYkB/OKc5UfxzTGMVasihh88faNRg8HEzK+Cg=="/>
@@ -33,15 +48,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.0/Runic96-83.delta" sparkle:deltaFrom="83" length="6325426" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="lPYL+03IF4N1awuv6DQSGBa+O8fXhqjbC9L1rLhgQy2NJgKKRyyHc6Ru/RpwrabYicyeSgNrsDDi3EYH7dDGDA=="/>
             </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.5.2</title>
-            <pubDate>Fri, 10 Jul 2026 12:47:03 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>83</sparkle:version>
-            <sparkle:shortVersionString>2.5.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.2/Runic-2.5.2.zip" length="33985216" type="application/octet-stream" sparkle:edSignature="wtKuoYgvDukAl3tK5kKOUrJM8mSUBGIB5xjCfsC9g4bfbWVhwawmtwbBPxsO4VFkV4e8M5f70NYAPC6MwhnLCA=="/>
         </item>
         <item>
             <title>0.14.0</title>
