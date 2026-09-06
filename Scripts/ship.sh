@@ -22,6 +22,9 @@ if [[ $BUMP -eq 1 ]]; then
 fi
 echo "==> shipping ${MARKETING_VERSION} (${BUILD_NUMBER})"
 
+# Staging copies from earlier runs are stray bundles by the singleton rule;
+# clear them before packaging so the check below only ever sees this build.
+rm -rf builds/versions
 Scripts/package_app.sh release
 SRC="builds/versions/athena-runic-${MARKETING_VERSION}-${BUILD_NUMBER}/Runic.app"
 [[ -d "$SRC" ]] || { echo "package_app.sh produced no bundle at $SRC" >&2; exit 1; }
