@@ -348,6 +348,11 @@ struct CodexUsageLogParser {
 
     private func shouldParse(_ line: CostUsageJsonl.Line) -> Bool {
         guard !line.bytes.isEmpty, !line.wasTruncated else { return false }
+        // Codex CLI 0.153+ writes usage as top-level `token_usage_record` lines
+        // (one per response, with a per-response `usage` delta) and no longer
+        // emits `event_msg`/`token_count` at all — a session on gpt-6-astra has
+        // hundreds of the former and zero of the latter.
+        if line.bytes.containsAscii(#""type":"token_usage_record""#) { return true }
         let isEvent = line.bytes.containsAscii(#""type":"event_msg""#)
         let isContext = line.bytes.containsAscii(#""type":"turn_context""#)
         guard isEvent || isContext else { return false }
@@ -383,6 +388,9 @@ struct CodexUsageLogParser {
         context: ParseContext,
         state: inout ParseState) -> TokenRecord?
     {
+        if parsed.type == "token_usage_record" {
+            return self.usageRecord(from: parsed, context: context, state: &state)
+        }
         guard parsed.type == "event_msg" else { return nil }
         guard (parsed.payload?["type"] as? String) == "token_count" else { return nil }
         guard let info = parsed.payload?["info"] as? [String: Any] else { return nil }
@@ -407,6 +415,44 @@ struct CodexUsageLogParser {
             requestID: self.requestID(info: info, payload: parsed.payload, object: parsed.object),
             version: self.firstString(from: info, keys: ["client_version", "version"])
                 ?? self.firstString(from: parsed.object, keys: ["version"]))
+    }
+
+    /// Codex 0.153+ `token_usage_record`: `payload.usage` is the self-contained
+    /// per-response delta (the same shape as the old `last_token_usage`), keyed
+    /// by `response_id` for dedupe. The record carries no model — that comes from
+    /// the preceding `turn_context` line, which the state already tracks.
+    private func usageRecord(
+        from parsed: ParsedLine,
+        context: ParseContext,
+        state: inout ParseState) -> TokenRecord?
+    {
+        guard let payload = parsed.payload,
+              let usage = payload["usage"] as? [String: Any] else { return nil }
+        let delta = CodexTotals(
+            input: max(0, self.toInt(usage["input_tokens"])),
+            cached: max(0, self.toInt(usage["cached_input_tokens"] ?? usage["cache_read_input_tokens"])),
+            output: max(0, self.toInt(usage["output_tokens"])))
+        guard delta.input > 0 || delta.cached > 0 || delta.output > 0 else { return nil }
+        // Keep the cumulative cursor current for any legacy total-only line that
+        // might follow in the same file.
+        if let thread = payload["thread_token_usage"] as? [String: Any] {
+            state.previousTotals = CodexTotals(
+                input: self.toInt(thread["input_tokens"]),
+                cached: self.toInt(thread["cached_input_tokens"] ?? thread["cache_read_input_tokens"]),
+                output: self.toInt(thread["output_tokens"]))
+        }
+        let project = self.projectContext(info: payload, payload: payload, object: parsed.object, state: state)
+        return TokenRecord(
+            timestamp: parsed.timestamp,
+            sessionID: self.sessionID(info: payload, payload: payload, object: parsed.object)
+                ?? context.file.sessionID,
+            projectID: project.id,
+            projectName: project.name,
+            model: self.modelName(info: payload, payload: payload, object: parsed.object, state: state),
+            tokens: delta,
+            requestID: self.firstString(from: payload, keys: ["response_id", "responseId"])
+                ?? self.requestID(info: payload, payload: payload, object: parsed.object),
+            version: self.firstString(from: parsed.object, keys: ["version", "cli_version"]))
     }
 
     private func tokenDeltas(from info: [String: Any], previousTotals: inout CodexTotals?) -> CodexTotals? {

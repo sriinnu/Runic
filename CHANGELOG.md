@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.1 — 2026-09-06
+- Codex: usage from Codex CLI 0.153+ is counted again. Newer rollouts log each response as a `token_usage_record` line and no longer emit the `token_count` event Runic read, so sessions on gpt-6-astra (and recent gpt-5.6 sessions) showed no tokens, no model, and no cost. Existing installs run a one-time full rescan on the next refresh to recover the missed history.
+- Codex: pricing and context windows for gpt-5.6 Sol / Terra / Luna and gpt-6-astra (272K context per Codex's own model cache); the Codex card's fallback context label now says GPT-6 Astra.
+
 ## 2.6.0 — 2026-09-04
 - Providers: added China-platform siblings as separate accounts you can track alongside the international ones — Kimi (China, api.moonshot.cn), GLM (China, open.bigmodel.cn), MiniMax (China, minimaxi.com), Qwen (China, DashScope) — plus StepFun as a new provider with both global (platform.stepfun.ai) and China (platform.stepfun.com) slots. Each has its own Keychain-stored key and env var (KIMI_CN_API_KEY, BIGMODEL_API_KEY, MINIMAXI_API_KEY, DASHSCOPE_CN_API_KEY, STEPFUN_API_KEY, STEPFUN_CN_API_KEY).
 - Preferences: a brand with both platforms (Kimi, GLM, MiniMax, Qwen, StepFun) is one entry everywhere. The list layout nests the China account under its parent behind an "Add <region>" link; the sidebar shows one row per brand with an International | China switch in the detail. A China account always sits right after its international sibling in the provider order, the menu switcher, the Overview, and the widget, so pairs are never split across the list, and it stays hidden from the menu until it has a key of its own.
