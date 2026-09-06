@@ -391,6 +391,10 @@ fi
 if [[ -f "$ICON_TARGET" ]]; then
   cp "$ICON_TARGET" "$APP/Contents/Resources/Icon.icns"
 fi
+# Third-party license notices travel with the binary (MIT/Apache/zlib terms).
+if [[ -f "$ROOT/THIRD-PARTY-NOTICES.md" ]]; then
+  cp "$ROOT/THIRD-PARTY-NOTICES.md" "$APP/Contents/Resources/THIRD-PARTY-NOTICES.md"
+fi
 
 # Bundle app resources (provider icons, etc.).
 APP_RESOURCES_DIR="$ROOT/Sources/Runic/Resources"

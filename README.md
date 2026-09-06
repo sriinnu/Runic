@@ -31,7 +31,9 @@ Its job is not to make provider usage look cleaner than it is. Its job is to rep
 ## What It Does
 
 - Shows enabled provider usage from APIs, local CLIs, web sessions, local probes, and local telemetry where available.
-- Tracks token and cost history for Claude and Codex through a compact, self-compacting Runic-owned relay: normal refresh reads today's live logs, history is backfilled automatically on first run, and an explicit rebuild repairs historical JSONL data on demand.
+- Tracks token and cost history from Claude, Codex, and opencode logs through a compact, self-compacting Runic-owned relay: normal refresh reads today's live logs, history is backfilled automatically on first run, and an explicit rebuild repairs historical JSONL data on demand. Models routed through those tools (Qwen, GLM, Kimi, DeepSeek, …) are attributed to their own provider.
+- Tracks China and international platforms as separate accounts where a vendor runs both (Kimi, z.ai, MiniMax, Qwen, StepFun), so both subscriptions can be watched at once.
+- Hot-reloads `~/Library/Application Support/Runic/config.json` for endpoint overrides, extra log paths, and rolling-window quota gauges — edit the file, no restart.
 - Reads capability metadata from Kosha-discovery when present, then falls back to bundled context metadata.
 - Exports scoped usage data as CSV or JSON with provenance fields where known.
 - Provides a CLI for scripts and diagnostics.
@@ -76,7 +78,7 @@ runic insights --provider all --view compaction --json --pretty
 runic otel-collect --port 4318
 ```
 
-Install it from Preferences -> Advanced -> Install CLI.
+Install it from Preferences -> Performance -> Refresh -> Install CLI.
 
 `runic cost` refreshes today's live usage by default. `--rebuild` is the explicit historical repair path and may scan provider JSONL history.
 
@@ -103,7 +105,7 @@ Runic is open source. Sponsorship is optional and should fund maintenance, signi
 
 ## License
 
-MPL-2.0. See [LICENSE](LICENSE).
+MPL-2.0. See [LICENSE](LICENSE). Bundled third-party software and fonts keep their own licenses, reproduced in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and shipped inside the app bundle.
 
 <div align="center">
 
