@@ -56,6 +56,32 @@ enum CostUsagePricing {
             inputCostPerToken: 7.5e-7,
             outputCostPerToken: 4.5e-6,
             cacheReadInputCostPerToken: 7.5e-8),
+        // gpt-5.6 tiers (sol/terra/luna) and gpt-6-astra. Rates from the kosha
+        // registry (OpenRouter provider-live, 2026-09-06), per-million ÷ 1e6.
+        "gpt-5.6": CodexPricing(
+            inputCostPerToken: 2e-6,
+            outputCostPerToken: 1e-5,
+            cacheReadInputCostPerToken: 2e-7),
+        "gpt-5.6-sol": CodexPricing(
+            inputCostPerToken: 2e-6,
+            outputCostPerToken: 1e-5,
+            cacheReadInputCostPerToken: 2e-7),
+        "gpt-5.6-terra": CodexPricing(
+            inputCostPerToken: 2e-6,
+            outputCostPerToken: 1.2e-5,
+            cacheReadInputCostPerToken: 2e-7),
+        "gpt-5.6-luna": CodexPricing(
+            inputCostPerToken: 2e-7,
+            outputCostPerToken: 1.2e-6,
+            cacheReadInputCostPerToken: 2e-8),
+        "gpt-6": CodexPricing(
+            inputCostPerToken: 1e-5,
+            outputCostPerToken: 5e-5,
+            cacheReadInputCostPerToken: 1e-6),
+        "gpt-6-astra": CodexPricing(
+            inputCostPerToken: 1e-5,
+            outputCostPerToken: 5e-5,
+            cacheReadInputCostPerToken: 1e-6),
         "gpt-5.5": CodexPricing(
             inputCostPerToken: 5e-6,
             outputCostPerToken: 3e-5,

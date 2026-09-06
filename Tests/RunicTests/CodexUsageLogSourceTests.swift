@@ -663,4 +663,80 @@ struct CodexUsageLogSourceTests {
         try "\(tokenCount)\n".write(to: fileURL, atomically: true, encoding: .utf8)
         try fileManager.setAttributes([.modificationDate: modifiedAt], ofItemAtPath: fileURL.path)
     }
+
+    /// Codex CLI 0.153+ writes usage as `token_usage_record` lines (per-response
+    /// `usage` delta, `response_id`) and no `event_msg`/`token_count` at all. A
+    /// gpt-6-astra session had 107 of the former and zero of the latter — and
+    /// Runic showed nothing for it.
+    @Test
+    func `codex parses token_usage_record lines from Codex 0.153`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_900_000) // 2026-01-10T00:00:00Z
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        let dayDir = root
+            .appendingPathComponent(String(format: "%04d", parts.year ?? 1970), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.month ?? 1), isDirectory: true)
+            .appendingPathComponent(String(format: "%02d", parts.day ?? 1), isDirectory: true)
+        try fm.createDirectory(at: dayDir, withIntermediateDirectories: true)
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        func record(at date: Date, responseID: String, input: Int, cached: Int, output: Int) throws -> String {
+            try Self.jsonLine([
+                "type": "token_usage_record",
+                "timestamp": formatter.string(from: date),
+                "payload": [
+                    "thread_id": "thread-1",
+                    "turn_id": "turn-1",
+                    "session_id": "session-astra",
+                    "response_id": responseID,
+                    "usage": [
+                        "input_tokens": input,
+                        "cached_input_tokens": cached,
+                        "output_tokens": output,
+                        "reasoning_output_tokens": 0,
+                        "total_tokens": input + output,
+                    ],
+                    "thread_token_usage": ["input_tokens": 99999, "output_tokens": 99999],
+                ],
+            ])
+        }
+        let turnContext = try Self.jsonLine([
+            "type": "turn_context",
+            "timestamp": formatter.string(from: now.addingTimeInterval(60)),
+            "payload": ["turn_id": "turn-1", "cwd": "/tmp/proj", "model": "gpt-6-astra"],
+        ])
+        let body = try [
+            turnContext,
+            record(at: now.addingTimeInterval(120), responseID: "resp-a", input: 1000, cached: 900, output: 50),
+            record(at: now.addingTimeInterval(180), responseID: "resp-b", input: 2000, cached: 0, output: 70),
+            // Duplicate response id (re-logged on resume) must not double count.
+            record(at: now.addingTimeInterval(240), responseID: "resp-b", input: 2000, cached: 0, output: 70),
+        ].joined(separator: "\n") + "\n"
+        try body.write(to: dayDir.appendingPathComponent("rollout-astra.jsonl"), atomically: true, encoding: .utf8)
+
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        let source = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 3,
+            now: now,
+            cache: cache)
+        let entries = try await source.loadEntries()
+
+        #expect(entries.count == 2)
+        #expect(Set(entries.map(\.model)) == ["gpt-6-astra"])
+        #expect(entries.map(\.outputTokens).reduce(0, +) == 120)
+        // cached is a subset of input and stored disjoint: (1000-900)+2000 input, 900 cache reads.
+        #expect(entries.map(\.inputTokens).reduce(0, +) == 2100)
+        #expect(entries.map(\.cacheReadTokens).reduce(0, +) == 900)
+    }
 }

@@ -285,7 +285,10 @@ public actor LedgerCache {
     /// install to run one more full-retention rebuild on next refresh.
     /// v2: re-run as a deterministic `.rebuildHistory` (v1's additive heal could
     /// stamp itself done having captured nothing if a long scan was interrupted).
-    static let catchUpHealVersion = 2
+    /// v3: Codex 0.153 `token_usage_record` lines were never parsed; files already
+    /// scanned to their end are resumed by byte offset, so only a full rebuild
+    /// picks the missed usage (gpt-6-astra sessions) back up.
+    static let catchUpHealVersion = 3
 
     /// Whether this provider still needs the one-time legacy catch-up repair.
     ///
