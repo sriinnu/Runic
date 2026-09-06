@@ -40,7 +40,7 @@
             <sparkle:version>83</sparkle:version>
             <sparkle:shortVersionString>2.5.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.0/Runic-2.5.2.zip" length="33985216" type="application/octet-stream" sparkle:edSignature="wtKuoYgvDukAl3tK5kKOUrJM8mSUBGIB5xjCfsC9g4bfbWVhwawmtwbBPxsO4VFkV4e8M5f70NYAPC6MwhnLCA=="/>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.5.2/Runic-2.5.2.zip" length="33985216" type="application/octet-stream" sparkle:edSignature="wtKuoYgvDukAl3tK5kKOUrJM8mSUBGIB5xjCfsC9g4bfbWVhwawmtwbBPxsO4VFkV4e8M5f70NYAPC6MwhnLCA=="/>
         </item>
         <item>
             <title>2.5.1</title>
