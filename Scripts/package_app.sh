@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 CONF=${1:-release}
-ALLOW_LLDB=${CODEXBAR_ALLOW_LLDB:-0}
-SIGNING_MODE=${RUNIC_SIGNING:-${CODEXBAR_SIGNING:-}}
+ALLOW_LLDB=${RUNIC_ALLOW_LLDB:-0}
+SIGNING_MODE=${RUNIC_SIGNING:-}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
@@ -41,7 +41,7 @@ if find "$ROOT/Sources/Runic/Resources" -name ".DS_Store" -print -quit | grep -q
 fi
 
 # Clean build only when explicitly requested (slower).
-if [[ "${CODEXBAR_FORCE_CLEAN:-0}" == "1" ]]; then
+if [[ "${RUNIC_FORCE_CLEAN:-0}" == "1" ]]; then
   if [[ -d "$ROOT/.build" ]]; then
     if command -v trash >/dev/null 2>&1; then
       if ! trash "$ROOT/.build"; then
@@ -175,7 +175,7 @@ APP_ENTITLEMENTS="${ENTITLEMENTS_DIR}/${APP_NAME}.entitlements"
 WIDGET_ENTITLEMENTS="${ENTITLEMENTS_DIR}/${APP_NAME}Widget.entitlements"
 mkdir -p "$ENTITLEMENTS_DIR"
 if [[ "$ALLOW_LLDB" == "1" && "$LOWER_CONF" != "debug" ]]; then
-  echo "ERROR: CODEXBAR_ALLOW_LLDB requires debug configuration" >&2
+  echo "ERROR: RUNIC_ALLOW_LLDB requires debug configuration" >&2
   exit 1
 fi
 cat > "$APP_ENTITLEMENTS" <<PLIST

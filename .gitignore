@@ -8,8 +8,6 @@ xcuserdata/
 DerivedData
 
 # Bundles / artifacts
-CodexBar.app
-Codexbar.app
 *.ipa
 *.dSYM*
 *.zip
@@ -135,7 +133,6 @@ RuniciOS/*.xcworkspace
 /docs/minimax.md
 /docs/cli-commands/
 /docs/codebase_review.md
-/docs/codexbar.png
 /docs/keychain_fix.md
 /docs/progress-bar-*.md
 /docs/progress-bar-visual-test.swift

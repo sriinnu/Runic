@@ -2,7 +2,7 @@ import AppKit
 import RunicCore
 import SwiftUI
 
-/// Horizontal provider tab bar at the top of the menu dropdown — inspired by CodexBar.
+/// Horizontal provider tab bar at the top of the menu dropdown.
 /// Uses actual provider brand icons (SVG) with brand colors from the descriptor registry.
 @MainActor
 struct ProviderTabBarView: View {
