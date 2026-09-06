@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.6.2 — 2026-09-06
+- Licensing: the app bundle now carries THIRD-PARTY-NOTICES.md (Sparkle, KeyboardShortcuts, swift-log, swift-syntax, CryptoSwift, Silo, Helix, and the OFL fonts), as those licenses require for binary distribution. Regenerate with `Scripts/generate-third-party-notices.sh` after changing dependencies.
+- Docs: README brought current (history coverage, China/international account pairs, hot-reload config, correct CLI install path, acknowledgements); docs/providers.md gains the seven providers it was missing plus regional-pair and auto-enable sections.
+- Release tooling: the appcast generator no longer re-points older entries at the newest release path; the Homebrew cask bump lands through a PR and survives a leftover branch; the local ship script clears stale staging bundles before packaging.
+
 ## 2.6.1 — 2026-09-06
 - Codex: usage from Codex CLI 0.153+ is counted again. Newer rollouts log each response as a `token_usage_record` line and no longer emit the `token_count` event Runic read, so sessions on gpt-6-astra (and recent gpt-5.6 sessions) showed no tokens, no model, and no cost. Existing installs run a one-time full rescan on the next refresh to recover the missed history.
 - Codex: pricing and context windows for gpt-5.6 Sol / Terra / Luna and gpt-6-astra (272K context per Codex's own model cache); the Codex card's fallback context label now says GPT-6 Astra.
