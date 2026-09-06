@@ -46,7 +46,20 @@ grep -q "version \"${MARKETING_VERSION}\"" "$CASK" || { echo "Failed to set cask
 grep -q "sha256 \"${SHA}\"" "$CASK" || { echo "Failed to set cask sha256" >&2; exit 1; }
 
 cd "$WORK/tap"
+# The tap's main branch only accepts changes through pull requests (ruleset,
+# 2026-09), so land the bump as a branch + PR and merge it. The clone runs
+# with commit signing off: the tap has no signing requirement and the global
+# config points at a hardware key that can't be touched headless.
+BRANCH="runic-${MARKETING_VERSION}"
+git checkout -q -b "$BRANCH"
 git add "$CASK_RELPATH"
-git commit -m "runic ${MARKETING_VERSION}" --quiet
-git push origin HEAD
-echo "Homebrew cask updated: ${TAP_REPO} -> runic ${MARKETING_VERSION}"
+git -c commit.gpgsign=false commit -m "runic ${MARKETING_VERSION}" --quiet
+git push -q -u origin "$BRANCH"
+PR_URL=$(gh pr create --title "runic ${MARKETING_VERSION}" \
+  --body "Bump cask to ${MARKETING_VERSION} (sha256 ${SHA}). Opened by Scripts/update-homebrew-cask.sh." 2>&1 | tail -1)
+echo "Homebrew cask PR: ${PR_URL}"
+if gh pr merge "$BRANCH" --squash --admin >/dev/null 2>&1 || gh pr merge "$BRANCH" --squash >/dev/null 2>&1; then
+  echo "Homebrew cask updated: ${TAP_REPO} -> runic ${MARKETING_VERSION}"
+else
+  echo "Homebrew cask PR could not be merged automatically; merge it by hand: ${PR_URL}" >&2
+fi
