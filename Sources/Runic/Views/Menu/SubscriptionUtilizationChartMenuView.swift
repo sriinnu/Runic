@@ -3,7 +3,7 @@ import RunicCore
 import SwiftUI
 
 /// Subscription utilization chart — shows daily usage as % bars with Daily/Weekly/Monthly picker.
-/// Inspired by CodexBar "Subscription Utilization" submenu.
+/// Subscription utilization submenu: quota consumption across the current window.
 @MainActor
 struct SubscriptionUtilizationChartMenuView: View {
     @Environment(\.runicFonts) private var fonts

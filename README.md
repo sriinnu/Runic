@@ -103,6 +103,10 @@ Do not commit keys, tokens, browser session dumps, local account screenshots, ac
 
 Runic is open source. Sponsorship is optional and should fund maintenance, signing, CI, docs, and privacy-first usage features without changing the core promise: honest local usage visibility should stay open.
 
+## Acknowledgements
+
+Runic's menu layout and provider tab bar were inspired by [CodexBar](https://github.com/steipete/CodexBar), and its local cost accounting by the ccusage approach to reading coding-tool logs. The code here is Runic's own; ideas travel, and they should be credited.
+
 ## License
 
 MPL-2.0. See [LICENSE](LICENSE). Bundled third-party software and fonts keep their own licenses, reproduced in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and shipped inside the app bundle.
