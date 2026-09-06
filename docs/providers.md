@@ -24,6 +24,13 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, `openT
 | z.ai | API token (Keychain/env) → quota API (`api`). |
 | Copilot | API token (device flow/env) → copilot_internal API (`api`). |
 | Vercel AI | API token (Keychain/env) → AI Gateway credits API (`api`). |
+| Kimi / Kimi (China) | API key (Keychain/env) → Moonshot balance API on `api.moonshot.ai` / `api.moonshot.cn` (`api`); optional custom gateway on the international slot. |
+| z.ai (China) | API key (Keychain/env) → `open.bigmodel.cn` monitor API mirrored from z.ai (`api`). |
+| MiniMax (China) | API key (Keychain/env) → `minimaxi.com` token-plan API (`api`); no web fallback on the China slot. |
+| Qwen / Qwen (China) | API key (Keychain/env) → DashScope usage API (`api`, plan-dependent: token/coding plans 404 and usage comes from coding-tool logs); optional base URL per slot. |
+| StepFun / StepFun (China) | API key (Keychain/env) → `/v1/accounts` balance on `api.stepfun.ai` / `api.stepfun.com` (`api`; response parsed defensively). |
+| DeepSeek | API key (Keychain/env) → balance API (`api`). |
+| opencode | Local session logs (`local`); history-only, no live gauge. |
 | Local LLM | Local runtime probe for Ollama/LM Studio/vLLM/llama.cpp/Open WebUI (`local`); usage comes from OpenTelemetry GenAI or local logs when configured. |
 
 ## Capability metadata
@@ -103,6 +110,12 @@ Ledger entries carry token/cost provenance where known: exact local log, provide
 - Credits endpoint: `GET https://ai-gateway.vercel.sh/v1/credits`.
 - Model availability endpoint: `GET https://ai-gateway.vercel.sh/v1/models` (best effort).
 - Status: none yet.
+
+## Regional pairs (China / international)
+Kimi, z.ai, MiniMax, Qwen, and StepFun run separate platforms for mainland China and the rest of the world — separate accounts, keys, and hosts — so each China platform is its own `UsageProvider` slot (`kimiCN`, `zaiCN`, `minimaxCN`, `qwenCN`, `stepfunCN`). `UsageProvider.chinaSibling` / `regionalParent` in RunicCore is the single pairing table; provider order pins a China slot directly after its sibling, the Providers pane shows one row per brand (nested in list layout, an International | China switch in the sidebar), the menu switcher labels them "Kimi CN" style, and a China slot stays out of the menu until it has a key. Env vars: `KIMI_CN_API_KEY`, `BIGMODEL_API_KEY`, `MINIMAXI_API_KEY`, `DASHSCOPE_CN_API_KEY`, `STEPFUN_API_KEY`, `STEPFUN_CN_API_KEY`. Details: `docs/kimi-cn.md`, `docs/glm-cn.md`, `docs/minimax-cn.md`, `docs/qwen-cn.md`, `docs/stepfun.md`, `docs/stepfun-cn.md`.
+
+## Auto-enable
+A provider the user never toggled switches on when evidence appears: an API key in the environment at launch (Copilot excluded — its resolver accepts a generic `GITHUB_TOKEN`), a key saved in Preferences, or usage attributed to it from coding-tool logs. A saved "off" is never overridden. Keychain reads at launch are deliberately skipped (see `RunicKeychainAccessPolicy`).
 
 ## Local LLM
 - No API key.
