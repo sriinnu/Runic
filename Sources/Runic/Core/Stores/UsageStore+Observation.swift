@@ -29,6 +29,7 @@ extension UsageStore {
         _ = self.ledgerAnomalies
         _ = self.ledgerErrors
         _ = self.ledgerUpdatedAt
+        _ = self.quotaWindows
         _ = self.credits
         _ = self.lastCreditsError
         _ = self.openAIDashboard
@@ -79,6 +80,31 @@ extension UsageStore {
                 self.observeSettingsChanges()
                 await self.handleSettingsChange()
             }
+        }
+    }
+
+    /// Editing a provider credential re-fetches so a new key takes effect without a
+    /// relaunch. The refresh is debounced to land *after* the debounced (~350ms)
+    /// Keychain write, so the fetch reads the freshly stored value rather than the
+    /// stale one. Keystrokes coalesce — only the final edit fires the refresh.
+    func observeCredentialChanges() {
+        withObservationTracking {
+            _ = self.settings.credentialValues
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.observeCredentialChanges()
+                self.scheduleCredentialRefresh()
+            }
+        }
+    }
+
+    private func scheduleCredentialRefresh() {
+        self.credentialRefreshTask?.cancel()
+        self.credentialRefreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.refresh(trigger: .settingsChange)
         }
     }
 }

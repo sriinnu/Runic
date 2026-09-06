@@ -36,11 +36,12 @@ enum RefreshTrigger: String {
     case login
     case resume
     case startup
+    case configFile
 
     var isAuto: Bool {
         switch self {
         case .manual, .login: false
-        case .menuOpen, .autoTimer, .settingsChange, .resume, .startup: true
+        case .menuOpen, .autoTimer, .settingsChange, .resume, .startup, .configFile: true
         }
     }
 
@@ -53,6 +54,7 @@ enum RefreshTrigger: String {
         case .login: "Login"
         case .resume: "Resume"
         case .startup: "Startup"
+        case .configFile: "Config file"
         }
     }
 }

@@ -67,7 +67,7 @@ extension GenericProviderFetcher {
         ]
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound {
             return nil
         }

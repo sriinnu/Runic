@@ -67,7 +67,9 @@ struct KeychainQueryPolicyTests {
         let account = "runic-test-custom-provider-\(UUID().uuidString)"
         self.deleteProviderCredential(account: account, dataProtection: false)
         self.deleteProviderCredential(account: account, dataProtection: true)
+        RunicKeychainAccessPolicy.testingOverride = true
         defer {
+            RunicKeychainAccessPolicy.testingOverride = nil
             self.deleteProviderCredential(account: account, dataProtection: false)
             self.deleteProviderCredential(account: account, dataProtection: true)
         }

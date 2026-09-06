@@ -57,7 +57,11 @@ extension UsageStore {
                 project: self.providerSettingValue(self.settings.vertexaiProject),
                 location: self.providerSettingValue(self.settings.vertexaiLocation)),
             kimi: ProviderSettingsSnapshot.KimiProviderSettings(
-                baseURL: self.providerSettingValue(self.settings.kimiBaseURL)))
+                baseURL: self.providerSettingValue(self.settings.kimiBaseURL)),
+            qwen: ProviderSettingsSnapshot.QwenProviderSettings(
+                baseURL: self.providerSettingValue(self.settings.qwenBaseURL)),
+            qwenCN: ProviderSettingsSnapshot.QwenProviderSettings(
+                baseURL: self.providerSettingValue(self.settings.qwenCNBaseURL)))
     }
 
     private func providerSettingValue(_ value: String) -> String? {

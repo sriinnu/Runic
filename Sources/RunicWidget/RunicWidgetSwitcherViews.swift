@@ -81,6 +81,11 @@ struct ProviderSwitchChip: View {
         case .mistral: "Mistral"
         case .perplexity: "PPLX"
         case .kimi: "Kimi"
+        case .kimiCN: "Kimi CN"
+        case .zaiCN: "z.ai CN"
+        case .minimaxCN: "MiniMax CN"
+        case .stepfun: "StepFun"
+        case .stepfunCN: "StepFun CN"
         case .auggie: "Auggie"
         case .together: "Together"
         case .cohere: "Cohere"
@@ -91,6 +96,7 @@ struct ProviderSwitchChip: View {
         case .bedrock: "Bedrock"
         case .vertexai: "Vertex"
         case .qwen: "Qwen"
+        case .qwenCN: "Qwen CN"
         case .localLLM: "Local"
         }
     }

@@ -5,9 +5,21 @@ import Testing
 
 @MainActor
 struct StatusMenuTests {
+    /// Each test gets a fresh defaults suite so it neither reads the developer's
+    /// real Runic preferences (a menu selection made in the running app) nor
+    /// writes provider toggles back into them.
+    static func isolatedDefaults() -> UserDefaults {
+        let suite = "StatusMenuTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        defaults.set(true, forKey: "providerDetectionCompleted")
+        return defaults
+    }
+
     @Test
     func `remembers provider when menu opens`() {
         let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
@@ -55,6 +67,7 @@ struct StatusMenuTests {
     @Test
     func `hides open AI web submenus when no history`() {
         let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
@@ -106,6 +119,7 @@ struct StatusMenuTests {
     @Test
     func `shows open AI web submenus when history exists`() throws {
         let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
@@ -178,6 +192,7 @@ struct StatusMenuTests {
     @Test
     func `shows credits before cost in codex menu card sections`() throws {
         let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
@@ -250,6 +265,7 @@ struct StatusMenuTests {
     @Test
     func `shows extra usage for claude when using menu card sections`() {
         let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
@@ -329,6 +345,7 @@ struct StatusMenuTests {
     @Test
     func `glance mode shows headline usage only`() {
         let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
@@ -404,6 +421,7 @@ struct StatusMenuTests {
     @Test
     func `analyst mode shows summary without actions`() {
         let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),

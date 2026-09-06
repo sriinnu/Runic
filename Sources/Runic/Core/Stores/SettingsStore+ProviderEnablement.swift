@@ -13,8 +13,17 @@ extension SettingsStore {
         return ordered
     }
 
+    /// Brand-level order: one entry per brand, China slots folded into their
+    /// international parent. This is what the Providers pane lists and what
+    /// `moveProvider` offsets refer to.
+    func orderedBrandProviders() -> [UsageProvider] {
+        self.orderedProviders().filter { !$0.isChinaSlot }
+    }
+
+    /// Offsets are brand-level (see `orderedBrandProviders`); a brand's China
+    /// slot travels with it and is never persisted on its own.
     func moveProvider(fromOffsets: IndexSet, toOffset: Int) {
-        var order = self.orderedProviders()
+        var order = self.orderedBrandProviders()
         order.move(fromOffsets: fromOffsets, toOffset: toOffset)
         self.providerOrderRaw = order.map(\.rawValue)
     }
@@ -65,6 +74,13 @@ extension SettingsStore {
         self.runInitialProviderDetectionIfNeeded(force: true)
     }
 
+    /// Whether the user (or a previous auto-enable) has ever saved a toggle for
+    /// this provider. False means the provider still runs on its descriptor default.
+    func hasSavedProviderToggle(cliName: String) -> Bool {
+        let toggles = (self.userDefaults.dictionary(forKey: "providerToggles") as? [String: Bool]) ?? [:]
+        return toggles[cliName] != nil
+    }
+
     /// Auto-enable a provider when the user enters a non-empty API token.
     func autoEnableProviderIfNeeded(cliName: String) {
         let toggles = (self.userDefaults.dictionary(forKey: "providerToggles") as? [String: Bool]) ?? [:]
@@ -107,7 +123,22 @@ extension SettingsStore {
             ordered.append(provider)
         }
 
-        return ordered
+        return Self.pinChinaSlotsAfterParents(ordered)
+    }
+
+    /// A China slot always sits directly after its international sibling, no
+    /// matter where a saved order (or an older build that appended new cases at
+    /// the end) put it — the pair reads as one brand on every surface.
+    private static func pinChinaSlotsAfterParents(_ order: [UsageProvider]) -> [UsageProvider] {
+        var result: [UsageProvider] = []
+        result.reserveCapacity(order.count)
+        for provider in order where !provider.isChinaSlot {
+            result.append(provider)
+            if let sibling = provider.chinaSibling {
+                result.append(sibling)
+            }
+        }
+        return result
     }
 
     private func refreshProviderEnablementCacheIfNeeded(

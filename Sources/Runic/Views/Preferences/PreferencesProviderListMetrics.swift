@@ -76,4 +76,5 @@ enum ProviderListMetrics {
     static let sidebarMicroCardBorderOpacity: Double = 0.2
     static let sidebarSectionSpacing: CGFloat = RunicSpacing.md
     static let sidebarContentGap: CGFloat = RunicSpacing.sm
+    static let regionalSiblingIndent: CGFloat = RunicSpacing.lg
 }

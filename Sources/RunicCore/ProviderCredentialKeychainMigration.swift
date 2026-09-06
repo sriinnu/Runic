@@ -39,6 +39,9 @@ public enum ProviderCredentialKeychainMigration {
     ]
 
     public static func migrateKnownLegacyItems() -> ProviderCredentialMigrationSummary {
+        guard RunicKeychainAccessPolicy.processMayUseKeychain else {
+            return ProviderCredentialMigrationSummary(migratedAccounts: [], blockedAccounts: [], failedAccounts: [])
+        }
         #if canImport(Security)
         guard self.legacyMigrationEnabled else {
             return ProviderCredentialMigrationSummary(migratedAccounts: [], blockedAccounts: [], failedAccounts: [])
@@ -76,6 +79,7 @@ public enum ProviderCredentialKeychainMigration {
 
     public static func token(account: String) -> String? {
         #if canImport(Security)
+        guard RunicKeychainAccessPolicy.processMayUseKeychain else { return nil }
         if let token = self.read(service: RunicKeychainService.providerCredentials, account: account).token {
             return token
         }
@@ -137,7 +141,7 @@ public enum ProviderCredentialKeychainMigration {
         }
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         if status == errSecInteractionNotAllowed { return .blocked }
         if status == errSecItemNotFound { return .missing }
         guard status == errSecSuccess,
@@ -162,7 +166,7 @@ public enum ProviderCredentialKeychainMigration {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
         ]
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
-        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+        return RunicKeychainGate.add(query as CFDictionary) == errSecSuccess
     }
 
     private static func deleteLegacy(account: String) {
@@ -180,7 +184,7 @@ public enum ProviderCredentialKeychainMigration {
             query[kSecUseDataProtectionKeychain as String] = true
         }
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
-        _ = SecItemDelete(query as CFDictionary)
+        _ = RunicKeychainGate.delete(query as CFDictionary)
     }
     #endif
 }

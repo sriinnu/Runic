@@ -8,6 +8,7 @@ struct OpenAIWebAccountSwitchTests {
     @Test
     func `clears dashboard when codex email changes`() {
         let settings = SettingsStore(
+            userDefaults: TestDefaults.isolated(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
@@ -38,6 +39,7 @@ struct OpenAIWebAccountSwitchTests {
     @Test
     func `keeps dashboard when codex email stays same`() {
         let settings = SettingsStore(
+            userDefaults: TestDefaults.isolated(),
             zaiTokenStore: NoopZaiTokenStore(),
             minimaxTokenStore: NoopMiniMaxTokenStore(),
             minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),

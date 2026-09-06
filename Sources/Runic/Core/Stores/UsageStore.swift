@@ -56,6 +56,9 @@ final class UsageStore {
     var ledgerDailySummaries: [UsageProvider: UsageLedgerDailySummary] = [:]
     var ledgerAllDailySummaries: [UsageProvider: [UsageLedgerDailySummary]] = [:]
     var ledgerHourlySummaries: [UsageProvider: [UsageLedgerHourlySummary]] = [:]
+    /// Config-driven rolling-window quota gauges (provider → windows), computed from
+    /// log-derived usage. Rendered as the card's gauge when present.
+    var quotaWindows: [UsageProvider: [RateWindow]] = [:]
     var ledgerActiveBlocks: [UsageProvider: UsageLedgerBlockSummary] = [:]
     var ledgerTopModels: [UsageProvider: UsageLedgerModelSummary] = [:]
     var ledgerTopProjects: [UsageProvider: UsageLedgerProjectSummary] = [:]
@@ -134,6 +137,8 @@ final class UsageStore {
     @ObservationIgnored var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored var ledgerRefreshTask: Task<Void, Never>?
+    @ObservationIgnored var credentialRefreshTask: Task<Void, Never>?
+    var appliedConfig: RunicConfig = .empty
     @ObservationIgnored private var runtimeStarted = false
     @ObservationIgnored var requestedLedgerMaxAgeDays: Int?
     @ObservationIgnored var providerHistoryMonthCache: [
@@ -202,6 +207,9 @@ final class UsageStore {
         self.runtimeStarted = true
         self.detectVersions()
         self.refreshPathDebugInfo()
+        // Keys already present (Keychain or env) add their provider before the
+        // first refresh, so a fresh install with KIMI_API_KEY exported shows Kimi.
+        self.autoEnableProvidersWithCredentials()
         LoginShellPathCache.shared.captureOnce { [weak self] _ in
             Task { @MainActor in self?.refreshPathDebugInfo() }
         }

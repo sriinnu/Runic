@@ -56,6 +56,10 @@ struct ProviderRegistry {
                             in: .whitespacesAndNewlines)
                         let cleanedKimiBaseURL = settings.kimiBaseURL.trimmingCharacters(
                             in: .whitespacesAndNewlines)
+                        let cleanedQwenBaseURL = settings.qwenBaseURL.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
+                        let cleanedQwenCNBaseURL = settings.qwenCNBaseURL.trimmingCharacters(
+                            in: .whitespacesAndNewlines)
                         return ProviderSettingsSnapshot(
                             debugMenuEnabled: settings.debugMenuEnabled,
                             codex: ProviderSettingsSnapshot.CodexProviderSettings(
@@ -79,7 +83,11 @@ struct ProviderRegistry {
                                 project: cleanedVertexAIProject.isEmpty ? nil : cleanedVertexAIProject,
                                 location: cleanedVertexAILocation.isEmpty ? nil : cleanedVertexAILocation),
                             kimi: ProviderSettingsSnapshot.KimiProviderSettings(
-                                baseURL: cleanedKimiBaseURL.isEmpty ? nil : cleanedKimiBaseURL))
+                                baseURL: cleanedKimiBaseURL.isEmpty ? nil : cleanedKimiBaseURL),
+                            qwen: ProviderSettingsSnapshot.QwenProviderSettings(
+                                baseURL: cleanedQwenBaseURL.isEmpty ? nil : cleanedQwenBaseURL),
+                            qwenCN: ProviderSettingsSnapshot.QwenProviderSettings(
+                                baseURL: cleanedQwenCNBaseURL.isEmpty ? nil : cleanedQwenCNBaseURL))
                     }
                     let context = ProviderFetchContext(
                         runtime: .app,

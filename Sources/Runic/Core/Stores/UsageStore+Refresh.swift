@@ -8,6 +8,49 @@ extension UsageStore {
         return enabled.filter { self.isProviderAvailable($0) }
     }
 
+    /// Whether an enabled provider has anything worth showing in the menu: a live
+    /// snapshot, ledger (log-derived) data, an in-flight refresh, or a configured
+    /// credential. An enabled-but-empty provider — e.g. an unused "Kimi (China)"
+    /// with no key and no logs — returns false so it doesn't clutter the switcher,
+    /// matching "show 1 if you have 1 key, 2 if you have 2". A provider that has a
+    /// key but is failing still returns true (a misconfiguration is actionable), so
+    /// bad credentials stay visible. Cheap enough to call from the menu on every
+    /// redraw: in-memory checks first, with a synchronous keychain read only for
+    /// enabled China variants (see below).
+    func providerHasMenuPresence(_ provider: UsageProvider) -> Bool {
+        if self.refreshingProviders.contains(provider) { return true }
+        if self.snapshots[provider] != nil { return true }
+        if self.ledgerTopModels[provider] != nil || self.ledgerDailySummaries[provider] != nil {
+            return true
+        }
+        // China variants duplicate their intl sibling; with no key of their own
+        // they're just clutter. In manual-refresh mode there's no refresh to reveal
+        // that, so check the keychain synchronously and hide them when unconfigured.
+        if Self.chinaMenuVariants.contains(provider) {
+            return ProviderTokenResolver.hasCredential(
+                for: provider, environment: self.processEnvironment)
+        }
+        // A configured credential surfaces as at least one fetch attempt whose
+        // strategy reported available (a token resolved). nil attempts means the
+        // provider has never been refreshed yet — keep it visible rather than
+        // hiding it on first launch or in manual-refresh mode.
+        if let attempts = self.lastFetchAttempts[provider] {
+            return attempts.contains(where: \.wasAvailable)
+        }
+        return true
+    }
+
+    /// CN providers that mirror an intl sibling; hidden from the menu when they have
+    /// no credential of their own (see `providerHasMenuPresence`).
+    private static let chinaMenuVariants: Set<UsageProvider> = [
+        .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN,
+    ]
+
+    /// Enabled providers that currently have something to show in the menu.
+    func menuVisibleProviders() -> [UsageProvider] {
+        self.enabledProviders().filter { self.providerHasMenuPresence($0) }
+    }
+
     var statusChecksEnabled: Bool {
         self.settings.statusChecksEnabled
     }
@@ -168,6 +211,7 @@ extension UsageStore {
 
     func bindSettings() {
         self.observeSettingsChanges()
+        self.observeCredentialChanges()
     }
 
     private func isProviderAvailable(_ provider: UsageProvider) -> Bool {

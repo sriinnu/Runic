@@ -4,8 +4,29 @@ import SwiftUI
 
 @MainActor
 enum RunicScreenshotRenderer {
-    private static let menuSize = CGSize(width: 392, height: 680)
-    private static let preferencesSize = CGSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
+    private static let menuSize = CGSize(width: 392, height: Self.heightOverride ?? 680)
+    private static let preferencesSize = CGSize(
+        width: PreferencesTab.windowWidth,
+        height: Self.heightOverride ?? PreferencesTab.windowHeight)
+
+    /// `RUNIC_SCREENSHOT_HEIGHT` renders a taller canvas so scrolling panes (the
+    /// Providers list) can be captured in full for review.
+    private static var heightOverride: CGFloat? {
+        guard let raw = ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_HEIGHT"],
+              let value = Double(raw), value > 0 else { return nil }
+        return CGFloat(value)
+    }
+
+    /// `RUNIC_SCREENSHOT_PROVIDERS_LAYOUT=sidebar|list` picks the Providers pane
+    /// layout for the render without persisting a change to the user's setting.
+    private static var providersLayoutOverride: Bool? {
+        switch ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_PROVIDERS_LAYOUT"]?.lowercased() {
+        case "sidebar": true
+        case "list": false
+        default: nil
+        }
+    }
+
     private static var keepAliveWindow: NSWindow?
 
     private struct RenderContext {
@@ -85,9 +106,16 @@ enum RunicScreenshotRenderer {
         if let theme = Self.themeOverride {
             settings.theme = theme
         }
+        let previousSidebar = settings.providersPaneSidebar
+        if let sidebar = Self.providersLayoutOverride {
+            settings.providersPaneSidebar = sidebar
+        }
         defer {
             if settings.theme != previousTheme {
                 settings.theme = previousTheme
+            }
+            if settings.providersPaneSidebar != previousSidebar {
+                settings.providersPaneSidebar = previousSidebar
             }
         }
 
@@ -99,7 +127,7 @@ enum RunicScreenshotRenderer {
                     settings: settings,
                     account: account,
                     updateReady: false,
-                    initialProvider: store.enabledProviders().first,
+                    initialProvider: Self.menuProviderOverride ?? store.enabledProviders().first,
                     width: Self.menuSize.width,
                     actions: Self.noopActions,
                     onSelectProvider: { _ in })
@@ -116,6 +144,10 @@ enum RunicScreenshotRenderer {
                 to: request.outputURL)
         case "prefs-providers":
             selection.tab = .providers
+            // RUNIC_SCREENSHOT_SIDEBAR_PROVIDER=<rawValue> focuses that brand in
+            // sidebar layout (a China slot also flips the region switch).
+            selection.provider = ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_SIDEBAR_PROVIDER"]
+                .flatMap(UsageProvider.init(rawValue:))
             try Self.writePreferences(
                 store: store,
                 settings: settings,
@@ -125,6 +157,14 @@ enum RunicScreenshotRenderer {
         default:
             throw RendererError.unsupportedKind(request.kind)
         }
+    }
+
+    /// `RUNIC_SCREENSHOT_MENU_PROVIDER=<rawValue>|overview` picks the menu card
+    /// to render; default is the first enabled provider.
+    private static var menuProviderOverride: UsageProvider?? {
+        guard let raw = ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_MENU_PROVIDER"] else { return nil }
+        if raw.lowercased() == "overview" { return .some(nil) }
+        return UsageProvider(rawValue: raw).map { .some($0) }
     }
 
     private static var themeOverride: Theme? {

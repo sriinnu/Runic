@@ -88,6 +88,8 @@ extension SettingsStore {
         _ = self.perplexityAPIToken
         _ = self.kimiAPIToken
         _ = self.kimiBaseURL
+        _ = self.qwenBaseURL
+        _ = self.qwenCNBaseURL
         _ = self.auggieAPIToken
         _ = self.togetherAPIToken
         _ = self.cohereAPIToken

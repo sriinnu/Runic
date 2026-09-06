@@ -41,21 +41,39 @@ extension RunicCLI {
     }
 
     static func resolveProvider(_ raw: String) -> UsageProvider {
-        switch raw {
-        case "local", "localllm", "local_llm":
-            return .localLLM
-        case "vercel-ai", "vercel_ai":
-            return .vercelai
-        case "vertex-ai", "vertex_ai":
-            return .vertexai
-        case "z-ai", "z_ai":
-            return .zai
-        default:
-            guard let provider = UsageProvider(rawValue: raw) else {
-                self.exit(code: 1, message: "Unknown provider: \(raw)")
-            }
+        guard let provider = Self.provider(named: raw) else {
+            self.exit(code: 1, message: "Unknown provider: \(raw). Known: \(self.providerNamesHelp)")
+        }
+        return provider
+    }
+
+    /// Accepts the enum raw value, the descriptor's CLI name, or any of its
+    /// aliases (case-insensitive), so `kimi-cn`, `glm-cn`, `bigmodel`,
+    /// `moonshot-cn`, `dashscope-cn` all resolve without a hand-kept table.
+    static func provider(named raw: String) -> UsageProvider? {
+        let lowered = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch lowered {
+        case "local", "localllm", "local_llm": return .localLLM
+        case "vercel-ai", "vercel_ai": return .vercelai
+        case "vertex-ai", "vertex_ai": return .vertexai
+        case "z-ai", "z_ai": return .zai
+        default: break
+        }
+        if let provider = UsageProvider(rawValue: raw) ?? UsageProvider(rawValue: lowered) {
             return provider
         }
+        return UsageProvider.allCases.first { provider in
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            if descriptor.metadata.cliName.lowercased() == lowered { return true }
+            return descriptor.cli.aliases.contains { $0.lowercased() == lowered }
+        }
+    }
+
+    /// Every provider's CLI name, in enum order — the single source for help text.
+    static var providerNamesHelp: String {
+        UsageProvider.allCases
+            .map { ProviderDescriptorRegistry.descriptor(for: $0).metadata.cliName }
+            .joined(separator: ", ")
     }
 
     static func expandedFileURL(_ rawPath: String) -> URL {
@@ -82,10 +100,7 @@ extension RunicCLI {
             print("    --pretty               Pretty-print output")
             print("    --no-color             Disable ANSI colors")
             print("")
-            print(
-                "  Providers: codex, claude, cursor, gemini, factory, copilot, zai, antigravity, minimax, " +
-                    "openrouter, vercelai, groq, deepseek, fireworks, mistral, perplexity, kimi, auggie, together, " +
-                    "cohere, xai, cerebras, sambanova, azure, bedrock, vertexai, qwen, local-llm")
+            print("  Providers: \(self.providerNamesHelp)")
         }
         if command == "cost" || command == nil {
             print("cost - Print local cost usage as text or JSON")

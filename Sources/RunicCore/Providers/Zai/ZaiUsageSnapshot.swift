@@ -31,7 +31,7 @@ public struct ZaiUsageSnapshot: Sendable {
 }
 
 extension ZaiUsageSnapshot {
-    public func toUsageSnapshot() -> UsageSnapshot {
+    public func toUsageSnapshot(providerID: UsageProvider = .zai) -> UsageSnapshot {
         let primaryLimit = self.tokenLimit ?? self.timeLimit
         let secondaryLimit = (self.tokenLimit != nil && self.timeLimit != nil) ? self.timeLimit : nil
 
@@ -46,7 +46,7 @@ extension ZaiUsageSnapshot {
         let planName = self.planName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let loginMethod = (planName?.isEmpty ?? true) ? nil : planName
         let identity = ProviderIdentitySnapshot(
-            providerID: .zai,
+            providerID: providerID,
             accountEmail: nil,
             accountOrganization: nil,
             loginMethod: loginMethod)

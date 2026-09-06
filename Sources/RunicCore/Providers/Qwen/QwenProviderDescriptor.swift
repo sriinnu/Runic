@@ -59,7 +59,8 @@ struct QwenAPIFetchStrategy: ProviderFetchStrategy {
         guard let tokenRes = Self.resolveTokenResolution(environment: context.env) else {
             throw QwenSettingsError.missingToken
         }
-        let usage = try await QwenUsageFetcher.fetchUsage(apiKey: tokenRes.token)
+        let baseURL = Self.resolveBaseURL(context: context)
+        let usage = try await QwenUsageFetcher.fetchUsageOrEmpty(apiKey: tokenRes.token, baseURL: baseURL)
         return self.makeResult(
             usage: usage.toUsageSnapshot(),
             sourceLabel: tokenRes.source.rawValue)
@@ -71,6 +72,17 @@ struct QwenAPIFetchStrategy: ProviderFetchStrategy {
 
     private static func resolveTokenResolution(environment: [String: String]) -> ProviderTokenResolution? {
         ProviderTokenResolver.qwenResolution(environment: environment)
+    }
+
+    /// Resolve the API base URL: explicit setting first, then environment override, else default.
+    private static func resolveBaseURL(context: ProviderFetchContext) -> String? {
+        func cleaned(_ value: String?) -> String? {
+            guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !trimmed.isEmpty else { return nil }
+            return trimmed
+        }
+        return cleaned(context.settings?.qwen?.baseURL)
+            ?? cleaned(context.env["DASHSCOPE_BASE_URL"])
     }
 }
 

@@ -13,7 +13,8 @@ struct KimiProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "kimi-base-url",
                 title: "API base URL (optional)",
-                subtitle: "Defaults to https://api.moonshot.ai. Use https://api.moonshot.cn for the China platform.",
+                subtitle: "Custom gateway or proxy only. Defaults to https://api.moonshot.ai; " +
+                    "for a China-platform key use the Kimi (China) account instead.",
                 kind: .plain,
                 placeholder: "https://api.moonshot.ai",
                 binding: context.stringBinding(\.kimiBaseURL),

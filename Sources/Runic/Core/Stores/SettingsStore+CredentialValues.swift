@@ -14,12 +14,18 @@ struct SettingsStoreCredentialValues {
     var mistralAPIToken = ""
     var perplexityAPIToken = ""
     var kimiAPIToken = ""
+    var kimiCNAPIToken = ""
+    var zaiCNAPIToken = ""
+    var minimaxCNAPIToken = ""
+    var stepfunAPIToken = ""
+    var stepfunCNAPIToken = ""
     var auggieAPIToken = ""
     var togetherAPIToken = ""
     var cohereAPIToken = ""
     var xaiAPIToken = ""
     var cerebrasAPIToken = ""
     var qwenAPIToken = ""
+    var qwenCNAPIToken = ""
     var sambaNovaAPIToken = ""
     var azureOpenAIAPIToken = ""
 }
@@ -154,6 +160,56 @@ extension SettingsStore {
         }
     }
 
+    /// Kimi China (api.moonshot.cn) API key (stored in Keychain).
+    var kimiCNAPIToken: String {
+        get { self.credentialValues.kimiCNAPIToken }
+        set {
+            self.credentialValues.kimiCNAPIToken = newValue
+            self.schedulePersistKimiCNAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "kimi-cn")
+        }
+    }
+
+    /// GLM China (open.bigmodel.cn) API token (stored in Keychain).
+    var zaiCNAPIToken: String {
+        get { self.credentialValues.zaiCNAPIToken }
+        set {
+            self.credentialValues.zaiCNAPIToken = newValue
+            self.schedulePersistZaiCNAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "glm-cn")
+        }
+    }
+
+    /// MiniMax China (minimaxi.com) API token (stored in Keychain).
+    var minimaxCNAPIToken: String {
+        get { self.credentialValues.minimaxCNAPIToken }
+        set {
+            self.credentialValues.minimaxCNAPIToken = newValue
+            self.schedulePersistMiniMaxCNAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "minimax-cn")
+        }
+    }
+
+    /// StepFun global (platform.stepfun.ai) API key (stored in Keychain).
+    var stepfunAPIToken: String {
+        get { self.credentialValues.stepfunAPIToken }
+        set {
+            self.credentialValues.stepfunAPIToken = newValue
+            self.schedulePersistStepFunAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "stepfun")
+        }
+    }
+
+    /// StepFun China (platform.stepfun.com) API key (stored in Keychain).
+    var stepfunCNAPIToken: String {
+        get { self.credentialValues.stepfunCNAPIToken }
+        set {
+            self.credentialValues.stepfunCNAPIToken = newValue
+            self.schedulePersistStepFunCNAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "stepfun-cn")
+        }
+    }
+
     /// Auggie API token (stored in Keychain).
     var auggieAPIToken: String {
         get { self.credentialValues.auggieAPIToken }
@@ -211,6 +267,16 @@ extension SettingsStore {
             self.credentialValues.qwenAPIToken = newValue
             self.schedulePersistQwenAPIToken()
             self.autoEnableProviderIfCredentialPresent(newValue, cliName: "qwen")
+        }
+    }
+
+    /// Qwen DashScope China (dashscope.aliyuncs.com) API key (stored in Keychain).
+    var qwenCNAPIToken: String {
+        get { self.credentialValues.qwenCNAPIToken }
+        set {
+            self.credentialValues.qwenCNAPIToken = newValue
+            self.schedulePersistQwenCNAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "qwen-cn")
         }
     }
 

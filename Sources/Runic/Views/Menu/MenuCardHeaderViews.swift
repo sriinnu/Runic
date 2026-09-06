@@ -413,6 +413,9 @@ struct MenuEmptyStateView: View {
     @Environment(\.runicFonts) private var fonts
     let providerName: String
     let placeholder: String
+    /// Drives the copy: missing key → "Connect …" + settings link; key present
+    /// or never refreshed → "not fetched yet" + a nudge to ping.
+    var needsCredentials: Bool = true
     let isHighlighted: Bool
     @Environment(\.runicTheme) private var runicTheme
 
@@ -423,29 +426,32 @@ struct MenuEmptyStateView: View {
                 HStack(spacing: RunicSpacing.xxs) {
                     Image(systemName: "sparkles")
                         .font(self.fonts.caption.weight(.semibold))
-                    Text("Connect \(self.providerName)")
+                    Text(self
+                        .needsCredentials ? "Connect \(self.providerName)" : "\(self.providerName) not fetched yet")
                         .font(self.fonts.subheadline.weight(.semibold))
                 }
                 Text(self.placeholder)
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
-                Text("Add credentials, then refresh.")
+                Text(self.needsCredentials ? "Add credentials, then refresh." : "Use Ping now to load usage.")
                     .font(self.fonts.footnote)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
-                Button {
-                    SettingsWindowBridge.open(tab: .providers, selection: nil)
-                } label: {
-                    HStack(spacing: RunicSpacing.xxs) {
-                        Image(systemName: "gearshape")
-                            .font(self.fonts.caption.weight(.semibold))
-                        Text("Open Settings → Providers")
-                            .font(self.fonts.footnote.weight(.semibold))
+                if self.needsCredentials {
+                    Button {
+                        SettingsWindowBridge.open(tab: .providers, selection: nil)
+                    } label: {
+                        HStack(spacing: RunicSpacing.xxs) {
+                            Image(systemName: "gearshape")
+                                .font(self.fonts.caption.weight(.semibold))
+                            Text("Open Settings → Providers")
+                                .font(self.fonts.footnote.weight(.semibold))
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(self.runicTheme.accent)
+                    .accessibilityLabel("Open provider settings")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(self.runicTheme.accent)
-                .accessibilityLabel("Open provider settings")
             }
         }
     }

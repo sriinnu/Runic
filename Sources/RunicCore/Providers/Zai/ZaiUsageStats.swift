@@ -9,21 +9,25 @@ import FoundationNetworking
 public struct ZaiUsageFetcher: Sendable {
     private static let log = RunicLog.logger("zai-usage")
 
-    private static let baseURL = "https://api.z.ai/api/monitor/usage"
-    private static let quotaAPIURL = "\(baseURL)/quota/limit"
-    private static let modelUsageAPIURL = "\(baseURL)/model-usage"
-    private static let toolUsageAPIURL = "\(baseURL)/tool-usage"
+    /// Default international host (z.ai). Overridable per the user's subscription region.
+    public static let defaultBaseURL = "https://api.z.ai/api/monitor/usage"
 
-    /// Fetches all available usage data from z.ai in parallel.
-    public static func fetchUsage(apiKey: String) async throws -> ZaiUsageSnapshot {
+    /// Fetches all available usage data from z.ai (or a compatible regional mirror) in parallel.
+    public static func fetchUsage(apiKey: String, baseURL: String = Self.defaultBaseURL) async throws
+        -> ZaiUsageSnapshot
+    {
         guard !apiKey.isEmpty else {
             throw ZaiUsageError.invalidCredentials
         }
 
+        let quotaAPIURL = "\(baseURL)/quota/limit"
+        let modelUsageAPIURL = "\(baseURL)/model-usage"
+        let toolUsageAPIURL = "\(baseURL)/tool-usage"
+
         // Fetch quota (required) and model/tool usage (best-effort) concurrently.
-        async let quotaTask = self.fetchQuota(apiKey: apiKey)
-        async let modelTask = self.fetchModelUsageBestEffort(apiKey: apiKey)
-        async let toolTask = self.fetchToolUsageBestEffort(apiKey: apiKey)
+        async let quotaTask = self.fetchQuota(apiKey: apiKey, quotaAPIURL: quotaAPIURL)
+        async let modelTask = self.fetchModelUsageBestEffort(apiKey: apiKey, modelUsageAPIURL: modelUsageAPIURL)
+        async let toolTask = self.fetchToolUsageBestEffort(apiKey: apiKey, toolUsageAPIURL: toolUsageAPIURL)
 
         let (tokenLimit, timeLimit, planName) = try await quotaTask
         let modelUsage = await modelTask
@@ -40,8 +44,11 @@ public struct ZaiUsageFetcher: Sendable {
 
     // MARK: - Quota endpoint (required)
 
-    private static func fetchQuota(apiKey: String) async throws -> (ZaiLimitEntry?, ZaiLimitEntry?, String?) {
-        let request = try self.makeRequest(url: self.quotaAPIURL, apiKey: apiKey)
+    private static func fetchQuota(
+        apiKey: String,
+        quotaAPIURL: String) async throws -> (ZaiLimitEntry?, ZaiLimitEntry?, String?)
+    {
+        let request = try self.makeRequest(url: quotaAPIURL, apiKey: apiKey)
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -85,16 +92,21 @@ public struct ZaiUsageFetcher: Sendable {
 
     // MARK: - Model usage endpoint (best-effort)
 
-    private static func fetchModelUsageBestEffort(apiKey: String) async -> ZaiModelUsageSummary? {
+    private static func fetchModelUsageBestEffort(
+        apiKey: String,
+        modelUsageAPIURL: String) async -> ZaiModelUsageSummary?
+    {
         do {
-            return try await self.fetchModelUsage(apiKey: apiKey)
+            return try await self.fetchModelUsage(apiKey: apiKey, modelUsageAPIURL: modelUsageAPIURL)
         } catch {
             self.log.info("z.ai model-usage endpoint unavailable: \(error.localizedDescription)")
             return nil
         }
     }
 
-    private static func fetchModelUsage(apiKey: String) async throws -> ZaiModelUsageSummary {
+    private static func fetchModelUsage(apiKey: String, modelUsageAPIURL: String) async throws
+        -> ZaiModelUsageSummary
+    {
         let (startTime, endTime) = self.rolling24hWindow()
         let urlString = "\(modelUsageAPIURL)?startTime=\(startTime)&endTime=\(endTime)"
         let request = try self.makeRequest(url: urlString, apiKey: apiKey)
@@ -145,16 +157,19 @@ public struct ZaiUsageFetcher: Sendable {
 
     // MARK: - Tool usage endpoint (best-effort)
 
-    private static func fetchToolUsageBestEffort(apiKey: String) async -> ZaiToolUsageSummary? {
+    private static func fetchToolUsageBestEffort(
+        apiKey: String,
+        toolUsageAPIURL: String) async -> ZaiToolUsageSummary?
+    {
         do {
-            return try await self.fetchToolUsage(apiKey: apiKey)
+            return try await self.fetchToolUsage(apiKey: apiKey, toolUsageAPIURL: toolUsageAPIURL)
         } catch {
             self.log.info("z.ai tool-usage endpoint unavailable: \(error.localizedDescription)")
             return nil
         }
     }
 
-    private static func fetchToolUsage(apiKey: String) async throws -> ZaiToolUsageSummary {
+    private static func fetchToolUsage(apiKey: String, toolUsageAPIURL: String) async throws -> ZaiToolUsageSummary {
         let (startTime, endTime) = self.rolling24hWindow()
         let urlString = "\(toolUsageAPIURL)?startTime=\(startTime)&endTime=\(endTime)"
         let request = try self.makeRequest(url: urlString, apiKey: apiKey)

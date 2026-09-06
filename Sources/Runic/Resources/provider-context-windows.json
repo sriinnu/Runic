@@ -17,6 +17,11 @@
   "mistral": { "model": "Mistral Large", "contextK": 128 },
   "perplexity": { "model": "Sonar", "contextK": 128 },
   "kimi": { "model": "Moonshot v1", "contextK": 128 },
+  "kimiCN": { "model": "Moonshot v1", "contextK": 128 },
+  "zaiCN": { "model": "GLM-4.6", "contextK": 205 },
+  "minimaxCN": { "model": "MiniMax coding plan model", "label": "ctx varies" },
+  "stepfun": { "model": "Step 2", "label": "ctx varies" },
+  "stepfunCN": { "model": "Step 2", "label": "ctx varies" },
   "auggie": { "model": "Augment managed model", "label": "ctx varies" },
   "together": { "model": "Llama 3.1", "contextK": 128 },
   "cohere": { "model": "Command R+", "contextK": 128 },
@@ -27,5 +32,6 @@
   "bedrock": { "model": "Bedrock foundation model", "label": "ctx varies" },
   "vertexai": { "model": "Vertex AI model", "label": "ctx varies" },
   "qwen": { "model": "Qwen 2.5 72B", "contextK": 128 },
+  "qwenCN": { "model": "Qwen 2.5 72B", "contextK": 128 },
   "local-llm": { "model": "Local model", "label": "ctx varies" }
 }

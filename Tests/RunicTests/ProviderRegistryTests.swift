@@ -49,4 +49,38 @@ final class ProviderRegistryTests: XCTestCase {
             invalid.isEmpty,
             "Context fallback entries need either contextK or label: \(invalid.keys.sorted()).")
     }
+
+    /// One walk over every provider for the wiring that has drifted before:
+    /// unique CLI names, aliases that don't shadow a CLI name, a doc file named
+    /// after the CLI name, and a China slot whose parent exists.
+    func test_providerRegistryWiringCoversEveryProvider() {
+        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+        var cliNames: [String: UsageProvider] = [:]
+        var problems: [String] = []
+
+        for provider in UsageProvider.allCases {
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            let cliName = descriptor.metadata.cliName
+            if let existing = cliNames[cliName] {
+                problems.append("\(provider) and \(existing) share CLI name '\(cliName)'")
+            }
+            cliNames[cliName] = provider
+            for alias in descriptor.cli.aliases where UsageProvider.allCases.contains(where: {
+                ProviderDescriptorRegistry.descriptor(for: $0).metadata.cliName == alias && $0 != provider
+            }) {
+                problems.append("\(provider) alias '\(alias)' shadows another provider's CLI name")
+            }
+            let doc = root.appendingPathComponent("docs/\(cliName).md")
+            if !FileManager.default.fileExists(atPath: doc.path) {
+                problems.append("\(provider) has no docs/\(cliName).md")
+            }
+            if descriptor.metadata.displayName.trimmingCharacters(in: .whitespaces).isEmpty {
+                problems.append("\(provider) has an empty display name")
+            }
+            if provider.isChinaSlot, provider.regionalParent?.chinaSibling != provider {
+                problems.append("\(provider) is a China slot without a matching parent")
+            }
+        }
+        XCTAssertTrue(problems.isEmpty, "Provider wiring problems:\n" + problems.joined(separator: "\n"))
+    }
 }

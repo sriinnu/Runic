@@ -37,6 +37,11 @@ public enum ProviderTokenResolver {
     private static let mistralAccount = "mistral-api-token"
     private static let perplexityAccount = "perplexity-api-token"
     private static let kimiAccount = "kimi-api-token"
+    private static let kimiCNAccount = "kimi-cn-api-token"
+    private static let zaiCNAccount = "zai-cn-api-token"
+    private static let minimaxCNAccount = "minimax-cn-api-token"
+    private static let stepfunAccount = "stepfun-api-token"
+    private static let stepfunCNAccount = "stepfun-cn-api-token"
     private static let auggieAccount = "auggie-api-token"
     private static let togetherAccount = "together-api-token"
     private static let cohereAccount = "cohere-api-token"
@@ -45,6 +50,7 @@ public enum ProviderTokenResolver {
     private static let sambanovaAccount = "sambanova-api-token"
     private static let azureOpenAIAccount = "azure-openai-api-token"
     private static let qwenAccount = "qwen-api-token"
+    private static let qwenCNAccount = "qwen-cn-api-token"
 
     public static func zaiToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.zaiResolution(environment: environment)?.token
@@ -119,6 +125,32 @@ public enum ProviderTokenResolver {
         self.kimiResolution(environment: environment)?.token
     }
 
+    public static func kimiCNToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.kimiCNResolution(environment: environment)?.token
+    }
+
+    public static func zaiCNToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.zaiCNResolution(environment: environment)?.token
+    }
+
+    public static func minimaxCNToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.minimaxCNResolution(environment: environment)?.token
+    }
+
+    public static func stepfunToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.stepfunResolution(environment: environment)?.token
+    }
+
+    public static func stepfunCNToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.stepfunCNResolution(environment: environment)?.token
+    }
+
     public static func auggieToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.auggieResolution(environment: environment)?.token
     }
@@ -157,6 +189,10 @@ public enum ProviderTokenResolver {
 
     public static func qwenToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.qwenResolution(environment: environment)?.token
+    }
+
+    public static func qwenCNToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        self.qwenCNResolution(environment: environment)?.token
     }
 
     public static func zaiResolution(
@@ -345,6 +381,72 @@ public enum ProviderTokenResolver {
         return nil
     }
 
+    public static func kimiCNResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.kimiCNAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["KIMI_CN_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["MOONSHOT_CN_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func zaiCNResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.zaiCNAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["BIGMODEL_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["ZHIPU_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func minimaxCNResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.minimaxCNAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["MINIMAXI_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func stepfunResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.stepfunAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["STEPFUN_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func stepfunCNResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.stepfunCNAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["STEPFUN_CN_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
     public static func auggieResolution(
         environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
     {
@@ -447,6 +549,83 @@ public enum ProviderTokenResolver {
         return nil
     }
 
+    public static func qwenCNResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.qwenCNAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["DASHSCOPE_CN_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    /// Resolve the API credential for any key-based provider (Keychain first, then
+    /// its environment variables). Nil for providers that don't authenticate with an
+    /// API key (Codex, Claude, Gemini, Cursor, …) or when nothing is configured.
+    /// This is the one place that knows which resolver belongs to which provider —
+    /// startup discovery uses it to switch on providers that already have a key.
+    ///
+    /// Pass `allowKeychain: false` to consult only the environment — safe to call
+    /// in bulk without touching the keychain at all.
+    public static func credentialResolution(
+        for provider: UsageProvider,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        allowKeychain: Bool = true) -> ProviderTokenResolution?
+    {
+        guard let resolver = self.credentialResolvers[provider] else { return nil }
+        if allowKeychain { return resolver(environment) }
+        return self.$keychainReadsAllowed.withValue(false) { resolver(environment) }
+    }
+
+    private typealias CredentialResolver = @Sendable ([String: String]) -> ProviderTokenResolution?
+
+    private static let credentialResolvers: [UsageProvider: CredentialResolver] = [
+        .zai: { ProviderTokenResolver.zaiResolution(environment: $0) },
+        .zaiCN: { ProviderTokenResolver.zaiCNResolution(environment: $0) },
+        .copilot: { ProviderTokenResolver.copilotResolution(environment: $0) },
+        .minimax: { ProviderTokenResolver.minimaxResolution(environment: $0) },
+        .minimaxCN: { ProviderTokenResolver.minimaxCNResolution(environment: $0) },
+        .openrouter: { ProviderTokenResolver.openRouterResolution(environment: $0) },
+        .vercelai: { ProviderTokenResolver.vercelAIResolution(environment: $0) },
+        .groq: { ProviderTokenResolver.groqResolution(environment: $0) },
+        .deepseek: { ProviderTokenResolver.deepSeekResolution(environment: $0) },
+        .fireworks: { ProviderTokenResolver.fireworksResolution(environment: $0) },
+        .mistral: { ProviderTokenResolver.mistralResolution(environment: $0) },
+        .perplexity: { ProviderTokenResolver.perplexityResolution(environment: $0) },
+        .kimi: { ProviderTokenResolver.kimiResolution(environment: $0) },
+        .kimiCN: { ProviderTokenResolver.kimiCNResolution(environment: $0) },
+        .stepfun: { ProviderTokenResolver.stepfunResolution(environment: $0) },
+        .stepfunCN: { ProviderTokenResolver.stepfunCNResolution(environment: $0) },
+        .auggie: { ProviderTokenResolver.auggieResolution(environment: $0) },
+        .together: { ProviderTokenResolver.togetherResolution(environment: $0) },
+        .cohere: { ProviderTokenResolver.cohereResolution(environment: $0) },
+        .xai: { ProviderTokenResolver.xaiResolution(environment: $0) },
+        .cerebras: { ProviderTokenResolver.cerebrasResolution(environment: $0) },
+        .sambanova: { ProviderTokenResolver.sambaNovaResolution(environment: $0) },
+        .azure: { ProviderTokenResolver.azureOpenAIResolution(environment: $0) },
+        .qwen: { ProviderTokenResolver.qwenResolution(environment: $0) },
+        .qwenCN: { ProviderTokenResolver.qwenCNResolution(environment: $0) },
+    ]
+
+    /// Whether the given provider currently resolves a credential (keychain or env).
+    /// Used to hide unconfigured China variants from the menu *synchronously* — in
+    /// manual-refresh mode there is no async refresh to reveal an empty provider, so
+    /// the menu reads the keychain directly instead of waiting on fetch attempts.
+    /// Providers without an API-key resolver report `true` (nothing to check).
+    public static func hasCredential(
+        for provider: UsageProvider,
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool
+    {
+        switch provider {
+        case .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN:
+            self.credentialResolution(for: provider, environment: environment) != nil
+        default:
+            true
+        }
+    }
+
     #if canImport(Security)
     static func keychainRead(service: String, account: String, dataProtection: Bool) -> String? {
         var result: CFTypeRef?
@@ -462,7 +641,7 @@ public enum ProviderTokenResolver {
         }
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
 
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound || status == errSecInteractionNotAllowed {
             return nil
         }

@@ -46,7 +46,7 @@ extension StatusItemController {
     /// rows so keyboard users can change providers.
     @objc func cycleMenuProvider(_ sender: NSMenuItem) {
         guard let menu = sender.menu else { return }
-        let providers = self.store.enabledProviders()
+        let providers = self.store.menuVisibleProviders()
         guard !providers.isEmpty else { return }
 
         var options: [UsageProvider?] = providers.count > 1 ? [nil] : []
@@ -198,15 +198,7 @@ extension StatusItemController {
     }
 
     static func abbreviatedProviderName(_ name: String) -> String {
-        if name.count <= 8 { return name }
-        let abbreviations: [String: String] = [
-            "Antigravity": "AntiG",
-            "OpenRouter": "ORouter",
-            "Perplexity": "Perplx",
-            "SambaNova": "SambaN",
-            "Azure OpenAI": "Azure",
-        ]
-        return abbreviations[name] ?? "\(name.prefix(6))\u{2026}"
+        ProviderNameAbbreviator.abbreviate(name)
     }
 
     func switcherIcon(for provider: UsageProvider, size: CGFloat) -> NSImage {

@@ -17,6 +17,7 @@ struct ProviderListView: View {
     let isErrorExpanded: (UsageProvider) -> Binding<Bool>
     let onCopyError: (String) -> Void
     let moveProviders: (IndexSet, Int) -> Void
+    @State private var expandedAddAccount: Set<UsageProvider> = []
 
     var body: some View {
         List {
@@ -27,9 +28,10 @@ struct ProviderListView: View {
                 let isFirstProvider = provider == self.providers.first
                 let isLastProvider = provider == self.providers.last
                 let shouldShowDivider = provider != self.providers.last
-                let showDividerOnProviderRow = shouldShowDivider &&
-                    (!isEnabled || (fields.isEmpty && toggles.isEmpty))
-                let providerAddsBottomPadding = isLastProvider && (!isEnabled || (fields.isEmpty && toggles.isEmpty))
+                let cnSibling = provider.chinaSibling
+                let hasTrailingContent = (isEnabled && !(fields.isEmpty && toggles.isEmpty)) || cnSibling != nil
+                let showDividerOnProviderRow = shouldShowDivider && !hasTrailingContent
+                let providerAddsBottomPadding = isLastProvider && !hasTrailingContent
 
                 ProviderListProviderRowView(
                     provider: provider,
@@ -54,8 +56,9 @@ struct ProviderListView: View {
                     let lastFieldID = fields.last?.id
                     ForEach(fields) { field in
                         let isLastField = field.id == lastFieldID
-                        let showDivider = shouldShowDivider && toggles.isEmpty && isLastField
-                        let fieldAddsBottomPadding = isLastProvider && toggles.isEmpty && isLastField
+                        let showDivider = shouldShowDivider && toggles.isEmpty && isLastField && cnSibling == nil
+                        let fieldAddsBottomPadding = isLastProvider && toggles.isEmpty && isLastField &&
+                            cnSibling == nil
 
                         ProviderListFieldRowView(provider: provider, field: field)
                             .id(self.rowID(provider: provider, suffix: field.id))
@@ -70,8 +73,8 @@ struct ProviderListView: View {
                     let lastToggleID = toggles.last?.id
                     ForEach(toggles) { toggle in
                         let isLastToggle = toggle.id == lastToggleID
-                        let showDivider = shouldShowDivider && isLastToggle
-                        let toggleAddsBottomPadding = isLastProvider && isLastToggle
+                        let showDivider = shouldShowDivider && isLastToggle && cnSibling == nil
+                        let toggleAddsBottomPadding = isLastProvider && isLastToggle && cnSibling == nil
 
                         ProviderListToggleRowView(provider: provider, toggle: toggle)
                             .id(self.rowID(provider: provider, suffix: toggle.id))
@@ -83,6 +86,13 @@ struct ProviderListView: View {
                             .listRowSeparator(.hidden)
                             .providerSectionDivider(isVisible: showDivider)
                     }
+                }
+
+                if let cnSibling {
+                    self.regionalSiblingSection(
+                        sibling: cnSibling,
+                        shouldShowDivider: shouldShowDivider,
+                        isLastProvider: isLastProvider)
                 }
             }
             .onMove { fromOffsets, toOffset in
@@ -110,5 +120,76 @@ struct ProviderListView: View {
 
     private func rowID(provider: UsageProvider, suffix: String) -> String {
         "\(provider.rawValue)-\(suffix)"
+    }
+
+    @ViewBuilder
+    private func regionalSiblingSection(
+        sibling: UsageProvider,
+        shouldShowDivider: Bool,
+        isLastProvider: Bool) -> some View
+    {
+        let siblingEnabled = self.isEnabled(sibling).wrappedValue
+        let siblingFields = self.settingsFields(sibling)
+
+        if siblingEnabled {
+            ProviderListProviderRowView(
+                provider: sibling,
+                store: self.store,
+                isEnabled: self.isEnabled(sibling),
+                subtitle: self.subtitle(sibling),
+                usageStatus: self.usageStatus(sibling),
+                sourceLabel: self.sourceLabel(sibling),
+                statusLabel: self.statusLabel(sibling),
+                errorDisplay: self.errorDisplay(sibling),
+                isErrorExpanded: self.isErrorExpanded(sibling),
+                onCopyError: self.onCopyError)
+                .padding(.leading, ProviderListMetrics.regionalSiblingIndent)
+                .listRowInsets(self.rowInsets(withDivider: false, addTopPadding: false, addBottomPadding: false))
+                .listRowSeparator(.hidden)
+
+            let lastFieldID = siblingFields.last?.id
+            ForEach(siblingFields) { field in
+                let isLastField = field.id == lastFieldID
+                let showDivider = shouldShowDivider && isLastField
+                let addsBottomPadding = isLastProvider && isLastField
+
+                ProviderListFieldRowView(provider: sibling, field: field)
+                    .id(self.rowID(provider: sibling, suffix: field.id))
+                    .padding(.leading, ProviderListMetrics.regionalSiblingIndent)
+                    .padding(.bottom, showDivider ? ProviderListMetrics.dividerBottomInset : 0)
+                    .listRowInsets(self.rowInsets(
+                        withDivider: showDivider,
+                        addTopPadding: false,
+                        addBottomPadding: addsBottomPadding))
+                    .listRowSeparator(.hidden)
+                    .providerSectionDivider(isVisible: showDivider)
+            }
+        } else {
+            ProviderListAddRegionalAccountView(
+                provider: sibling,
+                displayName: self.store.metadata(for: sibling).displayName,
+                isExpanded: self.addAccountExpandedBinding(for: sibling),
+                fields: siblingFields)
+                .padding(.leading, ProviderListMetrics.regionalSiblingIndent)
+                .padding(.bottom, shouldShowDivider ? ProviderListMetrics.dividerBottomInset : 0)
+                .listRowInsets(self.rowInsets(
+                    withDivider: shouldShowDivider,
+                    addTopPadding: false,
+                    addBottomPadding: isLastProvider))
+                .listRowSeparator(.hidden)
+                .providerSectionDivider(isVisible: shouldShowDivider)
+        }
+    }
+
+    private func addAccountExpandedBinding(for provider: UsageProvider) -> Binding<Bool> {
+        Binding(
+            get: { self.expandedAddAccount.contains(provider) },
+            set: { expanded in
+                if expanded {
+                    self.expandedAddAccount.insert(provider)
+                } else {
+                    self.expandedAddAccount.remove(provider)
+                }
+            })
     }
 }
