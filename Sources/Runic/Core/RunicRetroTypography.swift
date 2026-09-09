@@ -50,6 +50,10 @@ struct RetroTaglineFooter: View {
 /// - **Retro:** plain uppercase with wide tracking, sans-serif, muted navy
 ///   (matches Mockup #7 — brackets are NOT a retro pattern, they're terminal).
 /// - **Terminal:** monospaced `[ SECTION ]` brackets in phosphor green.
+/// - **Sumi:** a small vermilion seal mark, then the title in the body face.
+/// - **Blueprint:** tracked caps with a cyan tick and a title-block rule
+///   running to the trailing edge.
+/// - **Relief:** small tracked caps pressed into the surface (letterpress).
 /// - **Everywhere else:** standard subheadline.
 @MainActor
 struct RetroSectionHeader: View {
@@ -82,6 +86,46 @@ struct RetroSectionHeader: View {
                         .foregroundStyle(self.runicTheme.accent.opacity(0.85))
                 }
                 .font(self.fonts.callout.weight(.bold))
+            } else if self.runicTheme.id == "sumi" {
+                HStack(alignment: .center, spacing: 6) {
+                    // Hanko: a small square seal in vermilion with the
+                    // first letter knocked out of it.
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                            .fill(self.runicTheme.accent.opacity(0.92))
+                        Text(String(self.text.prefix(1)).uppercased())
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(self.runicTheme.surface)
+                    }
+                    .frame(width: 12, height: 12)
+                    .accessibilityHidden(true)
+                    Text(self.text)
+                        .font(self.fonts.subheadline.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.primaryText)
+                }
+            } else if self.runicTheme.id == "blueprint" {
+                HStack(alignment: .center, spacing: 8) {
+                    Rectangle()
+                        .fill(self.runicTheme.accent)
+                        .frame(width: 10, height: 1.5)
+                        .accessibilityHidden(true)
+                    Text(self.text.uppercased())
+                        .tracking(1.6)
+                        .font(self.fonts.system(size: 10, weight: .semibold))
+                        .foregroundStyle(self.runicTheme.primaryText)
+                        .lineLimit(1)
+                    Rectangle()
+                        .fill(self.runicTheme.cardStroke.opacity(0.45))
+                        .frame(height: 1)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityHidden(true)
+                }
+            } else if self.runicTheme.isElevated {
+                Text(self.text.uppercased())
+                    .tracking(1.2)
+                    .font(self.fonts.caption.weight(.bold))
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .shadow(color: self.runicTheme.elevationRimColor, radius: 0, y: 1)
             } else {
                 Text(self.text)
                     .font(self.fonts.subheadline.weight(.semibold))

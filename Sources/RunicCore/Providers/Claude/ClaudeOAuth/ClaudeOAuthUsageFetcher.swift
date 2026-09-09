@@ -90,6 +90,9 @@ struct OAuthUsageResponse: Decodable {
     let sevenDaySonnet: OAuthUsageWindow?
     let iguanaNecktie: OAuthUsageWindow?
     let extraUsage: OAuthExtraUsage?
+    /// Newer payloads carry every limit as a list, including model-scoped
+    /// weekly windows (`kind: "weekly_scoped"`, `scope.model.display_name`).
+    let limits: [OAuthLimitEntry]?
 
     enum CodingKeys: String, CodingKey {
         case fiveHour = "five_hour"
@@ -99,6 +102,45 @@ struct OAuthUsageResponse: Decodable {
         case sevenDaySonnet = "seven_day_sonnet"
         case iguanaNecktie = "iguana_necktie"
         case extraUsage = "extra_usage"
+        case limits
+    }
+}
+
+struct OAuthLimitEntry: Decodable {
+    let kind: String?
+    let group: String?
+    let percent: Double?
+    let resetsAt: String?
+    let scope: OAuthLimitScope?
+    let isActive: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case kind
+        case group
+        case percent
+        case resetsAt = "resets_at"
+        case scope
+        case isActive = "is_active"
+    }
+
+    /// Model name for a scoped limit, when the payload names one.
+    var scopedModelName: String? {
+        let name = self.scope?.model?.displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return name.isEmpty ? nil : name
+    }
+}
+
+struct OAuthLimitScope: Decodable {
+    let model: OAuthLimitScopeModel?
+}
+
+struct OAuthLimitScopeModel: Decodable {
+    let id: String?
+    let displayName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case displayName = "display_name"
     }
 }
 

@@ -40,15 +40,10 @@ struct SyncPane: View {
                 .opacity(0.3)
 
             VStack(spacing: 0) {
-                Picker("", selection: self.$selectedSection) {
-                    ForEach(SyncSection.allCases) { section in
-                        Label(section.label, systemImage: section.icon).tag(section)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-                .padding(.top, PreferencesLayoutMetrics.paneVertical)
-                .padding(.bottom, RunicSpacing.sm)
+                RunicSegmentedPicker(selection: self.$selectedSection, cases: SyncSection.allCases, label: \.label)
+                    .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                    .padding(.top, PreferencesLayoutMetrics.paneVertical)
+                    .padding(.bottom, RunicSpacing.sm)
 
                 switch self.selectedSection {
                 case .integrations:

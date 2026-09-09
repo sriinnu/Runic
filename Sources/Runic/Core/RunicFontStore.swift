@@ -20,9 +20,9 @@ final class RunicFontStore: @unchecked Sendable {
     /// bundled font name).
     var family: String = RunicFontChoice.defaultFamily
 
-    /// Theme-driven design override (Terminal forces `.monospaced`, Daybreak
-    /// forces `.rounded`) when the active font is one of the virtual system
-    /// families. Custom bundled fonts keep their real family.
+    /// Theme-driven design override (Terminal forces `.monospaced`) when the
+    /// active font is one of the virtual system families. Custom bundled
+    /// fonts keep their real family.
     var themeDesign: Font.Design?
 
     /// Optional theme-selected real family, e.g. CommitMono for Terminal.

@@ -55,7 +55,7 @@ extension GeminiStatusProbe {
             quotas.append(GeminiModelQuota(
                 modelId: modelId,
                 percentLeft: pct,
-                resetTime: nil,
+                resetTime: UsageResetParsing.date(fromRelative: resetDesc),
                 resetDescription: resetDesc))
         }
 

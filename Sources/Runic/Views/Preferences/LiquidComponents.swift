@@ -13,6 +13,10 @@ struct LiquidMeshBackground: View {
                 self.runicTheme.menuSurfaceGradient
                 RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
             }
+        } else if self.runicTheme.hasSurfaceTexture || self.runicTheme.style.effects.materialIntensity < 0.1 {
+            // Paper, film, parchment: the texture is the ground. A blurred
+            // mesh under it only produced a stray gray band mid-window.
+            Color.clear
         } else {
             Canvas { context, size in
                 self.drawMesh(context: context, size: size)
@@ -174,10 +178,13 @@ private struct LiquidGlassCore: ViewModifier {
     func body(content: Content) -> some View {
         let isGlassTheme = self.runicTheme.id == "glass"
         let isTerminalHUD = self.runicTheme.isTerminalHUD
+        let elevated = self.runicTheme.isElevated
         let cornerRadius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
-        let shadowColor = self.hovering
-            ? self.runicTheme.accent.opacity(isTerminalHUD ? 0.16 : (isGlassTheme ? 0.22 : 0.10))
-            : .black.opacity(isTerminalHUD ? 0.22 : (isGlassTheme ? 0.18 : 0.04))
+        let shadowColor = elevated
+            ? Color.clear
+            : (self.hovering
+                ? self.runicTheme.accent.opacity(isTerminalHUD ? 0.16 : (isGlassTheme ? 0.22 : 0.10))
+                : .black.opacity(isTerminalHUD ? 0.22 : (isGlassTheme ? 0.18 : 0.04)))
         let shadowRadius: CGFloat = self.hovering
             ? (isTerminalHUD ? 6 : (isGlassTheme ? 18 : 12))
             : (isTerminalHUD ? 3 : (isGlassTheme ? 10 : 4))
@@ -209,6 +216,7 @@ private struct LiquidGlassCore: ViewModifier {
                 }
                 .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
             }
+            .runicRaised(radius: cornerRadius, lift: self.hovering ? 1.3 : 1)
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
@@ -298,11 +306,7 @@ struct LiquidSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             if let title {
-                Text(title)
-                    .font(self.titleFont)
-                    .foregroundStyle(self.titleColor)
-                    .textCase(.uppercase)
-                    .tracking(self.runicTheme.isTerminalHUD ? 0.8 : 0.4)
+                RunicPreferencesSectionTitle(text: title)
                     .padding(.leading, RunicSpacing.xxs)
             }
             self.content
@@ -313,13 +317,27 @@ struct LiquidSection<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(LiquidGlassCore(shimmerIndex: self.title.hashValue & 0xF))
     }
+}
 
-    private var titleFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.headline.weight(.bold) : self.fonts.subheadline.weight(.semibold)
-    }
+/// Section title for preferences cards. Opinionated themes get the same
+/// header treatment as the menu (seal, brackets, rule, tracked caps);
+/// System and Dark keep a quiet uppercase label in the accent.
+@MainActor
+struct RunicPreferencesSectionTitle: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
+    let text: String
 
-    private var titleColor: Color {
-        self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.runicTheme.secondaryText
+    var body: some View {
+        if self.runicTheme.isCustom || self.runicTheme.isTerminalHUD {
+            RetroSectionHeader(text: self.text)
+        } else {
+            Text(self.text)
+                .font(self.fonts.subheadline.weight(.semibold))
+                .foregroundStyle(self.runicTheme.accent)
+                .textCase(.uppercase)
+                .tracking(0.6)
+        }
     }
 }
 

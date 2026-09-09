@@ -50,21 +50,21 @@ struct GeneralPane: View {
                         } label: {
                             Label("Open Config", systemImage: "doc.text")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.runicBordered)
 
                         Button {
                             RunicConfigStore.revealInFinder()
                         } label: {
                             Label("Reveal in Finder", systemImage: "folder")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.runicBordered)
 
                         Button {
                             self.reloadConfig()
                         } label: {
                             Label("Reload Now", systemImage: "arrow.clockwise")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.runicBordered)
                     }
 
                     Text(self.configStatusLine)
@@ -130,7 +130,7 @@ struct GeneralPane: View {
                                 }
                                 Text("Import Browser Cookies Now")
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.runicBordered)
                             .disabled(self.isImportingOpenAIWebCookies || !self.settings.openAIWebAccessEnabled)
 
                             if let status = self.openAIWebStatusText {
@@ -173,12 +173,10 @@ struct GeneralPane: View {
                         Text("Menu refresh rate")
                             .font(self.preferenceTitleFont)
 
-                        Picker("", selection: self.$settings.refreshFrequency) {
-                            ForEach(RefreshFrequency.allCases) { option in
-                                Text(option.label).tag(option)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                        RunicSegmentedPicker(
+                            selection: self.$settings.refreshFrequency,
+                            cases: RefreshFrequency.allCases,
+                            label: \.label)
 
                         Text("How often to automatically refresh usage data.")
                             .font(self.preferenceHelpFont)
@@ -189,13 +187,10 @@ struct GeneralPane: View {
                         Text("Chart style")
                             .font(self.preferenceTitleFont)
 
-                        Picker("", selection: self.$settings.chartStyle) {
-                            Text("Line").tag(ChartStyle.line)
-                            Text("Area").tag(ChartStyle.area)
-                            Text("Bar").tag(ChartStyle.bar)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 360)
+                        RunicSegmentedPicker(
+                            selection: self.$settings.chartStyle,
+                            options: [(ChartStyle.line, "Line"), (ChartStyle.area, "Area"), (ChartStyle.bar, "Bar")])
+                            .frame(maxWidth: 360)
 
                         Text("Timeline charts can render as a line, filled area, or bars.")
                             .font(self.preferenceHelpFont)
@@ -206,12 +201,13 @@ struct GeneralPane: View {
                         Text("Number format")
                             .font(self.preferenceTitleFont)
 
-                        Picker("", selection: self.$settings.numberFormat) {
-                            Text("Abbreviated (45.2K)").tag(NumberFormat.abbreviated)
-                            Text("Full (45,234)").tag(NumberFormat.full)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 360)
+                        RunicSegmentedPicker(
+                            selection: self.$settings.numberFormat,
+                            options: [
+                                (NumberFormat.abbreviated, "Abbreviated (45.2K)"),
+                                (NumberFormat.full, "Full (45,234)"),
+                            ])
+                            .frame(maxWidth: 360)
 
                         Text("How to display large numbers in the UI.")
                             .font(self.preferenceHelpFont)
@@ -222,12 +218,13 @@ struct GeneralPane: View {
                         Text("Date format")
                             .font(self.preferenceTitleFont)
 
-                        Picker("", selection: self.$settings.dateFormat) {
-                            Text("Relative (2h ago)").tag(DateFormat.relative)
-                            Text("Absolute (Jan 31, 2:30 PM)").tag(DateFormat.absolute)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 360)
+                        RunicSegmentedPicker(
+                            selection: self.$settings.dateFormat,
+                            options: [
+                                (DateFormat.relative, "Relative (2h ago)"),
+                                (DateFormat.absolute, "Absolute (Jan 31, 2:30 PM)"),
+                            ])
+                            .frame(maxWidth: 360)
 
                         Text("How to display timestamps throughout the app.")
                             .font(self.preferenceHelpFont)
@@ -326,7 +323,7 @@ struct GeneralPane: View {
             HStack {
                 Spacer()
                 Button("Quit Runic") { NSApp.terminate(nil) }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.runicProminent)
                     .controlSize(.large)
             }
             .liquidEntrance(appeared: self.appeared, index: 7)
@@ -372,21 +369,19 @@ struct GeneralPane: View {
     }
 
     private var preferenceTitleFont: Font {
-        self.runicTheme.isTerminalHUD
-            ? .system(size: 14, weight: .semibold, design: .monospaced)
-            : self.fonts.callout.weight(.medium)
+        self.fonts.callout.weight(.medium)
     }
 
     private var preferenceHelpFont: Font {
-        self.runicTheme.isTerminalHUD ? .system(size: 12, weight: .regular) : self.fonts.footnote
+        self.fonts.footnote
     }
 
     private var preferenceHelpDesign: Font.Design? {
-        self.runicTheme.isTerminalHUD ? .default : nil
+        nil
     }
 
     private var preferenceHelpTracking: CGFloat {
-        self.runicTheme.isTerminalHUD ? 0 : RunicFont.activeRules.letterSpacing
+        RunicFont.activeRules.letterSpacing
     }
 
     private var preferenceHelpColor: Color {
@@ -394,7 +389,7 @@ struct GeneralPane: View {
     }
 
     private var preferenceHelpLineSpacing: CGFloat {
-        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
+        0
     }
 
     private var openAIWebStatusText: String? {

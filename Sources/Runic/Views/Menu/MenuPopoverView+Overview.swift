@@ -40,15 +40,20 @@ extension MenuPopoverView {
                 brandColor: self.settings.theme.palette.accent),
         ]
 
+        // One tab per brand: a China slot rides under its international
+        // sibling's tab, and the card area stacks both regions.
+        var seenRoots: Set<UsageProvider> = []
         for provider in providers {
-            let meta = self.store.metadata(for: provider)
-            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            let root = provider.brandRoot
+            guard seenRoots.insert(root).inserted else { continue }
+            let meta = self.store.metadata(for: root)
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: root)
             tabs.append(ProviderTabBarView.TabItem(
-                id: provider.rawValue,
+                id: root.rawValue,
                 label: Self.abbreviatedProviderName(meta.displayName),
-                icon: ProviderBrandIcon.image(for: provider, size: 24),
-                provider: provider,
-                isSelected: selected == provider,
+                icon: ProviderBrandIcon.image(for: root, size: 24),
+                provider: root,
+                isSelected: selected?.brandRoot == root,
                 brandColor: Color(
                     red: Double(descriptor.branding.color.red),
                     green: Double(descriptor.branding.color.green),
@@ -67,7 +72,8 @@ extension MenuPopoverView {
             totalProviders: providers.count,
             width: self.contentWidth,
             showsUsed: self.settings.usageBarsShowUsed,
-            numberStyle: self.settings.numberFormat.formatterStyle)
+            numberStyle: self.settings.numberFormat.formatterStyle,
+            onAddRegion: { slot in self.actions.openProviderSettings(slot) })
     }
 
     func overviewModel(providers: [UsageProvider])
@@ -113,10 +119,11 @@ extension MenuPopoverView {
                 usedPercent: OverviewMenuView.displayPercent(for: snapshot?.primary, showsUsed: showsUsed),
                 todayTokens: todayTokens,
                 brandColor: brandColor,
-                resetDescription: snapshot?.primary.resetDescription,
+                resetDescription: OverviewMenuView.resetPill(for: snapshot?.primary),
                 windowLabel: snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines),
                 topModelContext: context,
-                hasQuota: hasQuota))
+                hasQuota: hasQuota,
+                bankedResetsText: OverviewMenuView.bankedResetsPill(for: snapshot?.resetCredits)))
 
             for summary in self.store.ledgerAllDailySummary(for: provider) where summary.dayStart >= weekAgo {
                 chartPoints.append(OverviewMenuView.DailyPoint(
@@ -128,8 +135,28 @@ extension MenuPopoverView {
             }
         }
 
-        let activeSummaries = summaries.filter { activeIDs.contains($0.id) }
+        // Keep a brand's sibling row alongside an active one so a two-region
+        // brand always stacks as a unit.
+        let activeRoots = Set(summaries.filter { activeIDs.contains($0.id) }.map(\.brandRoot))
+        let activeSummaries = summaries.filter { activeRoots.contains($0.brandRoot) }
         return (activeSummaries.isEmpty ? summaries : activeSummaries, chartPoints, totalToday)
+    }
+
+    /// Visible slots of the brand `provider` belongs to, international first.
+    func brandSlots(for provider: UsageProvider, in enabledProviders: [UsageProvider]) -> [UsageProvider] {
+        let root = provider.brandRoot
+        let candidates = [root] + (root.chinaSibling.map { [$0] } ?? [])
+        let visible = candidates.filter { enabledProviders.contains($0) }
+        return visible.isEmpty ? [provider] : visible
+    }
+
+    /// For a two-region brand with one side unconfigured, the slot to offer.
+    func missingBrandSlot(for provider: UsageProvider, in enabledProviders: [UsageProvider]) -> UsageProvider? {
+        let root = provider.brandRoot
+        guard let china = root.chinaSibling else { return nil }
+        if !enabledProviders.contains(china) { return china }
+        if !enabledProviders.contains(root) { return root }
+        return nil
     }
 
     static func abbreviatedProviderName(_ name: String) -> String {

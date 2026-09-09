@@ -48,7 +48,9 @@ struct RunicThemeFonts {
 
 /// How rounded surfaces feel. A multiplier applied to the RunicCornerRadius tokens.
 struct RunicThemeShape {
-    enum Separator { case hairline, glow, ascii }
+    /// `brush`: a tapered sumi-ink stroke. `rule`: a heavy, full-opacity
+    /// typographic rule. The rest are the original three.
+    enum Separator { case hairline, glow, ascii, brush, rule }
 
     /// Multiplier for the global RunicCornerRadius scale. 1.0 = unchanged.
     let cornerMultiplier: CGFloat
@@ -135,7 +137,10 @@ struct RunicThemeTypographyStyle: Hashable {
 
 /// JSON-backed chrome tuning for borders, corners, and panel depth.
 struct RunicThemeChromeStyle: Hashable {
-    enum BorderStyle: String, Hashable { case native, hairline, bevelSoft, hud, glass }
+    /// `ink`: a hairline plus a faintly offset second pass, like a pen that
+    /// went round twice. `block`: a heavy stroke with a hard, unblurred
+    /// offset shadow — poster chrome, no softness anywhere.
+    enum BorderStyle: String, Hashable { case native, hairline, bevelSoft, hud, glass, ink, block }
     enum CornerStyle: String, Hashable { case standard, soft, compact, sharp }
     enum PanelDepth: String, Hashable { case flat, low, medium, high }
 
@@ -149,24 +154,43 @@ struct RunicThemeChromeStyle: Hashable {
         borderStyle: .hairline, borderWeight: 0.7, borderOpacity: 0.55, cornerStyle: .standard, panelDepth: .medium)
 }
 
-/// JSON-backed intensity controls for scanlines, glow, and material overlays.
+/// JSON-backed intensity controls for scanlines, glow, material overlays,
+/// and surface texture.
 struct RunicThemeEffectsStyle: Hashable {
+    /// Full-surface texture drawn over every panel. `paper` scatters washi
+    /// fibres and a warm vignette; `grain` lays film grain, a dark vignette
+    /// and faint light slats; `grid` rules fine drafting lines with a
+    /// heavier line every fifth. All deterministic so they never shimmer.
+    enum Texture: String, Hashable { case none, paper, grain, grid }
+
     let scanlineOpacity: Double
     let glowStrength: Double
     let materialIntensity: Double
+    var texture: Texture = .none
+    var textureOpacity: Double = 0
+    /// 0 = flat. Above 0, readable surfaces are raised on a two-light
+    /// shadow (wide ambient + tight key from the top-left) and pushable
+    /// controls sit in recessed wells. The value scales shadow strength.
+    var elevation: Double = 0
 
     static let standard = RunicThemeEffectsStyle(scanlineOpacity: 0, glowStrength: 0.25, materialIntensity: 0.45)
 }
 
-/// JSON-backed controls for selected states, progress bars, and hover behavior.
+/// JSON-backed controls for selected states, progress bars, hover behavior,
+/// and chart series coloring.
 struct RunicThemeControlStyle: Hashable {
     enum SelectedFillStyle: String, Hashable { case accentSoft, accentSolid, neutralSoft, terminalSolid }
-    enum ProgressStyle: String, Hashable { case softBar, segmentedHUD, nativeBar }
+    /// `flatBar`: solid fill, square-ish ends, no gloss, sheen, or end cap.
+    enum ProgressStyle: String, Hashable { case softBar, segmentedHUD, nativeBar, flatBar }
     enum HoverStyle: String, Hashable { case neutral, accent, glow }
+    /// `monochrome`: one accent for the lead series, then a ramp of the
+    /// theme's text color, for themes that want single-ink charts.
+    enum ChartSeriesStyle: String, Hashable { case themed, monochrome }
 
     let selectedFillStyle: SelectedFillStyle
     let progressStyle: ProgressStyle
     let hoverStyle: HoverStyle
+    var chartSeries: ChartSeriesStyle = .themed
 
     static let standard = RunicThemeControlStyle(
         selectedFillStyle: .accentSoft, progressStyle: .softBar, hoverStyle: .accent)
@@ -218,7 +242,9 @@ extension RunicThemeChromeStyle: Decodable {
 }
 
 extension RunicThemeEffectsStyle: Decodable {
-    private enum CodingKeys: String, CodingKey { case scanlineOpacity, glowStrength, materialIntensity }
+    private enum CodingKeys: String, CodingKey {
+        case scanlineOpacity, glowStrength, materialIntensity, texture, textureOpacity, elevation
+    }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -226,11 +252,14 @@ extension RunicThemeEffectsStyle: Decodable {
         self.scanlineOpacity = values.double(forKey: .scanlineOpacity, default: defaults.scanlineOpacity)
         self.glowStrength = values.double(forKey: .glowStrength, default: defaults.glowStrength)
         self.materialIntensity = values.double(forKey: .materialIntensity, default: defaults.materialIntensity)
+        self.texture = values.rawEnum(Texture.self, forKey: .texture, default: defaults.texture)
+        self.textureOpacity = values.double(forKey: .textureOpacity, default: defaults.textureOpacity)
+        self.elevation = values.double(forKey: .elevation, default: defaults.elevation)
     }
 }
 
 extension RunicThemeControlStyle: Decodable {
-    private enum CodingKeys: String, CodingKey { case selectedFillStyle, progressStyle, hoverStyle }
+    private enum CodingKeys: String, CodingKey { case selectedFillStyle, progressStyle, hoverStyle, chartSeries }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -241,6 +270,7 @@ extension RunicThemeControlStyle: Decodable {
             default: defaults.selectedFillStyle)
         self.progressStyle = values.rawEnum(ProgressStyle.self, forKey: .progressStyle, default: defaults.progressStyle)
         self.hoverStyle = values.rawEnum(HoverStyle.self, forKey: .hoverStyle, default: defaults.hoverStyle)
+        self.chartSeries = values.rawEnum(ChartSeriesStyle.self, forKey: .chartSeries, default: defaults.chartSeries)
     }
 }
 

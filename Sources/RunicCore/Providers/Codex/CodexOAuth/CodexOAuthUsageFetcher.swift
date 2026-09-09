@@ -7,11 +7,39 @@ public struct CodexUsageResponse: Decodable, Sendable {
     public let planType: PlanType?
     public let rateLimit: RateLimitDetails?
     public let credits: CreditDetails?
+    /// Banked reset summary — the count only; the per-credit expiries come
+    /// from `CodexOAuthUsageFetcher.fetchResetCredits`.
+    public let rateLimitResetCredits: ResetCreditsSummary?
+    /// Extra metered features with their own windows (a promotional model's
+    /// separate 5h/weekly allowance, for example).
+    public let additionalRateLimits: [AdditionalRateLimit]?
 
     enum CodingKeys: String, CodingKey {
         case planType = "plan_type"
         case rateLimit = "rate_limit"
         case credits
+        case rateLimitResetCredits = "rate_limit_reset_credits"
+        case additionalRateLimits = "additional_rate_limits"
+    }
+
+    public struct ResetCreditsSummary: Decodable, Sendable {
+        public let availableCount: Int
+
+        enum CodingKeys: String, CodingKey {
+            case availableCount = "available_count"
+        }
+    }
+
+    public struct AdditionalRateLimit: Decodable, Sendable {
+        public let limitName: String?
+        public let meteredFeature: String?
+        public let rateLimit: RateLimitDetails?
+
+        enum CodingKeys: String, CodingKey {
+            case limitName = "limit_name"
+            case meteredFeature = "metered_feature"
+            case rateLimit = "rate_limit"
+        }
     }
 
     public enum PlanType: Sendable, Decodable, Equatable {
@@ -122,6 +150,60 @@ public struct CodexUsageResponse: Decodable, Sendable {
     }
 }
 
+/// `GET …/rate-limit-reset-credits`: every banked reset with its expiry.
+public struct CodexResetCreditsResponse: Decodable, Sendable {
+    public let credits: [Credit]
+    public let availableCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case credits
+        case availableCount = "available_count"
+    }
+
+    public struct Credit: Decodable, Sendable {
+        public let id: String
+        public let resetType: String?
+        public let status: String
+        public let grantedAt: String?
+        public let expiresAt: String?
+        public let title: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case resetType = "reset_type"
+            case status
+            case grantedAt = "granted_at"
+            case expiresAt = "expires_at"
+            case title
+        }
+    }
+
+    /// Map to the provider-neutral model. Dates are ISO-8601 with fractional
+    /// seconds; anything unparseable is dropped rather than guessed.
+    public func toUsageResetCredits(summaryCount: Int?) -> UsageResetCredits {
+        let credits = self.credits.map { credit in
+            UsageResetCredit(
+                id: credit.id,
+                title: credit.title,
+                status: credit.status,
+                grantedAt: Self.parseDate(credit.grantedAt),
+                expiresAt: Self.parseDate(credit.expiresAt),
+                resetType: credit.resetType)
+        }
+        let listed = credits.count(where: { $0.isAvailable() })
+        return UsageResetCredits(availableCount: self.availableCount ?? summaryCount ?? listed, credits: credits)
+    }
+
+    static func parseDate(_ raw: String?) -> Date? {
+        guard let raw, !raw.isEmpty else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: raw) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: raw)
+    }
+}
+
 public enum CodexOAuthFetchError: LocalizedError, Sendable {
     case unauthorized
     case invalidResponse
@@ -149,6 +231,58 @@ public enum CodexOAuthUsageFetcher {
     private static let defaultChatGPTBaseURL = "https://chatgpt.com/backend-api/"
     private static let chatGPTUsagePath = "/wham/usage"
     private static let codexUsagePath = "/api/codex/usage"
+    private static let chatGPTResetCreditsPath = "/wham/rate-limit-reset-credits"
+    private static let codexResetCreditsPath = "/api/codex/rate-limit-reset-credits"
+
+    /// Banked reset inventory. Best-effort: callers treat a failure as "count
+    /// only" and fall back to the summary in the usage payload.
+    public static func fetchResetCredits(
+        accessToken: String,
+        accountId: String?) async throws -> CodexResetCreditsResponse
+    {
+        var request = URLRequest(url: Self.resolveResetCreditsURL())
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("Runic", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let accountId, !accountId.isEmpty {
+            request.setValue(accountId, forHTTPHeaderField: "ChatGPT-Account-Id")
+        }
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw CodexOAuthFetchError.invalidResponse }
+            switch http.statusCode {
+            case 200...299:
+                do {
+                    return try JSONDecoder().decode(CodexResetCreditsResponse.self, from: data)
+                } catch {
+                    throw CodexOAuthFetchError.invalidResponse
+                }
+            case 401, 403:
+                throw CodexOAuthFetchError.unauthorized
+            default:
+                throw CodexOAuthFetchError.serverError(http.statusCode, String(data: data, encoding: .utf8))
+            }
+        } catch let error as CodexOAuthFetchError {
+            throw error
+        } catch {
+            throw CodexOAuthFetchError.networkError(error)
+        }
+    }
+
+    private static func resolveResetCreditsURL() -> URL {
+        let usage = self.resolveUsageURL()
+        let raw = usage.absoluteString
+        if raw.hasSuffix(Self.chatGPTUsagePath) {
+            return URL(string: String(raw.dropLast(Self.chatGPTUsagePath.count)) + Self.chatGPTResetCreditsPath) ??
+                usage
+        }
+        if raw.hasSuffix(Self.codexUsagePath) {
+            return URL(string: String(raw.dropLast(Self.codexUsagePath.count)) + Self.codexResetCreditsPath) ?? usage
+        }
+        return usage
+    }
 
     public static func fetchUsage(accessToken: String, accountId: String?) async throws -> CodexUsageResponse {
         var request = URLRequest(url: Self.resolveUsageURL())

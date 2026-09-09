@@ -146,17 +146,15 @@ struct ProvidersPane: View {
     /// region is its own provider slot underneath, so usage, history, and the
     /// key field all follow the selection.
     private func regionSwitcher(for brand: UsageProvider) -> some View {
-        Picker("Account", selection: self.$sidebarRegion) {
-            ForEach(ProviderRegion.allCases) { region in
-                Text(region.displayName).tag(region)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .frame(maxWidth: 360)
-        .padding(.horizontal, ProviderListMetrics.contentInset)
-        .padding(.top, RunicSpacing.sm)
-        .accessibilityLabel("\(self.store.metadata(for: brand).displayName) account region")
+        RunicSegmentedPicker(
+            selection: self.$sidebarRegion,
+            cases: ProviderRegion.allCases,
+            label: \.displayName)
+            .labelsHidden()
+            .frame(maxWidth: 360)
+            .padding(.horizontal, ProviderListMetrics.contentInset)
+            .padding(.top, RunicSpacing.sm)
+            .accessibilityLabel("\(self.store.metadata(for: brand).displayName) account region")
     }
 
     private var sidebarLayout: some View {

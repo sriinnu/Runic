@@ -91,6 +91,17 @@ extension SettingsStore {
         }
     }
 
+    /// Apply a theme to this process only — every visual consumer updates,
+    /// nothing is written to UserDefaults. Used by the screenshot renderer
+    /// so a review render can never flip the stored preference.
+    func previewTheme(_ theme: Theme) {
+        self.appearanceValues.theme = theme
+        RunicApp.applyTheme(theme)
+        RunicFont.applyTheme(theme.palette)
+        IconRenderer.themePalette = theme.palette
+        self.bumpVisualSettingsRevision()
+    }
+
     var theme: Theme {
         get { self.appearanceValues.theme }
         set {

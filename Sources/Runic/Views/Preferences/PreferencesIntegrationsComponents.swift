@@ -222,7 +222,7 @@ struct IntegrationCopyButton: View {
                 self.copiedValue == self.value ? "Copied" : self.title,
                 systemImage: self.copiedValue == self.value ? "checkmark" : "doc.on.doc")
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.runicBordered)
         .controlSize(.small)
     }
 }
@@ -237,7 +237,7 @@ struct IntegrationRevealButton: View {
         } label: {
             Label("Reveal", systemImage: "folder")
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.runicBordered)
         .controlSize(.small)
     }
 }
@@ -256,7 +256,7 @@ struct IntegrationLinkButton: View {
         } label: {
             Label(self.title, systemImage: self.systemImage)
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.runicBordered)
         .controlSize(.small)
         .disabled(self.url == nil)
     }
@@ -297,7 +297,7 @@ struct AddMCPServerSheet: View {
                 Button("Cancel", role: .cancel) { self.onCancel() }
                     .keyboardShortcut(.cancelAction)
                 Button("Add") { self.onAdd() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.runicProminent)
                     .disabled(self.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .keyboardShortcut(.defaultAction)
             }

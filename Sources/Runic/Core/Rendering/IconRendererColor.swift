@@ -4,7 +4,7 @@ import RunicCore
 extension IconRenderer {
     /// Active theme palette for the menubar icon. Set by SettingsStore on
     /// theme change so the vibrant accent ramp adapts to each theme's
-    /// signature colors (phosphor green for Terminal, peach for Daybreak,
+    /// signature colors (amber for Terminal, vermilion for Sumi, cyan for Blueprint,
     /// cyan→magenta for Glass).
     ///
     /// Writes happen on the main actor (SettingsStore.theme.didSet). Reads

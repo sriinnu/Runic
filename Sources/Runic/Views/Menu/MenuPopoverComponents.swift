@@ -96,6 +96,9 @@ struct MenuPopoverBackground: View {
                     lineWidth: self.runicTheme.style.chrome.borderWeight,
                     opacity: 0.24)
             }
+            if self.runicTheme.hasSurfaceTexture {
+                RunicSurfaceTextureOverlay()
+            }
         }
         .ignoresSafeArea()
     }
@@ -104,16 +107,35 @@ struct MenuPopoverBackground: View {
 struct MenuPopoverSurfaceCard<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(\.runicTheme) private var runicTheme
+    @State private var isHovered = false
 
     var body: some View {
         let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
         let strokeIsGlow = self.runicTheme.shape.separator == .glow
         let isGlass = self.runicTheme.id == "glass"
+        let borderStyle = self.runicTheme.style.chrome.borderStyle
+        let elevated = self.runicTheme.isElevated
         self.content
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(isGlass ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(self.runicTheme.menuSubtleFill))
+                    .fill(isGlass
+                        ? AnyShapeStyle(.regularMaterial)
+                        : AnyShapeStyle(elevated ? self.runicTheme.cardFill : self.runicTheme.menuSubtleFill))
+                    // Poster chrome: a hard, unblurred drop shadow in the text
+                    // color, under an opaque slab so the shadow never bleeds
+                    // through a translucent card fill. `block` style only.
+                    .background {
+                        if borderStyle == .block {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                    .fill(self.runicTheme.primaryText.opacity(0.85))
+                                    .offset(x: 3, y: 3)
+                                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                    .fill(self.runicTheme.surface)
+                            }
+                        }
+                    }
                     .background {
                         if isGlass {
                             // Soft accent bloom behind the frost — what makes
@@ -146,8 +168,23 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
                             ? self.runicTheme.accent.opacity(self.runicTheme.style.effects.glowStrength)
                             : .clear,
                         radius: 4 + self.runicTheme.style.effects.glowStrength * 5)
+                // Ink chrome: a second, slightly offset pass of the same
+                // line — the pen went round twice.
+                if borderStyle == .ink {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .stroke(
+                            self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity * 0.45),
+                            lineWidth: max(0.5, self.runicTheme.style.chrome.borderWeight * 0.7))
+                        .offset(x: 0.8, y: 1.1)
+                }
             }
             .retroBevel(baseRadius: RunicCornerRadius.lg)
+            .runicRaised(radius: radius, lift: self.isHovered ? 1.4 : 1)
+            .offset(y: elevated && self.isHovered ? -1 : 0)
+            .animation(elevated ? self.runicTheme.motion.curve : nil, value: self.isHovered)
+            .onHover { hovering in
+                if elevated { self.isHovered = hovering }
+            }
     }
 }
 
@@ -235,7 +272,7 @@ struct MenuPopoverChip: View {
                 // Glass / Dark — denser accent wash plus glow underlay.
                 return self.runicTheme.accent.opacity(0.24)
             }
-            // Daybreak / Light — warm tint, kept soft.
+            // Retro / Sumi / System — tint, kept soft.
             return self.runicTheme.accent.opacity(0.14)
         }
         return self.runicTheme.cardFill.opacity(0.34)
@@ -422,8 +459,9 @@ struct ModelQuotaWindowsPopoverView: View {
     }
 
     private func resetText(for window: RateWindow) -> String? {
-        if let resetsAt = window.resetsAt {
-            return "Resets \(UsageFormatter.resetCountdownDescription(from: resetsAt))"
+        if let resetsAt = window.resetsAt ?? UsageResetParsing.date(fromRelative: window.resetDescription) {
+            return "Resets \(UsageFormatter.resetCountdownDescription(from: resetsAt)) · " +
+                UsageFormatter.resetExpiryString(from: resetsAt)
         }
         if let reset = window.resetDescription?.trimmingCharacters(in: .whitespacesAndNewlines), !reset.isEmpty {
             return reset.lowercased().hasPrefix("resets") ? reset : "Resets \(reset)"

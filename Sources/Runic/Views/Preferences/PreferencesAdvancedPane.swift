@@ -19,12 +19,10 @@ struct AdvancedPane: View {
                     .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .textCase(.uppercase)
-                Picker("", selection: self.$settings.refreshFrequency) {
-                    ForEach(RefreshFrequency.allCases) { option in
-                        Text(option.label).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
+                RunicSegmentedPicker(
+                    selection: self.$settings.refreshFrequency,
+                    cases: RefreshFrequency.allCases,
+                    label: \.label)
 
                 if self.settings.refreshFrequency == .manual {
                     Text("Auto-refresh is off; use the menu's Refresh command.")

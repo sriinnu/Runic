@@ -21,6 +21,9 @@ struct ChartPanelStyle: ViewModifier {
                     if self.runicTheme.isTerminalHUD {
                         RunicTerminalScanlineOverlay(opacity: self.runicTheme.chartScanlineOpacity)
                     }
+                    if self.runicTheme.hasSurfaceTexture {
+                        RunicSurfaceTextureOverlay(strength: 0.7)
+                    }
                 }
             }
     }

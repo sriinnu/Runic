@@ -15,27 +15,27 @@ private struct Palette {
     let highlight: NSColor
 }
 
-private let daybreak = Palette(
-    background: NSColor.hex(0xEAF8FC),
-    surface: NSColor.hex(0xF7FCFF),
-    card: NSColor.hex(0xE5F7FB),
-    stroke: NSColor.hex(0xA5DDE8),
-    text: NSColor.hex(0x1F2937),
-    secondary: NSColor.hex(0x6B7280),
-    accent: NSColor.hex(0x55B8C9),
-    warm: NSColor.hex(0xFF5C84),
-    highlight: NSColor.hex(0xFFB000))
+private let sumi = Palette(
+    background: NSColor.hex(0xEDE6D8),
+    surface: NSColor.hex(0xF3EEE3),
+    card: NSColor.hex(0xE8E1D0),
+    stroke: NSColor.hex(0x2A2724),
+    text: NSColor.hex(0x1E1B18),
+    secondary: NSColor.hex(0x4B443B),
+    accent: NSColor.hex(0xC2331B),
+    warm: NSColor.hex(0x8B2C3A),
+    highlight: NSColor.hex(0x9C6D0B))
 
 private let terminal = Palette(
-    background: NSColor.hex(0x020806),
-    surface: NSColor.hex(0x06130E),
-    card: NSColor.hex(0x0B1B13),
-    stroke: NSColor.hex(0x00A866),
-    text: NSColor.hex(0xD7FCE8),
-    secondary: NSColor.hex(0x7AB795),
-    accent: NSColor.hex(0x00F082),
-    warm: NSColor.hex(0xFFB42B),
-    highlight: NSColor.hex(0x40DFFF))
+    background: NSColor.hex(0x0B0B0D),
+    surface: NSColor.hex(0x141416),
+    card: NSColor.hex(0x1A1A1D),
+    stroke: NSColor.hex(0xFFB000),
+    text: NSColor.hex(0xF2EDE4),
+    secondary: NSColor.hex(0xB8B0A3),
+    accent: NSColor.hex(0xFFB000),
+    warm: NSColor.hex(0xFF5C5C),
+    highlight: NSColor.hex(0xFF8C42))
 
 private final class Canvas {
     let width: CGFloat
@@ -257,7 +257,7 @@ private func drawPopover(_ c: Canvas, palette: Palette, terminalMode: Bool = fal
 }
 
 private func drawSettingsProviders(_ c: Canvas) {
-    let palette = daybreak
+    let palette = sumi
     c.fill(NSColor.hex(0xDDF5FA), 0, 0, c.width, c.height)
     c.rounded(palette.surface, 28, 28, c.width - 56, c.height - 56, radius: 26, stroke: palette.stroke.withAlphaComponent(0.65), lineWidth: 2)
     c.rounded(NSColor.white.withAlphaComponent(0.68), 54, 70, 230, c.height - 140, radius: 18, stroke: palette.stroke.withAlphaComponent(0.30))
@@ -288,7 +288,7 @@ private func drawSettingsProviders(_ c: Canvas) {
 }
 
 private func drawSettingsThemes(_ c: Canvas) {
-    let palette = daybreak
+    let palette = sumi
     c.fill(NSColor.hex(0xF3FBFD), 0, 0, c.width, c.height)
     c.rounded(palette.surface, 28, 28, c.width - 56, c.height - 56, radius: 26, stroke: palette.stroke.withAlphaComponent(0.60), lineWidth: 2)
     c.text("Appearance", 70, 74, 300, 40, size: 34, color: palette.text, weight: .bold)
@@ -296,9 +296,10 @@ private func drawSettingsThemes(_ c: Canvas) {
     let themes: [(String, NSColor, NSColor)] = [
         ("Retro", NSColor.hex(0x3B5BA5), NSColor.hex(0xF2E9D4)),
         ("System", NSColor.hex(0x5B7CFA), NSColor.hex(0xF4F6F8)),
-        ("Light", NSColor.hex(0x2670EB), NSColor.hex(0xF6F8FB)),
         ("Dark", NSColor.hex(0x8CCCFF), NSColor.hex(0x06080B)),
-        ("Daybreak", daybreak.accent, daybreak.surface),
+        ("Sumi", sumi.accent, sumi.surface),
+        ("Blueprint", NSColor.hex(0x7FD3FF), NSColor.hex(0x0F2E5E)),
+        ("Relief", NSColor.hex(0x4A55D6), NSColor.hex(0xE9E7E2)),
         ("Glass", NSColor.hex(0x6FE8FF), NSColor.hex(0xEAFBFF)),
         ("Terminal", terminal.accent, terminal.background),
     ]
@@ -307,9 +308,9 @@ private func drawSettingsThemes(_ c: Canvas) {
         let row = i / 3
         let x = CGFloat(70 + col * 330)
         let y = CGFloat(180 + row * 170)
-        c.rounded(item.2, x, y, 290, 130, radius: 20, stroke: item.0 == "Daybreak" ? item.1 : palette.stroke.withAlphaComponent(0.45), lineWidth: item.0 == "Daybreak" ? 3 : 1)
+        c.rounded(item.2, x, y, 290, 130, radius: 20, stroke: item.0 == "Sumi" ? item.1 : palette.stroke.withAlphaComponent(0.45), lineWidth: item.0 == "Sumi" ? 3 : 1)
         c.circle(item.1, centerX: x + 44, centerY: y + 42, radius: 18)
-        let darkTile = ["Terminal", "Dark"].contains(item.0)
+        let darkTile = ["Terminal", "Dark", "Blueprint"].contains(item.0)
         c.text(item.0, x + 76, y + 30, 170, 28, size: 22, color: darkTile ? NSColor.hex(0xD7FCE8) : palette.text, weight: .bold)
         c.text("Aa 123 - preview", x + 28, y + 80, 230, 26, size: 17, color: darkTile ? terminal.secondary : palette.secondary, monospaced: item.0 == "Terminal")
     }
@@ -325,8 +326,8 @@ private func drawSettingsThemes(_ c: Canvas) {
     }
 }
 
-try writeImage(named: "menubar-daybreak.png", width: 900, height: 1440) { canvas in
-    drawPopover(canvas, palette: daybreak)
+try writeImage(named: "menubar-sumi.png", width: 900, height: 1440) { canvas in
+    drawPopover(canvas, palette: sumi)
 }
 
 try writeImage(named: "menubar-terminal.png", width: 900, height: 1440) { canvas in

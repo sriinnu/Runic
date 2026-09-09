@@ -280,7 +280,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         let weekly = makeWindow(usage.sevenDay, windowMinutes: 7 * 24 * 60)
         let modelSpecific = makeWindow(
             usage.sevenDaySonnet ?? usage.sevenDayOpus,
-            windowMinutes: 7 * 24 * 60)
+            windowMinutes: 7 * 24 * 60) ?? Self.scopedLimitWindow(usage.limits)
 
         return ClaudeUsageSnapshot(
             primary: primary,
@@ -292,6 +292,25 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             accountOrganization: nil,
             loginMethod: Self.inferPlan(rateLimitTier: credentials.rateLimitTier),
             rawText: nil)
+    }
+
+    /// A model-scoped weekly limit from the `limits` list (a promotional
+    /// model's own allowance), labelled with the model name so the card and
+    /// the Resets panel show it as its own window.
+    static func scopedLimitWindow(_ limits: [OAuthLimitEntry]?) -> RateWindow? {
+        guard let limits else { return nil }
+        let scoped = limits.filter { $0.scopedModelName != nil && $0.percent != nil }
+        guard let entry = scoped.first(where: { $0.isActive == true }) ?? scoped.first,
+              let percent = entry.percent,
+              let model = entry.scopedModelName else { return nil }
+        let resetDate = ClaudeOAuthUsageFetcher.parseISO8601Date(entry.resetsAt)
+        let isWeekly = (entry.group ?? entry.kind ?? "").lowercased().contains("week")
+        return RateWindow(
+            usedPercent: percent,
+            windowMinutes: isWeekly ? 7 * 24 * 60 : nil,
+            resetsAt: resetDate,
+            resetDescription: resetDate.map(Self.formatResetDate),
+            label: isWeekly ? "\(model) weekly" : model)
     }
 
     private static func oauthExtraUsageCost(_ extra: OAuthExtraUsage?) -> ProviderCostSnapshot? {

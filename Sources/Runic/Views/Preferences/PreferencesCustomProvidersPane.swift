@@ -42,7 +42,7 @@ struct CustomProvidersPane: View {
                     } label: {
                         Label("Add Provider", systemImage: "plus")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.runicProminent)
                 }
                 .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
 

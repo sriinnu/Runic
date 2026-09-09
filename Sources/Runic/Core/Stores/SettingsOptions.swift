@@ -142,9 +142,10 @@ enum DateFormat: String, CaseIterable, Identifiable {
 enum Theme: String, CaseIterable, Identifiable {
     case retro
     case system
-    case light
     case dark
-    case daybreak
+    case sumi
+    case blueprint
+    case relief
     case glass
     case terminal
 
@@ -153,8 +154,22 @@ enum Theme: String, CaseIterable, Identifiable {
     static let `default`: Theme = .retro
 
     /// Raw values that used to exist and are now retired. Migration code in
-    /// `SettingsStore.normalizeStoredTheme` rewrites these on load.
-    static let retiredRawValues: Set<String> = ["pine", "nocturne", "prism"]
+    /// `SettingsStore+DefaultsSnapshot` rewrites these on load via
+    /// `migrated(fromRetired:)`.
+    static let retiredRawValues: Set<String> = ["pine", "nocturne", "prism", "light", "daybreak", "noir"]
+
+    /// Nearest living theme for a retired one: the two light themes land on
+    /// Sumi (the light theme with a point of view), the old dark ones on
+    /// Blueprint, the prism showpiece on Glass, and anything else on the
+    /// default.
+    static func migrated(fromRetired raw: String) -> Theme {
+        switch raw {
+        case "light", "daybreak": .sumi
+        case "nocturne", "noir": .blueprint
+        case "prism": .glass
+        default: .default
+        }
+    }
 
     var id: String {
         self.rawValue
@@ -164,9 +179,10 @@ enum Theme: String, CaseIterable, Identifiable {
         switch self {
         case .retro: "Retro"
         case .system: "System"
-        case .light: "Light"
         case .dark: "Dark"
-        case .daybreak: "Daybreak"
+        case .sumi: "Sumi"
+        case .blueprint: "Blueprint"
+        case .relief: "Relief"
         case .glass: "Glass"
         case .terminal: "Terminal"
         }

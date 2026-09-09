@@ -131,6 +131,14 @@ extension StatusItemController {
         }
     }
 
+    /// Settings → Providers with this slot focused. A China slot selects its
+    /// brand row and flips the region switch, so "Add China" lands on the
+    /// right key field.
+    func showProviderSettings(_ provider: UsageProvider) {
+        self.preferencesSelection.provider = provider
+        self.openSettings(tab: .providers)
+    }
+
     @objc func quit() {
         NSApp.terminate(nil)
     }

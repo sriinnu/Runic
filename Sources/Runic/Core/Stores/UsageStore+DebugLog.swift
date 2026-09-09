@@ -343,6 +343,12 @@ extension UsageStore {
         return lines
     }
 
+    nonisolated func debugResetCreditsSummary(_ credits: UsageResetCredits?) -> String {
+        guard let credits else { return "resetCredits=nil" }
+        let expiries = credits.credits.map { "\($0.status):\($0.expiresAt?.description ?? "nil")" }
+        return "resetCredits.available=\(credits.availableCount) credits=[\(expiries.joined(separator: ", "))]"
+    }
+
     private nonisolated func debugRateWindowSummary(label: String, window: RateWindow) -> String {
         let resetsAt = window.resetsAt?.description ?? "nil"
         let windowMinutes = window.windowMinutes.map { "\($0)m" } ?? "nil"

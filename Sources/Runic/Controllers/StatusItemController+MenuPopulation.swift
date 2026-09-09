@@ -49,6 +49,36 @@ extension StatusItemController {
         menu.addItem(.separator())
     }
 
+    /// Hosted "Resets" card: every window that knows when it flips, for the
+    /// overview (all providers) or the selected provider. Skipped when no
+    /// window has a reset to report.
+    func addResetScheduleCardIfNeeded(to menu: NSMenu, context: MenuPopulationContext) {
+        let providers = context.isOverviewMode ? context.enabledProviders : [context.currentProvider]
+        let inputs = providers.map { provider in
+            ResetScheduleBuilder.ProviderInput(
+                provider: provider,
+                metadata: self.store.metadata(for: provider),
+                snapshot: self.store.snapshot(for: provider),
+                quotaWindows: self.store.quotaWindows[provider])
+        }
+        let entries = ResetScheduleBuilder.entries(inputs)
+        let credits = ResetScheduleBuilder.credits(inputs)
+        guard !entries.isEmpty || !credits.isEmpty else { return }
+        let view = ResetScheduleMenuView(
+            entries: entries,
+            width: context.menuWidth - MenuCardMetrics.horizontalPadding * 2,
+            showsProvider: context.isOverviewMode,
+            credits: credits)
+            .padding(.horizontal, MenuCardMetrics.horizontalPadding)
+            .padding(.vertical, RunicSpacing.xs)
+        self.addHostedMenuItem(
+            self.themedHostedMenuRoot(view),
+            id: "resetScheduleCard",
+            width: context.menuWidth,
+            to: menu)
+        menu.addItem(.separator())
+    }
+
     func addUsageCardIfNeeded(to menu: NSMenu, context: MenuPopulationContext) -> Bool {
         guard !context.isOverviewMode,
               let model = self.menuCardModel(for: context.selectedProvider)

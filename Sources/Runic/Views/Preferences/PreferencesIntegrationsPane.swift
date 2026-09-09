@@ -91,7 +91,7 @@ struct IntegrationsPane: View {
                     } label: {
                         Label("Add", systemImage: "plus")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.runicBordered)
                     .controlSize(.small)
                 }
 
@@ -132,13 +132,10 @@ struct IntegrationsPane: View {
                 VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                     Text("Payload format")
                         .font(self.fonts.callout.weight(.semibold))
-                    Picker("", selection: self.$webhookFormat) {
-                        Text("Slack").tag("slack")
-                        Text("Discord").tag("discord")
-                        Text("Generic").tag("generic")
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 320)
+                    RunicSegmentedPicker(
+                        selection: self.$webhookFormat,
+                        options: [("slack", "Slack"), ("discord", "Discord"), ("generic", "Generic")])
+                        .frame(maxWidth: 320)
                 }
                 HStack(spacing: RunicSpacing.sm) {
                     Button {
@@ -146,7 +143,7 @@ struct IntegrationsPane: View {
                     } label: {
                         Label("Test", systemImage: "paperplane")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.runicBordered)
                     .disabled(self.defaultWebhookURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                     if let result = self.testWebhookResult {
@@ -183,12 +180,12 @@ struct IntegrationsPane: View {
                             } label: {
                                 Image(systemName: "folder")
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.runicBordered)
                             .controlSize(.small)
                             Button("Auto-detect") {
                                 self.autoDetectRepository()
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.runicBordered)
                             .controlSize(.small)
                         }
                         GitRepositoryStatus(
