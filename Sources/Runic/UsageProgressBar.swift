@@ -59,8 +59,54 @@ struct UsageProgressBar: View {
     var body: some View {
         if self.runicTheme.style.controls.progressStyle == .segmentedHUD || self.runicTheme.isTerminalHUD {
             self.terminalSegmentBody
+        } else if self.runicTheme.style.controls.progressStyle == .flatBar {
+            self.flatBody
         } else {
             self.gradientBody
+        }
+    }
+
+    /// Flat print-style bar: solid ink on a bare track, corners from the
+    /// theme, nothing glossy. Sumi and Blueprint.
+    private var flatBody: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let fillWidth = (self.animatedPercent / 100) * width
+            let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs)
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(self.runicTheme.menuTrackColor.opacity(self.isHighlighted ? 1.0 : 0.85))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .strokeBorder(self.runicTheme.primaryText.opacity(0.22), lineWidth: 0.6))
+                    .runicRecessed(radius: radius)
+                if fillWidth > 0 {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(self.tint)
+                        .frame(width: max(fillWidth, self.barHeight * 0.6))
+                        .runicRaised(radius: radius, lift: 0.4)
+                }
+            }
+            .frame(width: width, height: self.barHeight, alignment: .leading)
+        }
+        .frame(height: self.barHeight)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(self.accessibilityLabel)
+        .accessibilityValue("\(Int(self.clamped)) percent")
+        .accessibilityAddTraits(.updatesFrequently)
+        .onAppear {
+            if RunicScreenshotRenderer.isRequested {
+                self.animatedPercent = self.clamped
+                return
+            }
+            withAnimation(self.runicTheme.motion.curve) {
+                self.animatedPercent = self.clamped
+            }
+        }
+        .onChange(of: self.clamped) { _, newValue in
+            withAnimation(self.runicTheme.motion.curve) {
+                self.animatedPercent = newValue
+            }
         }
     }
 
@@ -95,6 +141,10 @@ struct UsageProgressBar: View {
         .accessibilityValue("\(Int(self.clamped)) percent")
         .accessibilityAddTraits(.updatesFrequently)
         .onAppear {
+            if RunicScreenshotRenderer.isRequested {
+                self.animatedPercent = self.clamped
+                return
+            }
             withAnimation(self.runicTheme.motion.curve) {
                 self.animatedPercent = self.clamped
             }
@@ -203,6 +253,10 @@ struct UsageProgressBar: View {
         .accessibilityAddTraits(.updatesFrequently)
         .drawingGroup(opaque: false)
         .onAppear {
+            if RunicScreenshotRenderer.isRequested {
+                self.animatedPercent = self.clamped
+                return
+            }
             withAnimation(self.runicTheme.motion.curve) {
                 self.animatedPercent = self.clamped
             }

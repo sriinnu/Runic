@@ -11,6 +11,9 @@ struct MenuPopoverActions {
     let exportCSV: (UsageExporter.Scope) -> Void
     let exportJSON: (UsageExporter.Scope) -> Void
     let openSettings: () -> Void
+    /// Open Settings → Providers focused on this slot (used by "Add China" /
+    /// "Add International" rows for a brand with two regions).
+    let openProviderSettings: (UsageProvider) -> Void
     let openAbout: () -> Void
     let quit: () -> Void
     let copyError: (String) -> Void
@@ -68,15 +71,30 @@ struct MenuPopoverView: View {
                         self.providerTabs(providers: enabledProviders, selected: provider)
                     }
 
+                    // A two-region brand stacks a card per configured slot
+                    // under one tab, with an offer to add the missing side.
+                    let slots = provider.map { self.brandSlots(for: $0, in: enabledProviders) } ?? []
+                    let leadSlot = slots.first
+                    let missingSlot = provider.flatMap { self.missingBrandSlot(for: $0, in: enabledProviders) }
+
                     Group {
                         if isOverview {
                             MenuPopoverSurfaceCard {
                                 self.overviewView(providers: enabledProviders)
                             }
-                        } else if let provider, let model = self.menuCardModel(for: provider) {
-                            MenuPopoverSurfaceCard {
-                                UsageMenuCardView(model: model, width: self.contentWidth)
-                                    .environment(\.menuItemHighlighted, false)
+                        } else if !slots.isEmpty {
+                            VStack(alignment: .leading, spacing: RunicSpacing.menuControlSpacing) {
+                                ForEach(slots, id: \.rawValue) { slot in
+                                    if let model = self.menuCardModel(for: slot) {
+                                        MenuPopoverSurfaceCard {
+                                            UsageMenuCardView(model: model, width: self.contentWidth)
+                                                .environment(\.menuItemHighlighted, false)
+                                        }
+                                    }
+                                }
+                                if let missingSlot {
+                                    self.addRegionRow(for: missingSlot)
+                                }
                             }
                         } else {
                             MenuPopoverSurfaceCard {
@@ -87,14 +105,18 @@ struct MenuPopoverView: View {
                     .frame(width: self.contentWidth, alignment: .leading)
                     .transition(.opacity.combined(with: .move(edge: .top)))
 
-                    if let provider, !isOverview {
-                        self.insightSection(provider: provider)
-                        if let panel = self.effectivePanel(from: self.availablePanels(for: provider)) {
+                    self.resetScheduleSection(
+                        providers: isOverview ? enabledProviders : slots,
+                        isOverview: isOverview)
+
+                    if let leadSlot, !isOverview {
+                        self.insightSection(provider: leadSlot)
+                        if let panel = self.effectivePanel(from: self.availablePanels(for: leadSlot)) {
                             self.exportSection(panel: panel)
                         }
                     }
 
-                    self.actionSections(provider: provider, isOverview: isOverview)
+                    self.actionSections(provider: leadSlot ?? provider, isOverview: isOverview)
 
                     if palette.id == "retro" {
                         RetroTaglineFooter()
@@ -164,6 +186,22 @@ struct MenuPopoverView: View {
         max(0, self.panelContentWidth - (RunicSpacing.menuPanelBodyInset * 2))
     }
 
+    /// "Add China account" / "Add International account" under a brand's
+    /// stacked cards. Opens Settings → Providers on that slot.
+    private func addRegionRow(for slot: UsageProvider) -> some View {
+        let brand = UsageProvider.compactDisplayName(self.store.metadata(for: slot.brandRoot).displayName)
+        return MenuPopoverSurfaceCard {
+            MenuPopoverActionButton(
+                title: "Add \(brand) \(slot.region.displayName) account",
+                systemImage: "plus.circle",
+                iconIntent: .action,
+                style: .compact,
+                action: { self.actions.openProviderSettings(slot) })
+                .padding(self.panelInset)
+        }
+        .frame(width: self.contentWidth, alignment: .leading)
+    }
+
     private var emptyProviderState: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             HStack(spacing: RunicSpacing.xs) {
@@ -187,8 +225,12 @@ struct MenuPopoverView: View {
         if enabledProviders.count > 1, self.selectedProvider == nil {
             return nil
         }
-        if let selectedProvider, enabledProviders.contains(selectedProvider) {
-            return selectedProvider
+        if let selectedProvider {
+            // A brand tab selects its root; accept it when any of the
+            // brand's slots is visible (only the China side may be set up).
+            if enabledProviders.contains(where: { $0.brandRoot == selectedProvider.brandRoot }) {
+                return selectedProvider
+            }
         }
         return enabledProviders.first ?? .codex
     }

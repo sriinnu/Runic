@@ -53,12 +53,10 @@ struct ProviderSidebarDetailView: View {
                         }
                         Divider()
 
-                        Picker("View", selection: self.$selectedSubview) {
-                            ForEach(ProviderDetailSubview.allCases) { view in
-                                Text(view.rawValue).tag(view)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                        RunicSegmentedPicker(
+                            selection: self.$selectedSubview,
+                            cases: ProviderDetailSubview.allCases,
+                            label: \.rawValue)
                     }
                 }
 
@@ -100,7 +98,7 @@ struct ProviderSidebarDetailView: View {
                                 Button("Copy diagnostics") {
                                     self.copyDiagnostics()
                                 }
-                                .buttonStyle(.bordered)
+                                .buttonStyle(.runicBordered)
                                 .controlSize(.small)
                                 .help("Copy fetch path, reliability, anomaly, and budget/forecast details.")
 

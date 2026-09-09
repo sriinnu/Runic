@@ -83,6 +83,9 @@ public struct UsageSnapshot: Codable, Sendable {
     public let tertiary: RateWindow?
     public let providerCost: ProviderCostSnapshot?
     public let zaiUsage: ZaiUsageSnapshot?
+    /// Banked, manually-redeemable limit resets (Codex "2 resets"), when the
+    /// provider offers them. Nil when the provider has no such concept.
+    public let resetCredits: UsageResetCredits?
     public let updatedAt: Date
     public let identity: ProviderIdentitySnapshot?
 
@@ -91,6 +94,7 @@ public struct UsageSnapshot: Codable, Sendable {
         case secondary
         case tertiary
         case providerCost
+        case resetCredits
         case updatedAt
         case identity
         case accountEmail
@@ -104,6 +108,7 @@ public struct UsageSnapshot: Codable, Sendable {
         tertiary: RateWindow? = nil,
         providerCost: ProviderCostSnapshot? = nil,
         zaiUsage: ZaiUsageSnapshot? = nil,
+        resetCredits: UsageResetCredits? = nil,
         updatedAt: Date,
         identity: ProviderIdentitySnapshot? = nil)
     {
@@ -112,6 +117,7 @@ public struct UsageSnapshot: Codable, Sendable {
         self.tertiary = tertiary
         self.providerCost = providerCost
         self.zaiUsage = zaiUsage
+        self.resetCredits = resetCredits
         self.updatedAt = updatedAt
         self.identity = identity
     }
@@ -123,6 +129,7 @@ public struct UsageSnapshot: Codable, Sendable {
         self.tertiary = try container.decodeIfPresent(RateWindow.self, forKey: .tertiary)
         self.providerCost = try container.decodeIfPresent(ProviderCostSnapshot.self, forKey: .providerCost)
         self.zaiUsage = nil // Not persisted, fetched fresh each time
+        self.resetCredits = try container.decodeIfPresent(UsageResetCredits.self, forKey: .resetCredits)
         self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         if let identity = try container.decodeIfPresent(ProviderIdentitySnapshot.self, forKey: .identity) {
             self.identity = identity
@@ -152,6 +159,7 @@ public struct UsageSnapshot: Codable, Sendable {
         }
         try container.encodeIfPresent(self.tertiary, forKey: .tertiary)
         try container.encodeIfPresent(self.providerCost, forKey: .providerCost)
+        try container.encodeIfPresent(self.resetCredits, forKey: .resetCredits)
         try container.encode(self.updatedAt, forKey: .updatedAt)
         try container.encodeIfPresent(self.identity, forKey: .identity)
         try container.encodeIfPresent(self.identity?.accountEmail, forKey: .accountEmail)
@@ -186,6 +194,7 @@ public struct UsageSnapshot: Codable, Sendable {
             tertiary: self.tertiary,
             providerCost: self.providerCost,
             zaiUsage: self.zaiUsage,
+            resetCredits: self.resetCredits,
             updatedAt: self.updatedAt,
             identity: scopedIdentity)
     }

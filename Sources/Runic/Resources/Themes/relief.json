@@ -1,0 +1,32 @@
+{
+  "id": "relief",
+  "displayName": "Relief",
+  "tagline": "Raised, pressed, lit",
+  "symbolName": "square.3.layers.3d.top.filled",
+  "isCustom": true,
+  "prefersDarkAppearance": false,
+  "colors": {
+    "primary":       "#26241F",
+    "secondary":     "#4A6FA5",
+    "accent":        "#4A55D6",
+    "highlight":     "#8F6300",
+    "warm":          "#C23A4E",
+    "tertiary":      "#1F7A52",
+    "surface":       "#E9E7E2",
+    "surfaceAlt":    "#F3F2EE",
+    "cardFill":      "#FBFAF8F5",
+    "cardStroke":    "#2A272333",
+    "primaryText":   "#26241FF5",
+    "secondaryText": "#4F4B44"
+  },
+  "fonts":   { "body": "system", "numeric": "tabular" },
+  "shape":   { "cornerMultiplier": 1.25, "separator": "hairline" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "generous" },
+  "style": {
+    "typography": { "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "chrome": { "borderStyle": "hairline", "borderWeight": 0.5, "borderOpacity": 0.35, "cornerStyle": "soft", "panelDepth": "high" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0, "elevation": 1.0 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}

@@ -97,6 +97,10 @@ extension StatusItemController {
                 self?.dismissPopover()
                 self?.showSettingsGeneral()
             },
+            openProviderSettings: { [weak self] provider in
+                self?.dismissPopover()
+                self?.showProviderSettings(provider)
+            },
             openAbout: { [weak self] in
                 self?.dismissPopover()
                 self?.showSettingsAbout()

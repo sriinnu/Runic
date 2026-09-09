@@ -250,7 +250,7 @@ struct AboutPane: View {
                         .font(.system(size: 12.5))
                         .frame(maxWidth: .infinity, alignment: .center)
                     Button("Check for Updates…") { self.updater.checkForUpdates(nil) }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.runicBordered)
                         .controlSize(.small)
                 }
             } else {

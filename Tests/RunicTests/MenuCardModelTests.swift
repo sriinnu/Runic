@@ -526,7 +526,7 @@ struct MenuCardModelTests {
     }
 
     @Test
-    func `keeps metadata opus label for claude tertiary`() throws {
+    func `window label wins over metadata opus label for claude tertiary`() throws {
         let now = Date()
         let metadata = try #require(ProviderDefaults.metadata[.claude])
         #expect(metadata.supportsOpus)
@@ -560,7 +560,10 @@ struct MenuCardModelTests {
             now: now))
 
         let tertiary = try #require(model.metrics.first { $0.id == "tertiary" })
-        #expect(tertiary.title == metadata.opusLabel)
+        // A window that names itself (a model-scoped weekly, a Codex extra
+        // limit) wins over the metadata opus label; unlabelled windows still
+        // fall back to it.
+        #expect(tertiary.title == "some-window-label")
     }
 
     @Test

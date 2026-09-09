@@ -227,6 +227,7 @@ struct UsageMenuMetricCard: View {
                 cornerRadius: MenuCardMetrics.metricCardCornerRadius,
                 style: .continuous)
                 .strokeBorder(self.runicTheme.cardStroke.opacity(0.42), lineWidth: 1))
+        .runicRaised(radius: MenuCardMetrics.metricCardCornerRadius, lift: 0.5)
     }
 
     private var titleFont: Font {

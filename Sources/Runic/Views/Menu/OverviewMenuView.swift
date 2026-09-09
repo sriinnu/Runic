@@ -24,6 +24,58 @@ struct OverviewMenuView: View {
         /// quota. Providers without one (balance/counter stubs) show "—" and
         /// are excluded from the cross-provider average.
         var hasQuota: Bool = true
+        /// "2 resets" when the provider banks manual limit resets.
+        var bankedResetsText: String?
+
+        /// Brand-level provider (the international slot for a two-region
+        /// brand, else the provider itself). Rows sharing a root stack
+        /// under one brand header.
+        var brandRoot: UsageProvider {
+            self.provider.brandRoot
+        }
+
+        var region: ProviderRegion {
+            self.provider.region
+        }
+    }
+
+    /// One brand in the overview: every visible region row plus, for a
+    /// two-region brand with one side unconfigured, the slot to offer.
+    struct BrandGroup: Identifiable {
+        let id: String
+        let root: UsageProvider
+        let rows: [ProviderSummary]
+        let missingSlot: UsageProvider?
+
+        var isStacked: Bool {
+            self.rows.count > 1 || self.missingSlot != nil
+        }
+    }
+
+    /// Group summaries by brand, preserving first-appearance order. A brand
+    /// with a China sibling whose other slot isn't visible gets that slot as
+    /// `missingSlot` so the row can offer to add it.
+    static func brandGroups(_ summaries: [ProviderSummary]) -> [BrandGroup] {
+        var order: [UsageProvider] = []
+        var rows: [UsageProvider: [ProviderSummary]] = [:]
+        for summary in summaries {
+            let root = summary.brandRoot
+            if rows[root] == nil { order.append(root) }
+            rows[root, default: []].append(summary)
+        }
+        return order.map { root in
+            let brandRows = rows[root] ?? []
+            var missing: UsageProvider?
+            if let china = root.chinaSibling {
+                let present = Set(brandRows.map(\.provider))
+                if !present.contains(china) {
+                    missing = china
+                } else if !present.contains(root) {
+                    missing = root
+                }
+            }
+            return BrandGroup(id: root.rawValue, root: root, rows: brandRows, missingSlot: missing)
+        }
     }
 
     struct DailyPoint: Identifiable {
@@ -44,6 +96,9 @@ struct OverviewMenuView: View {
     var showsUsed: Bool = true
     /// Mirrors the number-format preference (abbreviated vs full).
     var numberStyle: UsageFormatter.NumberStyle = .abbreviated
+    /// "Add China" / "Add International" for a two-region brand with one
+    /// side unconfigured. Nil hides the offer.
+    var onAddRegion: ((UsageProvider) -> Void)?
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
@@ -99,8 +154,16 @@ struct OverviewMenuView: View {
                     .padding(.vertical, RunicSpacing.md)
             } else {
                 VStack(spacing: RunicSpacing.compact) {
-                    ForEach(self.summaries) { summary in
-                        ProviderRow(summary: summary, showsUsed: self.showsUsed, numberStyle: self.numberStyle)
+                    ForEach(Self.brandGroups(self.summaries)) { group in
+                        if group.isStacked {
+                            BrandStackView(
+                                group: group,
+                                showsUsed: self.showsUsed,
+                                numberStyle: self.numberStyle,
+                                onAddRegion: self.onAddRegion)
+                        } else if let summary = group.rows.first {
+                            ProviderRow(summary: summary, showsUsed: self.showsUsed, numberStyle: self.numberStyle)
+                        }
                     }
                 }
             }
@@ -211,6 +274,22 @@ struct OverviewMenuView: View {
         return SessionQuotaNotificationLogic.hasRealQuota(window)
     }
 
+    /// Pill text for the overview row: a live countdown when the window
+    /// knows its reset moment, otherwise the provider's own phrase.
+    /// Pill text for banked resets: "2 resets" / "1 reset".
+    static func bankedResetsPill(for credits: UsageResetCredits?) -> String? {
+        guard let credits, credits.hasAny else { return nil }
+        return credits.availableCount == 1 ? "1 reset" : "\(credits.availableCount) resets"
+    }
+
+    static func resetPill(for window: RateWindow?, now: Date = .init()) -> String? {
+        guard let window else { return nil }
+        if let date = window.resetsAt ?? UsageResetParsing.date(fromRelative: window.resetDescription, now: now) {
+            return "↻ \(UsageFormatter.resetCountdownDescription(from: date, now: now))"
+        }
+        return window.resetDescription
+    }
+
     /// One entry per provider present in the chart data, in first-appearance
     /// order, colored by the provider's brand color so bars, legend dots, and
     /// the provider rows all agree on identity.
@@ -225,6 +304,79 @@ struct OverviewMenuView: View {
     }
 }
 
+// MARK: - Brand stack (two-region brands)
+
+/// A brand with International and China slots as one block: the brand mark
+/// and name once, then a row per region tagged INTL / CN, and an "Add …"
+/// offer when one side has no account yet.
+private struct BrandStackView: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
+    let group: OverviewMenuView.BrandGroup
+    let showsUsed: Bool
+    let numberStyle: UsageFormatter.NumberStyle
+    let onAddRegion: ((UsageProvider) -> Void)?
+
+    var body: some View {
+        let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm)
+        VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+            HStack(spacing: RunicSpacing.xs) {
+                if let icon = self.group.rows.first?.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 14, height: 14)
+                }
+                Text(self.brandName)
+                    .font(self.fonts.caption.weight(.semibold))
+                    .lineLimit(1)
+                Spacer()
+                Text(self.group.rows.count == 2 ? "2 regions" : "1 of 2 regions")
+                    .font(self.fonts.system(size: 8, weight: .medium))
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
+            }
+            ForEach(self.group.rows) { summary in
+                ProviderRow(
+                    summary: summary,
+                    showsUsed: self.showsUsed,
+                    numberStyle: self.numberStyle,
+                    regionTag: summary.region == .china ? "CN" : "INTL")
+            }
+            if let missing = self.group.missingSlot, let onAddRegion = self.onAddRegion {
+                Button {
+                    onAddRegion(missing)
+                } label: {
+                    HStack(spacing: RunicSpacing.xxs) {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 9, weight: .semibold))
+                        Text("Add \(missing.region.displayName) account")
+                            .font(self.fonts.system(size: 9, weight: .medium))
+                    }
+                    .foregroundStyle(self.runicTheme.iconColor(for: .navigation, hovered: true))
+                    .padding(.leading, 14 + RunicSpacing.xs)
+                    .padding(.vertical, 1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add \(self.brandName) \(missing.region.displayName) account")
+            }
+        }
+        .padding(RunicSpacing.compact)
+        .background(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(self.runicTheme.menuSubtleFill.opacity(0.6)))
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(self.runicTheme.cardStroke.opacity(0.35), lineWidth: 0.7))
+    }
+
+    private var brandName: String {
+        let name = self.group.rows.first(where: { $0.region == .international })?.name
+            ?? self.group.rows.first?.name ?? ""
+        return name.hasSuffix(" CN") ? String(name.dropLast(3)) : name
+    }
+}
+
 // MARK: - Provider row
 
 private struct ProviderRow: View {
@@ -232,6 +384,8 @@ private struct ProviderRow: View {
     let summary: OverviewMenuView.ProviderSummary
     var showsUsed: Bool = true
     var numberStyle: UsageFormatter.NumberStyle = .abbreviated
+    /// Inside a brand stack the name column becomes a region tag.
+    var regionTag: String?
     @Environment(\.runicTheme) private var runicTheme
 
     /// Emphasize rows needing attention: heavy usage in "used" mode, low
@@ -243,20 +397,30 @@ private struct ProviderRow: View {
 
     var body: some View {
         HStack(spacing: RunicSpacing.xs) {
-            // Icon with brand tint
-            if let icon = self.summary.icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 14, height: 14)
-            }
+            if let tag = self.regionTag {
+                // Region tag stands in for icon + name inside a brand stack.
+                Text(tag)
+                    .font(self.fonts.system(size: 8, weight: .bold))
+                    .tracking(0.6)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .frame(width: 14 + 58 + RunicSpacing.xs, alignment: .leading)
+                    .padding(.leading, 14 + RunicSpacing.xs)
+            } else {
+                // Icon with brand tint
+                if let icon = self.summary.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 14, height: 14)
+                }
 
-            // Name
-            Text(self.summary.name)
-                .font(self.fonts.caption)
-                .fontWeight(.medium)
-                .frame(width: 58, alignment: .leading)
-                .lineLimit(1)
+                // Name
+                Text(self.summary.name)
+                    .font(self.fonts.caption)
+                    .fontWeight(.medium)
+                    .frame(width: 58, alignment: .leading)
+                    .lineLimit(1)
+            }
 
             // Progress bar with gradient fill
             GeometryReader { geo in
@@ -313,6 +477,7 @@ private struct ProviderRow: View {
         // Second line: window + reset + context
         let hasSecondLine = self.summary.windowLabel != nil ||
             self.summary.resetDescription != nil ||
+            self.summary.bankedResetsText != nil ||
             self.summary.topModelContext != nil
 
         if hasSecondLine {
@@ -325,6 +490,9 @@ private struct ProviderRow: View {
                 }
                 if let reset = self.summary.resetDescription {
                     InfoPill(text: reset)
+                }
+                if let banked = self.summary.bankedResetsText {
+                    InfoPill(text: banked)
                 }
                 if let ctx = self.summary.topModelContext {
                     InfoPill(text: ctx)

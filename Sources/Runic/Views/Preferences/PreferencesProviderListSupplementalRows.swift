@@ -172,7 +172,7 @@ extension View {
     func applyProviderSettingsButtonStyle(_ style: ProviderSettingsActionDescriptor.Style) -> some View {
         switch style {
         case .bordered:
-            self.buttonStyle(.bordered)
+            self.buttonStyle(.runicBordered)
         case .link:
             self.buttonStyle(.link)
         }

@@ -1,0 +1,32 @@
+{
+  "id": "blueprint",
+  "displayName": "Blueprint",
+  "tagline": "Drafting table",
+  "symbolName": "ruler",
+  "isCustom": true,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#EAF2FF",
+    "secondary":     "#B5D4FF",
+    "accent":        "#7FD3FF",
+    "highlight":     "#FFD166",
+    "warm":          "#FF7B7B",
+    "tertiary":      "#9EF0C2",
+    "surface":       "#0F2E5E",
+    "surfaceAlt":    "#123A73E6",
+    "cardFill":      "#FFFFFF14",
+    "cardStroke":    "#EAF2FF99",
+    "primaryText":   "#F2F7FFF5",
+    "secondaryText": "#FFFFFFBF"
+  },
+  "fonts":   { "body": "system", "numeric": "mono" },
+  "shape":   { "cornerMultiplier": 0.35, "separator": "hairline" },
+  "motion":  { "preset": "standard" },
+  "density": { "preset": "normal" },
+  "style": {
+    "typography": { "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.01, "contrast": "strong" },
+    "chrome": { "borderStyle": "hairline", "borderWeight": 1.0, "borderOpacity": 0.7, "cornerStyle": "sharp", "panelDepth": "flat" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.08, "materialIntensity": 0.0, "texture": "grid", "textureOpacity": 0.6 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}

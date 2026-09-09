@@ -88,12 +88,10 @@ struct DebugPane: View {
                 title: "Probe logs",
                 caption: "Fetch the latest PTY scrape for Codex or Claude; Copy keeps the full text.")
             {
-                Picker("Provider", selection: self.$currentLogProvider) {
-                    Text("Codex").tag(UsageProvider.codex)
-                    Text("Claude").tag(UsageProvider.claude)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 240)
+                RunicSegmentedPicker(
+                    selection: self.$currentLogProvider,
+                    options: [(UsageProvider.codex, "Codex"), (UsageProvider.claude, "Claude")])
+                    .frame(width: 240)
 
                 HStack(spacing: RunicSpacing.sm) {
                     Button { self.loadLog(self.currentLogProvider) } label: {
@@ -224,12 +222,10 @@ struct DebugPane: View {
                 title: "Notifications",
                 caption: "Trigger test notifications for the 5-hour session window (depleted/restored).")
             {
-                Picker("Provider", selection: self.$currentLogProvider) {
-                    Text("Codex").tag(UsageProvider.codex)
-                    Text("Claude").tag(UsageProvider.claude)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 240)
+                RunicSegmentedPicker(
+                    selection: self.$currentLogProvider,
+                    options: [(UsageProvider.codex, "Codex"), (UsageProvider.claude, "Claude")])
+                    .frame(width: 240)
 
                 HStack(spacing: RunicSpacing.sm) {
                     Button {
@@ -253,14 +249,15 @@ struct DebugPane: View {
                 title: "Error simulation",
                 caption: "Inject a fake error message into the menu card for layout testing.")
             {
-                Picker("Provider", selection: self.$currentErrorProvider) {
-                    Text("Codex").tag(UsageProvider.codex)
-                    Text("Claude").tag(UsageProvider.claude)
-                    Text("Gemini").tag(UsageProvider.gemini)
-                    Text("Antigravity").tag(UsageProvider.antigravity)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 240)
+                RunicSegmentedPicker(
+                    selection: self.$currentErrorProvider,
+                    options: [
+                        (UsageProvider.codex, "Codex"),
+                        (UsageProvider.claude, "Claude"),
+                        (UsageProvider.gemini, "Gemini"),
+                        (UsageProvider.antigravity, "Antigravity"),
+                    ])
+                    .frame(width: 240)
 
                 TextField("Simulated error text", text: self.$simulatedErrorText, axis: .vertical)
                     .lineLimit(4)

@@ -231,6 +231,13 @@ struct AppearancePreviewCard: View {
                     endPoint: .trailing))
                 .frame(height: 1)
                 .shadow(color: palette.accent.opacity(0.28), radius: 3.5)
+        case .brush:
+            RunicBrushStrokeRule(color: palette.primaryText.opacity(0.62))
+                .frame(height: 3)
+        case .rule:
+            Rectangle()
+                .fill(palette.primaryText.opacity(0.78))
+                .frame(height: 1.5)
         case .hairline:
             Rectangle()
                 .fill(palette.menuSeparatorColor.opacity(0.65))
@@ -239,7 +246,7 @@ struct AppearancePreviewCard: View {
     }
 
     /// Font for value text in the preview, picking up the theme's font design
-    /// (Commit Mono for Terminal, rounded for Daybreak, selected family elsewhere).
+    /// (Geist Mono for Terminal, selected family elsewhere).
     private func previewValueFont(size: CGFloat, weight: Font.Weight, palette: RunicThemePalette) -> Font {
         let family = RunicFontChoice.resolvedThemeFamily(palette.style.typography.bodyFamily) ?? self.fontFamily
         if self.usesVirtualSystemFamily(family), let design = palette.fonts.swiftUIDesignOverride {

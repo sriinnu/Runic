@@ -54,13 +54,11 @@ extension ProviderSidebarDetailView {
 
                     Spacer()
 
-                    Picker("Metric", selection: self.$historyMetricMode) {
-                        ForEach(ProviderHistoryMetricMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 220)
+                    RunicSegmentedPicker(
+                        selection: self.$historyMetricMode,
+                        cases: ProviderHistoryMetricMode.allCases,
+                        label: \.rawValue)
+                        .frame(width: 220)
                 }
 
                 if self.historyIsLoading, self.historySnapshot == nil {
@@ -120,7 +118,7 @@ extension ProviderSidebarDetailView {
                         Button("Retry") {
                             Task { await self.loadHistoryMonth(forceRefresh: true) }
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.runicBordered)
                         .controlSize(.small)
                     }
                     .padding(RunicSpacing.sm)

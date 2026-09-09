@@ -46,7 +46,7 @@ struct RunicThemeJSON: Decodable {
 
     /// Either named preset (`"standard"`, `"soft"`, `"sharp"`, `"glassy"`,
     /// `"retroBevel"`) — or custom `cornerMultiplier` + `separator`
-    /// (`"hairline"`, `"glow"`, `"ascii"`).
+    /// (`"hairline"`, `"glow"`, `"ascii"`, `"brush"`, `"rule"`).
     struct Shape: Decodable {
         let preset: String?
         let cornerMultiplier: Double?
@@ -224,6 +224,8 @@ extension RunicThemeJSON {
         let sep: RunicThemeShape.Separator = switch self.shape.separator ?? "hairline" {
         case "glow": .glow
         case "ascii": .ascii
+        case "brush": .brush
+        case "rule": .rule
         default: .hairline
         }
         return RunicThemeShape(cornerMultiplier: mult, separator: sep)

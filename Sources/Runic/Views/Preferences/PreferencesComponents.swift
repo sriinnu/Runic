@@ -116,11 +116,8 @@ struct PreferenceToggleRow: View {
 
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(self.subtitleFont)
-                    .fontDesign(self.subtitleDesign)
-                    .tracking(self.subtitleTracking)
-                    .foregroundStyle(self.subtitleColor)
-                    .lineSpacing(self.subtitleLineSpacing)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -128,30 +125,11 @@ struct PreferenceToggleRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Row titles follow the theme's face — Terminal included. Mixing a
+    /// system-font subtitle under a mono title was the single loudest
+    /// "fonts are off" in Preferences.
     private var titleFont: Font {
-        self.runicTheme.isTerminalHUD
-            ? .system(size: 14, weight: .semibold, design: .monospaced)
-            : self.fonts.callout.weight(.medium)
-    }
-
-    private var subtitleFont: Font {
-        self.runicTheme.isTerminalHUD ? .system(size: 12, weight: .regular) : self.fonts.footnote
-    }
-
-    private var subtitleDesign: Font.Design? {
-        self.runicTheme.isTerminalHUD ? .default : nil
-    }
-
-    private var subtitleTracking: CGFloat {
-        self.runicTheme.isTerminalHUD ? 0 : RunicFont.activeRules.letterSpacing
-    }
-
-    private var subtitleColor: Color {
-        self.runicTheme.subduedSecondaryText
-    }
-
-    private var subtitleLineSpacing: CGFloat {
-        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
+        self.fonts.callout.weight(.medium)
     }
 }
 
@@ -205,7 +183,7 @@ struct PreferenceStepperRow: View {
     }
 
     private var subtitleLineSpacing: CGFloat {
-        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
+        0
     }
 }
 
@@ -233,7 +211,7 @@ private struct PreferenceStepperControl: View {
             Button(action: self.onDecrement) {
                 Image(systemName: "minus")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.runicBordered)
             .controlSize(.small)
             .disabled(!self.canDecrement)
 
@@ -256,7 +234,7 @@ private struct PreferenceStepperControl: View {
             Button(action: self.onIncrement) {
                 Image(systemName: "plus")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.runicBordered)
             .controlSize(.small)
             .disabled(!self.canIncrement)
         }
@@ -287,16 +265,12 @@ struct SettingsSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionHeaderSpacing) {
             if let title, !title.isEmpty {
-                Text(title)
-                    .font(self.titleFont)
-                    .tracking(self.runicTheme.isTerminalHUD ? 0.8 : 0)
-                    .textCase(self.runicTheme.isTerminalHUD ? .uppercase : nil)
+                RunicPreferencesSectionTitle(text: title)
             }
             if let caption {
                 Text(caption)
-                    .font(self.captionFont)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(self.captionOpacity))
-                    .lineSpacing(self.captionLineSpacing)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
             VStack(alignment: .leading, spacing: self.contentSpacing) {
@@ -304,22 +278,6 @@ struct SettingsSection<Content: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var titleFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.headline.weight(.bold) : self.fonts.subheadline.weight(.semibold)
-    }
-
-    private var captionFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.caption : self.fonts.footnote
-    }
-
-    private var captionOpacity: Double {
-        self.runicTheme.isTerminalHUD ? 0.78 : 0.70
-    }
-
-    private var captionLineSpacing: CGFloat {
-        self.runicTheme.isTerminalHUD ? PreferencesTypographyMetrics.terminalBodyLineSpacing : 0
     }
 }
 

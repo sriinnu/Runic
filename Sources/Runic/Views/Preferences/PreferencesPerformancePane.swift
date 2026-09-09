@@ -51,13 +51,10 @@ struct PerformancePane: View {
                         Text("Raw metrics retention")
                             .font(self.fonts.body)
 
-                        Picker("", selection: self.$rawMetricsRetentionDays) {
-                            Text("30 days").tag(30)
-                            Text("60 days").tag(60)
-                            Text("90 days").tag(90)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 300)
+                        RunicSegmentedPicker(
+                            selection: self.$rawMetricsRetentionDays,
+                            options: [(30, "30 days"), (60, "60 days"), (90, "90 days")])
+                            .frame(maxWidth: 300)
 
                         Text("How long to keep detailed latency and error records.")
                             .font(self.fonts.footnote)
@@ -68,13 +65,10 @@ struct PerformancePane: View {
                         Text("Aggregated stats retention")
                             .font(self.fonts.body)
 
-                        Picker("", selection: self.$aggregatedStatsRetentionYears) {
-                            Text("1 year").tag(1)
-                            Text("2 years").tag(2)
-                            Text("5 years").tag(5)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 300)
+                        RunicSegmentedPicker(
+                            selection: self.$aggregatedStatsRetentionYears,
+                            options: [(1, "1 year"), (2, "2 years"), (5, "5 years")])
+                            .frame(maxWidth: 300)
 
                         Text("How long to keep daily performance summaries.")
                             .font(self.fonts.footnote)
@@ -111,7 +105,7 @@ struct PerformancePane: View {
                             }
                             Text("Vacuum Database")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.runicBordered)
                         .disabled(self.isVacuuming || self.isClearingData)
 
                         if let status = self.vacuumStatus {
@@ -139,7 +133,7 @@ struct PerformancePane: View {
                             }
                             Text("Clear Old Data")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.runicBordered)
                         .disabled(self.isVacuuming || self.isClearingData)
 
                         if let status = self.clearDataStatus {

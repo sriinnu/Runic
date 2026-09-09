@@ -55,14 +55,12 @@ extension ProviderSidebarDetailView {
                         .tracking(0.25)
                     Spacer()
                     if self.selectedHistoryDaySummary != nil {
-                        Picker("History detail", selection: self.$historyDayDetailMode) {
-                            ForEach(ProviderHistoryDayDetailMode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .controlSize(.mini)
-                        .frame(maxWidth: 240)
+                        RunicSegmentedPicker(
+                            selection: self.$historyDayDetailMode,
+                            cases: ProviderHistoryDayDetailMode.allCases,
+                            label: \.rawValue)
+                            .controlSize(.mini)
+                            .frame(maxWidth: 240)
                     }
                 }
 

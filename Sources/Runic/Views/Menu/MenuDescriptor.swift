@@ -140,6 +140,9 @@ struct MenuDescriptor {
             if meta.supportsOpus, let opus = snap.tertiary {
                 Self.appendRateWindow(entries: &entries, title: meta.opusLabel ?? "Sonnet", window: opus)
             }
+            if let credits = snap.resetCredits, let line = ResetCreditEntry.summaryLine(for: credits) {
+                entries.append(.text(line, .secondary))
+            }
 
             if settings.showOptionalCreditsAndExtraUsage,
                provider == .claude,
@@ -362,9 +365,10 @@ struct MenuDescriptor {
         let line = UsageFormatter
             .usageLine(remaining: window.remainingPercent, used: window.usedPercent)
         entries.append(.text("\(title): \(line)", .primary))
-        if let date = window.resetsAt {
+        if let date = window.resetsAt ?? UsageResetParsing.date(fromRelative: window.resetDescription) {
             let countdown = UsageFormatter.resetCountdownDescription(from: date)
-            entries.append(.text("Resets \(countdown)", .secondary))
+            let expiry = UsageFormatter.resetExpiryString(from: date)
+            entries.append(.text("Resets \(countdown) · \(expiry)", .secondary))
         } else if let reset = window.resetDescription {
             entries.append(.text(Self.resetLine(reset), .secondary))
         }

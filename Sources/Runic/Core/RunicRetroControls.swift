@@ -42,11 +42,19 @@ struct RetroToggleStyle: ToggleStyle {
         case (false, true):
             self.runicTheme.accent
         case (false, false):
-            self.runicTheme.surfaceAlt
+            // Elevated themes: the well sits a step darker than the card so
+            // an unchecked box still reads as a box.
+            self.runicTheme.isElevated ? self.runicTheme.surface : self.runicTheme.surfaceAlt
         }
-        let stroke = self.runicTheme.isTerminalHUD
-            ? self.runicTheme.accent.opacity(isOn ? 0.95 : 0.42)
-            : self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity)
+        // An unchecked box must still read as a box: themes with faint
+        // chrome (Relief's 0.35 hairline) get a floor on the stroke.
+        let stroke: Color = if self.runicTheme.isTerminalHUD {
+            self.runicTheme.accent.opacity(isOn ? 0.95 : 0.42)
+        } else if self.runicTheme.isElevated {
+            self.runicTheme.primaryText.opacity(isOn ? 0.18 : 0.38)
+        } else {
+            self.runicTheme.cardStroke.opacity(max(self.runicTheme.style.chrome.borderOpacity, 0.55))
+        }
         return ZStack {
             // Card body — parchment for "off", System-7 blue for "on".
             RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -68,6 +76,9 @@ struct RetroToggleStyle: ToggleStyle {
                     .foregroundStyle(self.runicTheme.surface)
             }
         }
+        // Elevated themes: an unchecked box is a well, a checked one a raised chip.
+        .runicRecessed(radius: isOn ? 0 : radius)
+        .runicRaised(radius: radius, lift: isOn ? 0.6 : 0)
         .accessibilityAddTraits(.isButton)
         .accessibilityValue(Text(isOn ? "on" : "off"))
     }

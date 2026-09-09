@@ -278,13 +278,16 @@ extension UsageMenuCardView.Model {
         let zaiUsage = input.provider == .zai ? snapshot.zaiUsage : nil
         let zaiTokenDetail = Self.zaiLimitDetailText(limit: zaiUsage?.tokenLimit, numberStyle: input.numberStyle)
         let zaiTimeDetail = Self.zaiLimitDetailText(limit: zaiUsage?.timeLimit, numberStyle: input.numberStyle)
+        // Banked resets ride on the primary window's detail line: that is the
+        // window the user will spend one on.
+        let bankedResets = snapshot.resetCredits.flatMap { ResetCreditEntry.summaryLine(for: $0, now: input.now) }
         metrics.append(Metric(
             id: "primary",
             title: input.metadata.sessionLabel,
             percent: Self.metricPercent(for: snapshot.primary, showUsed: input.usageBarsShowUsed),
             percentStyle: percentStyle,
             resetText: Self.resetText(for: snapshot.primary, prefersCountdown: true),
-            detailText: input.provider == .zai ? zaiTokenDetail : nil))
+            detailText: input.provider == .zai ? zaiTokenDetail : bankedResets))
         if let weekly = snapshot.secondary {
             let paceText = UsagePaceText.weekly(provider: input.provider, window: weekly, now: input.now)
             metrics.append(Metric(
@@ -297,11 +300,12 @@ extension UsageMenuCardView.Model {
         }
         if let tertiary = snapshot.tertiary {
             // Render the tertiary window whenever the snapshot has one (Copilot
-            // Chat, Gemini's third model, ...), not just for opus-style
-            // providers. Opus-style providers keep their metadata label so
-            // Claude/Antigravity cards are unchanged.
+            // Chat, Gemini's third model, a Codex extra limit, a Claude
+            // model-scoped weekly...). A window that names itself wins;
+            // opus-style providers keep their metadata label otherwise.
             let fallbackTitle = input.metadata.opusLabel ?? "Sonnet"
-            let title = input.metadata.supportsOpus ? fallbackTitle : (tertiary.label ?? fallbackTitle)
+            let ownLabel = tertiary.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let title = ownLabel.isEmpty ? fallbackTitle : ownLabel
             metrics.append(Metric(
                 id: "tertiary",
                 title: title,
@@ -501,11 +505,15 @@ extension UsageMenuCardView.Model {
     }
 
     private static func resetText(for window: RateWindow, prefersCountdown: Bool) -> String? {
-        if let date = window.resetsAt {
+        // Both halves of the story: how long until the window flips, and the
+        // wall-clock moment it happens. Providers that only hand us a phrase
+        // ("resets in 3h") get the phrase parsed into a real date.
+        if let date = window.resetsAt ?? UsageResetParsing.date(fromRelative: window.resetDescription) {
+            let expiry = UsageFormatter.resetExpiryString(from: date)
             if prefersCountdown {
-                return "Resets \(UsageFormatter.resetCountdownDescription(from: date))"
+                return "Resets \(UsageFormatter.resetCountdownDescription(from: date)) · \(expiry)"
             }
-            return "Resets \(UsageFormatter.resetDescription(from: date))"
+            return "Resets \(expiry)"
         }
 
         if let desc = window.resetDescription, !desc.isEmpty {

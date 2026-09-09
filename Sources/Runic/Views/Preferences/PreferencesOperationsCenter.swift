@@ -79,14 +79,14 @@ struct RunicOperationsCenterView: View {
                 } label: {
                     Label("Install Guardrails", systemImage: "shield.checkered")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.runicBordered)
 
                 Button {
                     self.onCopyDiagnostics()
                 } label: {
                     Label("Copy Diagnostics", systemImage: "doc.on.doc")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.runicBordered)
 
                 if let status = self.guardrailStatus ?? self.diagnosticsStatus {
                     Text(status)

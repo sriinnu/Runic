@@ -83,6 +83,10 @@ struct PreferencesView: View {
                 self.settings.theme.palette.surface
                 LiquidMeshBackground()
                     .opacity(self.meshBackgroundOpacity)
+                if self.settings.theme.palette.hasSurfaceTexture {
+                    RunicSurfaceTextureOverlay()
+                        .environment(\.runicTheme, self.settings.theme.palette)
+                }
             }
             .ignoresSafeArea()
         }
@@ -131,20 +135,16 @@ struct PreferencesView: View {
                     .opacity(self.settings.theme.palette.isTerminalHUD ? 1.0 : 0.3)
                 VStack(spacing: 0) {
                     HStack(spacing: RunicSpacing.xs) {
-                        Picker("", selection: self.$providersSection) {
-                            ForEach(ProvidersSubSection.allCases) { section in
-                                Text(section.label).tag(section)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                        RunicSegmentedPicker(
+                            selection: self.$providersSection,
+                            cases: ProvidersSubSection.allCases,
+                            label: \.label)
 
                         if self.providersSection == .builtIn {
-                            Picker("", selection: self.$settings.providersPaneSidebar) {
-                                Text("List").tag(false)
-                                Text("Sidebar").tag(true)
-                            }
-                            .pickerStyle(.segmented)
-                            .controlSize(.small)
+                            RunicSegmentedPicker(
+                                selection: self.$settings.providersPaneSidebar,
+                                options: [(false, "List"), (true, "Sidebar")])
+                                .controlSize(.small)
                         }
                     }
                     .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
@@ -168,15 +168,13 @@ struct PreferencesView: View {
             SyncPane(settings: self.settings, store: self.store)
         case .performance:
             VStack(spacing: 0) {
-                Picker("", selection: self.$performanceSection) {
-                    ForEach(PerformanceSubSection.allCases) { section in
-                        Text(section.label).tag(section)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-                .padding(.top, RunicSpacing.sm)
-                .padding(.bottom, RunicSpacing.xs)
+                RunicSegmentedPicker(
+                    selection: self.$performanceSection,
+                    cases: PerformanceSubSection.allCases,
+                    label: \.label)
+                    .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                    .padding(.top, RunicSpacing.sm)
+                    .padding(.bottom, RunicSpacing.xs)
 
                 switch self.performanceSection {
                 case .monitoring:
@@ -187,15 +185,10 @@ struct PreferencesView: View {
             }
         case .about:
             VStack(spacing: 0) {
-                Picker("", selection: self.$aboutSection) {
-                    ForEach(AboutSubSection.allCases) { section in
-                        Text(section.label).tag(section)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-                .padding(.top, RunicSpacing.sm)
-                .padding(.bottom, RunicSpacing.xs)
+                RunicSegmentedPicker(selection: self.$aboutSection, cases: AboutSubSection.allCases, label: \.label)
+                    .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                    .padding(.top, RunicSpacing.sm)
+                    .padding(.bottom, RunicSpacing.xs)
 
                 switch self.aboutSection {
                 case .about:

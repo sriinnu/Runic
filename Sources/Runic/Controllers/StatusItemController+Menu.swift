@@ -95,6 +95,7 @@ extension StatusItemController {
         self.addProviderSwitcherIfNeeded(to: menu, context: context)
         self.addOverviewCardIfNeeded(to: menu, context: context)
         let addedOpenAIWebItems = self.addUsageCardIfNeeded(to: menu, context: context)
+        self.addResetScheduleCardIfNeeded(to: menu, context: context)
         self.addOpenAIWebSubmenusIfNeeded(to: menu, context: context, cardAlreadyAdded: addedOpenAIWebItems)
         self.addActivityChartSubmenusIfNeeded(to: menu, context: context)
         self.addExportUsageSubmenu(to: menu)

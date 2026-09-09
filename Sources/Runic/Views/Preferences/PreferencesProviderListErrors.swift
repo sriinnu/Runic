@@ -36,7 +36,7 @@ struct ProviderErrorView: View {
                             .font(self.fonts.caption)
                     }
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.runicBordered)
                 .controlSize(.small)
                 .help("Copy error to clipboard")
                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }

@@ -220,8 +220,9 @@ struct SettingsStoreDefaultsSnapshot {
     private static func theme(userDefaults: UserDefaults) -> Theme {
         let raw = userDefaults.string(forKey: "theme") ?? ""
         if Theme.retiredRawValues.contains(raw) {
-            userDefaults.set(Theme.daybreak.rawValue, forKey: "theme")
-            return .daybreak
+            let replacement = Theme.migrated(fromRetired: raw)
+            userDefaults.set(replacement.rawValue, forKey: "theme")
+            return replacement
         }
         if let resolved = Theme(rawValue: raw) {
             return resolved

@@ -73,7 +73,7 @@ struct RunicDoodleRenderingTests {
     @Test
     func `runi doodle renders visibly at menu sizes in light and dark themes`() throws {
         let moods: [RunicDoodle.Mood] = [.resting, .searching, .tangled, .zen]
-        for theme in [Theme.light, Theme.dark] {
+        for theme in [Theme.sumi, Theme.dark] {
             let palette = theme.palette
             for mood in moods {
                 for size in [CGFloat(44), CGFloat(76)] {
@@ -97,7 +97,7 @@ struct RunicDoodleRenderingTests {
         // Cheap distinctness guard: each mood's ink coverage should differ —
         // catching a regression where every mood falls back to the same body.
         var coverage: [Int] = []
-        let palette = Theme.light.palette
+        let palette = Theme.sumi.palette
         for mood in [RunicDoodle.Mood.resting, .searching, .tangled, .zen] {
             let art = RunicDoodleArt(
                 mood: mood,

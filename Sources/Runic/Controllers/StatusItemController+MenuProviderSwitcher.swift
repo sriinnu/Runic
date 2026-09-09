@@ -147,7 +147,7 @@ extension StatusItemController {
             let todayTokens = self.store.ledgerDailySummary(for: provider)?.totals.totalTokens ?? 0
             totalToday += todayTokens
 
-            let resetDesc = snapshot?.primary.resetDescription
+            let resetDesc = OverviewMenuView.resetPill(for: snapshot?.primary)
             let windowLabel = snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines)
             let topModel = self.store.ledgerTopModel(for: provider)
             let topModelContext = ProviderContextWindowRegistry.shared
@@ -172,7 +172,8 @@ extension StatusItemController {
                 resetDescription: resetDesc,
                 windowLabel: windowLabel,
                 topModelContext: topModelContext,
-                hasQuota: hasQuota))
+                hasQuota: hasQuota,
+                bankedResetsText: OverviewMenuView.bankedResetsPill(for: snapshot?.resetCredits)))
 
             let dailySummaries = self.store.ledgerAllDailySummary(for: provider)
             for summary in dailySummaries where summary.dayStart >= weekAgo {
@@ -194,7 +195,8 @@ extension StatusItemController {
             totalProviders: providers.count,
             width: width,
             showsUsed: showsUsed,
-            numberStyle: self.settings.numberFormat.formatterStyle)
+            numberStyle: self.settings.numberFormat.formatterStyle,
+            onAddRegion: { [weak self] slot in self?.showProviderSettings(slot) })
     }
 
     static func abbreviatedProviderName(_ name: String) -> String {

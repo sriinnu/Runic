@@ -1,0 +1,32 @@
+{
+  "id": "sumi",
+  "displayName": "Sumi",
+  "tagline": "Ink on washi",
+  "symbolName": "paintbrush.pointed.fill",
+  "isCustom": true,
+  "prefersDarkAppearance": false,
+  "colors": {
+    "primary":       "#16130F",
+    "secondary":     "#2C4F7C",
+    "accent":        "#C93A1E",
+    "highlight":     "#7F580A",
+    "warm":          "#8E2E3C",
+    "tertiary":      "#3E6B52",
+    "surface":       "#F6F2E9",
+    "surfaceAlt":    "#FBF9F3",
+    "cardFill":      "#FFFFFF99",
+    "cardStroke":    "#1F1B1666",
+    "primaryText":   "#16130FF2",
+    "secondaryText": "#55504A"
+  },
+  "fonts":   { "body": "system", "numeric": "tabular" },
+  "shape":   { "cornerMultiplier": 0.75, "separator": "brush" },
+  "motion":  { "preset": "slow" },
+  "density": { "preset": "normal" },
+  "style": {
+    "typography": { "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "chrome": { "borderStyle": "ink", "borderWeight": 0.9, "borderOpacity": 0.55, "cornerStyle": "compact", "panelDepth": "low" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "paper", "textureOpacity": 0.55 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}

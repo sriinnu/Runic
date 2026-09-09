@@ -50,7 +50,26 @@ enum RunicScreenshotRenderer {
     {
         guard let request = Self.request else { return false }
         self.installKeepAliveWindow()
+        // The stored theme is the user's; every exit path below puts the raw
+        // value back and flushes, so a render can never leave it flipped.
+        let storedTheme = UserDefaults.standard.string(forKey: "theme")
+        defer {
+            if let storedTheme {
+                UserDefaults.standard.set(storedTheme, forKey: "theme")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "theme")
+            }
+            UserDefaults.standard.synchronize()
+        }
         Task { @MainActor in
+            defer {
+                if let storedTheme {
+                    UserDefaults.standard.set(storedTheme, forKey: "theme")
+                } else {
+                    UserDefaults.standard.removeObject(forKey: "theme")
+                }
+                UserDefaults.standard.synchronize()
+            }
             do {
                 try await Task.sleep(nanoseconds: 600_000_000)
                 let context = RenderContext(
@@ -102,18 +121,19 @@ enum RunicScreenshotRenderer {
         let account = context.account
         let updater = context.updater
         let selection = context.selection
-        let previousTheme = settings.theme
+        // In-memory only: the stored preference is never touched, so a batch
+        // of renders can't race each other's restore.
         if let theme = Self.themeOverride {
-            settings.theme = theme
+            settings.previewTheme(theme)
+        }
+        if Self.wantsDemoData {
+            Self.seedDemoSnapshots(into: store)
         }
         let previousSidebar = settings.providersPaneSidebar
         if let sidebar = Self.providersLayoutOverride {
             settings.providersPaneSidebar = sidebar
         }
         defer {
-            if settings.theme != previousTheme {
-                settings.theme = previousTheme
-            }
             if settings.providersPaneSidebar != previousSidebar {
                 settings.providersPaneSidebar = previousSidebar
             }
@@ -167,6 +187,81 @@ enum RunicScreenshotRenderer {
         return UsageProvider(rawValue: raw).map { .some($0) }
     }
 
+    /// `RUNIC_SCREENSHOT_DEMO=1` seeds representative quota windows for the
+    /// enabled providers so review renders show gauges, reset countdowns and
+    /// the Resets panel. The screenshot process never fetches, so without
+    /// this every card renders empty. Nothing is persisted — the seeded
+    /// snapshots live only in this throwaway process.
+    private static var wantsDemoData: Bool {
+        ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_DEMO"] == "1"
+    }
+
+    private static func seedDemoSnapshots(into store: UsageStore) {
+        let now = Date()
+        let providers = store.enabledProviders()
+        // A spread of shapes: healthy session + weekly, an exhausted session
+        // about to flip, a model-labelled window from a phrase, a plain
+        // balance (no reset — must stay out of the Resets panel).
+        struct DemoShape {
+            let used: Double
+            let resetsIn: TimeInterval
+            let windowMinutes: Int?
+            let weeklyUsed: Double?
+            let weeklyResetsIn: TimeInterval?
+        }
+        let shapes: [DemoShape] = [
+            DemoShape(
+                used: 62,
+                resetsIn: 2 * 3600 + 14 * 60,
+                windowMinutes: 300,
+                weeklyUsed: 20,
+                weeklyResetsIn: 3 * 86400 + 5 * 3600),
+            DemoShape(used: 100, resetsIn: 18 * 60, windowMinutes: 300, weeklyUsed: 48, weeklyResetsIn: 5 * 86400),
+            DemoShape(used: 35, resetsIn: 5 * 3600, windowMinutes: 300, weeklyUsed: nil, weeklyResetsIn: nil),
+            DemoShape(used: 12, resetsIn: 26 * 3600, windowMinutes: 1440, weeklyUsed: 71, weeklyResetsIn: 12 * 86400),
+        ]
+        for (index, provider) in providers.enumerated() {
+            let shape = shapes[index % shapes.count]
+            let primary = RateWindow(
+                usedPercent: shape.used,
+                windowMinutes: shape.windowMinutes,
+                resetsAt: now.addingTimeInterval(shape.resetsIn),
+                resetDescription: nil)
+            let secondary: RateWindow? = shape.weeklyUsed.map { used in
+                RateWindow(
+                    usedPercent: used,
+                    windowMinutes: 10080,
+                    resetsAt: now.addingTimeInterval(shape.weeklyResetsIn ?? 7 * 86400),
+                    resetDescription: nil)
+            }
+            let banked: UsageResetCredits? = index % shapes.count == 1
+                ? UsageResetCredits(
+                    availableCount: 2,
+                    credits: [
+                        UsageResetCredit(
+                            id: "demo-1",
+                            title: "Full reset",
+                            status: "available",
+                            grantedAt: now.addingTimeInterval(-5 * 86400),
+                            expiresAt: now.addingTimeInterval(25 * 86400)),
+                        UsageResetCredit(
+                            id: "demo-2",
+                            title: "Full reset",
+                            status: "available",
+                            grantedAt: now.addingTimeInterval(-4 * 86400),
+                            expiresAt: now.addingTimeInterval(26 * 86400)),
+                    ])
+                : nil
+            store.snapshots[provider] = UsageSnapshot(
+                primary: primary,
+                secondary: secondary,
+                tertiary: nil,
+                resetCredits: banked,
+                updatedAt: now.addingTimeInterval(-240),
+                identity: nil)
+        }
+    }
+
     private static var themeOverride: Theme? {
         guard let raw = ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_THEME"] else { return nil }
         return Theme(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
@@ -212,7 +307,12 @@ enum RunicScreenshotRenderer {
         guard let rep = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
             throw RendererError.bitmapUnavailable
         }
-        rep.size = size
+        // The rep's logical size must match the bounds that were laid out,
+        // not the requested canvas: a taller `RUNIC_SCREENSHOT_HEIGHT` than
+        // the content once produced a non-uniformly scaled PNG whose text
+        // looked letter-spaced — and cost a long chase for a font bug that
+        // did not exist.
+        rep.size = hostingView.bounds.size
         hostingView.cacheDisplay(in: hostingView.bounds, to: rep)
 
         try FileManager.default.createDirectory(
@@ -233,6 +333,7 @@ enum RunicScreenshotRenderer {
         exportCSV: { _ in },
         exportJSON: { _ in },
         openSettings: {},
+        openProviderSettings: { _ in },
         openAbout: {},
         quit: {},
         copyError: { _ in })

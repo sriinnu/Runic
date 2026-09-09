@@ -133,10 +133,10 @@ struct AnalyticsAddBudgetSheet: View {
 
             HStack {
                 Button("Cancel", action: self.onCancel)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.runicBordered)
                 Spacer()
                 Button("Add", action: self.onAdd)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.runicProminent)
             }
         }
         .padding(RunicSpacing.lg)

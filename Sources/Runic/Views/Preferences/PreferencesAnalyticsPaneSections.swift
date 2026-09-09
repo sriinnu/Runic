@@ -141,12 +141,10 @@ extension AnalyticsPane {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Usage metrics")
                 .font(self.fonts.body)
-            Picker("", selection: self.$settings.usageMetricDisplayMode) {
-                ForEach(UsageMetricDisplayMode.allCases) { mode in
-                    Text(mode.label).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
+            RunicSegmentedPicker(
+                selection: self.$settings.usageMetricDisplayMode,
+                cases: UsageMetricDisplayMode.allCases,
+                label: \.label)
             Text("Pick bars, percent, or both in the menu card.")
                 .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.subduedSecondaryText)
@@ -158,12 +156,7 @@ extension AnalyticsPane {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Menu mode")
                 .font(self.fonts.body)
-            Picker("", selection: self.$settings.menuMode) {
-                ForEach(MenuMode.allCases) { mode in
-                    Text(mode.label).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
+            RunicSegmentedPicker(selection: self.$settings.menuMode, cases: MenuMode.allCases, label: \.label)
             Text("Glance: usage only. Analyst: usage + credits/cost. Operator: full insights and actions.")
                 .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.subduedSecondaryText)
@@ -175,14 +168,12 @@ extension AnalyticsPane {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Provider switcher layout")
                 .font(self.fonts.body)
-            Picker("", selection: self.$settings.providerSwitcherLayout) {
-                ForEach(ProviderSwitcherLayout.allCases) { layout in
-                    Text(layout.label).tag(layout)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(!self.settings.mergeIcons)
-            .opacity(self.settings.mergeIcons ? 1 : 0.5)
+            RunicSegmentedPicker(
+                selection: self.$settings.providerSwitcherLayout,
+                cases: ProviderSwitcherLayout.allCases,
+                label: \.label)
+                .disabled(!self.settings.mergeIcons)
+                .opacity(self.settings.mergeIcons ? 1 : 0.5)
             Text("Choose whether providers appear on top or in a left sidebar.")
                 .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.subduedSecondaryText)
@@ -194,14 +185,12 @@ extension AnalyticsPane {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Switcher icon size")
                 .font(self.fonts.body)
-            Picker("", selection: self.$settings.providerSwitcherIconSize) {
-                ForEach(ProviderSwitcherIconSize.allCases) { size in
-                    Text(size.label).tag(size)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(!self.settings.mergeIcons)
-            .opacity(self.settings.mergeIcons ? 1 : 0.5)
+            RunicSegmentedPicker(
+                selection: self.$settings.providerSwitcherIconSize,
+                cases: ProviderSwitcherIconSize.allCases,
+                label: \.label)
+                .disabled(!self.settings.mergeIcons)
+                .opacity(self.settings.mergeIcons ? 1 : 0.5)
             Text("Small or medium icons for the provider switcher.")
                 .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.subduedSecondaryText)
@@ -223,7 +212,7 @@ extension AnalyticsPane {
                 } label: {
                     Label("Install Defaults", systemImage: "shield.lefthalf.filled")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.runicBordered)
                 .controlSize(.small)
             }
 
@@ -232,7 +221,7 @@ extension AnalyticsPane {
             } label: {
                 Label("Add Rule", systemImage: "plus")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.runicBordered)
             .controlSize(.small)
         }
     }
@@ -268,7 +257,7 @@ extension AnalyticsPane {
             } label: {
                 Label("Add Budget", systemImage: "plus")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.runicBordered)
             .controlSize(.small)
         }
     }

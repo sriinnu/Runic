@@ -220,12 +220,14 @@ extension RunicTests {
         let retro = Theme.retro.palette
         let terminal = Theme.terminal.palette
         let glass = Theme.glass.palette
-        let light = Theme.light.palette
+        let light = Theme.sumi.palette
 
         #expect(retro.prefersRetroToggleChrome)
         #expect(terminal.prefersRetroToggleChrome)
-        #expect(!glass.prefersRetroToggleChrome)
-        #expect(!light.prefersRetroToggleChrome)
+        #expect(glass.prefersRetroToggleChrome)
+        #expect(light.prefersRetroToggleChrome)
+        #expect(!Theme.system.palette.prefersRetroToggleChrome)
+        #expect(!Theme.dark.palette.prefersRetroToggleChrome)
         #expect(terminal.chartScanlineOpacity == terminal.style.effects.scanlineOpacity)
         #expect(light.nsColor(light.chartAxisLabelColor).alphaComponent >= 0.80)
         #expect(glass.motion.curve(reduceMotion: true) == nil)
@@ -236,11 +238,11 @@ extension RunicTests {
     @Test
     func `terminal typography keeps readable hud line rhythm`() {
         let palette = Theme.terminal.palette
-        let rules = RunicFontRules.rules(for: RunicFontChoice.commitMono.id)
+        let rules = RunicFontRules.rules(for: RunicFontChoice.geistMono.id)
             .applying(palette.style.typography)
 
-        #expect(rules.lineSpacing == 1.45)
-        #expect(rules.lineSpacing > RunicFontRules.rules(for: RunicFontChoice.commitMono.id).lineSpacing)
+        #expect(rules.lineSpacing == 1.2)
+        #expect(rules.lineSpacing > RunicFontRules.rules(for: RunicFontChoice.geistMono.id).lineSpacing)
     }
 
     @MainActor
@@ -250,7 +252,7 @@ extension RunicTests {
 
         store.applyTheme(Theme.terminal.palette)
 
-        #expect(store.activeNumericFamily == RunicFontChoice.commitMono.id)
+        #expect(store.activeNumericFamily == RunicFontChoice.geistMono.id)
     }
 
     @MainActor

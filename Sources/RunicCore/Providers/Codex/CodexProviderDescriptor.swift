@@ -157,8 +157,20 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
             accessToken: credentials.accessToken,
             accountId: credentials.accountId)
 
+        // Banked resets: the usage payload only carries the count. The
+        // inventory endpoint adds each credit's expiry; if it fails we keep
+        // the count so the menu still says "2 resets" rather than nothing.
+        var resetCredits: UsageResetCredits?
+        if let summary = usage.rateLimitResetCredits {
+            let inventory = try? await CodexOAuthUsageFetcher.fetchResetCredits(
+                accessToken: credentials.accessToken,
+                accountId: credentials.accountId)
+            resetCredits = inventory?.toUsageResetCredits(summaryCount: summary.availableCount)
+                ?? UsageResetCredits(availableCount: summary.availableCount)
+        }
+
         return self.makeResult(
-            usage: Self.mapUsage(usage, credentials: credentials),
+            usage: Self.mapUsage(usage, credentials: credentials, resetCredits: resetCredits),
             credits: Self.mapCredits(usage.credits),
             sourceLabel: "oauth")
     }
@@ -176,9 +188,14 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
         return false
     }
 
-    private static func mapUsage(_ response: CodexUsageResponse, credentials: CodexOAuthCredentials) -> UsageSnapshot {
+    static func mapUsage(
+        _ response: CodexUsageResponse,
+        credentials: CodexOAuthCredentials,
+        resetCredits: UsageResetCredits? = nil) -> UsageSnapshot
+    {
         let primary = Self.makeWindow(response.rateLimit?.primaryWindow)
         let secondary = Self.makeWindow(response.rateLimit?.secondaryWindow)
+        let tertiary = Self.additionalWindow(response.additionalRateLimits)
 
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -189,9 +206,31 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
         return UsageSnapshot(
             primary: primary ?? RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
             secondary: secondary,
-            tertiary: nil,
+            tertiary: tertiary,
+            resetCredits: resetCredits,
             updatedAt: Date(),
             identity: identity)
+    }
+
+    /// A promotional / extra metered feature gets its own windows. Surface
+    /// the tighter of its two as the card's third window, labelled with the
+    /// provider's own limit name so "each one" of the resets is visible.
+    private static func additionalWindow(_ limits: [CodexUsageResponse.AdditionalRateLimit]?) -> RateWindow? {
+        guard let extra = limits?.first(where: { $0.rateLimit?.primaryWindow != nil }),
+              let details = extra.rateLimit else { return nil }
+        let candidates = [details.primaryWindow, details.secondaryWindow].compactMap(\.self)
+        guard let tightest = candidates.max(by: { $0.usedPercent < $1.usedPercent }),
+              let window = Self.makeWindow(tightest) else { return nil }
+        let name = (extra.limitName ?? extra.meteredFeature ?? "Extra limit")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let hours = max(1, tightest.limitWindowSeconds / 3600)
+        let span = tightest.limitWindowSeconds >= 6 * 86400 ? "weekly" : "\(hours)h"
+        return RateWindow(
+            usedPercent: window.usedPercent,
+            windowMinutes: window.windowMinutes,
+            resetsAt: window.resetsAt,
+            resetDescription: window.resetDescription,
+            label: "\(name) \(span)")
     }
 
     private static func mapCredits(_ credits: CodexUsageResponse.CreditDetails?) -> CreditsSnapshot? {
