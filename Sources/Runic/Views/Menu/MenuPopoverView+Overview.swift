@@ -15,13 +15,16 @@ extension MenuPopoverView {
                 cornerRadius: self.settings.theme.palette.shape.cornerRadius(RunicCornerRadius.lg),
                 style: .continuous))
             .overlay {
-                RoundedRectangle(
-                    cornerRadius: self.settings.theme.palette.shape.cornerRadius(RunicCornerRadius.lg),
-                    style: .continuous)
-                    .stroke(
-                        self.settings.theme.palette.cardStroke.opacity(
-                            self.settings.theme.palette.style.chrome.borderOpacity * 0.7),
-                        lineWidth: self.settings.theme.palette.style.chrome.borderWeight)
+                // Paper: the tabs are stickers on the sky, no tray around them.
+                if !self.settings.theme.palette.isPaperCutout {
+                    RoundedRectangle(
+                        cornerRadius: self.settings.theme.palette.shape.cornerRadius(RunicCornerRadius.lg),
+                        style: .continuous)
+                        .stroke(
+                            self.settings.theme.palette.cardStroke.opacity(
+                                self.settings.theme.palette.style.chrome.borderOpacity * 0.7),
+                            lineWidth: self.settings.theme.palette.style.chrome.borderWeight)
+                }
             }
             .frame(width: self.contentWidth, alignment: .leading)
     }

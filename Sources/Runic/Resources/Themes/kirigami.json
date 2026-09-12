@@ -1,0 +1,32 @@
+{
+  "id": "kirigami",
+  "displayName": "Kirigami",
+  "tagline": "Paper, cut and glued",
+  "symbolName": "scissors",
+  "isCustom": true,
+  "prefersDarkAppearance": false,
+  "colors": {
+    "primary":       "#6A4CA6",
+    "secondary":     "#2B6A96",
+    "accent":        "#C6392A",
+    "highlight":     "#8C6A12",
+    "warm":          "#A0417A",
+    "tertiary":      "#237240",
+    "surface":       "#F3EAD6",
+    "surfaceAlt":    "#F8F2E4",
+    "cardFill":      "#FBF6EA",
+    "cardStroke":    "#2A2119",
+    "primaryText":   "#2A2119",
+    "secondaryText": "#5A4E42"
+  },
+  "fonts":   { "body": "system", "numeric": "mono" },
+  "shape":   { "cornerMultiplier": 1.1, "separator": "stitch" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "normal" },
+  "style": {
+    "typography": { "bodyFamily": "Nunito", "numericFamily": "Geist Mono", "displayFamily": "Patrick Hand", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "chrome": { "borderStyle": "cutout", "borderWeight": 1.5, "borderOpacity": 0.92, "cornerStyle": "soft", "panelDepth": "low" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "hatch", "textureOpacity": 0.5 },
+    "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "pipe", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}

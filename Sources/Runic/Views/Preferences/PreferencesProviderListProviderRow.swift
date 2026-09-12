@@ -27,7 +27,7 @@ struct ProviderListProviderRowView: View {
         HStack(alignment: .top, spacing: ProviderListMetrics.rowSpacing) {
             Toggle("", isOn: self.$isEnabled)
                 .labelsHidden()
-                .toggleStyle(.checkbox)
+                .runicPreferenceToggleStyle()
                 .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
                 .focused(self.$isToggleFocused)
 
@@ -89,6 +89,7 @@ struct ProviderListProviderRowView: View {
             RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
                 .strokeBorder(self.cardBorderColor, lineWidth: 1)
         }
+        .runicCutout(radius: ProviderListMetrics.providerCardCornerRadius, lift: 0.8, seed: 43)
         .overlay(alignment: .topLeading) {
             ProviderListReorderHandle(isVisible: showReorderHandle)
                 .offset(

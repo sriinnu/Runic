@@ -27,6 +27,9 @@ struct MenuPopoverView: View {
     let account: AccountInfo
     let updateReady: Bool
     let width: CGFloat
+    /// Popover height. Renders pass a taller canvas to capture the whole
+    /// scroll content; the live popover keeps the default.
+    var height: CGFloat = 680
     let actions: MenuPopoverActions
     let onSelectProvider: (UsageProvider?) -> Void
 
@@ -41,7 +44,9 @@ struct MenuPopoverView: View {
         account: AccountInfo,
         updateReady: Bool,
         initialProvider: UsageProvider?,
+        initialPanel: PopoverInsightPanel? = nil,
         width: CGFloat,
+        height: CGFloat = 680,
         actions: MenuPopoverActions,
         onSelectProvider: @escaping (UsageProvider?) -> Void)
     {
@@ -50,9 +55,11 @@ struct MenuPopoverView: View {
         self.account = account
         self.updateReady = updateReady
         self.width = width
+        self.height = height
         self.actions = actions
         self.onSelectProvider = onSelectProvider
         self._selectedProvider = State(initialValue: initialProvider)
+        self._selectedPanel = State(initialValue: initialPanel)
     }
 
     var body: some View {
@@ -63,7 +70,7 @@ struct MenuPopoverView: View {
         let isOverview = provider == nil && enabledProviders.count > 1
 
         ZStack {
-            MenuPopoverBackground()
+            MenuPopoverBackground(showsProviderTabs: enabledProviders.count > 1)
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: RunicSpacing.menuPanelSpacing) {
@@ -129,7 +136,7 @@ struct MenuPopoverView: View {
                 .padding(.bottom, self.outerVerticalPadding)
             }
         }
-        .frame(width: self.width, height: 680)
+        .frame(width: self.width, height: self.height)
         .environment(\.runicTheme, palette)
         .runicColorScheme(palette)
         .runicTypography()

@@ -52,8 +52,7 @@ struct SubscriptionUtilizationChartMenuView: View {
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Utilization")
-                .font(self.fonts.subheadline)
-                .fontWeight(.semibold)
+                .font(self.fonts.sectionTitle)
 
             Picker("", selection: self.$selectedPeriod) {
                 ForEach(Period.allCases, id: \.self) { period in

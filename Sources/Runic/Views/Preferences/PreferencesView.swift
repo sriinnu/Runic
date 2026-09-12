@@ -67,9 +67,11 @@ struct PreferencesView: View {
     var body: some View {
         VStack(spacing: 0) {
             self.tabStrip
-            Rectangle()
-                .fill(self.settings.theme.palette.menuSeparatorColor)
-                .frame(height: 1)
+            if !self.settings.theme.palette.isPaperCutout {
+                Rectangle()
+                    .fill(self.settings.theme.palette.menuSeparatorColor)
+                    .frame(height: 1)
+            }
             self.content(for: self.selection.tab)
         }
         .runicTypography()
@@ -80,12 +82,19 @@ struct PreferencesView: View {
         .tint(self.settings.theme.palette.accent)
         .background {
             ZStack {
-                self.settings.theme.palette.surface
-                LiquidMeshBackground()
-                    .opacity(self.meshBackgroundOpacity)
-                if self.settings.theme.palette.hasSurfaceTexture {
-                    RunicSurfaceTextureOverlay()
+                if self.settings.theme.palette.isPaperCutout {
+                    // Sky behind the tab strip, the sheet's cut edge just
+                    // under the tabs so they read as folder tabs on it.
+                    RunicPaperStage(skyBand: Self.paperSkyBand, hillHeight: 96)
                         .environment(\.runicTheme, self.settings.theme.palette)
+                } else {
+                    self.settings.theme.palette.surface
+                    LiquidMeshBackground()
+                        .opacity(self.meshBackgroundOpacity)
+                    if self.settings.theme.palette.hasSurfaceTexture {
+                        RunicSurfaceTextureOverlay()
+                            .environment(\.runicTheme, self.settings.theme.palette)
+                    }
                 }
             }
             .ignoresSafeArea()
@@ -106,6 +115,10 @@ struct PreferencesView: View {
         }
     }
 
+    /// Tab strip height on paper: vertical padding + the 56pt tab, minus a
+    /// few points so the tabs overlap the sheet's top edge.
+    private static let paperSkyBand: CGFloat = RunicSpacing.sm + 56 - 2
+
     private var visibleTabs: [PreferencesTab] {
         PreferencesTab.allCases.filter { self.settings.debugMenuEnabled || $0 != .debug }
     }
@@ -120,7 +133,9 @@ struct PreferencesView: View {
             .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
             .padding(.vertical, RunicSpacing.sm)
         }
-        .background(self.settings.theme.palette.surfaceAlt.opacity(self.headerBackgroundOpacity))
+        .background(self.settings.theme.palette.isPaperCutout
+            ? Color.clear
+            : self.settings.theme.palette.surfaceAlt.opacity(self.headerBackgroundOpacity))
     }
 
     @ViewBuilder
@@ -217,7 +232,9 @@ struct PreferencesView: View {
                     font: .system(size: 18, weight: selected ? .semibold : .medium))
                     .frame(height: 22)
                 Text(tab.label)
-                    .font(self.fonts.caption.weight(selected ? .semibold : .medium))
+                    .font(self.fonts.hasDisplayFace
+                        ? self.fonts.display(size: 13)
+                        : self.fonts.caption.weight(selected ? .semibold : .medium))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -230,12 +247,20 @@ struct PreferencesView: View {
             : self.settings.theme.palette.secondaryText)
         .background {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(selected ? self.selectedTabFill : .clear)
+                .fill(selected ? self.selectedTabFill(for: tab) : self.unselectedTabFill)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(selected ? self.settings.theme.palette.accent.opacity(0.45) : .clear, lineWidth: 1)
+            if !self.settings.theme.palette.isPaperCutout {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(selected ? self.settings.theme.palette.accent.opacity(0.45) : .clear, lineWidth: 1)
+            }
         }
+        .runicCutout(
+            radius: 8,
+            lift: selected ? 0.8 : 0.4,
+            seed: UInt64(tab.hashValue & 0xFF),
+            tilt: selected ? 0 : ((self.visibleTabs.firstIndex(of: tab) ?? 0).isMultiple(of: 2) ? -1.2 : 1.1))
+        .environment(\.runicTheme, self.settings.theme.palette)
     }
 
     private var meshBackgroundOpacity: Double {
@@ -247,8 +272,19 @@ struct PreferencesView: View {
         self.settings.theme.palette.isTerminalHUD ? 0.68 : 0.82
     }
 
-    private var selectedTabFill: Color {
-        self.settings.theme.palette.accent.opacity(self.settings.theme.palette.isTerminalHUD ? 0.18 : 0.12)
+    /// Kirigami tabs are folder tabs: every tab is a paper sticker, and the
+    /// selected one takes a pastel of its own (each tab a different colour,
+    /// the way a tabbed craft binder does). Other themes: accent wash.
+    private func selectedTabFill(for tab: PreferencesTab) -> Color {
+        let palette = self.settings.theme.palette
+        if palette.isPaperCutout {
+            return RunicPaperStage.pastel(self.visibleTabs.firstIndex(of: tab) ?? 0)
+        }
+        return palette.accent.opacity(palette.isTerminalHUD ? 0.18 : 0.12)
+    }
+
+    private var unselectedTabFill: Color {
+        self.settings.theme.palette.isPaperCutout ? self.settings.theme.palette.cardFill : .clear
     }
 
     private func ensureValidTabSelection() {

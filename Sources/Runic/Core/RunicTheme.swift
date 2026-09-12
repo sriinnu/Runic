@@ -39,6 +39,57 @@ struct RunicThemePalette {
         self.id == "terminal"
     }
 
+    /// Paper-craft chrome: cards are stickers (wobbly marker outline, white
+    /// halo, hard offset shadow), bars are pipes, and a strip of paper
+    /// scenery runs under the surface. Driven by `chrome.borderStyle`.
+    var isPaperCutout: Bool {
+        self.style.chrome.borderStyle == .cutout
+    }
+
+    /// Chart bar fill. Pipe themes get a vertical gradient — a lit top band
+    /// over the solid tube — so bars read as cylinders instead of slabs.
+    func chartBarStyle(_ color: Color) -> AnyShapeStyle {
+        guard self.style.controls.progressStyle == .pipe else { return AnyShapeStyle(color) }
+        // Lit top band, solid body, shaded underside — a tube lit from above.
+        // The shade is the text ink laid over the colour, so it darkens any hue.
+        let shade = self.primaryText.opacity(0.28)
+        return AnyShapeStyle(LinearGradient(
+            stops: [
+                .init(color: color.opacity(0.70), location: 0),
+                .init(color: color.opacity(0.70), location: 0.18),
+                .init(color: color, location: 0.19),
+                .init(color: color, location: 0.72),
+                .init(color: Self.blend(color, over: shade), location: 0.73),
+                .init(color: Self.blend(color, over: shade), location: 1),
+            ],
+            startPoint: .top,
+            endPoint: .bottom))
+    }
+
+    /// Whether bar charts should draw a darker lip band across the top of
+    /// each bar (the pipe mouth). Pipe themes only.
+    var wantsChartPipeLip: Bool {
+        self.style.controls.progressStyle == .pipe
+    }
+
+    /// Fill for the pipe lip band, drawn over the bar's top segment.
+    var chartPipeLipColor: Color {
+        self.primaryText.opacity(0.55)
+    }
+
+    /// `shade` composited over `color`, resolved through AppKit so the
+    /// result is a flat colour a gradient stop can hold.
+    private static func blend(_ color: Color, over shade: Color) -> Color {
+        let base = NSColor(color).usingColorSpace(.sRGB) ?? .black
+        let top = NSColor(shade).usingColorSpace(.sRGB) ?? .clear
+        let a = top.alphaComponent
+        return Color(
+            red: Double(base.redComponent * (1 - a) + top.redComponent * a),
+            green: Double(base.greenComponent * (1 - a) + top.greenComponent * a),
+            blue: Double(base.blueComponent * (1 - a) + top.blueComponent * a),
+            opacity: Double(base.alphaComponent))
+    }
+
     /// Theme-owned checkbox chrome (accent-filled box, theme stroke) for
     /// every opinionated theme. Only System and Dark keep the native
     /// checkbox, which follows the macOS accent and reads foreign everywhere
@@ -127,6 +178,11 @@ struct RunicThemePalette {
     var cardBackgroundStyle: AnyShapeStyle {
         if self.id == "glass" {
             return AnyShapeStyle(.regularMaterial)
+        }
+        // A glued-on sheet is opaque; a translucent gradient over the
+        // hatching reads as gray.
+        if self.isPaperCutout {
+            return AnyShapeStyle(self.cardFill)
         }
         return AnyShapeStyle(self.menuCardGradient)
     }
@@ -323,6 +379,22 @@ struct RunicDivider: View {
                 Rectangle()
                     .fill(self.runicTheme.primaryText.opacity(0.78 * self.opacity))
                     .frame(height: 1.5)
+            case .stitch:
+                // Short pencil dashes — the cut-here line on a craft sheet.
+                Rectangle()
+                    .fill(.clear)
+                    .frame(height: 1)
+                    .overlay(alignment: .leading) {
+                        GeometryReader { proxy in
+                            Path { path in
+                                path.move(to: CGPoint(x: 0, y: 0.5))
+                                path.addLine(to: CGPoint(x: proxy.size.width, y: 0.5))
+                            }
+                            .stroke(
+                                self.runicTheme.primaryText.opacity(0.42 * self.opacity),
+                                style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [3, 4]))
+                        }
+                    }
             case .hairline:
                 Rectangle()
                     .fill(self.runicTheme.menuSeparatorColor.opacity(0.65 * self.opacity))
@@ -425,6 +497,11 @@ struct RunicSurfaceTextureOverlay: View {
                 RunicFilmGrainCanvas(opacity: opacity, light: self.runicTheme.primaryText)
             case .grid:
                 RunicDraftingGridCanvas(opacity: opacity, ink: self.runicTheme.primaryText)
+            case .hatch:
+                RunicPencilHatchCanvas(
+                    opacity: opacity,
+                    ink: self.runicTheme.primaryText,
+                    warm: self.runicTheme.highlight)
             }
         }
         .allowsHitTesting(false)
@@ -474,6 +551,46 @@ private struct RunicPaperTextureCanvas: View {
                     center: CGPoint(x: size.width / 2, y: size.height / 2),
                     startRadius: 0,
                     endRadius: max(size.width, size.height) * 0.78))
+        }
+    }
+}
+
+/// Pencil hatching on card stock: fine 45° strokes every 5pt with a seeded
+/// wobble in weight and a few skipped lines, plus a faint warm wash toward
+/// the corners so the sheet reads as paper rather than a pattern fill.
+private struct RunicPencilHatchCanvas: View {
+    let opacity: Double
+    let ink: Color
+    let warm: Color
+
+    var body: some View {
+        Canvas { context, size in
+            guard size.width > 0, size.height > 0 else { return }
+            var rng = RunicSeededRandom(seed: UInt64(size.width * 41 + size.height * 23))
+            let spacing: CGFloat = 5
+            var offset: CGFloat = -size.height
+            while offset < size.width {
+                // Skip roughly one line in nine — pencil lifts.
+                if rng.nextUnit() < 0.11 {
+                    offset += spacing
+                    continue
+                }
+                var line = Path()
+                line.move(to: CGPoint(x: offset, y: 0))
+                line.addLine(to: CGPoint(x: offset + size.height, y: size.height))
+                let alpha = 0.035 + 0.03 * rng.nextUnit()
+                let width = 0.45 + 0.25 * CGFloat(rng.nextUnit())
+                context.stroke(line, with: .color(self.ink.opacity(alpha * self.opacity)), lineWidth: width)
+                offset += spacing
+            }
+            // Warm corner wash, like sun on a paper page.
+            context.fill(
+                Path(CGRect(origin: .zero, size: size)),
+                with: .radialGradient(
+                    Gradient(colors: [.clear, .clear, self.warm.opacity(0.07 * self.opacity)]),
+                    center: CGPoint(x: size.width * 0.5, y: size.height * 0.45),
+                    startRadius: 0,
+                    endRadius: max(size.width, size.height) * 0.82))
         }
     }
 }

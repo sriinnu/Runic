@@ -238,6 +238,14 @@ struct AppearancePreviewCard: View {
             Rectangle()
                 .fill(palette.primaryText.opacity(0.78))
                 .frame(height: 1.5)
+        case .stitch:
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: 0.5))
+                path.addLine(to: CGPoint(x: 400, y: 0.5))
+            }
+            .stroke(palette.primaryText.opacity(0.42), style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [3, 4]))
+            .frame(height: 1)
+            .clipped()
         case .hairline:
             Rectangle()
                 .fill(palette.menuSeparatorColor.opacity(0.65))

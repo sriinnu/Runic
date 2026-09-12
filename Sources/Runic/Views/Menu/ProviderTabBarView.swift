@@ -37,8 +37,8 @@ struct ProviderTabBarView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: RunicSpacing.xxs) {
-                ForEach(self.tabs) { tab in
+            HStack(spacing: self.runicTheme.isPaperCutout ? RunicSpacing.xs : RunicSpacing.xxs) {
+                ForEach(Array(self.tabs.enumerated()), id: \.element.id) { index, tab in
                     let selectedColor = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : tab.brandColor
                     Button {
                         self.onSelect(tab.provider)
@@ -69,16 +69,17 @@ struct ProviderTabBarView: View {
                                 .fontWeight(tab.isSelected ? .semibold : .regular)
                                 .lineLimit(1)
                         }
-                        .padding(.horizontal, RunicSpacing.compact)
+                        .padding(.horizontal, self.runicTheme.isPaperCutout ? RunicSpacing.xs : RunicSpacing.compact)
                         .padding(.vertical, RunicSpacing.xxs + 2)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(self.tabBackgroundFill(selectedColor: selectedColor, isSelected: tab.isSelected)))
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(
-                                    self.tabStrokeColor(selectedColor: selectedColor, isSelected: tab.isSelected),
-                                    lineWidth: self.tabStrokeWidth(isSelected: tab.isSelected)))
+                        .background(self.tabShape
+                            .fill(self.tabBackgroundFill(
+                                selectedColor: selectedColor,
+                                isSelected: tab.isSelected,
+                                index: index)))
+                        .overlay(self.tabShape
+                            .stroke(
+                                self.tabStrokeColor(selectedColor: selectedColor, isSelected: tab.isSelected),
+                                lineWidth: self.tabStrokeWidth(isSelected: tab.isSelected)))
                         .foregroundStyle(self.runicTheme.isTerminalHUD
                             ? self.terminalForegroundStyle(for: tab)
                             : self.standardForegroundStyle(for: tab))
@@ -86,6 +87,13 @@ struct ProviderTabBarView: View {
                             color: self.tabGlowColor(selectedColor: selectedColor, isSelected: tab.isSelected),
                             radius: self.tabGlowRadius(isSelected: tab.isSelected),
                             y: 1)
+                        // Folder tabs: each a sticker, the selected one sits
+                        // flat and the rest lean a degree either way.
+                        .runicCutout(
+                            radius: Self.paperTabRadius,
+                            lift: tab.isSelected ? 0.8 : 0.45,
+                            seed: UInt64(index + 3),
+                            tilt: tab.isSelected ? 0 : (index.isMultiple(of: 2) ? -1.4 : 1.2))
                     }
                     .buttonStyle(TabButtonStyle())
                 }
@@ -125,10 +133,13 @@ struct ProviderTabBarView: View {
         }
         .frame(minWidth: self.width, maxWidth: .infinity)
         .background {
-            ZStack {
-                self.runicTheme.menuSurfaceGradient
-                if self.runicTheme.isTerminalHUD {
-                    RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
+            // Paper: the sky shows through; the tabs are the only chrome.
+            if !self.runicTheme.isPaperCutout {
+                ZStack {
+                    self.runicTheme.menuSurfaceGradient
+                    if self.runicTheme.isTerminalHUD {
+                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
+                    }
                 }
             }
         }
@@ -162,9 +173,25 @@ struct ProviderTabBarView: View {
             .accessibilityHidden(true)
     }
 
+    private static let paperTabRadius: CGFloat = 9
+
+    /// Capsules everywhere except paper, where a folder tab is a rounded
+    /// rectangle so its wobbly outline has straight runs to wobble on.
+    private var tabShape: AnyShape {
+        self.runicTheme.isPaperCutout
+            ? AnyShape(RoundedRectangle(cornerRadius: Self.paperTabRadius, style: .continuous))
+            : AnyShape(Capsule(style: .continuous))
+    }
+
     /// Glass-flavoured glow halos for tab capsules. Terminal stays solid,
-    /// glow themes (Glass / Dark) get heavy neon, others stay subtle.
-    private func tabBackgroundFill(selectedColor: Color, isSelected: Bool) -> Color {
+    /// glow themes (Glass / Dark) get heavy neon, others stay subtle. Paper
+    /// tabs are cream stickers; the selected one takes a pastel by position,
+    /// like the coloured tabs on a craft binder.
+    private func tabBackgroundFill(selectedColor: Color, isSelected: Bool, index: Int) -> Color {
+        if self.runicTheme.isPaperCutout {
+            guard isSelected else { return self.runicTheme.cardFill }
+            return RunicPaperStage.pastel(index)
+        }
         if isSelected {
             if self.runicTheme.isTerminalHUD {
                 return selectedColor.opacity(0.22)
@@ -184,6 +211,8 @@ struct ProviderTabBarView: View {
     }
 
     private func tabStrokeColor(selectedColor: Color, isSelected: Bool) -> Color {
+        // Paper: the cutout chrome draws the marker outline.
+        if self.runicTheme.isPaperCutout { return .clear }
         guard isSelected else {
             return self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity * 0.65)
         }
@@ -193,7 +222,7 @@ struct ProviderTabBarView: View {
     }
 
     private func tabGlowColor(selectedColor: Color, isSelected: Bool) -> Color {
-        guard isSelected else { return .clear }
+        guard isSelected, !self.runicTheme.isPaperCutout else { return .clear }
         if self.runicTheme.isTerminalHUD { return selectedColor.opacity(0.14) }
         if self.runicTheme.shape.separator == .glow {
             return selectedColor.opacity(self.runicTheme.style.effects.glowStrength)
@@ -213,7 +242,12 @@ struct ProviderTabBarView: View {
     }
 
     private func standardForegroundStyle(for tab: TabItem) -> Color {
-        tab.isSelected ? self.runicTheme.primaryText : self.runicTheme.primaryText.opacity(0.66)
+        if self.runicTheme.isPaperCutout {
+            // Cream stickers on sky: full ink, no fade — a faded label on a
+            // sticker looks printed wrong.
+            return tab.isSelected ? self.runicTheme.primaryText : self.runicTheme.primaryText.opacity(0.82)
+        }
+        return tab.isSelected ? self.runicTheme.primaryText : self.runicTheme.primaryText.opacity(0.66)
     }
 }
 

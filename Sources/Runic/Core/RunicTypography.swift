@@ -199,16 +199,19 @@ struct RunicFontRules: Hashable {
         }
 
         // Mona Sans is the default product face: compact, clear, and calm.
-        // Geist stays available as a slightly warmer alternate sans.
+        // Geist stays available as a slightly warmer alternate sans. Nunito
+        // (Kirigami's body) runs a touch wide and airy, so it takes the
+        // taller line rhythm.
         if normalized == "mona sans" ||
             normalized == "geist" ||
+            normalized == "nunito" ||
             normalized.hasPrefix("geist ") && !normalized.contains("mono")
         {
             return RunicFontRules(
                 letterSpacing: 0,
                 compactLetterSpacing: 0,
                 wordSpacing: 0,
-                lineSpacing: normalized == "mona sans" ? 1.25 : 1.15,
+                lineSpacing: normalized == "geist" ? 1.15 : 1.25,
                 prefersMonospacedDigits: false,
                 contrast: RunicFontContrast(
                     lightPrimaryOpacity: 0.92,
@@ -291,14 +294,19 @@ struct RunicFontChoice: Identifiable, Hashable {
     /// Curated families. Commercial faces are shown only when installed locally.
     static let monaSans = RunicFontChoice(id: "Mona Sans", displayName: "Mona Sans")
     static let geist = RunicFontChoice(id: "Geist", displayName: "Geist")
+    /// Rounded humanist sans bundled for Kirigami's body; also offered in the picker.
+    static let nunito = RunicFontChoice(id: "Nunito", displayName: "Nunito")
     static let commitMono = RunicFontChoice(id: "CommitMono", displayName: "Commit Mono")
     static let geistMono = RunicFontChoice(id: "Geist Mono", displayName: "Geist Mono")
     static let berkeleyMono = RunicFontChoice(id: "Berkeley Mono", displayName: "Berkeley Mono")
     static let operatorMono = RunicFontChoice(id: "Operator Mono", displayName: "Operator Mono")
     /// Licensed commercial mono face; shown only when bundled or installed on the Mac.
     static let tx02 = RunicFontChoice(id: "TX-02", displayName: "TX-02 Berkeley Mono")
+    /// Handwriting face bundled for Kirigami titles. Display-only: hidden
+    /// from the body-font picker, reachable through a theme's `displayFamily`.
+    static let patrickHand = RunicFontChoice(id: "Patrick Hand", displayName: "Patrick Hand")
 
-    private static let hiddenBundledFamilies: Set<String> = ["VT323"]
+    private static let hiddenBundledFamilies: Set<String> = ["VT323", "Patrick Hand"]
     private static let prunedBundledFamilies: Set<String> = [
         "fira code",
         "firacode",
@@ -323,6 +331,7 @@ struct RunicFontChoice: Identifiable, Hashable {
         let bundledFamilies = Set(RunicTypography.discoverBundledFontFamilies())
         let curatedBundled: [RunicFontChoice] = [
             .geist,
+            .nunito,
             .commitMono,
             .geistMono,
             .berkeleyMono,
@@ -369,6 +378,19 @@ struct RunicFontChoice: Identifiable, Hashable {
             return self.defaultFamily
         }
         return family
+    }
+
+    /// Display faces may be hidden from the picker (VT323, Patrick Hand) and
+    /// still be used by a theme. Only availability matters here; an absent
+    /// family yields `nil` so callers fall back to the body face.
+    static func resolvedDisplayFamily(_ family: String?) -> String? {
+        guard let family = family?.trimmingCharacters(in: .whitespacesAndNewlines), !family.isEmpty else {
+            return nil
+        }
+        // Installed, or shipped in the bundle (readable from the font files
+        // themselves, so this holds before `registerFonts()` has run).
+        if self.isFontFamilyAvailable(family) { return family }
+        return RunicTypography.discoverBundledFontFamilies().contains(family) ? family : nil
     }
 
     private static func isFontFamilyAvailable(_ family: String) -> Bool {
@@ -457,6 +479,10 @@ enum RunicFont {
 
     static var largeTitle: Font {
         RunicFontStore.shared.largeTitle
+    }
+
+    static var sectionTitle: Font {
+        RunicFontStore.shared.sectionTitle
     }
 
     static func system(size: CGFloat) -> Font {

@@ -54,6 +54,8 @@ struct RetroTaglineFooter: View {
 /// - **Blueprint:** tracked caps with a cyan tick and a title-block rule
 ///   running to the trailing edge.
 /// - **Relief:** small tracked caps pressed into the surface (letterpress).
+/// - **Kirigami (any display face):** the title handwritten in lowercase,
+///   a size up, with a small marker underline that stops short.
 /// - **Everywhere else:** standard subheadline.
 @MainActor
 struct RetroSectionHeader: View {
@@ -120,6 +122,20 @@ struct RetroSectionHeader: View {
                         .frame(maxWidth: .infinity)
                         .accessibilityHidden(true)
                 }
+            } else if self.fonts.hasDisplayFace {
+                Text(self.text.lowercased())
+                    .font(self.fonts.display(size: 18))
+                    .foregroundStyle(self.runicTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .padding(.bottom, 1)
+                    .background(alignment: .bottomLeading) {
+                        // Marker underline, a touch short of the text width.
+                        RunicMarkerUnderline(color: self.runicTheme.highlight.opacity(0.62))
+                            .frame(height: 3)
+                            .padding(.trailing, 12)
+                            .offset(y: 1)
+                    }
             } else if self.runicTheme.isElevated {
                 Text(self.text.uppercased())
                     .tracking(1.2)

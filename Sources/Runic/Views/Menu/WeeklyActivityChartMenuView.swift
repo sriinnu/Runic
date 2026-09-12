@@ -42,8 +42,7 @@ struct WeeklyActivityChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Last 7 Days")
-                    .font(self.fonts.subheadline)
-                    .fontWeight(.semibold)
+                    .font(self.fonts.sectionTitle)
                 Spacer()
                 if model.bars.count > 1 {
                     let avg = model.totalTokens / max(1, model.bars.count(where: { $0.totalTokens > 0 }))
@@ -66,8 +65,9 @@ struct WeeklyActivityChartMenuView: View {
                         BarMark(
                             x: .value("Day", bar.weekdayShort),
                             y: .value("Tokens", bar.totalTokens))
-                            .foregroundStyle(bar.isToday ? todayColor : barColor)
+                            .foregroundStyle(self.runicTheme.chartBarStyle(bar.isToday ? todayColor : barColor))
                             .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm))
+                        self.pipeLip(day: bar.weekdayShort, tokens: bar.totalTokens)
                     }
                 }
                 .chartXAxis {
@@ -128,6 +128,19 @@ struct WeeklyActivityChartMenuView: View {
         .chartPanelStyle(width: self.width)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Last 7 days usage bar chart")
+    }
+
+    /// Pipe mouth: a dark band across the top of the bar. Empty off pipe themes.
+    @ChartContentBuilder
+    private func pipeLip(day: String, tokens: Int) -> some ChartContent {
+        if self.runicTheme.wantsChartPipeLip, tokens > 0 {
+            BarMark(
+                x: .value("Day", day),
+                yStart: .value("Lip", Double(tokens) * 0.86),
+                yEnd: .value("Tokens", Double(tokens)))
+                .foregroundStyle(self.runicTheme.chartPipeLipColor)
+                .cornerRadius(1)
+        }
     }
 
     // MARK: - Model

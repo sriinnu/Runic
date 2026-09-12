@@ -44,8 +44,7 @@ struct HourlyActivityChartMenuView: View {
             // Header
             HStack(alignment: .firstTextBaseline) {
                 Text("Today by Hour")
-                    .font(self.fonts.subheadline)
-                    .fontWeight(.semibold)
+                    .font(self.fonts.sectionTitle)
                 Spacer()
                 if let peak = model.peakHour {
                     Text("Peak \(peak.label)")
@@ -67,8 +66,10 @@ struct HourlyActivityChartMenuView: View {
                         BarMark(
                             x: .value("Hour", bar.hour),
                             y: .value("Tokens", bar.totalTokens))
-                            .foregroundStyle(bar.isPeak ? self.runicTheme.chartPeakColor : barColor)
+                            .foregroundStyle(
+                                self.runicTheme.chartBarStyle(bar.isPeak ? self.runicTheme.chartPeakColor : barColor))
                             .cornerRadius(self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs))
+                        self.pipeLip(hour: bar.hour, tokens: bar.totalTokens)
                     }
                     if let selected = self.selectedHour,
                        let bar = model.bars.first(where: { $0.hour == selected })
@@ -173,6 +174,19 @@ struct HourlyActivityChartMenuView: View {
         .chartPanelStyle(width: self.width)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Today by hour chart with \(model.activeHours) active hours")
+    }
+
+    /// Pipe mouth: a dark band across the top of the bar. Empty off pipe themes.
+    @ChartContentBuilder
+    private func pipeLip(hour: Int, tokens: Int) -> some ChartContent {
+        if self.runicTheme.wantsChartPipeLip, tokens > 0 {
+            BarMark(
+                x: .value("Hour", hour),
+                yStart: .value("Lip", Double(tokens) * 0.86),
+                yEnd: .value("Tokens", Double(tokens)))
+                .foregroundStyle(self.runicTheme.chartPipeLipColor)
+                .cornerRadius(1)
+        }
     }
 
     // MARK: - Model
