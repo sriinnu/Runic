@@ -8,6 +8,7 @@ enum PopoverInsightPanel: String, CaseIterable, Identifiable {
     case weekly
     case utilization
     case windows
+    case burn
     case projects
     case models
 
@@ -22,6 +23,7 @@ enum PopoverInsightPanel: String, CaseIterable, Identifiable {
         case .weekly: "7 days"
         case .utilization: "Utilization"
         case .windows: "Windows"
+        case .burn: "Burn"
         case .projects: "Projects"
         case .models: "Models"
         }
@@ -34,6 +36,7 @@ enum PopoverInsightPanel: String, CaseIterable, Identifiable {
         case .weekly: "calendar"
         case .utilization: "gauge.with.dots.needle.67percent"
         case .windows: "rectangle.split.2x1"
+        case .burn: "flame"
         case .projects: "folder"
         case .models: "cpu"
         }
@@ -55,7 +58,7 @@ extension UsageExporter.Scope {
             self = .weekly
         case .utilization:
             self = .utilization
-        case .windows:
+        case .windows, .burn:
             self = .windows
         case .projects:
             self = .projects
@@ -79,8 +82,23 @@ extension UsageTimelineChartMenuView.TimeRange {
 
 struct MenuPopoverBackground: View {
     @Environment(\.runicTheme) private var runicTheme
+    /// Paper themes show a band of sky behind the provider tab strip so the
+    /// tabs read as folder tabs on a glued-down sheet. Off when the popover
+    /// has no tab strip (one provider), so no dead sky sits above the card.
+    var showsProviderTabs: Bool = false
 
     var body: some View {
+        if self.runicTheme.isPaperCutout {
+            // 12pt outer padding + 8pt strip padding + ~30pt tab, less 2 so
+            // the tabs' feet overlap the sheet's cut edge like folder tabs.
+            RunicPaperStage(skyBand: self.showsProviderTabs ? 48 : 0)
+                .ignoresSafeArea()
+        } else {
+            self.standardBody
+        }
+    }
+
+    private var standardBody: some View {
         ZStack {
             self.runicTheme.menuSurfaceGradient
             if self.runicTheme.id == "glass" {
@@ -115,13 +133,16 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
         let isGlass = self.runicTheme.id == "glass"
         let borderStyle = self.runicTheme.style.chrome.borderStyle
         let elevated = self.runicTheme.isElevated
+        let paper = borderStyle == .cutout
         self.content
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(isGlass
                         ? AnyShapeStyle(.regularMaterial)
-                        : AnyShapeStyle(elevated ? self.runicTheme.cardFill : self.runicTheme.menuSubtleFill))
+                        : AnyShapeStyle(elevated || borderStyle == .cutout
+                            ? self.runicTheme.cardFill
+                            : self.runicTheme.menuSubtleFill))
                     // Poster chrome: a hard, unblurred drop shadow in the text
                     // color, under an opaque slab so the shadow never bleeds
                     // through a translucent card fill. `block` style only.
@@ -157,17 +178,21 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
                     }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .stroke(
-                        self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity),
-                        lineWidth: strokeIsGlow
-                            ? max(0.8, self.runicTheme.style.chrome.borderWeight)
-                            : self.runicTheme.style.chrome.borderWeight)
-                    .shadow(
-                        color: strokeIsGlow
-                            ? self.runicTheme.accent.opacity(self.runicTheme.style.effects.glowStrength)
-                            : .clear,
-                        radius: 4 + self.runicTheme.style.effects.glowStrength * 5)
+                // Cut-out chrome draws its own wobbly outline; a second
+                // geometric stroke under it would read as a printing misregister.
+                if borderStyle != .cutout {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .stroke(
+                            self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity),
+                            lineWidth: strokeIsGlow
+                                ? max(0.8, self.runicTheme.style.chrome.borderWeight)
+                                : self.runicTheme.style.chrome.borderWeight)
+                        .shadow(
+                            color: strokeIsGlow
+                                ? self.runicTheme.accent.opacity(self.runicTheme.style.effects.glowStrength)
+                                : .clear,
+                            radius: 4 + self.runicTheme.style.effects.glowStrength * 5)
+                }
                 // Ink chrome: a second, slightly offset pass of the same
                 // line — the pen went round twice.
                 if borderStyle == .ink {
@@ -179,11 +204,12 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
                 }
             }
             .retroBevel(baseRadius: RunicCornerRadius.lg)
+            .runicCutout(radius: radius, lift: paper && self.isHovered ? 1.45 : 1)
             .runicRaised(radius: radius, lift: self.isHovered ? 1.4 : 1)
-            .offset(y: elevated && self.isHovered ? -1 : 0)
-            .animation(elevated ? self.runicTheme.motion.curve : nil, value: self.isHovered)
+            .offset(y: (elevated || paper) && self.isHovered ? -1 : 0)
+            .animation(elevated || paper ? self.runicTheme.motion.curve : nil, value: self.isHovered)
             .onHover { hovering in
-                if elevated { self.isHovered = hovering }
+                if elevated || paper { self.isHovered = hovering }
             }
     }
 }

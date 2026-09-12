@@ -36,14 +36,21 @@ struct ProviderSidebarRow: View {
         .padding(.horizontal, RunicSpacing.xs)
         .padding(.vertical, RunicSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // Theme accent, not `Color.accentColor`: the system accent ignores
+        // the theme and resolves to black in offscreen renders.
         .background(
             RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
-                .fill(self.isSelected ? Color.accentColor.opacity(0.14) : .clear))
+                .fill(self.isSelected ? self.runicTheme.accent.opacity(0.14) : .clear))
         .overlay(
             RoundedRectangle(cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
                 .stroke(
-                    self.isSelected ? Color.accentColor.opacity(0.45) : Color.clear,
+                    self.isSelected ? self.runicTheme.accent.opacity(0.45) : Color.clear,
                     lineWidth: 1))
+        .runicCutout(
+            radius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+            lift: 0.5,
+            seed: 37,
+            enabled: self.isSelected)
         .contentShape(Rectangle())
         .opacity(self.isEnabled ? 1 : 0.6)
     }
@@ -75,6 +82,7 @@ struct ProviderSidebarSectionCard<Content: View>: View {
                     .strokeBorder(
                         self.runicTheme.menuSeparatorColor.opacity(ProviderListMetrics.sidebarCardBorderOpacity + 0.12),
                         lineWidth: 1))
+            .runicCutout(radius: ProviderListMetrics.sidebarCardCornerRadius, lift: 0.7, seed: 41)
     }
 }
 

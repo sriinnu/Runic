@@ -8,6 +8,8 @@ Runic only exposes bundled or locally installed families that the app can resolv
 - Commit Mono: bundled OTF files, license in `OFL-CommitMono.txt`.
 - Geist and Geist Mono: bundled TTF files, license in `OFL-Geist.txt`.
 - VT323: bundled TTF file for Retro decoration, license in `OFL-VT323.txt`.
+- Patrick Hand: bundled TTF file for Kirigami titles, license in `OFL-PatrickHand.txt`.
+- Nunito: bundled TTF files (Regular, Medium, SemiBold, Bold) for Kirigami body text, license in `OFL-Nunito.txt`.
 
 ## Local-Only Commercial Fonts
 

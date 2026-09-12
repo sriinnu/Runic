@@ -88,8 +88,7 @@ struct UsageTimelineChartMenuView: View {
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             // Header on its own line
             Text("Timeline")
-                .font(self.fonts.subheadline)
-                .fontWeight(.semibold)
+                .font(self.fonts.sectionTitle)
 
             // Range picker on its own line
             Picker("", selection: self.selectedTimeRangeBindingForPicker) {
@@ -120,8 +119,10 @@ struct UsageTimelineChartMenuView: View {
                                 x: .value("Time", point.date, unit: .day),
                                 y: .value("Tokens", point.totalTokens),
                                 width: .ratio(isTerminal ? 0.48 : 0.62))
-                                .foregroundStyle(lineColor.opacity(isTerminal ? 0.78 : 0.66))
+                                .foregroundStyle(
+                                    self.runicTheme.chartBarStyle(lineColor.opacity(isTerminal ? 0.78 : 0.66)))
                                 .cornerRadius(isTerminal ? 1 : 3)
+                            self.pipeLip(date: point.date, tokens: point.totalTokens)
                         } else if chartStyle == .area {
                             AreaMark(
                                 x: .value("Time", point.date),
@@ -274,6 +275,20 @@ struct UsageTimelineChartMenuView: View {
                     .fontWeight(.medium)
                     .foregroundStyle(self.runicTheme.primaryText)
             }
+        }
+    }
+
+    /// Pipe mouth: a dark band across the top of the bar. Empty off pipe themes.
+    @ChartContentBuilder
+    private func pipeLip(date: Date, tokens: Int) -> some ChartContent {
+        if self.runicTheme.wantsChartPipeLip, tokens > 0 {
+            BarMark(
+                x: .value("Time", date, unit: .day),
+                yStart: .value("Lip", Double(tokens) * 0.86),
+                yEnd: .value("Tokens", Double(tokens)),
+                width: .ratio(0.62))
+                .foregroundStyle(self.runicTheme.chartPipeLipColor)
+                .cornerRadius(1)
         }
     }
 

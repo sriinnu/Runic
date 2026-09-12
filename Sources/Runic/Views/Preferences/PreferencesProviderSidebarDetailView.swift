@@ -47,9 +47,21 @@ struct ProviderSidebarDetailView: View {
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Spacer()
-                            Toggle("Enabled", isOn: self.$isEnabled)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
+                            // Paper owns its switch (the pill); other themes
+                            // keep the native switch here since it is the
+                            // one place a switch, not a checkbox, is right.
+                            if self.runicTheme.isPaperCutout {
+                                // Custom toggle styles ignore `labelsHidden`,
+                                // so the title is empty and VoiceOver gets it
+                                // back through the accessibility label.
+                                Toggle("", isOn: self.$isEnabled)
+                                    .toggleStyle(.retro)
+                                    .accessibilityLabel("Enabled")
+                            } else {
+                                Toggle("Enabled", isOn: self.$isEnabled)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
                         }
                         Divider()
 
@@ -213,7 +225,7 @@ struct ProviderSidebarDetailView: View {
                                                 .foregroundStyle(self.runicTheme.secondaryText)
                                         }
                                     }
-                                    .toggleStyle(.checkbox)
+                                    .runicPreferenceToggleStyle()
 
                                     if toggle.binding.wrappedValue {
                                         if let status = toggle.statusText?(), !status.isEmpty {

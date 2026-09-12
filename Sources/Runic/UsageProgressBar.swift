@@ -61,8 +61,72 @@ struct UsageProgressBar: View {
             self.terminalSegmentBody
         } else if self.runicTheme.style.controls.progressStyle == .flatBar {
             self.flatBody
+        } else if self.runicTheme.style.controls.progressStyle == .pipe {
+            self.pipeBody
         } else {
             self.gradientBody
+        }
+    }
+
+    /// Warp-pipe bar for Kirigami: an outlined cream track, the fill as an
+    /// outlined tube with a lit top band, and a slightly taller lip at the
+    /// leading end — the pipe mouth.
+    private var pipeBody: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let ink = self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity)
+            let inkWidth: CGFloat = 1
+            let lipWidth: CGFloat = max(4, self.barHeight * 0.55)
+            let minFill = lipWidth + 3
+            let fillWidth = self.animatedPercent > 0
+                ? max(minFill, (self.animatedPercent / 100) * width)
+                : 0
+            let radius: CGFloat = 2.5
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(self.runicTheme.surfaceAlt)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .strokeBorder(ink.opacity(0.75), lineWidth: inkWidth))
+                if fillWidth > 0 {
+                    // Tube body.
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(self.runicTheme.chartBarStyle(self.tint))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .strokeBorder(ink, lineWidth: inkWidth))
+                        .frame(width: max(0, fillWidth - lipWidth * 0.5))
+                    // Lip: a taller, outlined cap at the mouth of the pipe.
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(self.tint)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .strokeBorder(ink, lineWidth: inkWidth))
+                        .frame(width: lipWidth, height: self.barHeight + 3)
+                        .offset(x: fillWidth - lipWidth)
+                }
+            }
+            .frame(width: width, height: self.barHeight, alignment: .leading)
+        }
+        .frame(height: self.barHeight)
+        .padding(.vertical, 1.5)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(self.accessibilityLabel)
+        .accessibilityValue("\(Int(self.clamped)) percent")
+        .accessibilityAddTraits(.updatesFrequently)
+        .onAppear {
+            if RunicScreenshotRenderer.isRequested {
+                self.animatedPercent = self.clamped
+                return
+            }
+            withAnimation(self.runicTheme.motion.curve) {
+                self.animatedPercent = self.clamped
+            }
+        }
+        .onChange(of: self.clamped) { _, newValue in
+            withAnimation(self.runicTheme.motion.curve) {
+                self.animatedPercent = newValue
+            }
         }
     }
 

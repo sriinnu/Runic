@@ -31,6 +31,10 @@ final class RunicFontStore: @unchecked Sendable {
     /// Optional theme-selected family for numeric labels and metric values.
     var themeNumericFamilyOverride: String?
 
+    /// Optional theme-selected decorative family for section titles and
+    /// card headings (Kirigami's handwriting). `nil` = titles use the body face.
+    var themeDisplayFamilyOverride: String?
+
     /// Fine-grained typography tuning from theme JSON.
     var themeTypography: RunicThemeTypographyStyle = .standard
 
@@ -82,6 +86,32 @@ final class RunicFontStore: @unchecked Sendable {
 
     var largeTitle: Font {
         self.makeFont(size: 28, relativeTo: .largeTitle)
+    }
+
+    /// Whether the active theme supplies a decorative face for titles.
+    var hasDisplayFace: Bool {
+        self.themeDisplayFamilyOverride != nil
+    }
+
+    /// Decorative title face at a given size. Falls back to the body face
+    /// at semibold when the theme has no display family.
+    func display(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        if let family = self.themeDisplayFamilyOverride {
+            return Font.custom(RunicTypography.fontName(for: family), fixedSize: self.scaled(size))
+        }
+        return self.system(size: size, weight: weight == .regular ? .semibold : weight)
+    }
+
+    /// Section and chart titles: handwriting on a theme with a display face
+    /// (a step larger, since hand faces run small), semibold body elsewhere.
+    var sectionTitle: Font {
+        self.hasDisplayFace ? self.display(size: 17) : self.subheadline.weight(.semibold)
+    }
+
+    /// Provider / card heading: the display face at heading size, or the
+    /// body headline.
+    var cardTitle: Font {
+        self.hasDisplayFace ? self.display(size: 21) : self.headline.weight(.semibold)
     }
 
     var numericCaption: Font {
@@ -162,6 +192,7 @@ final class RunicFontStore: @unchecked Sendable {
         self.themeDesign = palette.fonts.swiftUIDesignOverride
         self.themeFamilyOverride = RunicFontChoice.resolvedThemeFamily(palette.style.typography.bodyFamily)
         self.themeNumericFamilyOverride = RunicFontChoice.resolvedThemeFamily(palette.style.typography.numericFamily)
+        self.themeDisplayFamilyOverride = RunicFontChoice.resolvedDisplayFamily(palette.style.typography.displayFamily)
         self.themeTypography = palette.style.typography
     }
 

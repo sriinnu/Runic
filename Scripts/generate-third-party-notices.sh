@@ -42,6 +42,6 @@ for p in json.load(open('Package.resolved'))['pins']:
   done
   echo "## Fonts (SIL Open Font License 1.1)"
   echo
-  echo "Geist, Geist Mono, Mona Sans, Commit Mono, and VT323 are bundled under the SIL OFL 1.1. The full license text for each ships alongside the fonts in \`Contents/Resources/Fonts/\` (OFL-*.txt). See \`Sources/Runic/Resources/Fonts/FONT_PROVENANCE.md\`."
+  echo "Geist, Geist Mono, Mona Sans, Commit Mono, VT323, Patrick Hand, and Nunito are bundled under the SIL OFL 1.1. The full license text for each ships alongside the fonts in \`Contents/Resources/Fonts/\` (OFL-*.txt). See \`Sources/Runic/Resources/Fonts/FONT_PROVENANCE.md\`."
 } > "$OUT"
 echo "wrote $OUT ($(wc -l < "$OUT") lines)"

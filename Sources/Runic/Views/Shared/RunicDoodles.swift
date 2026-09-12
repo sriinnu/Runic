@@ -35,8 +35,11 @@ struct RunicDoodle: View {
             mood: self.mood,
             bodyColor: self.runicTheme.accent,
             eyeColor: self.runicTheme.primaryText,
-            detailColor: self.runicTheme.secondaryText.opacity(0.55))
+            detailColor: self.runicTheme.secondaryText.opacity(0.55),
+            sticker: self.runicTheme.isPaperCutout,
+            inkColor: self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity))
             .frame(width: self.size, height: self.size * 0.6)
+            .rotationEffect(.degrees(self.runicTheme.isPaperCutout ? -5 : 0))
             .offset(y: self.bobOffset)
             .scaleEffect(self.breatheScale, anchor: .bottom)
             .onAppear {
@@ -52,6 +55,8 @@ struct RunicDoodle: View {
     /// mascot feels alive without pulling focus.
     private var bobOffset: CGFloat {
         guard self.breathing else { return 0 }
+        // A sticker hops instead of drifting — every mood, a touch higher.
+        if self.runicTheme.isPaperCutout { return -3 }
         switch self.mood {
         case .zen, .searching: return -1.5
         case .resting, .tangled: return 0
@@ -76,6 +81,10 @@ struct RunicDoodleArt: View {
     let bodyColor: Color
     let eyeColor: Color
     let detailColor: Color
+    /// Paper-craft rendering: the body gets a white halo, a marker outline
+    /// and a hard offset shadow, like a sticker peeled onto the page.
+    var sticker: Bool = false
+    var inkColor: Color = .black
 
     var body: some View {
         Canvas { context, size in
@@ -111,6 +120,15 @@ struct RunicDoodleArt: View {
 
             // Body: the lemniscate.
             let body = Self.infinityPath(center: center, rx: rx, ry: ry, knotted: self.mood == .tangled)
+            if self.sticker {
+                // Shadow → halo → outline, then the coloured body on top.
+                let shadow = body.applying(CGAffineTransform(translationX: stroke * 0.7, y: stroke * 0.8))
+                let haloStyle = StrokeStyle(lineWidth: stroke + 7, lineCap: .round, lineJoin: .round)
+                let outlineStyle = StrokeStyle(lineWidth: stroke + 3.2, lineCap: .round, lineJoin: .round)
+                context.stroke(shadow, with: .color(self.inkColor.opacity(0.28)), style: haloStyle)
+                context.stroke(body, with: .color(.white), style: haloStyle)
+                context.stroke(body, with: .color(self.inkColor), style: outlineStyle)
+            }
             context.stroke(body, with: .color(self.bodyColor), style: style)
 
             // Eyes sit inside the loops.

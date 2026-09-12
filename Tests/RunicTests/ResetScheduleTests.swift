@@ -207,6 +207,78 @@ struct ThemeMigrationTests {
 
     @MainActor
     @Test
+    func `kirigami carries its paper craft identity`() {
+        let kirigami = Theme.kirigami.palette
+
+        #expect(Theme(rawValue: "kirigami") == .kirigami)
+        #expect(kirigami.isPaperCutout)
+        #expect(kirigami.style.chrome.borderStyle == .cutout)
+        #expect(kirigami.shape.separator == .stitch)
+        #expect(kirigami.style.effects.texture == .hatch)
+        #expect(kirigami.hasSurfaceTexture)
+        #expect(kirigami.style.controls.progressStyle == .pipe)
+        #expect(kirigami.wantsChartPipeLip)
+        #expect(!Theme.sumi.palette.wantsChartPipeLip)
+        #expect(kirigami.style.typography.displayFamily == RunicFontChoice.patrickHand.id)
+        #expect(kirigami.style.typography.numericFamily == RunicFontChoice.geistMono.id)
+        #expect(kirigami.prefersDarkAppearance == false)
+        #expect(kirigami.prefersRetroToggleChrome, "paper pill switches are theme-owned")
+        #expect(!kirigami.isElevated, "cut-out shadows are hard offsets, not the elevation system")
+    }
+
+    @MainActor
+    @Test
+    func `display face resolves for kirigami and stays out of the body picker`() {
+        let store = RunicFontStore()
+        store.applyTheme(Theme.kirigami.palette)
+        #expect(store.hasDisplayFace, "Patrick Hand is bundled, so the display face must resolve")
+        #expect(store.themeDisplayFamilyOverride == RunicFontChoice.patrickHand.id)
+        #expect(store.themeFamilyOverride == RunicFontChoice.nunito.id, "Kirigami locks its rounded body face")
+        #expect(RunicFontChoice.availableChoices().contains { $0.id == RunicFontChoice.nunito.id })
+        #expect(store.themeNumericFamilyOverride == RunicFontChoice.geistMono.id)
+        #expect(!RunicFontChoice.availableChoices().contains { $0.id == RunicFontChoice.patrickHand.id })
+
+        store.applyTheme(Theme.sumi.palette)
+        #expect(!store.hasDisplayFace)
+        #expect(RunicFontChoice.resolvedDisplayFamily("No Such Family 123") == nil)
+    }
+
+    @MainActor
+    @Test
+    func `theme JSON decodes paper craft tokens`() throws {
+        let json = """
+        {
+          "id": "probe2", "displayName": "Probe", "tagline": "t", "symbolName": "circle",
+          "isCustom": true, "prefersDarkAppearance": false,
+          "colors": {
+            "primary": "#000000", "secondary": "#000000", "accent": "#FF0000", "highlight": "#FFFF00",
+            "warm": "#FF0000", "tertiary": "#333333", "surface": "#FFFFFF", "surfaceAlt": "#EEEEEE",
+            "cardFill": "#FFFFFF", "cardStroke": "#000000", "primaryText": "#000000", "secondaryText": "#333333"
+          },
+          "fonts": { "body": "system", "numeric": "mono" },
+          "shape": { "cornerMultiplier": 1.1, "separator": "stitch" },
+          "motion": { "preset": "snappy" },
+          "density": { "preset": "normal" },
+          "style": {
+            "typography": { "displayFamily": "Patrick Hand" },
+            "chrome": { "borderStyle": "cutout" },
+            "effects": { "texture": "hatch", "textureOpacity": 0.5 },
+            "controls": { "progressStyle": "pipe" }
+          }
+        }
+        """
+        let palette = try JSONDecoder().decode(RunicThemeJSON.self, from: Data(json.utf8)).toPalette()
+        #expect(palette.shape.separator == .stitch)
+        #expect(palette.style.chrome.borderStyle == .cutout)
+        #expect(palette.style.effects.texture == .hatch)
+        #expect(palette.style.controls.progressStyle == .pipe)
+        #expect(palette.style.typography.displayFamily == "Patrick Hand")
+        #expect(palette.isPaperCutout)
+        #expect(Theme.dark.palette.style.typography.displayFamily == nil)
+    }
+
+    @MainActor
+    @Test
     func `theme JSON decodes texture separator and chart series tokens`() throws {
         let json = """
         {

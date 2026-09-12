@@ -63,6 +63,7 @@ struct RunicSegmentedPicker<Value: Hashable>: View {
                     self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity * 0.8),
                     lineWidth: self.runicTheme.style.chrome.borderWeight))
         .retroBevel(baseRadius: RunicCornerRadius.sm, inset: true)
+        .runicCutout(radius: radius, lift: 0.5, seed: 11)
         .runicRecessed(radius: radius)
     }
 
@@ -126,6 +127,7 @@ struct RunicBorderedButtonStyle: ButtonStyle {
                         self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity),
                         lineWidth: self.runicTheme.style.chrome.borderWeight))
             .retroBevel(baseRadius: RunicCornerRadius.sm, inset: configuration.isPressed)
+            .runicCutout(radius: radius, lift: configuration.isPressed ? 0.2 : 0.55, seed: 13)
             .runicRaised(radius: radius, lift: configuration.isPressed ? 0.25 : 0.8)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(self.runicTheme.motion.curve, value: configuration.isPressed)
@@ -159,6 +161,7 @@ struct RunicProminentButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(self.runicTheme.accent.opacity(solid ? 0.35 : 0.85), lineWidth: 0.8))
             .retroBevel(baseRadius: RunicCornerRadius.sm, inset: configuration.isPressed)
+            .runicCutout(radius: radius, lift: configuration.isPressed ? 0.2 : 0.55, seed: 17)
             .runicRaised(radius: radius, lift: configuration.isPressed ? 0.25 : 0.8)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(self.runicTheme.motion.curve, value: configuration.isPressed)

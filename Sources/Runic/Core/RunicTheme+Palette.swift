@@ -326,6 +326,61 @@ extension Theme {
                         selectedFillStyle: .terminalSolid,
                         progressStyle: .segmentedHUD,
                         hoverStyle: .neutral)))
+        case .kirigami:
+            // Paper craft. Cream card stock with pencil hatching, every card a
+            // sticker — marker outline, white halo, hard offset shadow. A
+            // handwriting face for titles only, Nunito's rounded sans for the
+            // body; numbers stay in Geist Mono so they read at menu size. Bars are warp pipes, the mascot is
+            // a cut-out sticker, and a strip of paper hills sits under it all.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Paper, cut and glued",
+                symbolName: "scissors",
+                isCustom: true,
+                prefersDarkAppearance: false,
+                primary: Color(red: 0.416, green: 0.298, blue: 0.651), // craft purple
+                secondary: Color(red: 0.169, green: 0.416, blue: 0.588), // sky ink
+                accent: Color(red: 0.776, green: 0.224, blue: 0.165), // marker red
+                highlight: Color(red: 0.549, green: 0.416, blue: 0.071), // star ochre
+                warm: Color(red: 0.627, green: 0.255, blue: 0.478), // plum
+                tertiary: Color(red: 0.137, green: 0.447, blue: 0.251), // pipe green
+                surface: Color(red: 0.953, green: 0.918, blue: 0.839), // cream card stock
+                surfaceAlt: Color(red: 0.973, green: 0.949, blue: 0.894),
+                cardFill: Color(red: 0.984, green: 0.965, blue: 0.918), // lighter sheet, glued on
+                cardStroke: Color(red: 0.165, green: 0.129, blue: 0.098), // marker ink, opaque
+                primaryText: Color(red: 0.165, green: 0.129, blue: 0.098),
+                secondaryText: Color(red: 0.353, green: 0.306, blue: 0.259),
+                fonts: RunicThemeFonts(body: .system, numeric: .mono),
+                shape: RunicThemeShape(cornerMultiplier: 1.1, separator: .stitch),
+                motion: .snappy,
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: RunicFontChoice.nunito.id,
+                        numericFamily: RunicFontChoice.geistMono.id,
+                        displayFamily: RunicFontChoice.patrickHand.id,
+                        scale: 1.0,
+                        tracking: 0,
+                        lineSpacing: nil,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .cutout,
+                        borderWeight: 1.5,
+                        borderOpacity: 0.92,
+                        cornerStyle: .soft,
+                        panelDepth: .low),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
+                        materialIntensity: 0,
+                        texture: .hatch,
+                        textureOpacity: 0.5),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSoft,
+                        progressStyle: .pipe,
+                        hoverStyle: .neutral,
+                        chartSeries: .themed)))
         }
     }
 

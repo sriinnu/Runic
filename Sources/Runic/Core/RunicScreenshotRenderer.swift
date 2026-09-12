@@ -148,7 +148,10 @@ enum RunicScreenshotRenderer {
                     account: account,
                     updateReady: false,
                     initialProvider: Self.menuProviderOverride ?? store.enabledProviders().first,
+                    initialPanel: ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_PANEL"]
+                        .flatMap(PopoverInsightPanel.init(rawValue:)),
                     width: Self.menuSize.width,
+                    height: Self.menuSize.height,
                     actions: Self.noopActions,
                     onSelectProvider: { _ in })
                     .environment(\.runicFonts, RunicFontStore.shared),
@@ -199,6 +202,8 @@ enum RunicScreenshotRenderer {
     private static func seedDemoSnapshots(into store: UsageStore) {
         let now = Date()
         let providers = store.enabledProviders()
+        // Never let a render write quota history into the real support dir.
+        QuotaSampleStore.shared.memoryOnly = true
         // A spread of shapes: healthy session + weekly, an exhausted session
         // about to flip, a model-labelled window from a phrase, a plain
         // balance (no reset — must stay out of the Resets panel).
@@ -252,13 +257,44 @@ enum RunicScreenshotRenderer {
                             expiresAt: now.addingTimeInterval(26 * 86400)),
                     ])
                 : nil
-            store.snapshots[provider] = UsageSnapshot(
+            let snapshot = UsageSnapshot(
                 primary: primary,
                 secondary: secondary,
                 tertiary: nil,
                 resetCredits: banked,
                 updatedAt: now.addingTimeInterval(-240),
                 identity: nil)
+            store.snapshots[provider] = snapshot
+            Self.seedDemoBurnHistory(provider: provider, snapshot: snapshot, now: now)
+        }
+    }
+
+    /// A believable cycle for the Burn panel: quiet, a burst, quiet again,
+    /// ending exactly at the live reading so the curve meets the dot.
+    private static func seedDemoBurnHistory(provider: UsageProvider, snapshot: UsageSnapshot, now: Date) {
+        let store = QuotaSampleStore.shared
+        store.clear(provider: provider)
+        for slot in QuotaWindowSlot.allCases {
+            guard let window = slot.window(in: snapshot), let resetsAt = window.resetsAt,
+                  let minutes = window.windowMinutes else { continue }
+            let duration = TimeInterval(minutes) * 60
+            let start = resetsAt.addingTimeInterval(-duration)
+            let elapsed = now.timeIntervalSince(start)
+            guard elapsed > 0 else { continue }
+            let steps = 40
+            for step in 0...steps {
+                let fraction = Double(step) / Double(steps)
+                let at = start.addingTimeInterval(elapsed * fraction)
+                // Ease: slow start, burst around 55–70% of elapsed time, plateau.
+                let shape: Double = fraction < 0.55
+                    ? fraction * 0.45
+                    : (fraction < 0.72 ? 0.25 + (fraction - 0.55) * 3.5 : 0.85 + (fraction - 0.72) * 0.5)
+                let used = min(window.usedPercent, window.usedPercent * shape)
+                store.record(
+                    provider: provider,
+                    slot: slot,
+                    sample: QuotaSample(at: at, usedPercent: used, resetsAt: resetsAt, windowMinutes: minutes))
+            }
         }
     }
 

@@ -49,8 +49,9 @@ struct RunicThemeFonts {
 /// How rounded surfaces feel. A multiplier applied to the RunicCornerRadius tokens.
 struct RunicThemeShape {
     /// `brush`: a tapered sumi-ink stroke. `rule`: a heavy, full-opacity
-    /// typographic rule. The rest are the original three.
-    enum Separator { case hairline, glow, ascii, brush, rule }
+    /// typographic rule. `stitch`: a short-dash pencil rule, like the dotted
+    /// lines on a craft template. The rest are the original three.
+    enum Separator { case hairline, glow, ascii, brush, rule, stitch }
 
     /// Multiplier for the global RunicCornerRadius scale. 1.0 = unchanged.
     let cornerMultiplier: CGFloat
@@ -126,6 +127,9 @@ struct RunicThemeTypographyStyle: Hashable {
 
     let bodyFamily: String?
     let numericFamily: String?
+    /// Optional decorative face for section titles and card headings —
+    /// a handwriting family on Kirigami. Body and numbers never use it.
+    var displayFamily: String?
     let scale: CGFloat
     let tracking: CGFloat
     let lineSpacing: CGFloat?
@@ -139,8 +143,10 @@ struct RunicThemeTypographyStyle: Hashable {
 struct RunicThemeChromeStyle: Hashable {
     /// `ink`: a hairline plus a faintly offset second pass, like a pen that
     /// went round twice. `block`: a heavy stroke with a hard, unblurred
-    /// offset shadow — poster chrome, no softness anywhere.
-    enum BorderStyle: String, Hashable { case native, hairline, bevelSoft, hud, glass, ink, block }
+    /// offset shadow — poster chrome, no softness anywhere. `cutout`: a
+    /// paper-craft sticker — a wobbly marker outline, a white halo outside
+    /// it, and a hard offset shadow, as if the card were cut out and glued on.
+    enum BorderStyle: String, Hashable { case native, hairline, bevelSoft, hud, glass, ink, block, cutout }
     enum CornerStyle: String, Hashable { case standard, soft, compact, sharp }
     enum PanelDepth: String, Hashable { case flat, low, medium, high }
 
@@ -160,8 +166,9 @@ struct RunicThemeEffectsStyle: Hashable {
     /// Full-surface texture drawn over every panel. `paper` scatters washi
     /// fibres and a warm vignette; `grain` lays film grain, a dark vignette
     /// and faint light slats; `grid` rules fine drafting lines with a
-    /// heavier line every fifth. All deterministic so they never shimmer.
-    enum Texture: String, Hashable { case none, paper, grain, grid }
+    /// heavier line every fifth; `hatch` lays fine diagonal pencil hatching
+    /// over warm card stock. All deterministic so they never shimmer.
+    enum Texture: String, Hashable { case none, paper, grain, grid, hatch }
 
     let scanlineOpacity: Double
     let glowStrength: Double
@@ -181,7 +188,9 @@ struct RunicThemeEffectsStyle: Hashable {
 struct RunicThemeControlStyle: Hashable {
     enum SelectedFillStyle: String, Hashable { case accentSoft, accentSolid, neutralSoft, terminalSolid }
     /// `flatBar`: solid fill, square-ish ends, no gloss, sheen, or end cap.
-    enum ProgressStyle: String, Hashable { case softBar, segmentedHUD, nativeBar, flatBar }
+    /// `pipe`: an outlined tube with a lip at the leading end — the bar as
+    /// a warp pipe.
+    enum ProgressStyle: String, Hashable { case softBar, segmentedHUD, nativeBar, flatBar, pipe }
     enum HoverStyle: String, Hashable { case neutral, accent, glow }
     /// `monochrome`: one accent for the lead series, then a ramp of the
     /// theme's text color, for themes that want single-ink charts.
@@ -210,7 +219,7 @@ extension RunicThemeStyle: Decodable {
 
 extension RunicThemeTypographyStyle: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case bodyFamily, numericFamily, scale, tracking, lineSpacing, contrast
+        case bodyFamily, numericFamily, displayFamily, scale, tracking, lineSpacing, contrast
     }
 
     init(from decoder: Decoder) throws {
@@ -218,6 +227,7 @@ extension RunicThemeTypographyStyle: Decodable {
         let defaults = Self.standard
         self.bodyFamily = try values.decodeIfPresent(String.self, forKey: .bodyFamily)
         self.numericFamily = try values.decodeIfPresent(String.self, forKey: .numericFamily)
+        self.displayFamily = try values.decodeIfPresent(String.self, forKey: .displayFamily)
         self.scale = values.cgFloat(forKey: .scale, default: defaults.scale)
         self.tracking = values.cgFloat(forKey: .tracking, default: defaults.tracking)
         self.lineSpacing = values.cgFloatIfPresent(forKey: .lineSpacing)

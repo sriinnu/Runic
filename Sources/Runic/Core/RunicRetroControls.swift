@@ -15,7 +15,11 @@ struct RetroToggleStyle: ToggleStyle {
             // `.center` aligns with PreferenceToggleRow's outer HStack so the
             // checkbox sits beside the label rather than baseline-shifting.
             HStack(alignment: .center, spacing: RunicSpacing.xs) {
-                self.box(isOn: configuration.isOn)
+                if self.runicTheme.isPaperCutout {
+                    self.paperPill(isOn: configuration.isOn)
+                } else {
+                    self.box(isOn: configuration.isOn)
+                }
                 configuration.label
                     .foregroundStyle(self.runicTheme.primaryText)
             }
@@ -29,6 +33,37 @@ struct RetroToggleStyle: ToggleStyle {
             Toggle(isOn: configuration.$isOn) { configuration.label }
                 .toggleStyle(.checkbox)
         }
+    }
+
+    /// Kirigami: a paper pill switch — outlined capsule, "On"/"Off" written
+    /// inside, a round knob with its own outline that slides to the on side.
+    private func paperPill(isOn: Bool) -> some View {
+        let width: CGFloat = 44
+        let height: CGFloat = 20
+        let ink = self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity)
+        let inkWidth = max(1, self.runicTheme.style.chrome.borderWeight)
+        let knob = height - 6
+        return ZStack(alignment: isOn ? .trailing : .leading) {
+            Capsule(style: .continuous)
+                .fill(isOn ? self.runicTheme.tertiary.opacity(0.30) : self.runicTheme.surfaceAlt)
+                .overlay(Capsule(style: .continuous).strokeBorder(ink, lineWidth: inkWidth))
+                .frame(width: width, height: height)
+            Text(isOn ? "On" : "Off")
+                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                .foregroundStyle(self.runicTheme.primaryText)
+                .frame(width: width - knob - 8, alignment: .center)
+                .offset(x: isOn ? -(knob + 4) : (knob + 4))
+                .frame(width: width, alignment: isOn ? .trailing : .leading)
+            Circle()
+                .fill(isOn ? self.runicTheme.tertiary : Color.white)
+                .overlay(Circle().strokeBorder(ink, lineWidth: inkWidth))
+                .frame(width: knob, height: knob)
+                .padding(3)
+        }
+        .frame(width: width, height: height)
+        .runicCutout(radius: height / 2, lift: 0.45)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(Text(isOn ? "on" : "off"))
     }
 
     private func box(isOn: Bool) -> some View {

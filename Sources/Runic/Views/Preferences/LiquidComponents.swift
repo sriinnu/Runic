@@ -180,7 +180,7 @@ private struct LiquidGlassCore: ViewModifier {
         let isTerminalHUD = self.runicTheme.isTerminalHUD
         let elevated = self.runicTheme.isElevated
         let cornerRadius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
-        let shadowColor = elevated
+        let shadowColor = elevated || self.runicTheme.isPaperCutout
             ? Color.clear
             : (self.hovering
                 ? self.runicTheme.accent.opacity(isTerminalHUD ? 0.16 : (isGlassTheme ? 0.22 : 0.10))
@@ -216,6 +216,7 @@ private struct LiquidGlassCore: ViewModifier {
                 }
                 .shadow(color: shadowColor, radius: shadowRadius, y: shadowY)
             }
+            .runicCutout(radius: cornerRadius, seed: 23)
             .runicRaised(radius: cornerRadius, lift: self.hovering ? 1.3 : 1)
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

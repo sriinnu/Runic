@@ -53,8 +53,7 @@ struct UsageWindowComparisonChartMenuView: View {
 
         VStack(alignment: .leading, spacing: RunicSpacing.xs) {
             Text("Windows")
-                .font(self.fonts.subheadline)
-                .fontWeight(.semibold)
+                .font(self.fonts.sectionTitle)
 
             if model.points.isEmpty {
                 Text("No usage window data available.")

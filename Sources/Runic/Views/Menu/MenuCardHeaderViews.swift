@@ -141,7 +141,8 @@ struct UsageMenuCardHeaderView: View {
     /// Terminal needs a visible title jump because monospaced weights read
     /// flatter at small sizes than proportional UI fonts.
     private var providerTitleFont: Font {
-        self.runicTheme.isTerminalHUD ? self.fonts.title3.weight(.bold) : self.fonts.headline.weight(.semibold)
+        if self.runicTheme.isTerminalHUD { return self.fonts.title3.weight(.bold) }
+        return self.fonts.cardTitle
     }
 
     private var subtitleColor: Color {

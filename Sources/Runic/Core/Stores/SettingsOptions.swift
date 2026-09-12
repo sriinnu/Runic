@@ -148,6 +148,7 @@ enum Theme: String, CaseIterable, Identifiable {
     case relief
     case glass
     case terminal
+    case kirigami
 
     /// The signature look — parchment + navy bevels, System-7 chrome with
     /// modern info architecture. New installs land here.
@@ -185,6 +186,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .relief: "Relief"
         case .glass: "Glass"
         case .terminal: "Terminal"
+        case .kirigami: "Kirigami"
         }
     }
 }
