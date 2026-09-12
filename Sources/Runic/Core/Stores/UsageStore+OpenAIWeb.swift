@@ -101,6 +101,7 @@ extension UsageStore {
                let usage = dash.toUsageSnapshot(provider: .codex, accountEmail: targetEmail)
             {
                 self.snapshots[.codex] = usage
+                QuotaSampleStore.shared.record(provider: .codex, snapshot: usage)
                 self.errors[.codex] = nil
                 self.failureGates[.codex]?.recordSuccess()
                 self.lastSourceLabels[.codex] = "openai-web"

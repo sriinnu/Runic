@@ -103,6 +103,7 @@ extension MenuPopoverView {
         {
             panels.append(.windows)
         }
+        if !self.burnWindows(for: provider).isEmpty { panels.append(.burn) }
         if !self.store.ledgerProjectBreakdown(for: provider).isEmpty { panels.append(.projects) }
         if !self.store.ledgerModelBreakdown(for: provider).isEmpty || !self.modelQuotaWindows(for: provider).isEmpty {
             panels.append(.models)
@@ -156,6 +157,8 @@ extension MenuPopoverView {
                 primaryPercent: snapshot?.primary.usedPercent ?? 0,
                 secondaryPercent: snapshot?.secondary?.usedPercent,
                 width: self.panelBodyWidth)
+        case .burn:
+            QuotaBurnChartMenuView(windows: self.burnWindows(for: provider), width: self.panelBodyWidth)
         case .projects:
             ProjectBreakdownMenuView(
                 breakdown: self.store.ledgerProjectBreakdown(for: provider),
@@ -170,6 +173,32 @@ extension MenuPopoverView {
                 ModelBreakdownMenuView(breakdown: breakdown, width: self.panelBodyWidth)
             }
         }
+    }
+
+    /// Burn series for every window of `provider` that has a reset moment
+    /// and at least two readings this cycle. Session first, then weekly.
+    func burnWindows(for provider: UsageProvider) -> [QuotaBurnChartMenuView.WindowSeries] {
+        guard let snapshot = self.store.snapshot(for: provider) else { return [] }
+        let metadata = self.store.metadata(for: provider)
+        let store = QuotaSampleStore.shared
+        let now = Date()
+        var result: [QuotaBurnChartMenuView.WindowSeries] = []
+        for slot in QuotaWindowSlot.allCases {
+            guard let window = slot.window(in: snapshot), window.hasKnownLimit != false else { continue }
+            let samples = store.samples(provider: provider, slot: slot, since: now.addingTimeInterval(-8 * 86400))
+            guard let series = QuotaBurnSeries.make(samples: samples, window: window, now: now) else { continue }
+            let label = window.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let title: String = switch slot {
+            case .primary: label.isEmpty ? (metadata.sessionLabel.isEmpty ? "Session" : metadata.sessionLabel) : label
+            case .secondary: label.isEmpty ? (metadata.weeklyLabel.isEmpty ? "Weekly" : metadata.weeklyLabel) : label
+            case .tertiary: label.isEmpty ? (metadata.opusLabel ?? "Model") : label
+            }
+            result.append(QuotaBurnChartMenuView.WindowSeries(
+                id: "\(provider.rawValue)-\(slot.rawValue)",
+                title: title,
+                series: series))
+        }
+        return result
     }
 
     func modelQuotaWindows(for provider: UsageProvider) -> [RateWindow] {

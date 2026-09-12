@@ -278,6 +278,8 @@ extension UsageStore {
             await MainActor.run {
                 self.handleSessionQuotaTransition(provider: provider, snapshot: scoped)
                 self.snapshots[provider] = scoped
+                // Keep the reading: the Burn panel draws the cycle from these.
+                QuotaSampleStore.shared.record(provider: provider, snapshot: scoped)
                 // Providers whose fetchers attach a credits snapshot (DeepSeek,
                 // OpenRouter, Vercel AI, ...) surface it per provider; a nil
                 // result keeps the last-known snapshot, mirroring how usage
