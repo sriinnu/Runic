@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.7.3 — 2026-09-16
+- Release: 2.7.2 shipped the 2.7.1 app binary. Swift 6.4 writes builds to `.build/out/Products/Release`, and the packaging scripts kept copying the per-architecture folders it no longer updates. 2.7.3 is the first build that actually contains the 2.7.2 fixes (every-region Refresh, region-aware dashboard, status and export). Packaging now takes paths from SwiftPM, builds all architectures in one pass, refuses an app binary older than its sources, and the release checks that the dSYM and the signed binary have the same UUIDs.
+- Balances: prepaid providers (Kimi, Kimi China, DeepSeek, OpenRouter, Vercel AI, StepFun) show a proper Balance row, "¥110.04 · ¥85.04 paid · ¥25.00 bonus", with a currency symbol only where the platform fixes one (api.moonshot.cn = CNY, api.moonshot.ai = USD, DeepSeek reports its own, OpenRouter = USD). Balance APIs return a snapshot only, so Runic records every reading (62 days) and derives a Spend row: spent today and this month (top-ups excluded), the 7-day burn rate, and runway ("~1.2 days left at ¥89/day"). Totals cover the time Runic was recording and say "tracked since" when that started mid-period.
+- Balances: a Top up badge and "API calls blocked · top up to resume" when calls will fail (DeepSeek's `is_available`, or a balance at or below zero), and a Low balance badge when the recent burn rate empties it within a day.
+- OpenRouter: exact spend for the UTC day and month from `GET /api/v1/key` replaces the estimate ("this key"); a key spending limit becomes a gauge with its reset; the free-model daily request quota becomes its own bar.
+- Kimi: a Kimi Code subscription key (rejected by the Open Platform balance endpoint) falls back to Kimi Code plan usage (`api.kimi.com/coding/v1/usages`): 5h, weekly and monthly windows with reset times.
+- Kimi China: kimi-k3 usage routed through Claude Code (attributed to Kimi by model name, which carries no region) shows on the China account when that's the one enabled, instead of being dropped with the disabled international slot.
+- Tests no longer leave a preferences file behind for every settings store they build.
+
 ## 2.7.2 — 2026-09-16
 - Menu: **Refresh** on a brand with International and China accounts (Kimi, z.ai, MiniMax, Qwen, StepFun) fetches every region you have enabled. The brand tab points at the international slot, so Refresh only re-fetched that one: a China-only account never updated, and with both only the international card did. Opening the menu now also re-pings when any region under the tab is stale or failing, not just the international one.
 - Menu: **Dashboard**, **Status page** and **Export CSV/JSON** act on the region the brand tab actually shows. A China-only Kimi opens platform.moonshot.cn instead of the international console and exports its own usage instead of the empty international slot.
