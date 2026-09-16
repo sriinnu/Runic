@@ -72,6 +72,9 @@ extension UsageMenuCardView.Model {
         let metrics = Self.metrics(input: input)
         let creditsText: String? = if input.provider == .codex, !input.showOptionalCreditsAndExtraUsage {
             nil
+        } else if input.provider != .codex, input.snapshot?.balance != nil {
+            // The Balance row already shows this number, with its currency.
+            nil
         } else {
             Self.creditsLine(metadata: input.metadata, credits: input.credits, error: input.creditsError)
         }
@@ -104,7 +107,7 @@ extension UsageMenuCardView.Model {
         } else if effectiveError != nil {
             HeaderBadge(text: "Issue", style: .error)
         } else {
-            nil
+            Self.balanceBadge(balance: input.snapshot?.balance, spend: input.balanceSpend)
         }
         let placeholder = input.snapshot == nil && !input.isRefreshing && effectiveError == nil && !hasLedgerData
             ? "No usage yet" : nil
@@ -287,7 +290,7 @@ extension UsageMenuCardView.Model {
         // Kimi Code subscription (5h / weekly windows that name themselves).
         let windowsNameThemselves = input.provider.brandRoot == .kimi
         func title(_ window: RateWindow, fallback: String) -> String {
-            guard windowsNameThemselves,
+            guard windowsNameThemselves || fallback.isEmpty,
                   let own = window.label?.trimmingCharacters(in: .whitespacesAndNewlines), !own.isEmpty
             else { return fallback }
             return own
@@ -300,7 +303,9 @@ extension UsageMenuCardView.Model {
                 percent: nil,
                 percentStyle: percentStyle,
                 resetText: BalanceFormatter.amount(balance.available, currency: balance.currency),
-                detailText: Self.balanceComponentsText(balance)))
+                detailText: balance.blocksAPICalls
+                    ? "API calls blocked · top up to resume"
+                    : Self.balanceComponentsText(balance)))
         } else {
             metrics.append(Metric(
                 id: "primary",
@@ -367,6 +372,20 @@ extension UsageMenuCardView.Model {
         return self.clamped(showUsed ? window.usedPercent : window.remainingPercent)
     }
 
+    /// Under a day of runway at the recent burn rate.
+    static let lowBalanceRunwayDays = 1.0
+
+    /// "Top up" when calls are already failing, "Low balance" when the recent
+    /// burn rate empties it within a day. Errors and refreshes take precedence.
+    static func balanceBadge(balance: ProviderBalance?, spend: BalanceSpendSummary?) -> HeaderBadge? {
+        guard let balance else { return nil }
+        if balance.blocksAPICalls { return HeaderBadge(text: "Top up", style: .error) }
+        if let runway = spend?.runwayDays, runway < Self.lowBalanceRunwayDays {
+            return HeaderBadge(text: "Low balance", style: .warning)
+        }
+        return nil
+    }
+
     static func balanceComponentsText(_ balance: ProviderBalance) -> String? {
         let parts = balance.components
             .filter { $0.amount > 0.000_001 }
@@ -388,6 +407,9 @@ extension UsageMenuCardView.Model {
         if let rate = spend.dailyBurnRate, let runway = spend.runwayDays {
             let perDay = BalanceFormatter.amount(rate, currency: spend.currency)
             parts.append("\(Self.runwayPhrase(days: runway)) at \(perDay)/day")
+        }
+        if let scope = spend.scope {
+            parts.append(scope)
         }
         if spend.monthIsPartial {
             let sinceToday = calendar.isDate(spend.trackedSince, inSameDayAs: now)

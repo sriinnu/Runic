@@ -195,8 +195,12 @@ final class UsageStore {
     /// snapshot captured from its latest successful fetch.
     /// Spend derived from recorded balance readings (nil until two readings).
     func balanceSpend(for provider: UsageProvider, now: Date = Date()) -> BalanceSpendSummary? {
-        guard self.snapshots[provider]?.balance != nil else { return nil }
-        return BalanceSpendSummary.make(samples: BalanceSampleStore.shared.samples(provider: provider), now: now)
+        guard let balance = self.snapshots[provider]?.balance else { return nil }
+        let samples = BalanceSampleStore.shared.samples(provider: provider)
+        if let reported = balance.reportedSpend {
+            return BalanceSpendSummary.make(reported: reported, balance: balance, samples: samples, now: now)
+        }
+        return BalanceSpendSummary.make(samples: samples, now: now)
     }
 
     func credits(for provider: UsageProvider) -> CreditsSnapshot? {

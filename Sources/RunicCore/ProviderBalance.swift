@@ -29,17 +29,50 @@ public struct ProviderBalance: Codable, Sendable, Equatable {
     public let components: [Component]
     /// Lifetime spend, when the API reports it directly (OpenRouter, Vercel).
     public let lifetimeSpent: Double?
+    /// The provider's own verdict on whether API calls still go through
+    /// (DeepSeek `is_available`). Nil when the API doesn't say.
+    public let apiCallsAllowed: Bool?
+    /// Spend the provider reports directly (OpenRouter's key usage), which beats
+    /// deriving it from balance drops. Nil when the API has none.
+    public let reportedSpend: ReportedSpend?
+
+    /// Provider-reported spend for calendar periods (UTC on OpenRouter).
+    public struct ReportedSpend: Codable, Sendable, Equatable {
+        public let today: Double
+        public let thisWeek: Double?
+        public let thisMonth: Double
+        /// What the figures cover when narrower than the account ("this key").
+        public let scope: String?
+
+        public init(today: Double, thisWeek: Double?, thisMonth: Double, scope: String?) {
+            self.today = today
+            self.thisWeek = thisWeek
+            self.thisMonth = thisMonth
+            self.scope = scope
+        }
+    }
 
     public init(
         available: Double,
         currency: String?,
         components: [Component] = [],
-        lifetimeSpent: Double? = nil)
+        lifetimeSpent: Double? = nil,
+        apiCallsAllowed: Bool? = nil,
+        reportedSpend: ReportedSpend? = nil)
     {
         self.available = available
         self.currency = currency
         self.components = components
         self.lifetimeSpent = lifetimeSpent
+        self.apiCallsAllowed = apiCallsAllowed
+        self.reportedSpend = reportedSpend
+    }
+
+    /// Paid API calls will fail: the provider says so, or, when it doesn't say,
+    /// nothing is left (Moonshot documents that inference stops at a balance of
+    /// zero or less; OpenRouter rejects paid requests without credits).
+    public var blocksAPICalls: Bool {
+        self.apiCallsAllowed.map { !$0 } ?? (self.available <= 0)
     }
 }
 
