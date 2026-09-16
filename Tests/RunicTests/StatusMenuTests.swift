@@ -12,6 +12,7 @@ struct StatusMenuTests {
         let suite = "StatusMenuTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
+        TestDefaults.track(suite)
         defaults.set(true, forKey: "providerDetectionCompleted")
         return defaults
     }
