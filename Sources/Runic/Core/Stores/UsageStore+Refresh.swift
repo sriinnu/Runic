@@ -115,9 +115,12 @@ extension UsageStore {
             now.timeIntervalSince(snapshot.updatedAt) > maxAge
         }
         if let provider {
-            if self.isStale(provider: provider) { return true }
-            guard let snapshot = self.snapshots[provider] else { return true }
-            return budgetAvailable && aged(snapshot)
+            // A brand tab covers both regions; any stale slot warrants a ping.
+            return self.menuSlots(for: provider).contains { slot in
+                if self.isStale(provider: slot) { return true }
+                guard let snapshot = self.snapshots[slot] else { return true }
+                return budgetAvailable && aged(snapshot)
+            }
         }
         if self.isStale { return true }
         return budgetAvailable && self.snapshots.values.contains(where: aged)
@@ -131,12 +134,40 @@ extension UsageStore {
         return self.isProviderAvailable(provider)
     }
 
+    /// Enabled slots of `provider`'s brand, international first. The menu's
+    /// brand tab selects the root (`.kimi`) while stacking a card per region, so
+    /// a single-provider refresh must fan out — otherwise a China-only account
+    /// (`.kimiCN`) under that tab never re-fetches.
+    func refreshSlots(for provider: UsageProvider) -> [UsageProvider] {
+        let slots = Self.brandCandidates(for: provider).filter { self.isEnabled($0) }
+        return slots.isEmpty ? [provider] : slots
+    }
+
+    /// Menu-visible slots of `provider`'s brand — the region(s) actually shown
+    /// under its tab. Falls back to `provider` when none are visible.
+    func menuSlots(for provider: UsageProvider) -> [UsageProvider] {
+        let candidates = Self.brandCandidates(for: provider)
+        guard candidates.count > 1 else { return [provider] }
+        let visible = self.menuVisibleProviders().filter { candidates.contains($0) }
+        return visible.isEmpty ? [provider] : visible
+    }
+
+    private static func brandCandidates(for provider: UsageProvider) -> [UsageProvider] {
+        let root = provider.brandRoot
+        return [root] + (root.chinaSibling.map { [$0] } ?? [])
+    }
+
     func refreshSingleProvider(_ provider: UsageProvider) async {
         self.isRefreshing = true
         defer { self.isRefreshing = false }
-        await self.refreshProvider(provider, trigger: .manual)
-        await self.refreshStatus(provider, trigger: .manual)
+        await withTaskGroup(of: Void.self) { group in
+            for slot in self.refreshSlots(for: provider) {
+                group.addTask { await self.refreshProvider(slot, trigger: .manual) }
+                group.addTask { await self.refreshStatus(slot, trigger: .manual) }
+            }
+        }
         self.scheduleLedgerRefresh(force: true, inactiveProviders: [])
+        self.persistWidgetSnapshot(reason: "refresh")
     }
 
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
