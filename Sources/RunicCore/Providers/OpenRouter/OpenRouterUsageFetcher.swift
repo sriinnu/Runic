@@ -184,6 +184,7 @@ extension OpenRouterCreditsResponse {
                 resetDescription: resetDesc),
             secondary: nil,
             tertiary: nil,
+            balance: ProviderBalance(available: balance, currency: "USD", lifetimeSpent: used),
             updatedAt: Date(),
             identity: identity)
     }

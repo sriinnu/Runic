@@ -173,6 +173,8 @@ extension VercelAICreditsResponse {
                 resetDescription: resetDesc),
             secondary: nil,
             tertiary: nil,
+            // Gateway credits: the API names no currency, so none is shown.
+            balance: ProviderBalance(available: balance, currency: nil, lifetimeSpent: used),
             updatedAt: Date(),
             identity: identity)
     }

@@ -85,6 +85,8 @@ extension StepFunAccountSnapshot {
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
+            // /v1/accounts' schema (and so its unit) is unconfirmed: no currency.
+            balance: self.availableBalance.map { ProviderBalance(available: $0, currency: nil) },
             updatedAt: self.updatedAt,
             identity: ProviderIdentitySnapshot(
                 providerID: providerID,

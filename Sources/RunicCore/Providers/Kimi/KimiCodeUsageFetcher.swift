@@ -216,7 +216,9 @@ extension KimiUsageFetcher {
         environment: [String: String]) async throws -> UsageSnapshot
     {
         do {
-            return try await self.fetchBalance(apiKey: apiKey, baseURL: baseURL).toUsageSnapshot()
+            let currency = KimiBalanceResponse.currency(forBalanceURL: self.balanceURL(baseURL: baseURL))
+            return try await self.fetchBalance(apiKey: apiKey, baseURL: baseURL)
+                .toUsageSnapshot(currency: currency)
         } catch let KimiAPIError.httpError(statusCode, body) where statusCode == 401 || statusCode == 403 {
             do {
                 return try await KimiCodeUsageFetcher.fetchUsage(apiKey: apiKey, environment: environment)

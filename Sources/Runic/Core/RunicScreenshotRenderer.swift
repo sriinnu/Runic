@@ -204,6 +204,7 @@ enum RunicScreenshotRenderer {
         let providers = store.enabledProviders()
         // Never let a render write quota history into the real support dir.
         QuotaSampleStore.shared.memoryOnly = true
+        BalanceSampleStore.shared.memoryOnly = true
         // A spread of shapes: healthy session + weekly, an exhausted session
         // about to flip, a model-labelled window from a phrase, a plain
         // balance (no reset — must stay out of the Resets panel).
@@ -267,7 +268,36 @@ enum RunicScreenshotRenderer {
             store.snapshots[provider] = snapshot
             Self.seedDemoBurnHistory(provider: provider, snapshot: snapshot, now: now)
         }
+        // Prepaid-balance providers get a balance card with spend history.
+        for provider in providers where Self.demoBalanceProviders.contains(provider) {
+            let currency = provider == .kimiCN || provider == .stepfunCN ? "CNY" : "USD"
+            let balance = ProviderBalance(
+                available: 110.04,
+                currency: currency,
+                components: [.init(label: "Paid", amount: 85.04), .init(label: "Bonus", amount: 25)])
+            store.snapshots[provider] = UsageSnapshot(
+                primary: RateWindow(
+                    usedPercent: 0,
+                    windowMinutes: nil,
+                    resetsAt: nil,
+                    resetDescription: nil,
+                    hasKnownLimit: false),
+                secondary: nil,
+                balance: balance,
+                updatedAt: now.addingTimeInterval(-240))
+            // Two days of readings: a top-up, then a busy afternoon.
+            let readings: [(TimeInterval, Double)] = [
+                (-44 * 3600, 60), (-30 * 3600, 42.5), (-26 * 3600, 242.5), (-8 * 3600, 199.18), (-240, 110.04),
+            ]
+            for (offset, available) in readings {
+                BalanceSampleStore.shared.record(
+                    provider: provider,
+                    sample: BalanceSample(at: now.addingTimeInterval(offset), available: available, currency: currency))
+            }
+        }
     }
+
+    private static let demoBalanceProviders: Set<UsageProvider> = [.kimi, .kimiCN, .deepseek, .stepfun, .stepfunCN]
 
     /// A believable cycle for the Burn panel: quiet, a burst, quiet again,
     /// ending exactly at the live reading so the curve meets the dot.
