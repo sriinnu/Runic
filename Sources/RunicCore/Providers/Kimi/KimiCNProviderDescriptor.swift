@@ -18,7 +18,7 @@ public enum KimiCNProviderDescriptor {
                 opusLabel: nil,
                 supportsOpus: false,
                 supportsCredits: false,
-                creditsHint: "Shows account balance from the Moonshot China (api.moonshot.cn) API.",
+                creditsHint: "Shows api.moonshot.cn account balance, or 5h and weekly plan usage for a Kimi Code key.",
                 toggleTitle: "Show Kimi (China) usage",
                 cliName: "kimi-cn",
                 defaultEnabled: false,
@@ -61,9 +61,10 @@ struct KimiCNAPIFetchStrategy: ProviderFetchStrategy {
         guard let tokenRes = ProviderTokenResolver.kimiCNResolution(environment: context.env) else {
             throw KimiSettingsError.missingToken
         }
-        let usage = try await KimiUsageFetcher.fetchBalance(apiKey: tokenRes.token, baseURL: Self.baseURL)
+        let usage = try await KimiUsageFetcher.fetchSnapshot(
+            apiKey: tokenRes.token, baseURL: Self.baseURL, environment: context.env)
         return self.makeResult(
-            usage: usage.toUsageSnapshot(),
+            usage: usage,
             sourceLabel: tokenRes.source.rawValue)
     }
 
