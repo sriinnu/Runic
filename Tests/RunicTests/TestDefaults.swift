@@ -35,7 +35,33 @@ enum TestDefaults {
         self.suites.append(suite)
         guard !self.cleanupRegistered else { return }
         self.cleanupRegistered = true
+        self.sweepEarlierRuns()
         atexit { TestDefaults.removeTrackedSuites() }
+    }
+
+    /// cfprefsd can still write a suite's plist after its test process exits,
+    /// so exit-time cleanup alone leaks one run's worth. Each run also removes
+    /// suite files left by earlier runs; files younger than ten minutes may
+    /// belong to a run still in progress and are left alone.
+    static func sweepEarlierRuns(now: Date = Date()) {
+        let fm = FileManager.default
+        guard let preferences = fm.urls(for: .libraryDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Preferences", isDirectory: true),
+            let files = try? fm.contentsOfDirectory(
+                at: preferences, includingPropertiesForKeys: [.contentModificationDateKey])
+        else { return }
+        for file in files {
+            let name = file.lastPathComponent
+            guard name.hasPrefix("RunicTests-") || name.hasPrefix("StatusMenuTests-"),
+                  name.range(
+                      of: #"-[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\.plist$"#,
+                      options: .regularExpression) != nil,
+                  let modified = try? file.resourceValues(forKeys: [.contentModificationDateKey])
+                      .contentModificationDate,
+                      now.timeIntervalSince(modified) > 600
+            else { continue }
+            try? fm.removeItem(at: file)
+        }
     }
 
     static func removeTrackedSuites() {
@@ -48,6 +74,10 @@ enum TestDefaults {
             .appendingPathComponent("Preferences", isDirectory: true)
         for suite in suites {
             UserDefaults.standard.removePersistentDomain(forName: suite)
+            // cfprefsd writes the plist asynchronously, after this process is
+            // gone, which recreated the file deleted below. Flush the emptied
+            // domain synchronously first so there is nothing left to write.
+            CFPreferencesSynchronize(suite as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
             if let file = preferences?.appendingPathComponent("\(suite).plist") {
                 try? FileManager.default.removeItem(at: file)
             }
