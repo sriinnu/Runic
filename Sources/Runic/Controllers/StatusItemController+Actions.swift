@@ -42,7 +42,9 @@ extension StatusItemController {
         let preferred = self.lastMenuProvider
             ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
 
-        let provider = preferred ?? .codex
+        // A brand tab selects its international root; open the console of the
+        // region actually shown (a China-only Kimi goes to platform.moonshot.cn).
+        let provider = self.store.menuSlots(for: preferred ?? .codex).first ?? .codex
         let meta = self.store.metadata(for: provider)
         let urlString: String? = if provider == .claude, self.store.isClaudeSubscription() {
             meta.subscriptionDashboardURL ?? meta.dashboardURL
@@ -85,7 +87,7 @@ extension StatusItemController {
         let preferred = self.lastMenuProvider
             ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
 
-        let provider = preferred ?? .codex
+        let provider = self.store.menuSlots(for: preferred ?? .codex).first ?? .codex
         let meta = self.store.metadata(for: provider)
         let urlString = meta.statusPageURL ?? meta.statusLinkURL
         guard let urlString, let url = URL(string: urlString) else { return }
