@@ -12,9 +12,12 @@ extension StatusItemController {
     }
 
     func exportUsage(format: UsageExporter.Format, scope: UsageExporter.Scope = .all) {
-        let provider = self.lastMenuProvider
+        let preferred = self.lastMenuProvider
             ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
             ?? .codex
+        // A brand tab selects its international root; export the region the
+        // popover actually shows (its lead slot), not an empty disabled root.
+        let provider = self.store.menuSlots(for: preferred).first ?? preferred
         let content = UsageExporter.export(store: self.store, provider: provider, format: format, scope: scope)
 
         let panel = NSSavePanel()
