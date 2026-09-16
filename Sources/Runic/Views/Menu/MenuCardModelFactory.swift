@@ -72,6 +72,9 @@ extension UsageMenuCardView.Model {
         let metrics = Self.metrics(input: input)
         let creditsText: String? = if input.provider == .codex, !input.showOptionalCreditsAndExtraUsage {
             nil
+        } else if input.provider != .codex, input.snapshot?.balance != nil {
+            // The Balance row already shows this number, with its currency.
+            nil
         } else {
             Self.creditsLine(metadata: input.metadata, credits: input.credits, error: input.creditsError)
         }
