@@ -3,20 +3,35 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.7.2</title>
+            <pubDate>Wed, 16 Sep 2026 15:38:32 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>115</sparkle:version>
+            <sparkle:shortVersionString>2.7.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.7.2</h2>
+<ul>
+<li>Menu: <strong>Refresh</strong> on a brand with International and China accounts (Kimi, z.ai, MiniMax, Qwen, StepFun) fetches every region you have enabled. The brand tab points at the international slot, so Refresh only re-fetched that one: a China-only account never updated, and with both only the international card did. Opening the menu now also re-pings when any region under the tab is stale or failing, not just the international one.</li>
+<li>Menu: <strong>Dashboard</strong>, <strong>Status page</strong> and <strong>Export CSV/JSON</strong> act on the region the brand tab actually shows. A China-only Kimi opens platform.moonshot.cn instead of the international console and exports its own usage instead of the empty international slot.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic-2.7.2.zip" length="36395278" type="application/octet-stream" sparkle:edSignature="AWDNIH3uyu9l/e80+7+Gl/4C/fp6hlI0ztXAPQ9irohdrcqSdnI51VLUjIPXe5W8U0eL3IpLF0aGqa3HMHukDg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-112.delta" sparkle:deltaFrom="112" length="35586" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Zm5MeX/jTR98N8K60HSB8/EvzY4Eix5E9jVjxd0xDUnh0p/jiyYyD+v4YB9npBG41KaQBcLHe+XPVGbIjL+zDg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-107.delta" sparkle:deltaFrom="107" length="6694538" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="pWzpQKgJ1hyEwMX8p3HbFxwqzcYAo1hrzrnNHIpCJe4UVUoLhRiaw58f2smV2oPgPgs0PRBjYAkDsSrrP3nmDw=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-98.delta" sparkle:deltaFrom="98" length="8349558" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="IWuDlTDbmUr0AWD0PKT1b6UxWGUekzuomup2k2WNN8XSg/TtuhklAK2J/7yNlNr7GbHufge8GiZbOgBoOsDRDA=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-97.delta" sparkle:deltaFrom="97" length="8365858" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="brQpNnKAlcFCPxrifhDNp1nBsCjxaNR2fRuq4HcBMaKWLJ3VFr+1MQOJ4yyfPaWmDNHXMBegHXQglvz6anrqBg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-96.delta" sparkle:deltaFrom="96" length="8409306" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="VYVlB7lSPv4xm1Q1MiD4SyvPg97yRKbKqwYIrOZlEzwQ6u/JOOrk6uDjtISMraqHOQPGa0WtnUrSuUhXpQXSCA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.7.1</title>
             <pubDate>Sat, 12 Sep 2026 22:16:50 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>112</sparkle:version>
             <sparkle:shortVersionString>2.7.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.7.1</h2>
-<ul>
-<li>Preferences: the Providers sidebar's selected row and the provider list's enable checkboxes are theme-owned on every opinionated theme (the row used the macOS accent instead of the theme's; the checkboxes were native). No change on System and Dark.</li>
-<li>Themes: <strong>Kirigami</strong> — paper craft. Cream card stock with pencil hatching; every card, button, tab and switch is a sticker: a wobbly marker outline, a white halo outside it, and a hard offset shadow, as if cut out and glued on. Section and card titles are handwritten (Patrick Hand, bundled under the OFL, display-only — it never touches the font picker), body text is Nunito (rounded sans, bundled under the OFL, also offered in the font picker for any theme), numbers stay in Geist Mono. Progress bars are warp pipes (outlined tube, lit top band, a taller lip at the mouth), bar charts get the same lip, Runi becomes a peel-off sticker that hops. The popover and the Preferences window are staged like a craft page: a band of sky at the top with a cloud and a star, the provider and Preferences tabs as folder tabs stuck onto the cream sheet below it (selected tab in peach, butter, mint, sky or lilac by position, the rest leaning a degree either way), the sheet's cut top edge running under their feet, and a strip of paper hills with flowers along the bottom. Cards lift on hover. Theme JSON gains <code>chrome.borderStyle</code> value <code>cutout</code>, <code>effects.texture</code> value <code>hatch</code>, <code>controls.progressStyle</code> value <code>pipe</code>, <code>shape.separator</code> value <code>stitch</code>, and <code>typography.displayFamily</code>. No Nintendo assets — the whole cast is Runi.</li>
-<li>Menu: a <strong>Burn</strong> panel in Explore. Every refresh now keeps the quota reading (per provider and window, 21 days, JSONL under Application Support), and the panel draws the cycle: the actual curve as a step line, the even-burn budget from window start to reset as a dashed line, a "now" rule, and dashed projections from the last 1h and 6h rates to their run-out points. The headline says "Ahead of budget by 12%" or "Under budget by 8%" and "Runs out Thu 4 PM (2d 4h) at the 6h rate · resets Sat 9 PM" or "Lasts to the reset". Session, weekly and model windows each get their own tab. Appears once a window has two readings this cycle.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic-2.7.1.zip" length="36395216" type="application/octet-stream" sparkle:edSignature="3Ado/mamx1Is+8+eYh0R5h11wO9y9mwINg/seiWMxBpYKAbh00XTxhSoOSVxgXNLrtXGbGOHBYLpHqLXgQr3Ag=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic112-107.delta" sparkle:deltaFrom="107" length="6684206" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="IQfMXh8AVDPg0zcFmhwym7zZ9PkVgmeG9tx9iY4LEh04bzozlj3G8RVTkdtcoVfwdIWJFJ0Czv0hYPdgoNerDg=="/>
@@ -39,20 +54,6 @@
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.0/Runic107-97.delta" sparkle:deltaFrom="97" length="7292758" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="JflXdY2/+EapdV+/76jRTWdN0GjRGATkSMtaKmQg/pc+gPVRvkPK57RBtVG4fCqEaspdJ03hu3Rew8UvLW6/AQ=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.0/Runic107-96.delta" sparkle:deltaFrom="96" length="7371870" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="o7BKOfh3RRDSQ74bqZZclvZo/WRGoyBLoFv3KmFfRj2xjue5wHRaB9XSRgZ/V6tzwlqa6s1rAYyhPczixnpXAA=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.0/Runic107-83.delta" sparkle:deltaFrom="83" length="8474854" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="8hziWynhU2bpqRtxWULqBRh/2sUY+TMf6ox+0oOqpOqJnIOoEakL5S2j4Ct6MRuk+MVQkRYvU8SCD61wZk3pCg=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.6.2</title>
-            <pubDate>Sun, 06 Sep 2026 19:58:47 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>98</sparkle:version>
-            <sparkle:shortVersionString>2.6.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic-2.6.2.zip" length="34485942" type="application/octet-stream" sparkle:edSignature="n6yh0J15mqrX5GOwW1EHjo478L8eWTiwfykuug6WKg7nIWdHmSgrFvSI8s6jVTelKWKVYBtjiRlJZk4/kWD7Dw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic98-97.delta" sparkle:deltaFrom="97" length="39566" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="L+SNoLOLEMYRrlTJN7BFJGgcwrmQv0Im17iNBV3HKnlPtzbMz6xwdJPtDPTs8CiaQ4XFRrI0olo58aBuZIEiAg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic98-96.delta" sparkle:deltaFrom="96" length="2645126" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="wSm0QASBDUyBx1JjvIq7RXDqnBbM/fD+zSDhyuAh8Dk+2Vu7WoSAVamJeIqx3vZV0yp05HlGoTa+VBUPe9h7CQ=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.6.2/Runic98-83.delta" sparkle:deltaFrom="83" length="6403042" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4EWd8ehyBcyMlDht1jVmTz885HwB+DkMoUgBUR7qhWNsXK8WUveMkRYo1J5gjrzJUICD3/PwHuGuqNm7OnAtBw=="/>
             </sparkle:deltas>
         </item>
         <item>
