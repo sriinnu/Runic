@@ -57,6 +57,13 @@ extension UsageProvider {
         self.regionalParent ?? self
     }
 
+    /// Every slot of `self`'s brand, international first: `[.kimi, .kimiCN]`
+    /// for either Kimi slot, `[self]` for a single-region provider.
+    public var brandSlots: [UsageProvider] {
+        let root = self.brandRoot
+        return [root] + (root.chinaSibling.map { [$0] } ?? [])
+    }
+
     /// The slot of `self`'s brand for the given region, if it exists.
     public func slot(for region: ProviderRegion) -> UsageProvider? {
         switch region {

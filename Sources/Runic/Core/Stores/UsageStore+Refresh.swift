@@ -139,22 +139,22 @@ extension UsageStore {
     /// a single-provider refresh must fan out — otherwise a China-only account
     /// (`.kimiCN`) under that tab never re-fetches.
     func refreshSlots(for provider: UsageProvider) -> [UsageProvider] {
-        let slots = Self.brandCandidates(for: provider).filter { self.isEnabled($0) }
+        let slots = provider.brandSlots.filter { self.isEnabled($0) }
         return slots.isEmpty ? [provider] : slots
     }
 
     /// Menu-visible slots of `provider`'s brand — the region(s) actually shown
-    /// under its tab. Falls back to `provider` when none are visible.
+    /// under its tab. Never empty: falls back to `provider` when none are visible.
     func menuSlots(for provider: UsageProvider) -> [UsageProvider] {
-        let candidates = Self.brandCandidates(for: provider)
+        let candidates = provider.brandSlots
         guard candidates.count > 1 else { return [provider] }
         let visible = self.menuVisibleProviders().filter { candidates.contains($0) }
         return visible.isEmpty ? [provider] : visible
     }
 
-    private static func brandCandidates(for provider: UsageProvider) -> [UsageProvider] {
-        let root = provider.brandRoot
-        return [root] + (root.chinaSibling.map { [$0] } ?? [])
+    /// The slot a brand tab leads with — what dashboard, status, and export act on.
+    func menuLeadSlot(for provider: UsageProvider) -> UsageProvider {
+        self.menuSlots(for: provider).first ?? provider
     }
 
     func refreshSingleProvider(_ provider: UsageProvider) async {

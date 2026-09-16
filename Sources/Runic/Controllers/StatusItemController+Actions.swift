@@ -15,6 +15,17 @@ extension StatusItemController {
         return self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first
     }
 
+    /// The slot provider-targeted actions (dashboard, status page, export) act
+    /// on: the last-viewed provider's lead region, so a brand tab — which
+    /// selects its international root — targets the region it actually shows
+    /// (a China-only Kimi opens platform.moonshot.cn, not the intl console).
+    func actionTargetProvider() -> UsageProvider {
+        let preferred = self.lastMenuProvider
+            ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
+            ?? .codex
+        return self.store.menuLeadSlot(for: preferred)
+    }
+
     /// True when a refresh is already running (global or single-provider — both
     /// set `isRefreshing`). Callers use this to surface feedback instead of the
     /// silent no-op inside `UsageStore.refresh()`.
@@ -39,12 +50,7 @@ extension StatusItemController {
     }
 
     @objc func openDashboard() {
-        let preferred = self.lastMenuProvider
-            ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
-
-        // A brand tab selects its international root; open the console of the
-        // region actually shown (a China-only Kimi goes to platform.moonshot.cn).
-        let provider = self.store.menuSlots(for: preferred ?? .codex).first ?? .codex
+        let provider = self.actionTargetProvider()
         let meta = self.store.metadata(for: provider)
         let urlString: String? = if provider == .claude, self.store.isClaudeSubscription() {
             meta.subscriptionDashboardURL ?? meta.dashboardURL
@@ -84,10 +90,7 @@ extension StatusItemController {
     }
 
     @objc func openStatusPage() {
-        let preferred = self.lastMenuProvider
-            ?? (self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first)
-
-        let provider = self.store.menuSlots(for: preferred ?? .codex).first ?? .codex
+        let provider = self.actionTargetProvider()
         let meta = self.store.metadata(for: provider)
         let urlString = meta.statusPageURL ?? meta.statusLinkURL
         guard let urlString, let url = URL(string: urlString) else { return }
