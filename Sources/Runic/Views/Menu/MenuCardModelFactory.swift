@@ -42,6 +42,8 @@ extension UsageMenuCardView.Model {
         /// False when no live fetch strategy could run (no credential resolved).
         /// Nil/true means a strategy ran — or the provider was never refreshed.
         var liveFetchWasAvailable: Bool = true
+        /// Spend and runway derived from recorded balance readings.
+        var balanceSpend: BalanceSpendSummary?
         var numberStyle: UsageFormatter.NumberStyle = .abbreviated
         var dateStyle: UsageFormatter.DateStyle = .relative
     }
@@ -290,13 +292,33 @@ extension UsageMenuCardView.Model {
             else { return fallback }
             return own
         }
-        metrics.append(Metric(
-            id: "primary",
-            title: title(snapshot.primary, fallback: input.metadata.sessionLabel),
-            percent: Self.metricPercent(for: snapshot.primary, showUsed: input.usageBarsShowUsed),
-            percentStyle: percentStyle,
-            resetText: Self.resetText(for: snapshot.primary, prefersCountdown: true),
-            detailText: input.provider == .zai ? zaiTokenDetail : bankedResets))
+        if let balance = snapshot.balance, snapshot.primary.hasKnownLimit == false {
+            // A plain prepaid balance: the amount, and what it's made of.
+            metrics.append(Metric(
+                id: "primary",
+                title: "Balance",
+                percent: nil,
+                percentStyle: percentStyle,
+                resetText: BalanceFormatter.amount(balance.available, currency: balance.currency),
+                detailText: Self.balanceComponentsText(balance)))
+        } else {
+            metrics.append(Metric(
+                id: "primary",
+                title: title(snapshot.primary, fallback: input.metadata.sessionLabel),
+                percent: Self.metricPercent(for: snapshot.primary, showUsed: input.usageBarsShowUsed),
+                percentStyle: percentStyle,
+                resetText: Self.resetText(for: snapshot.primary, prefersCountdown: true),
+                detailText: input.provider == .zai ? zaiTokenDetail : bankedResets))
+        }
+        if snapshot.balance != nil, let spend = input.balanceSpend {
+            metrics.append(Metric(
+                id: "balance-spend",
+                title: "Spend",
+                percent: nil,
+                percentStyle: percentStyle,
+                resetText: Self.balanceSpendText(spend),
+                detailText: Self.balanceRunwayText(spend, now: input.now)))
+        }
         if let weekly = snapshot.secondary {
             let paceText = UsagePaceText.weekly(provider: input.provider, window: weekly, now: input.now)
             metrics.append(Metric(
@@ -343,6 +365,45 @@ extension UsageMenuCardView.Model {
     private static func metricPercent(for window: RateWindow, showUsed: Bool) -> Double? {
         guard window.hasKnownLimit != false else { return nil }
         return self.clamped(showUsed ? window.usedPercent : window.remainingPercent)
+    }
+
+    static func balanceComponentsText(_ balance: ProviderBalance) -> String? {
+        let parts = balance.components
+            .filter { $0.amount > 0.000_001 }
+            .map { "\(BalanceFormatter.amount($0.amount, currency: balance.currency)) \($0.label.lowercased())" }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// "¥89.14 today · ¥120.30 this month".
+    static func balanceSpendText(_ spend: BalanceSpendSummary) -> String {
+        let today = BalanceFormatter.amount(spend.spentToday, currency: spend.currency)
+        let month = BalanceFormatter.amount(spend.spentThisMonth, currency: spend.currency)
+        return "\(today) today · \(month) this month"
+    }
+
+    /// "~1.2 days left at ¥89.14/day · tracked since 4:10 PM". Totals only cover
+    /// time Runic was recording, so a partial period says when that began.
+    static func balanceRunwayText(_ spend: BalanceSpendSummary, now: Date, calendar: Calendar = .current) -> String {
+        var parts: [String] = []
+        if let rate = spend.dailyBurnRate, let runway = spend.runwayDays {
+            let perDay = BalanceFormatter.amount(rate, currency: spend.currency)
+            parts.append("\(Self.runwayPhrase(days: runway)) at \(perDay)/day")
+        }
+        if spend.monthIsPartial {
+            let sinceToday = calendar.isDate(spend.trackedSince, inSameDayAs: now)
+            let since = sinceToday
+                ? spend.trackedSince.formatted(date: .omitted, time: .shortened)
+                : spend.trackedSince.formatted(.dateTime.month(.abbreviated).day())
+            parts.append("tracked since \(since)")
+        }
+        return parts.isEmpty ? "Spend from balance changes" : parts.joined(separator: " · ")
+    }
+
+    static func runwayPhrase(days: Double) -> String {
+        if days < 1 { return "~\(max(1, Int((days * 24).rounded())))h left" }
+        if days < 10 { return String(format: "~%.1f days left", days) }
+        if days > 365 { return "over a year left" }
+        return "~\(Int(days.rounded())) days left"
     }
 
     /// Compact label for a quota window, derived from its length in minutes.

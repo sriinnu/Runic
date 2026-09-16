@@ -193,6 +193,12 @@ final class UsageStore {
     /// Live credits for a provider. Codex keeps its dedicated slot (probe +
     /// web-dashboard fallback with caching); every other provider reads the
     /// snapshot captured from its latest successful fetch.
+    /// Spend derived from recorded balance readings (nil until two readings).
+    func balanceSpend(for provider: UsageProvider, now: Date = Date()) -> BalanceSpendSummary? {
+        guard self.snapshots[provider]?.balance != nil else { return nil }
+        return BalanceSpendSummary.make(samples: BalanceSampleStore.shared.samples(provider: provider), now: now)
+    }
+
     func credits(for provider: UsageProvider) -> CreditsSnapshot? {
         if provider == .codex { return self.credits }
         return self.providerCredits[provider]

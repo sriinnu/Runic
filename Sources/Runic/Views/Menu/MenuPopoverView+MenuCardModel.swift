@@ -52,6 +52,7 @@ extension MenuPopoverView {
             now: Date(),
             quotaWindows: self.store.quotaWindows[provider],
             liveFetchWasAvailable: self.store.lastFetchAttempts[provider]?.contains(where: \.wasAvailable) ?? true,
+            balanceSpend: self.store.balanceSpend(for: provider),
             numberStyle: self.settings.numberFormat.formatterStyle,
             dateStyle: self.settings.dateFormat.formatterStyle)
         return UsageMenuCardView.Model.make(input)

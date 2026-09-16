@@ -82,7 +82,17 @@ enum KimiUsageFetcher {
 }
 
 extension KimiBalanceResponse {
-    func toUsageSnapshot() -> UsageSnapshot {
+    /// Moonshot's balance API carries no currency, but each platform bills in
+    /// one: api.moonshot.cn in CNY, api.moonshot.ai in USD. A custom gateway
+    /// host stays unknown.
+    static func currency(forBalanceURL url: URL?) -> String? {
+        let host = url?.host?.lowercased() ?? ""
+        if host.hasSuffix("moonshot.cn") { return "CNY" }
+        if host.hasSuffix("moonshot.ai") { return "USD" }
+        return nil
+    }
+
+    func toUsageSnapshot(currency: String? = nil) -> UsageSnapshot {
         let available = self.data?.availableBalance
         let summary = if let available {
             "Balance: \(Self.formatAmount(available))"
@@ -111,6 +121,15 @@ extension KimiBalanceResponse {
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
+            balance: available.map { available in
+                ProviderBalance(
+                    available: available,
+                    currency: currency,
+                    components: [
+                        self.data?.cashBalance.map { .init(label: "Paid", amount: $0) },
+                        self.data?.voucherBalance.map { .init(label: "Bonus", amount: $0) },
+                    ].compactMap(\.self))
+            },
             updatedAt: Date(),
             identity: nil)
     }

@@ -311,6 +311,11 @@ extension UsageStore {
                 self.snapshots[provider] = scoped
                 // Keep the reading: the Burn panel draws the cycle from these.
                 QuotaSampleStore.shared.record(provider: provider, snapshot: scoped)
+                // Balance APIs return a snapshot only; the readings are what
+                // spend today / this month / runway are derived from.
+                if let balance = scoped.balance {
+                    BalanceSampleStore.shared.record(provider: provider, balance: balance, at: scoped.updatedAt)
+                }
                 // Providers whose fetchers attach a credits snapshot (DeepSeek,
                 // OpenRouter, Vercel AI, ...) surface it per provider; a nil
                 // result keeps the last-known snapshot, mirroring how usage

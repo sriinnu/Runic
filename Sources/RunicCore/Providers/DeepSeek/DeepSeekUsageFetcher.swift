@@ -83,8 +83,19 @@ extension DeepSeekBalanceResponse {
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
+            balance: ProviderBalance(
+                available: self.remainingBalance,
+                currency: self.currencyCode,
+                components: [
+                    Self.amount(self.preferredBalanceInfo?.topped_up_balance).map { .init(label: "Paid", amount: $0) },
+                    Self.amount(self.preferredBalanceInfo?.granted_balance).map { .init(label: "Bonus", amount: $0) },
+                ].compactMap(\.self)),
             updatedAt: Date(),
             identity: nil)
+    }
+
+    private static func amount(_ raw: String?) -> Double? {
+        raw.flatMap { Double($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
     }
 
     func toCreditsSnapshot() -> CreditsSnapshot {
