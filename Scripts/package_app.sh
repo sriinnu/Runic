@@ -129,15 +129,25 @@ path.write_text(text)
 PY
 }
 
+# One build for every requested arch. Swift 6.4's build system writes all
+# products to a single directory (a universal binary when several archs are
+# asked for); the old per-arch `.build/<arch>-apple-macosx/<conf>` directories
+# are no longer updated. Copying from those shipped a Sep 12 binary as 2.7.2,
+# so the output directory comes from SwiftPM itself, never a hardcoded path.
+ARCH_FLAGS=()
+for ARCH in "${ARCH_LIST[@]}"; do
+  ARCH_FLAGS+=(--arch "$ARCH")
+done
+
 KEYBOARD_SHORTCUTS_UTIL="$ROOT/.build/checkouts/KeyboardShortcuts/Sources/KeyboardShortcuts/Utilities.swift"
 if [[ ! -f "$KEYBOARD_SHORTCUTS_UTIL" ]]; then
-  swift build -c "$CONF" --arch "${ARCH_LIST[0]}"
+  swift build -c "$CONF" "${ARCH_FLAGS[@]}"
 fi
 patch_keyboard_shortcuts
 
-for ARCH in "${ARCH_LIST[@]}"; do
-  swift build -c "$CONF" --arch "$ARCH"
-done
+swift build -c "$CONF" "${ARCH_FLAGS[@]}"
+BIN_DIR="$(swift build -c "$CONF" "${ARCH_FLAGS[@]}" --show-bin-path)"
+echo "Build products: $BIN_DIR"
 
 APP="$BUILD_DIR/${APP_NAME}.app"
 rm -rf "$APP"
@@ -234,12 +244,22 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 build_product_path() {
-  local name="$1"
-  local arch="$2"
-  case "$arch" in
-    arm64|x86_64) echo ".build/${arch}-apple-macosx/$CONF/$name" ;;
-    *) echo ".build/$CONF/$name" ;;
-  esac
+  echo "$BIN_DIR/$1"
+}
+
+# The app binary links Runic + RunicCore (+ macro support); if it is older than
+# any of their sources, this build did not produce it. Refuse to package it
+# rather than silently shipping old code. (Helpers are exempt: an app-only change
+# legitimately leaves RunicCLI un-relinked.)
+verify_binary_fresh() {
+  local binary="$1"
+  local newer
+  newer=$(find "$ROOT/Sources/Runic" "$ROOT/Sources/RunicCore" "$ROOT/Sources/RunicMacroSupport" \
+    -newer "$binary" \( -name '*.swift' -o -name '*.json' \) -print -quit)
+  if [[ -n "$newer" ]]; then
+    echo "ERROR: $binary is older than $newer; the build did not produce it (stale product)." >&2
+    exit 1
+  fi
 }
 
 verify_binary_arches() {
@@ -265,35 +285,30 @@ verify_binary_arches() {
 install_binary() {
   local name="$1"
   local dest="$2"
-  local binaries=()
-  for arch in "${ARCH_LIST[@]}"; do
-    local src
-    src=$(build_product_path "$name" "$arch")
-    if [[ ! -f "$src" ]]; then
-      echo "ERROR: Missing ${name} build for ${arch} at ${src}" >&2
-      exit 1
-    fi
-    binaries+=("$src")
-  done
-  if [[ ${#ARCH_LIST[@]} -gt 1 ]]; then
-    lipo -create "${binaries[@]}" -output "$dest"
-  else
-    cp "${binaries[0]}" "$dest"
+  local src
+  src=$(build_product_path "$name")
+  if [[ ! -f "$src" ]]; then
+    echo "ERROR: Missing ${name} build at ${src}" >&2
+    exit 1
   fi
+  if [[ "$name" == "Runic" ]]; then
+    verify_binary_fresh "$src"
+  fi
+  cp "$src" "$dest"
   chmod +x "$dest"
   verify_binary_arches "$dest" "${ARCH_LIST[@]}"
 }
 
 install_binary "Runic" "$APP/Contents/MacOS/${APP_NAME}"
 # Ship RunicCLI alongside the app for easy symlinking.
-if [[ -f "$(build_product_path "RunicCLI" "${ARCH_LIST[0]}")" ]]; then
+if [[ -f "$(build_product_path "RunicCLI")" ]]; then
   install_binary "RunicCLI" "$APP/Contents/Helpers/RunicCLI"
 fi
 # Watchdog helper: ensures `claude` probes die when Runic crashes/gets killed.
-if [[ -f "$(build_product_path "RunicClaudeWatchdog" "${ARCH_LIST[0]}")" ]]; then
+if [[ -f "$(build_product_path "RunicClaudeWatchdog")" ]]; then
   install_binary "RunicClaudeWatchdog" "$APP/Contents/Helpers/RunicClaudeWatchdog"
 fi
-if [[ -f "$(build_product_path "RunicWidget" "${ARCH_LIST[0]}")" ]]; then
+if [[ -f "$(build_product_path "RunicWidget")" ]]; then
   WIDGET_APP="$APP/Contents/PlugIns/RunicWidget.appex"
   mkdir -p "$WIDGET_APP/Contents/MacOS" "$WIDGET_APP/Contents/Resources"
   cat > "$WIDGET_APP/Contents/Info.plist" <<PLIST
@@ -368,8 +383,8 @@ fi
 function resign() { codesign "${CODESIGN_ARGS[@]}" "$1"; }
 
 # Embed Sparkle.framework
-if [[ -d ".build/$CONF/Sparkle.framework" ]]; then
-  cp -R ".build/$CONF/Sparkle.framework" "$APP/Contents/Frameworks/"
+if [[ -d "$BIN_DIR/Sparkle.framework" ]]; then
+  cp -R "$BIN_DIR/Sparkle.framework" "$APP/Contents/Frameworks/"
   chmod -R a+rX "$APP/Contents/Frameworks/Sparkle.framework"
   install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/${APP_NAME}"
   # Re-sign Sparkle and all nested components with a stable identity.
@@ -403,7 +418,7 @@ if [[ -d "$APP_RESOURCES_DIR" ]]; then
 fi
 
 # SwiftPM resource bundles (e.g. KeyboardShortcuts) are emitted next to the built binary.
-PREFERRED_BUILD_DIR="$(dirname "$(build_product_path "Runic" "${ARCH_LIST[0]}")")"
+PREFERRED_BUILD_DIR="$BIN_DIR"
 shopt -s nullglob
 SWIFTPM_BUNDLES=("${PREFERRED_BUILD_DIR}/"*.bundle)
 shopt -u nullglob

@@ -43,10 +43,14 @@ trap 'rm -f "$API_KEY_FILE" "$NOTARIZE_ZIP"' EXIT
 # Allow building a universal binary if ARCHES is provided; default to universal (arm64 + x86_64).
 ARCHES_VALUE=${ARCHES:-"arm64 x86_64"}
 ARCH_LIST=( ${ARCHES_VALUE} )
+ARCH_FLAGS=()
 for ARCH in "${ARCH_LIST[@]}"; do
-  swift build -c release --arch "$ARCH"
+  ARCH_FLAGS+=(--arch "$ARCH")
 done
+# package_app.sh builds every arch in one invocation and copies from SwiftPM's
+# reported output directory (see the note there on the stale per-arch dirs).
 ARCHES="${ARCHES_VALUE}" ./Scripts/package_app.sh release
+BIN_DIR="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)"
 
 ENTITLEMENTS_DIR="$ROOT/.build/entitlements"
 APP_ENTITLEMENTS="${ENTITLEMENTS_DIR}/Runic.entitlements"
@@ -96,29 +100,20 @@ spctl -a -t exec -vv "$APP_BUNDLE"
 stapler validate "$APP_BUNDLE"
 
 echo "Packaging dSYM"
-FIRST_ARCH="${ARCH_LIST[0]}"
-PREFERRED_ARCH_DIR=".build/${FIRST_ARCH}-apple-macosx/release"
-DSYM_PATH="${PREFERRED_ARCH_DIR}/${APP_NAME}.dSYM"
+DSYM_PATH="${BIN_DIR}/${APP_NAME}.dSYM"
 if [[ ! -d "$DSYM_PATH" ]]; then
   echo "Missing dSYM at $DSYM_PATH" >&2
   exit 1
 fi
-if [[ ${#ARCH_LIST[@]} -gt 1 ]]; then
-  MERGED_DSYM="${PREFERRED_ARCH_DIR}/${APP_NAME}.dSYM-universal"
-  rm -rf "$MERGED_DSYM"
-  cp -R "$DSYM_PATH" "$MERGED_DSYM"
-  DWARF_PATH="${MERGED_DSYM}/Contents/Resources/DWARF/${APP_NAME}"
-  BINARIES=()
-  for ARCH in "${ARCH_LIST[@]}"; do
-    ARCH_DSYM=".build/${ARCH}-apple-macosx/release/${APP_NAME}.dSYM/Contents/Resources/DWARF/${APP_NAME}"
-    if [[ ! -f "$ARCH_DSYM" ]]; then
-      echo "Missing dSYM for ${ARCH} at $ARCH_DSYM" >&2
-      exit 1
-    fi
-    BINARIES+=("$ARCH_DSYM")
-  done
-  lipo -create "${BINARIES[@]}" -output "$DWARF_PATH"
-  DSYM_PATH="$MERGED_DSYM"
+# The dSYM and the signed binary must come from the same link: identical UUIDs
+# for every arch. A mismatch means the bundle holds a binary from another build.
+APP_UUIDS=$(dwarfdump --uuid "$APP_BUNDLE/Contents/MacOS/${APP_NAME}" | awk '{print $2, $3}' | sort)
+DSYM_UUIDS=$(dwarfdump --uuid "$DSYM_PATH" | awk '{print $2, $3}' | sort)
+if [[ "$APP_UUIDS" != "$DSYM_UUIDS" ]]; then
+  echo "ERROR: app binary and dSYM UUIDs differ; the bundle is not from this build." >&2
+  echo "app:  $APP_UUIDS" >&2
+  echo "dSYM: $DSYM_UUIDS" >&2
+  exit 1
 fi
 "$DITTO_BIN" --norsrc -c -k --keepParent "$DSYM_PATH" "$DSYM_ZIP"
 
