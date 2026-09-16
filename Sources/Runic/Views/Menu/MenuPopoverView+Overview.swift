@@ -147,9 +147,7 @@ extension MenuPopoverView {
 
     /// Visible slots of the brand `provider` belongs to, international first.
     func brandSlots(for provider: UsageProvider, in enabledProviders: [UsageProvider]) -> [UsageProvider] {
-        let root = provider.brandRoot
-        let candidates = [root] + (root.chinaSibling.map { [$0] } ?? [])
-        let visible = candidates.filter { enabledProviders.contains($0) }
+        let visible = provider.brandSlots.filter { enabledProviders.contains($0) }
         return visible.isEmpty ? [provider] : visible
     }
 
