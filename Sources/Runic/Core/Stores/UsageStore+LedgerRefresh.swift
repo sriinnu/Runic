@@ -116,10 +116,15 @@ extension UsageStore {
         providers.formUnion(result.modelBreakdownsByProvider.keys)
         for provider in providers {
             self.autoEnableProviderWithLedgerData(provider)
-            guard self.settings.isProviderEnabledCached(
-                provider: provider, metadataByProvider: self.providerMetadata)
-            else { continue }
-            self.applyLedgerRefreshResult(result, provider: provider)
+        }
+        let assignments = Self.ledgerSlotAssignments(
+            dataProviders: providers,
+            hasData: { result.hasData(for: $0) },
+            isEnabled: {
+                self.settings.isProviderEnabledCached(provider: $0, metadataByProvider: self.providerMetadata)
+            })
+        for (slot, dataProvider) in assignments {
+            self.applyLedgerRefreshResult(result, from: dataProvider, to: slot)
         }
         self.sendBudgetNotificationsIfNeeded()
         if self.ledgerMaxAgeDays > result.scanDays {
@@ -127,26 +132,56 @@ extension UsageStore {
         }
     }
 
+    /// Which provider's ledger data each enabled slot displays (slot → data provider).
+    ///
+    /// Log-derived usage has no region: `kimi-k3` routed through Claude Code is
+    /// the same model name on api.moonshot.cn and api.moonshot.ai, so it's
+    /// attributed to the brand root (`.kimi`). A user who only tracks the China
+    /// slot has the root switched off, which used to drop that usage entirely and
+    /// leave the China card blank. When a brand's data provider is disabled, its
+    /// data goes to the brand's enabled slot instead, unless that slot has usage
+    /// of its own. Enabled providers always keep their own data.
+    static func ledgerSlotAssignments(
+        dataProviders: Set<UsageProvider>,
+        hasData: (UsageProvider) -> Bool,
+        isEnabled: (UsageProvider) -> Bool) -> [UsageProvider: UsageProvider]
+    {
+        var assignments: [UsageProvider: UsageProvider] = [:]
+        for provider in dataProviders where isEnabled(provider) {
+            assignments[provider] = provider
+        }
+        for provider in dataProviders.sorted(by: { $0.rawValue < $1.rawValue })
+            where !isEnabled(provider) && hasData(provider)
+        {
+            guard let slot = provider.brandSlots.first(where: { $0 != provider && isEnabled($0) }),
+                  !hasData(slot)
+            else { continue }
+            assignments[slot] = provider
+        }
+        return assignments
+    }
+
     private func applyLedgerRefreshResult(
         _ result: LedgerRefreshResult,
-        provider: UsageProvider)
+        from dataProvider: UsageProvider,
+        to provider: UsageProvider)
     {
-        self.ledgerErrors[provider] = result.errorsByProvider[provider]
-        self.ledgerDailySummaries[provider] = result.dailyByProvider[provider]
-        self.ledgerAllDailySummaries.setNonEmpty(result.allDailySummariesByProvider[provider], forKey: provider)
-        self.ledgerHourlySummaries.setNonEmpty(result.hourlySummariesByProvider[provider], forKey: provider)
-        self.ledgerActiveBlocks[provider] = result.activeBlocksByProvider[provider]
-        self.ledgerTopModels[provider] = result.topModelsByProvider[provider]
-        self.ledgerTopProjects[provider] = result.topProjectsByProvider[provider]
-        self.ledgerModelBreakdowns[provider] = result.modelBreakdownsByProvider[provider]
-        self.ledgerProjectBreakdowns[provider] = result.projectBreakdownsByProvider[provider]
-        self.ledgerSpendForecasts[provider] = result.spendForecastsByProvider[provider]
-        self.ledgerProjectSpendForecasts[provider] = result.projectSpendForecastsByProvider[provider]
-        self.ledgerTopProjectSpendForecasts[provider] = result.topProjectSpendForecastsByProvider[provider]
-        self.ledgerAnomalies[provider] = result.anomaliesByProvider[provider]
-        self.ledgerCompactions[provider] = result.compactionsByProvider[provider]
+        self.ledgerErrors[provider] = result.errorsByProvider[dataProvider]
+        self.ledgerDailySummaries[provider] = result.dailyByProvider[dataProvider]
+        self.ledgerAllDailySummaries.setNonEmpty(result.allDailySummariesByProvider[dataProvider], forKey: provider)
+        self.ledgerHourlySummaries.setNonEmpty(result.hourlySummariesByProvider[dataProvider], forKey: provider)
+        self.ledgerActiveBlocks[provider] = result.activeBlocksByProvider[dataProvider]
+        self.ledgerTopModels[provider] = result.topModelsByProvider[dataProvider]
+        self.ledgerTopProjects[provider] = result.topProjectsByProvider[dataProvider]
+        self.ledgerModelBreakdowns[provider] = result.modelBreakdownsByProvider[dataProvider]
+        self.ledgerProjectBreakdowns[provider] = result.projectBreakdownsByProvider[dataProvider]
+        self.ledgerSpendForecasts[provider] = result.spendForecastsByProvider[dataProvider]
+        self.ledgerProjectSpendForecasts[provider] = result.projectSpendForecastsByProvider[dataProvider]
+        self.ledgerTopProjectSpendForecasts[provider] = result.topProjectSpendForecastsByProvider[dataProvider]
+        self.ledgerAnomalies[provider] = result.anomaliesByProvider[dataProvider]
+        self.ledgerCompactions[provider] = result.compactionsByProvider[dataProvider]
 
-        if let lastActivity = result.lastActivityByProvider[provider] {
+        if let lastActivity = result.lastActivityByProvider[dataProvider] {
             self.lastLedgerActivityAt[provider] = lastActivity
         }
         self.ledgerUpdatedAt[provider] = result.updatedAt

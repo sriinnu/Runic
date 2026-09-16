@@ -57,9 +57,10 @@ struct KimiAPIFetchStrategy: ProviderFetchStrategy {
             throw KimiSettingsError.missingToken
         }
         let baseURL = Self.resolveBaseURL(context: context)
-        let usage = try await KimiUsageFetcher.fetchBalance(apiKey: tokenRes.token, baseURL: baseURL)
+        let usage = try await KimiUsageFetcher.fetchSnapshot(
+            apiKey: tokenRes.token, baseURL: baseURL, environment: context.env)
         return self.makeResult(
-            usage: usage.toUsageSnapshot(),
+            usage: usage,
             sourceLabel: tokenRes.source.rawValue)
     }
 

@@ -140,3 +140,13 @@ struct UsageStoreLedgerInsightLoader {
             providers: load.providers)
     }
 }
+
+extension LedgerRefreshResult {
+    /// Whether the refresh produced any usage for `provider` (a queried source
+    /// with no matching logs yields none).
+    func hasData(for provider: UsageProvider) -> Bool {
+        self.dailyByProvider[provider] != nil
+            || self.allDailySummariesByProvider[provider]?.isEmpty == false
+            || self.modelBreakdownsByProvider[provider]?.isEmpty == false
+    }
+}

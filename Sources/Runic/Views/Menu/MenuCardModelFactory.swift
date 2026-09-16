@@ -281,9 +281,18 @@ extension UsageMenuCardView.Model {
         // Banked resets ride on the primary window's detail line: that is the
         // window the user will spend one on.
         let bankedResets = snapshot.resetCredits.flatMap { ResetCreditEntry.summaryLine(for: $0, now: input.now) }
+        // Kimi keys are either Open Platform (a balance, titled by metadata) or a
+        // Kimi Code subscription (5h / weekly windows that name themselves).
+        let windowsNameThemselves = input.provider.brandRoot == .kimi
+        func title(_ window: RateWindow, fallback: String) -> String {
+            guard windowsNameThemselves,
+                  let own = window.label?.trimmingCharacters(in: .whitespacesAndNewlines), !own.isEmpty
+            else { return fallback }
+            return own
+        }
         metrics.append(Metric(
             id: "primary",
-            title: input.metadata.sessionLabel,
+            title: title(snapshot.primary, fallback: input.metadata.sessionLabel),
             percent: Self.metricPercent(for: snapshot.primary, showUsed: input.usageBarsShowUsed),
             percentStyle: percentStyle,
             resetText: Self.resetText(for: snapshot.primary, prefersCountdown: true),
@@ -292,7 +301,7 @@ extension UsageMenuCardView.Model {
             let paceText = UsagePaceText.weekly(provider: input.provider, window: weekly, now: input.now)
             metrics.append(Metric(
                 id: "secondary",
-                title: input.metadata.weeklyLabel,
+                title: title(weekly, fallback: input.metadata.weeklyLabel),
                 percent: Self.metricPercent(for: weekly, showUsed: input.usageBarsShowUsed),
                 percentStyle: percentStyle,
                 resetText: Self.resetText(for: weekly, prefersCountdown: true),
