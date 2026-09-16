@@ -345,9 +345,9 @@ create_app_bundle() {
         # Find Sparkle framework in build directory
         local sparkle_source=""
         if [[ "$CONFIGURATION" == "release" ]]; then
-            sparkle_source=".build/arm64-apple-macosx/release/Sparkle.framework"
+            sparkle_source=".build/release/Sparkle.framework"
         else
-            sparkle_source=".build/arm64-apple-macosx/debug/Sparkle.framework"
+            sparkle_source=".build/debug/Sparkle.framework"
         fi
 
         if [[ -d "$sparkle_source" ]]; then
