@@ -89,7 +89,8 @@ extension DeepSeekBalanceResponse {
                 components: [
                     Self.amount(self.preferredBalanceInfo?.topped_up_balance).map { .init(label: "Paid", amount: $0) },
                     Self.amount(self.preferredBalanceInfo?.granted_balance).map { .init(label: "Bonus", amount: $0) },
-                ].compactMap(\.self)),
+                ].compactMap(\.self),
+                apiCallsAllowed: self.is_available),
             updatedAt: Date(),
             identity: nil)
     }

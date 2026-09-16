@@ -160,6 +160,39 @@ public struct BalanceSpendSummary: Sendable, Equatable {
     public let trackedSince: Date
     public let todayIsPartial: Bool
     public let monthIsPartial: Bool
+    /// Set when totals are provider-reported and narrower than the account.
+    public var scope: String?
+
+    /// Totals the provider reports itself (exact, whole periods, no tracking gap).
+    /// The burn rate still prefers recorded readings; without enough of them it
+    /// falls back to month-to-date spend over the days elapsed.
+    public static func make(
+        reported: ProviderBalance.ReportedSpend,
+        balance: ProviderBalance,
+        samples: [BalanceSample],
+        now: Date = Date(),
+        calendar: Calendar = .current) -> BalanceSpendSummary
+    {
+        let derived = self.make(samples: samples, now: now, calendar: calendar)
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let monthStart = utc.dateInterval(of: .month, for: now)?.start ?? now
+        let elapsedDays = now.timeIntervalSince(monthStart) / 86400
+        let rate = derived?.dailyBurnRate
+            ?? (elapsedDays >= 1 && reported.thisMonth > 0 ? reported.thisMonth / elapsedDays : nil)
+        var summary = BalanceSpendSummary(
+            currency: balance.currency,
+            spentToday: reported.today,
+            spentThisMonth: reported.thisMonth,
+            toppedUpThisMonth: derived?.toppedUpThisMonth ?? 0,
+            dailyBurnRate: rate,
+            runwayDays: rate.map { max(0, balance.available) / $0 },
+            trackedSince: samples.first?.at ?? now,
+            todayIsPartial: false,
+            monthIsPartial: false)
+        summary.scope = reported.scope
+        return summary
+    }
 
     static let rateWindow: TimeInterval = 7 * 86400
     static let minimumRateCoverage: TimeInterval = 12 * 3600

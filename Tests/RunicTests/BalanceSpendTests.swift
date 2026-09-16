@@ -174,3 +174,103 @@ struct BalanceSpendTests {
         #expect(UsageMenuCardView.Model.runwayPhrase(days: 500) == "over a year left")
     }
 }
+
+/// Blocked / low-balance states and OpenRouter's reported key usage.
+struct BalanceStateTests {
+    @Test
+    func `calls are blocked when the provider says so or nothing is left`() {
+        #expect(ProviderBalance(available: 0, currency: "CNY").blocksAPICalls)
+        #expect(ProviderBalance(available: -1.2, currency: "CNY").blocksAPICalls)
+        #expect(!ProviderBalance(available: 3, currency: "CNY").blocksAPICalls)
+        #expect(ProviderBalance(available: 5, currency: "USD", apiCallsAllowed: false).blocksAPICalls)
+        // The provider's own verdict wins over the number.
+        #expect(!ProviderBalance(available: 0, currency: "USD", apiCallsAllowed: true).blocksAPICalls)
+    }
+
+    @Test
+    func `deepseek is_available flows into the balance`() throws {
+        let response = DeepSeekBalanceResponse(
+            is_available: false,
+            balance_infos: [
+                .init(currency: "USD", total_balance: "0.02", granted_balance: "0.00", topped_up_balance: "0.02"),
+            ])
+        let balance = try #require(response.toUsageSnapshot().balance)
+        #expect(balance.apiCallsAllowed == false)
+        #expect(balance.blocksAPICalls)
+    }
+
+    @Test
+    @MainActor
+    func `badge says top up when blocked and low balance under a day of runway`() throws {
+        let blocked = ProviderBalance(available: 0, currency: "CNY")
+        #expect(UsageMenuCardView.Model.balanceBadge(balance: blocked, spend: nil)?.text == "Top up")
+
+        let now = Date(timeIntervalSince1970: 1_789_574_400)
+        let samples = [
+            BalanceSample(at: now.addingTimeInterval(-20 * 3600), available: 150, currency: "CNY"),
+            BalanceSample(at: now.addingTimeInterval(-600), available: 30, currency: "CNY"),
+        ]
+        let spend = try #require(BalanceSpendSummary.make(samples: samples, now: now))
+        let low = ProviderBalance(available: 30, currency: "CNY")
+        #expect(try #require(spend.runwayDays) < 1)
+        #expect(UsageMenuCardView.Model.balanceBadge(balance: low, spend: spend)?.text == "Low balance")
+        #expect(UsageMenuCardView.Model.balanceBadge(
+            balance: ProviderBalance(available: 30, currency: "CNY"),
+            spend: nil) == nil)
+        #expect(UsageMenuCardView.Model.balanceBadge(balance: nil, spend: spend) == nil)
+    }
+
+    @Test
+    func `openrouter key usage gives exact spend, a key limit and the free quota`() throws {
+        let now = Date(timeIntervalSince1970: 1_789_574_400) // Wed 2026-09-16 16:00 UTC
+        let keyJSON = """
+        {"data": {"label": "runic", "usage": 42.5, "limit": 50, "limit_remaining": 7.5, "limit_reset": "weekly",
+                  "usage_daily": 1.25, "usage_weekly": 6.5, "usage_monthly": 18.75, "is_free_tier": false,
+                  "free_model_daily_requests": {"used": 12, "limit": 50, "remaining": 38}}}
+        """
+        let keyInfo = try JSONDecoder().decode(OpenRouterKeyInfoResponse.self, from: Data(keyJSON.utf8))
+        let credits = try JSONDecoder().decode(
+            OpenRouterCreditsResponse.self,
+            from: Data(#"{"data": {"total_credits": 100, "total_usage": 60}}"#.utf8))
+        let snapshot = credits.toUsageSnapshot(keyInfo: keyInfo, now: now)
+
+        let reported = try #require(snapshot.balance?.reportedSpend)
+        #expect(reported == .init(today: 1.25, thisWeek: 6.5, thisMonth: 18.75, scope: "this key"))
+
+        let limit = try #require(snapshot.secondary)
+        #expect(limit.label == "Key limit")
+        #expect(limit.usedPercent == 85)
+        #expect(limit.windowMinutes == 10080)
+        // Next Monday 00:00 UTC after Wed Sep 16.
+        #expect(limit.resetsAt == Date(timeIntervalSince1970: 1_789_948_800))
+
+        let free = try #require(snapshot.tertiary)
+        #expect(free.label == "Free requests")
+        #expect(free.usedPercent == 24)
+        #expect(free.resetsAt == Date(timeIntervalSince1970: 1_789_603_200))
+
+        let spend = try BalanceSpendSummary.make(
+            reported: reported,
+            balance: #require(snapshot.balance),
+            samples: [],
+            now: now)
+        #expect(spend.spentToday == 1.25)
+        #expect(spend.monthIsPartial == false)
+        #expect(spend.scope == "this key")
+        // No readings yet: month-to-date over 15.67 elapsed days.
+        #expect(abs((spend.dailyBurnRate ?? 0) - 18.75 / (15 + 16.0 / 24)) < 0.0001)
+    }
+
+    @Test
+    func `legacy key payload without usage fields adds nothing`() throws {
+        let keyInfo = try JSONDecoder().decode(
+            OpenRouterKeyInfoResponse.self,
+            from: Data(#"{"data": {"label": "old", "usage": 3, "limit": null, "is_free_tier": true}}"#.utf8))
+        let credits = try JSONDecoder().decode(
+            OpenRouterCreditsResponse.self, from: Data(#"{"data": {"total_credits": 10, "total_usage": 3}}"#.utf8))
+        let snapshot = credits.toUsageSnapshot(keyInfo: keyInfo)
+        #expect(snapshot.secondary == nil)
+        #expect(snapshot.tertiary == nil)
+        #expect(snapshot.balance?.reportedSpend == nil)
+    }
+}
