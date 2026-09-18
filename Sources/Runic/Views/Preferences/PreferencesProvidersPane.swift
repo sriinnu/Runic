@@ -274,6 +274,7 @@ struct ProvidersPane: View {
             .openrouter,
             .vercelai,
             .groq,
+            .typesafe,
             .deepseek,
             .fireworks,
             .mistral,

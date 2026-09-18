@@ -237,6 +237,9 @@ enum UsageDebugCredentialCatalog {
         .groq: [
             .init(label: "groq", resolution: { ProviderTokenResolver.groqResolution() }),
         ],
+        .typesafe: [
+            .init(label: "typesafe", resolution: { ProviderTokenResolver.typeSafeResolution() }),
+        ],
         .deepseek: [
             .init(label: "deepseek", resolution: { ProviderTokenResolver.deepSeekResolution() }),
         ],

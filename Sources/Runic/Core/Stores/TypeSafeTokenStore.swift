@@ -1,0 +1,123 @@
+import Foundation
+import RunicCore
+import Security
+
+protocol TypeSafeTokenStoring: Sendable {
+    func loadToken() throws -> String?
+    func storeToken(_ token: String?) throws
+}
+
+enum TypeSafeTokenStoreError: LocalizedError {
+    case keychainStatus(OSStatus)
+    case invalidData
+
+    var errorDescription: String? {
+        switch self {
+        case let .keychainStatus(status):
+            "Keychain error: \(status)"
+        case .invalidData:
+            "Keychain returned invalid data."
+        }
+    }
+}
+
+struct KeychainTypeSafeTokenStore: TypeSafeTokenStoring {
+    private static let log = RunicLog.logger("typesafe-token-store")
+
+    private let service = RunicKeychainService.providerCredentials
+    private let account = "typesafe-api-token"
+
+    func loadToken() throws -> String? {
+        // Try standard keychain first.
+        if let token = try self.readToken(dataProtection: false) {
+            return token
+        }
+        // Migrate from the old Data Protection keychain if present.
+        if let token = try self.readToken(dataProtection: true) {
+            Self.log.info("Migrating TypeSafe token from Data Protection keychain")
+            // Store first, delete old only on success — prevents data loss.
+            if (try? self.storeToken(token)) != nil {
+                try? self.deleteToken(dataProtection: true)
+            }
+            return token
+        }
+        return nil
+    }
+
+    func storeToken(_ token: String?) throws {
+        let cleaned = token?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned == nil || cleaned?.isEmpty == true {
+            try? self.deleteToken(dataProtection: false)
+            try? self.deleteToken(dataProtection: true)
+            return
+        }
+
+        let normalized = cleaned!
+        if let current = try self.readToken(dataProtection: false), current == normalized {
+            return
+        }
+
+        let data = normalized.data(using: .utf8)!
+
+        // When the value changes, delete-then-add to ensure SecAccess ACL is set.
+        // SecItemUpdate does NOT update the ACL, so existing items with
+        // missing or stale ACLs would keep failing access after an app upgrade.
+        try? self.deleteToken(dataProtection: false)
+        try? self.deleteToken(dataProtection: true)
+
+        var addQuery = self.baseQuery(dataProtection: false)
+        addQuery[kSecValueData as String] = data
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+
+        let addStatus = RunicKeychainGate.add(addQuery as CFDictionary)
+        guard addStatus == errSecSuccess else {
+            Self.log.error("Keychain add failed: \(addStatus)")
+            throw TypeSafeTokenStoreError.keychainStatus(addStatus)
+        }
+    }
+
+    // MARK: - Private
+
+    private func readToken(dataProtection: Bool) throws -> String? {
+        var result: CFTypeRef?
+        var query = self.baseQuery(dataProtection: dataProtection)
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        query[kSecReturnData as String] = true
+        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
+
+        let status = RunicKeychainGate.copyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound || status == errSecInteractionNotAllowed {
+            return nil
+        }
+        guard status == errSecSuccess else {
+            Self.log.error("Keychain read failed: \(status)")
+            throw TypeSafeTokenStoreError.keychainStatus(status)
+        }
+        guard let data = result as? Data else {
+            throw TypeSafeTokenStoreError.invalidData
+        }
+        let token = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (token?.isEmpty ?? true) ? nil : token
+    }
+
+    private func deleteToken(dataProtection: Bool) throws {
+        var query = self.baseQuery(dataProtection: dataProtection)
+        RunicKeychainQuery.disallowAuthenticationUI(in: &query)
+        let status = RunicKeychainGate.delete(query as CFDictionary)
+        if status == errSecSuccess || status == errSecItemNotFound { return }
+        Self.log.error("Keychain delete failed: \(status)")
+        throw TypeSafeTokenStoreError.keychainStatus(status)
+    }
+
+    private func baseQuery(dataProtection: Bool) -> [String: Any] {
+        var q: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: self.service,
+            kSecAttrAccount as String: self.account,
+        ]
+        if dataProtection {
+            q[kSecUseDataProtectionKeychain as String] = true
+        }
+        return q
+    }
+}

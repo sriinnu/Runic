@@ -9,6 +9,7 @@ struct SettingsStoreCredentialValues {
     var openRouterAPIToken = ""
     var vercelAIAPIToken = ""
     var groqAPIToken = ""
+    var typeSafeAPIToken = ""
     var deepSeekAPIToken = ""
     var fireworksAPIToken = ""
     var mistralAPIToken = ""
@@ -107,6 +108,16 @@ extension SettingsStore {
             self.credentialValues.groqAPIToken = newValue
             self.schedulePersistGroqAPIToken()
             self.autoEnableProviderIfCredentialPresent(newValue, cliName: "groq")
+        }
+    }
+
+    /// TypeSafe (Jev) API key (stored in Keychain).
+    var typeSafeAPIToken: String {
+        get { self.credentialValues.typeSafeAPIToken }
+        set {
+            self.credentialValues.typeSafeAPIToken = newValue
+            self.schedulePersistTypeSafeAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "typesafe")
         }
     }
 
