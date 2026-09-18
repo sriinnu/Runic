@@ -61,6 +61,7 @@ enum RunicDiagnosticsReport {
         .openrouter: (\.openRouterAPIToken, "API key"),
         .vercelai: (\.vercelAIAPIToken, "Gateway API key"),
         .groq: (\.groqAPIToken, "API key"),
+        .typesafe: (\.typeSafeAPIToken, "API key"),
         .deepseek: (\.deepSeekAPIToken, "API key"),
         .fireworks: (\.fireworksAPIToken, "API key"),
         .mistral: (\.mistralAPIToken, "API key"),

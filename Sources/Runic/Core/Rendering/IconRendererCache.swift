@@ -90,6 +90,7 @@ extension IconRenderer {
         .qwen: 25,
         .vercelai: 26,
         .localLLM: 27,
+        .typesafe: 28,
         .combined: 99,
     ]
 

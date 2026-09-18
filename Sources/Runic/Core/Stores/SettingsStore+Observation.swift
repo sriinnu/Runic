@@ -82,6 +82,7 @@ extension SettingsStore {
         _ = self.openRouterAPIToken
         _ = self.vercelAIAPIToken
         _ = self.groqAPIToken
+        _ = self.typeSafeAPIToken
         _ = self.deepSeekAPIToken
         _ = self.fireworksAPIToken
         _ = self.mistralAPIToken

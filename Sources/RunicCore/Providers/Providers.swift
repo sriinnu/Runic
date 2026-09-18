@@ -37,6 +37,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case vertexai
     case qwen
     case qwenCN
+    case typesafe
     case localLLM = "local-llm"
 }
 
@@ -72,6 +73,7 @@ public enum IconStyle: Sendable, Hashable {
     case bedrock
     case vertexai
     case qwen
+    case typesafe
     case localLLM
     case combined
 }

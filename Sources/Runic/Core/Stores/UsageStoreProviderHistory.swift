@@ -74,6 +74,7 @@ struct UsageStoreProviderHistorySupport {
              .vertexai,
              .qwen,
              .qwenCN,
+             .typesafe,
              .localLLM:
             return self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:

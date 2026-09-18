@@ -76,6 +76,7 @@ struct ProviderSwitchChip: View {
         case .openrouter: "OR"
         case .vercelai: "Vercel"
         case .groq: "Groq"
+        case .typesafe: "TypeSafe"
         case .deepseek: "DeepSeek"
         case .fireworks: "Fireworks"
         case .mistral: "Mistral"

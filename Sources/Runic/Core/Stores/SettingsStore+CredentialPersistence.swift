@@ -126,6 +126,18 @@ extension SettingsStore {
         }
     }
 
+    func schedulePersistTypeSafeAPIToken() {
+        self.credentialPersistTasks.typeSafe?.cancel()
+        let tokenStore = self.credentialStores.typeSafe
+        self.credentialPersistTasks.typeSafe = self.makeCredentialPersistTask(
+            value: self.typeSafeAPIToken,
+            loggerName: "typesafe-token-store",
+            failureMessage: "Failed to persist TypeSafe token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
     func schedulePersistDeepSeekAPIToken() {
         self.credentialPersistTasks.deepSeek?.cancel()
         let tokenStore = self.credentialStores.deepSeek

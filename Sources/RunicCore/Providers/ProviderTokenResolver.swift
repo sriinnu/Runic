@@ -48,6 +48,7 @@ public enum ProviderTokenResolver {
     private static let xaiAccount = "xai-api-token"
     private static let cerebrasAccount = "cerebras-api-token"
     private static let sambanovaAccount = "sambanova-api-token"
+    private static let typeSafeAccount = "typesafe-api-token"
     private static let azureOpenAIAccount = "azure-openai-api-token"
     private static let qwenAccount = "qwen-api-token"
     private static let qwenCNAccount = "qwen-cn-api-token"
@@ -97,6 +98,12 @@ public enum ProviderTokenResolver {
 
     public static func groqToken(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         self.groqResolution(environment: environment)?.token
+    }
+
+    public static func typeSafeToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.typeSafeResolution(environment: environment)?.token
     }
 
     public static func deepSeekToken(
@@ -310,6 +317,23 @@ public enum ProviderTokenResolver {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
         if let token = self.cleaned(environment["GROQ_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    /// TypeSafe ships its key as `TYPESAFE_API_KEY`, but the key is commonly
+    /// stored under the model's name (`JEV_API_KEY`) — accept both.
+    public static func typeSafeResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.typeSafeAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["TYPESAFE_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        if let token = self.cleaned(environment["JEV_API_KEY"]) {
             return ProviderTokenResolution(token: token, source: .environment)
         }
         return nil
@@ -590,6 +614,7 @@ public enum ProviderTokenResolver {
         .openrouter: { ProviderTokenResolver.openRouterResolution(environment: $0) },
         .vercelai: { ProviderTokenResolver.vercelAIResolution(environment: $0) },
         .groq: { ProviderTokenResolver.groqResolution(environment: $0) },
+        .typesafe: { ProviderTokenResolver.typeSafeResolution(environment: $0) },
         .deepseek: { ProviderTokenResolver.deepSeekResolution(environment: $0) },
         .fireworks: { ProviderTokenResolver.fireworksResolution(environment: $0) },
         .mistral: { ProviderTokenResolver.mistralResolution(environment: $0) },

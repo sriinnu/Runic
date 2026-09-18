@@ -28,6 +28,7 @@ struct SettingsStoreCredentialStores {
     let qwen: any QwenTokenStoring
     let qwenCN: any QwenCNTokenStoring
     let azureOpenAI: any AzureOpenAITokenStoring
+    let typeSafe: any TypeSafeTokenStoring
 }
 
 extension SettingsStore {
@@ -59,7 +60,8 @@ extension SettingsStore {
         sambaNovaTokenStore: any SambaNovaTokenStoring = KeychainSambaNovaTokenStore(),
         qwenTokenStore: any QwenTokenStoring = KeychainQwenTokenStore(),
         qwenCNTokenStore: any QwenCNTokenStoring = KeychainQwenCNTokenStore(),
-        azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore())
+        azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore(),
+        typeSafeTokenStore: any TypeSafeTokenStoring = KeychainTypeSafeTokenStore())
     {
         self.init(
             userDefaults: userDefaults,
@@ -90,7 +92,8 @@ extension SettingsStore {
                 sambaNova: sambaNovaTokenStore,
                 qwen: qwenTokenStore,
                 qwenCN: qwenCNTokenStore,
-                azureOpenAI: azureOpenAITokenStore))
+                azureOpenAI: azureOpenAITokenStore,
+                typeSafe: typeSafeTokenStore))
     }
 }
 
@@ -103,6 +106,7 @@ struct SettingsStoreCredentialPersistTasks {
     var openRouter: Task<Void, Never>?
     var vercelAI: Task<Void, Never>?
     var groq: Task<Void, Never>?
+    var typeSafe: Task<Void, Never>?
     var deepSeek: Task<Void, Never>?
     var fireworks: Task<Void, Never>?
     var mistral: Task<Void, Never>?
