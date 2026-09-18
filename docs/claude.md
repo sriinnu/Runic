@@ -23,9 +23,30 @@ Claude supports three usage data paths plus local cost usage relay. Source selec
 - Web extras are internal-only (not exposed in the Providers pane).
 
 ## OAuth API (preferred)
-- Credentials:
-  - Keychain service: `Claude Code-credentials` (primary on macOS).
+- Credentials, in order:
+  - Runic's own cached copy: service `com.sriinnu.athena.Runic.provider-credentials.v2`, account `claude-oauth-cache` (access token + expiry + scopes + tier; **no refresh token**).
+  - Keychain service: `Claude Code-credentials` (written by the CLI), read with user interaction suppressed.
   - File fallback: `~/.claude/.credentials.json`.
+
+### Why the cache exists
+`Claude Code-credentials` belongs to the Claude CLI, so its Keychain ACL trusts
+that binary and not Runic. Every read from the app can raise the "Runic wants to
+use your confidential information" dialog, and because the ACL is bound to the
+exact binary, a rebuilt Runic prompts again — and the CLI rewrites the item on
+each token refresh, which drops any grant that was given. Worse, in a headless
+process the dialog has nobody to click and `SecItemCopyMatching` blocks.
+
+So the refresh path never touches the CLI's item without a guard:
+`ClaudeKeychainInteraction.withoutUserInteraction` wraps the read in
+`SecKeychainSetUserInteractionAllowed(false)` (deprecated, but the only API that
+turns off the legacy ACL dialog — `kSecUseAuthenticationUI: fail` only covers
+biometry/passcode items), so it fails fast instead of prompting or hanging. On a
+successful read the credentials are copied into Runic's own item, which the app
+owns and is never prompted for.
+
+`ClaudeOAuthCredentialsStore.loadAllowingInteraction()` is the one path that may
+prompt. It runs after a user-initiated `claude login`, where a single dialog is
+expected, and refills the cache.
 - Requires `user:profile` scope (CLI tokens with only `user:inference` cannot call usage).
 - Endpoint:
   - `GET https://api.anthropic.com/api/oauth/usage`
