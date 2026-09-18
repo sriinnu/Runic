@@ -19,6 +19,28 @@ struct KeychainQueryPolicyTests {
     }
 
     @Test
+    func `suppressing keychain interaction restores the previous setting`() {
+        var before: DarwinBoolean = true
+        #expect(SecKeychainGetUserInteractionAllowed(&before) == errSecSuccess)
+
+        let value = ClaudeKeychainInteraction.withoutUserInteraction { 42 }
+
+        #expect(value == 42)
+        var after: DarwinBoolean = false
+        #expect(SecKeychainGetUserInteractionAllowed(&after) == errSecSuccess)
+        #expect(after.boolValue == before.boolValue)
+    }
+
+    @Test
+    func `claude oauth cache stays empty in an unsigned process`() {
+        // The access policy keeps ad-hoc builds (tests included) off the login
+        // keychain, so the cache must degrade to "no cached credentials"
+        // instead of touching the user's real items.
+        #expect(!RunicKeychainAccessPolicy.processMayUseKeychain)
+        #expect(ClaudeOAuthCredentialCache.load() == nil)
+    }
+
+    @Test
     func `RunicCore background keychain queries fail instead of prompting`() throws {
         var query: [String: Any] = [:]
 

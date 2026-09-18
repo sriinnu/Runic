@@ -109,12 +109,36 @@ public enum ClaudeOAuthCredentialsStore {
     private static let credentialsPath = ".claude/.credentials.json"
     private static let keychainService = "Claude Code-credentials"
 
+    /// Background refreshes must never raise a Keychain dialog: the CLI's item
+    /// is ACL-bound to the CLI, so reading it from the app prompts, and the CLI
+    /// rewrites the item on every token refresh, which drops any grant the user
+    /// gave. `load()` therefore reads Runic's own cached copy first and only
+    /// touches the CLI's item with user interaction suppressed.
+    ///
+    /// `loadAllowingInteraction()` is the explicit escape hatch for a button the
+    /// user pressed — it may prompt once, and re-fills the cache when it works.
     public static func load() throws -> ClaudeOAuthCredentials {
+        if let cached = ClaudeOAuthCredentialCache.load() {
+            return cached
+        }
+        return try self.loadFromSources(allowUserInteraction: false)
+    }
+
+    public static func loadAllowingInteraction() throws -> ClaudeOAuthCredentials {
+        try self.loadFromSources(allowUserInteraction: true)
+    }
+
+    private static func loadFromSources(allowUserInteraction: Bool) throws -> ClaudeOAuthCredentials {
         // Prefer Keychain (CLI writes there on macOS), but fall back to the JSON file when missing.
         var lastError: Error?
-        if let keychainData = try? self.loadFromKeychain() {
+        let keychainData = allowUserInteraction
+            ? try? self.loadFromKeychain()
+            : ClaudeKeychainInteraction.withoutUserInteraction { try? self.loadFromKeychain() }
+        if let keychainData {
             do {
-                return try ClaudeOAuthCredentials.parse(data: keychainData)
+                let credentials = try ClaudeOAuthCredentials.parse(data: keychainData)
+                ClaudeOAuthCredentialCache.store(credentials)
+                return credentials
             } catch {
                 // Keep the Keychain parse error so we can surface it if the file is also invalid.
                 lastError = error
@@ -122,7 +146,9 @@ public enum ClaudeOAuthCredentialsStore {
         }
         do {
             let fileData = try self.loadFromFile()
-            return try ClaudeOAuthCredentials.parse(data: fileData)
+            let credentials = try ClaudeOAuthCredentials.parse(data: fileData)
+            ClaudeOAuthCredentialCache.store(credentials)
+            return credentials
         } catch {
             if let lastError { throw lastError }
             throw error
