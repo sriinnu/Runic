@@ -3,24 +3,31 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.8.0</title>
+            <pubDate>Sat, 19 Sep 2026 16:04:57 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>125</sparkle:version>
+            <sparkle:shortVersionString>2.8.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.8.0</h2>
+<ul>
+<li>TypeSafe: a provider for the vendor of the Jev System One model. Its API has no usage or billing endpoint — a live key answers <code>GET /v1/models</code> and nothing else, and a completed call reports only that call's own tokens back to the caller — so the card shows key health and available models, and the dashboard link goes to the console's Usage page. The key resolves from the Keychain first, then <code>TYPESAFE_API_KEY</code>, then <code>JEV_API_KEY</code>, since the key is often filed under the model's name.</li>
+<li>Claude: the Keychain dialog no longer comes back after every rebuild. <code>Claude Code-credentials</code> belongs to the Claude CLI, so its access rules trust that binary and not Runic, and the permission you grant is tied to the exact build — and the CLI drops it again each time it refreshes its token. Runic now keeps its own copy of the access token (never the refresh token), which it owns and is never asked about, and the CLI's item is only read with the dialog suppressed, so a background refresh fails quietly to the file fallback instead of asking or hanging. The one prompt left comes right after you sign in with <code>claude login</code> yourself.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.0/Runic-2.8.0.zip" length="36485052" type="application/octet-stream" sparkle:edSignature="JNlGndIvcRyKawSDbcrSstidXdwq2T1cLI/cgLDY6CnEJ5LTpThBKxByJkf0Yr7zvdXRg8Gx1K5pggFHf22KCA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.0/Runic125-121.delta" sparkle:deltaFrom="121" length="4791810" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="vVo6RQIZHmysD4G90PjrXUvul9OAQWDwYaSlJOhOHBbwcGNifw1CynVcapUDsGm2CEwE8K8+d+KyfsQMBo11CA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.7.3</title>
             <pubDate>Wed, 16 Sep 2026 17:48:02 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>121</sparkle:version>
             <sparkle:shortVersionString>2.7.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.7.3</h2>
-<ul>
-<li>Release: 2.7.2 shipped the 2.7.1 app binary. Swift 6.4 writes builds to <code>.build/out/Products/Release</code>, and the packaging scripts kept copying the per-architecture folders it no longer updates. 2.7.3 is the first build that actually contains the 2.7.2 fixes (every-region Refresh, region-aware dashboard, status and export). Packaging now takes paths from SwiftPM, builds all architectures in one pass, refuses an app binary older than its sources, and the release checks that the dSYM and the signed binary have the same UUIDs.</li>
-<li>Balances: prepaid providers (Kimi, Kimi China, DeepSeek, OpenRouter, Vercel AI, StepFun) show a proper Balance row, "¥110.04 · ¥85.04 paid · ¥25.00 bonus", with a currency symbol only where the platform fixes one (api.moonshot.cn = CNY, api.moonshot.ai = USD, DeepSeek reports its own, OpenRouter = USD). Balance APIs return a snapshot only, so Runic records every reading (62 days) and derives a Spend row: spent today and this month (top-ups excluded), the 7-day burn rate, and runway ("~1.2 days left at ¥89/day"). Totals cover the time Runic was recording and say "tracked since" when that started mid-period.</li>
-<li>Balances: a Top up badge and "API calls blocked · top up to resume" when calls will fail (DeepSeek's <code>is_available</code>, or a balance at or below zero), and a Low balance badge when the recent burn rate empties it within a day.</li>
-<li>OpenRouter: exact spend for the UTC day and month from <code>GET /api/v1/key</code> replaces the estimate ("this key"); a key spending limit becomes a gauge with its reset; the free-model daily request quota becomes its own bar.</li>
-<li>Kimi: a Kimi Code subscription key (rejected by the Open Platform balance endpoint) falls back to Kimi Code plan usage (<code>api.kimi.com/coding/v1/usages</code>): 5h, weekly and monthly windows with reset times.</li>
-<li>Kimi China: kimi-k3 usage routed through Claude Code (attributed to Kimi by model name, which carries no region) shows on the China account when that's the one enabled, instead of being dropped with the disabled international slot.</li>
-<li>Tests no longer leave a preferences file behind for every settings store they build.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.3/Runic-2.7.3.zip" length="36357398" type="application/octet-stream" sparkle:edSignature="1FtiaN1sNjckZt28DlnqxyqNqLQ2Y5UfIM6ZPfrr29kz7lA9Xw+iav8wNhjs/l29XhaRC+1soplMt7uKXBSyCQ=="/>
         </item>
         <item>
@@ -44,22 +51,6 @@
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-98.delta" sparkle:deltaFrom="98" length="8349558" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="IWuDlTDbmUr0AWD0PKT1b6UxWGUekzuomup2k2WNN8XSg/TtuhklAK2J/7yNlNr7GbHufge8GiZbOgBoOsDRDA=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-97.delta" sparkle:deltaFrom="97" length="8365858" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="brQpNnKAlcFCPxrifhDNp1nBsCjxaNR2fRuq4HcBMaKWLJ3VFr+1MQOJ4yyfPaWmDNHXMBegHXQglvz6anrqBg=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.2/Runic115-96.delta" sparkle:deltaFrom="96" length="8409306" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="VYVlB7lSPv4xm1Q1MiD4SyvPg97yRKbKqwYIrOZlEzwQ6u/JOOrk6uDjtISMraqHOQPGa0WtnUrSuUhXpQXSCA=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.7.1</title>
-            <pubDate>Sat, 12 Sep 2026 22:16:50 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>112</sparkle:version>
-            <sparkle:shortVersionString>2.7.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic-2.7.1.zip" length="36395216" type="application/octet-stream" sparkle:edSignature="3Ado/mamx1Is+8+eYh0R5h11wO9y9mwINg/seiWMxBpYKAbh00XTxhSoOSVxgXNLrtXGbGOHBYLpHqLXgQr3Ag=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic112-107.delta" sparkle:deltaFrom="107" length="6684206" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="IQfMXh8AVDPg0zcFmhwym7zZ9PkVgmeG9tx9iY4LEh04bzozlj3G8RVTkdtcoVfwdIWJFJ0Czv0hYPdgoNerDg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic112-98.delta" sparkle:deltaFrom="98" length="8363274" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="PRtkLOosL8Bw8bC3+YmeBI/PsPwjW/mf3+jm+RbO+fRfDHu/fjDiozYbgcdKTcvKRWZj8FA7AvoDsHOyShemBg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic112-97.delta" sparkle:deltaFrom="97" length="8360938" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="JD3L+VPd84yO5Hm2DxNv6rX6lszYc0ak6RtWW0ddIOTdv/OiXXA9iAb6paxUBGpVaHsrcZFSvDiQ8uc7RMXwCQ=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic112-96.delta" sparkle:deltaFrom="96" length="8422314" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="eTJSthBrJqsPKB3eY0s2RFGwNt6C1oGhbt3ek/UQvvuWnk/OpxQlnXcrxHpJfsyDmtEPH47LOWrc+6hQJeGbBA=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.1/Runic112-83.delta" sparkle:deltaFrom="83" length="9368350" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="5Fp+W8C1F8hnDTemCV2VTNLtaYj8574mwvIGf+TIXgmKBVUG4Lxk83ZQDpKfuTaXLIkvC6mfzm2x1yK+e2U0Dw=="/>
             </sparkle:deltas>
         </item>
         <item>
