@@ -30,6 +30,7 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, `openT
 | Qwen / Qwen (China) | API key (Keychain/env) → DashScope usage API (`api`, plan-dependent: token/coding plans 404 and usage comes from coding-tool logs); optional base URL per slot. |
 | StepFun / StepFun (China) | API key (Keychain/env) → `/v1/accounts` balance on `api.stepfun.ai` / `api.stepfun.com` (`api`; response parsed defensively). |
 | DeepSeek | API key (Keychain/env) → balance API (`api`). |
+| TypeSafe | API key (Keychain/env `TYPESAFE_API_KEY` or `JEV_API_KEY`) → `GET /v1/models` (`api`). The published OpenAPI spec has exactly two endpoints and neither reports spend, so this is key health and model inventory only; account totals exist solely in the web console. |
 | opencode | Local session logs (`local`); history-only, no live gauge. |
 | Local LLM | Local runtime probe for Ollama/LM Studio/vLLM/llama.cpp/Open WebUI (`local`); usage comes from OpenTelemetry GenAI or local logs when configured. |
 
