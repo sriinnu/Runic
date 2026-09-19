@@ -33,7 +33,7 @@ This doc describes the **current provider architecture** (post-macro registry) a
   - `ProviderDescriptor` owns labels, URLs, default enablement, and fetch pipeline.
   - `ProviderFetchStrategy` objects implement concrete fetch paths.
   - CLI + app both call the same descriptor/fetch pipeline.
-- Dynamic capability labels are not descriptor constants. Runic reads Kosha-discovery 1.2.0's schema-v1 manifest at `~/.kosha/registry.json` when available, treats records older than 24 hours as stale, and then falls back to `Resources/provider-context-windows.json`.
+- Dynamic capability labels are not descriptor constants. Runic reads Kosha-discovery 1.5.1's schema-v1 manifest at `~/.kosha/registry.json` when available, treats records older than 24 hours as stale, and then falls back to `Resources/provider-context-windows.json`.
 
 Common building blocks already exist:
 - PTY: `TTYCommandRunner`

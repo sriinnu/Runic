@@ -36,7 +36,7 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, `openT
 
 ## Capability metadata
 
-Usage fetch strategies answer "what did this account use?" Capability metadata answers "what can this model/provider support?" Runic reads Kosha-discovery 1.2.0's local schema-v1 registry at `~/.kosha/registry.json` for model context windows when available, marks records older than 24 hours as stale, and falls back to `Sources/Runic/Resources/provider-context-windows.json`. It does not call provider APIs from menu rendering.
+Usage fetch strategies answer "what did this account use?" Capability metadata answers "what can this model/provider support?" Runic reads Kosha-discovery 1.5.1's local schema-v1 registry at `~/.kosha/registry.json` for model context windows when available, marks records older than 24 hours as stale, and falls back to `Sources/Runic/Resources/provider-context-windows.json`. It does not call provider APIs from menu rendering.
 
 ## Shared usage ledger
 
