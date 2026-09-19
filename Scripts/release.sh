@@ -15,6 +15,7 @@ TAG="v${MARKETING_VERSION}"
 
 require_clean_worktree
 ensure_changelog_finalized "$MARKETING_VERSION"
+ensure_package_version "$MARKETING_VERSION"
 ensure_appcast_monotonic "$APPCAST" "$MARKETING_VERSION" "$BUILD_NUMBER"
 
 CURRENT_BRANCH=$(git branch --show-current)
@@ -60,9 +61,14 @@ SPARKLE_PRIVATE_KEY_FILE="$KEY_FILE" \
 
 verify_appcast_entry "$APPCAST" "$MARKETING_VERSION" "$KEY_FILE"
 
+# The appcast now points at deltas that only exist locally; attach them to the
+# release before anyone reads it.
+upload_deltas "$TAG" "$APP_NAME"
+check_appcast_deltas "$APPCAST" "$TAG" "$BUILD_NUMBER"
+
 git add "$APPCAST"
 git commit -m "docs: update appcast for ${MARKETING_VERSION}"
-git push origin main
+push_appcast_commit "$MARKETING_VERSION"
 
 if [[ "${RUN_SPARKLE_UPDATE_TEST:-0}" == "1" ]]; then
   PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')

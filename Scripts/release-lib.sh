@@ -212,3 +212,96 @@ check_assets() {
 
   echo "Release assets verified for $tag: $app_zip, $dsym_zip"
 }
+
+# package.json is `"private": true` — nothing publishes it, and npm is not part
+# of the release. Its version field is still kept in step with version.env by
+# convention, and without a check it drifts silently: the manifest sat at 2.0.0
+# from March to September while the app shipped eight versions past it.
+ensure_package_version() {
+  local version="$1"
+  local manifest="${2:-package.json}"
+
+  [[ -f "$manifest" ]] || return 0
+  local current
+  current=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("version",""))' \
+    "$manifest" 2>/dev/null || true)
+  [[ -n "$current" ]] || err "Could not read a version from $manifest"
+  if [[ "$current" != "$version" ]]; then
+    err "$manifest says $current but version.env says $version. Bump them together."
+  fi
+}
+
+# generate_appcast writes Runic<new>-<old>.delta into the repo root and the
+# appcast points at them on this release. `gh release create` uploads only the
+# zip and dSYM, so without this the delta URLs 404 and clients silently fall
+# back to the full download — every release so far needed this by hand.
+upload_deltas() {
+  local tag="$1"
+  local prefix="${2:-Runic}"
+
+  require_command gh
+  shopt -s nullglob
+  local deltas=("${prefix}"*.delta)
+  shopt -u nullglob
+
+  if [[ ${#deltas[@]} -eq 0 ]]; then
+    echo "No deltas generated for $tag (clients get the full zip)."
+    return 0
+  fi
+  gh release upload "$tag" "${deltas[@]}" --clobber
+  echo "Uploaded ${#deltas[@]} delta(s) to $tag: ${deltas[*]}"
+}
+
+# Only this release's deltas are checked: older appcast entries point at deltas
+# attached to their own releases. Names encode the build (Runic125-121.delta).
+check_appcast_deltas() {
+  local appcast="$1"
+  local tag="$2"
+  local build="$3"
+
+  require_command gh
+  local referenced
+  referenced=$(grep -oE "Runic${build}-[0-9]+\.delta" "$appcast" | sort -u || true)
+  [[ -n "$referenced" ]] || return 0
+
+  local assets
+  assets=$(gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null || true)
+  local missing=()
+  while IFS= read -r delta; do
+    [[ -n "$delta" ]] || continue
+    printf "%s\n" "$assets" | grep -Fxq "$delta" || missing+=("$delta")
+  done <<<"$referenced"
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "WARN: appcast references deltas missing from $tag: ${missing[*]}" >&2
+    echo "WARN: clients fall back to the full zip. Fix: gh release upload $tag ${missing[*]}" >&2
+    return 0
+  fi
+  echo "Appcast deltas verified against $tag."
+}
+
+# main requires pull requests, so the appcast commit can never be pushed
+# directly: the release stopped here and was finished by hand every time. The
+# branch and PR are made here; merging stays a human decision.
+push_appcast_commit() {
+  local version="$1"
+  local branch="appcast/${version}"
+
+  if git push origin main 2>/dev/null; then
+    echo "Appcast pushed to main."
+    return 0
+  fi
+
+  echo "Direct push to main refused (branch ruleset); opening a PR instead." >&2
+  require_command gh
+  local sha
+  sha=$(git rev-parse HEAD)
+  git fetch -q origin main
+  git branch -f "$branch" "$sha"
+  git reset --hard origin/main
+  git push -f -q origin "$branch"
+  gh pr create --head "$branch" \
+    --title "docs: update appcast for ${version}" \
+    --body "Appcast entry for ${version}, written by release.sh. main refuses direct pushes, so the release routes this commit through a PR."
+  echo "Appcast PR opened from $branch — review and merge it to finish the release." >&2
+}
