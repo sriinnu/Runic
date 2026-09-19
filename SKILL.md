@@ -67,7 +67,7 @@ Use `./Scripts/compile_and_run.sh --wait` when the user needs a locally installe
 
 ## Context Metadata
 
-Runic prefers Kosha-discovery 1.5.1's local TTL-backed registry at `~/.kosha/registry.json` for model/provider context capacity metadata. If that registry is missing or stale, Runic falls back to `Sources/Runic/Resources/provider-context-windows.json`.
+Runic prefers Kosha-discovery 1.6.0's local TTL-backed registry at `~/.kosha/registry.json` for model/provider context capacity metadata. If that registry is missing or stale, Runic falls back to `Sources/Runic/Resources/provider-context-windows.json`.
 
 Context labels mean advertised or configured model capacity. They do not prove that all earlier conversation content is semantically retained after provider-side summarization or compaction.
 
