@@ -47,6 +47,7 @@ public enum ClaudeWebAPIFetcher {
         if let name = organization.name { log("Organization name: \(name)") }
 
         var usage = try await fetchUsageData(orgId: organization.id, sessionKey: sessionKey, logger: log)
+        let resetCredits = usage.resetCredits
         if usage.extraUsageCost == nil,
            let extra = await fetchExtraUsageCost(orgId: organization.id, sessionKey: sessionKey, logger: log)
         {
@@ -85,6 +86,7 @@ public enum ClaudeWebAPIFetcher {
                 accountEmail: usage.accountEmail,
                 loginMethod: usage.loginMethod)
         }
+        usage.resetCredits = resetCredits
         return usage
     }
 
