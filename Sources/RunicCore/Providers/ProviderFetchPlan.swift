@@ -123,7 +123,8 @@ public enum ProviderFetchError: LocalizedError, Sendable {
             }
             if provider == .claude {
                 return "No non-interactive Claude credentials found. " +
-                    "Runic skipped automatic Claude CLI probing because it can trigger macOS password prompts."
+                    "If you signed in again with `claude /login`, press the reload button (↻) on Claude " +
+                    "in Settings → Providers so Runic can re-read the new token (one Keychain prompt)."
             }
             return "No available fetch strategy for \(provider.rawValue)."
         case .missingCredentials:

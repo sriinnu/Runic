@@ -47,6 +47,7 @@ struct ProviderSidebarDetailView: View {
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Spacer()
+                            ProviderReloadButton(provider: self.provider, store: self.store, isEnabled: self.isEnabled)
                             // Paper owns its switch (the pill); other themes
                             // keep the native switch here since it is the
                             // one place a switch, not a checkbox, is right.

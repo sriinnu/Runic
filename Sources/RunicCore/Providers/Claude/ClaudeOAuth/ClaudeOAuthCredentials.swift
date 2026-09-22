@@ -128,6 +128,43 @@ public enum ClaudeOAuthCredentialsStore {
         try self.loadFromSources(allowUserInteraction: true)
     }
 
+    /// User-initiated reload (the provider reload button). Re-reads the CLI's
+    /// item — at most one Keychain dialog — only when Runic's copy is missing
+    /// or older than the item, e.g. after a `/login` in the terminal. When the
+    /// copy is current this is a no-op and never prompts.
+    @discardableResult
+    public static func reloadIfSourceChanged() -> Bool {
+        let cachedAt = ClaudeOAuthCredentialCache.cachedAt()
+        let cacheUsable = ClaudeOAuthCredentialCache.load() != nil
+        if cacheUsable, let cachedAt {
+            guard let modified = self.keychainItemModifiedAt(), modified > cachedAt else { return false }
+        }
+        guard (try? self.loadAllowingInteraction()) != nil else { return false }
+        return true
+    }
+
+    /// Modification date of the CLI's Keychain item. Attributes only — no
+    /// secret is decrypted, so this never raises the ACL dialog.
+    public static func keychainItemModifiedAt() -> Date? {
+        #if os(macOS)
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: self.keychainService,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecReturnAttributes as String: true,
+        ]
+        RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
+        var result: AnyObject?
+        let status = ClaudeKeychainInteraction.withoutUserInteraction {
+            RunicKeychainGate.copyMatching(query as CFDictionary, &result)
+        }
+        guard status == errSecSuccess, let attributes = result as? [String: Any] else { return nil }
+        return attributes[kSecAttrModificationDate as String] as? Date
+        #else
+        return nil
+        #endif
+    }
+
     private static func loadFromSources(allowUserInteraction: Bool) throws -> ClaudeOAuthCredentials {
         // Prefer Keychain (CLI writes there on macOS), but fall back to the JSON file when missing.
         var lastError: Error?

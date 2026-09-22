@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.1 — Unreleased
+- Settings → Providers: every provider has a reload button (↻). It re-fetches that provider right away, and for Claude it first checks whether the CLI's Keychain item changed since Runic last copied the token, for example after a `claude /login` in the terminal. If it did, Runic re-reads it (one Keychain dialog, because you pressed the button) instead of failing with "No non-interactive Claude credentials found". The check reads only the item's modification date, so pressing reload with a current token never prompts.
+
 ## 2.8.0 — 2026-09-19
 - TypeSafe: a provider for the vendor of the Jev System One model. Its API has no usage or billing endpoint — a live key answers `GET /v1/models` and nothing else, and a completed call reports only that call's own tokens back to the caller — so the card shows key health and available models, and the dashboard link goes to the console's Usage page. The key resolves from the Keychain first, then `TYPESAFE_API_KEY`, then `JEV_API_KEY`, since the key is often filed under the model's name.
 - Claude: the Keychain dialog no longer comes back after every rebuild. `Claude Code-credentials` belongs to the Claude CLI, so its access rules trust that binary and not Runic, and the permission you grant is tied to the exact build — and the CLI drops it again each time it refreshes its token. Runic now keeps its own copy of the access token (never the refresh token), which it owns and is never asked about, and the CLI's item is only read with the dialog suppressed, so a background refresh fails quietly to the file fallback instead of asking or hanging. The one prompt left comes right after you sign in with `claude login` yourself.
