@@ -66,6 +66,8 @@ extension ClaudeWebAPIFetcher {
         public let accountOrganization: String?
         public let accountEmail: String?
         public let loginMethod: String?
+        /// Banked limit resets from the `cedar_ember` block, when requested.
+        public var resetCredits: UsageResetCredits?
 
         public init(
             sessionPercentUsed: Double,

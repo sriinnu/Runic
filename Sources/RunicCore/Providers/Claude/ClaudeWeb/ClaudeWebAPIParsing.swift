@@ -90,7 +90,7 @@ extension ClaudeWebAPIFetcher {
             }
         }
 
-        return WebUsageData(
+        var usage = WebUsageData(
             sessionPercentUsed: sessionPercent,
             sessionResetsAt: sessionResets,
             weeklyPercentUsed: weeklyPercent,
@@ -100,6 +100,16 @@ extension ClaudeWebAPIFetcher {
             accountOrganization: nil,
             accountEmail: nil,
             loginMethod: nil)
+        usage.resetCredits = Self.parseLimitResets(data)
+        return usage
+    }
+
+    static func parseLimitResets(_ data: Data) -> UsageResetCredits? {
+        struct Envelope: Decodable {
+            let cedarEmber: ClaudeLimitResetStatus?
+            enum CodingKeys: String, CodingKey { case cedarEmber = "cedar_ember" }
+        }
+        return (try? JSONDecoder().decode(Envelope.self, from: data))?.cedarEmber?.resetCredits()
     }
 
     /// The API reports `utilization` as a number that may be integral (45) or

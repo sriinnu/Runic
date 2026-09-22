@@ -2,6 +2,7 @@
 
 ## 2.8.1 — Unreleased
 - Settings → Providers: every provider has a reload button (↻). It re-fetches that provider right away, and for Claude it first checks whether the CLI's Keychain item changed since Runic last copied the token, for example after a `claude /login` in the terminal. If it did, Runic re-reads it (one Keychain dialog, because you pressed the button) instead of failing with "No non-interactive Claude credentials found". The check reads only the item's modification date, so pressing reload with a current token never prompts.
+- Claude: banked limit resets show up next to Codex's. claude.ai grants one-off "reset your limits" credits (the Opus 5.5 launch gave Pro and Max one, usable until Oct 22). The usage endpoint only includes them when asked with `cedar_ember=1`, so Runic now sends that flag on both the OAuth and web requests and shows each reset with its expiry on the card, the Resets panel and the menu. Runic only displays them; redeem one on claude.ai.
 
 ## 2.8.0 — 2026-09-19
 - TypeSafe: a provider for the vendor of the Jev System One model. Its API has no usage or billing endpoint — a live key answers `GET /v1/models` and nothing else, and a completed call reports only that call's own tokens back to the caller — so the card shows key health and available models, and the dashboard link goes to the console's Usage page. The key resolves from the Keychain first, then `TYPESAFE_API_KEY`, then `JEV_API_KEY`, since the key is often filed under the model's name.

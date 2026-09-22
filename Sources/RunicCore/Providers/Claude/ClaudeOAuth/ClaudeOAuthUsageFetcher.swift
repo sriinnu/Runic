@@ -32,7 +32,9 @@ enum ClaudeOAuthUsageFetcher {
     private static let betaHeader = "oauth-2025-04-20"
 
     static func fetchUsage(accessToken: String) async throws -> OAuthUsageResponse {
-        guard let url = URL(string: baseURL + usagePath) else {
+        var components = URLComponents(string: baseURL + self.usagePath)
+        components?.queryItems = [ClaudeLimitResetStatus.queryItem]
+        guard let url = components?.url else {
             throw ClaudeOAuthFetchError.invalidResponse
         }
 
@@ -93,6 +95,8 @@ struct OAuthUsageResponse: Decodable {
     /// Newer payloads carry every limit as a list, including model-scoped
     /// weekly windows (`kind: "weekly_scoped"`, `scope.model.display_name`).
     let limits: [OAuthLimitEntry]?
+    /// Banked limit resets; present only when requested with `cedar_ember=1`.
+    let cedarEmber: ClaudeLimitResetStatus?
 
     enum CodingKeys: String, CodingKey {
         case fiveHour = "five_hour"
@@ -103,6 +107,7 @@ struct OAuthUsageResponse: Decodable {
         case iguanaNecktie = "iguana_necktie"
         case extraUsage = "extra_usage"
         case limits
+        case cedarEmber = "cedar_ember"
     }
 }
 

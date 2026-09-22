@@ -16,6 +16,8 @@ public struct ClaudeUsageSnapshot: Sendable {
     public let accountOrganization: String?
     public let loginMethod: String?
     public let rawText: String?
+    /// Banked "reset your limits" grants, when the source reports them.
+    public let resetCredits: UsageResetCredits?
 
     public init(
         primary: RateWindow,
@@ -26,8 +28,10 @@ public struct ClaudeUsageSnapshot: Sendable {
         accountEmail: String?,
         accountOrganization: String?,
         loginMethod: String?,
-        rawText: String?)
+        rawText: String?,
+        resetCredits: UsageResetCredits? = nil)
     {
+        self.resetCredits = resetCredits
         self.primary = primary
         self.secondary = secondary
         self.opus = opus
@@ -291,7 +295,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             accountEmail: nil,
             accountOrganization: nil,
             loginMethod: Self.inferPlan(rateLimitTier: credentials.rateLimitTier),
-            rawText: nil)
+            rawText: nil,
+            resetCredits: usage.cedarEmber?.resetCredits())
     }
 
     /// A model-scoped weekly limit from the `limits` list (a promotional
@@ -375,7 +380,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             accountEmail: webData.accountEmail,
             accountOrganization: webData.accountOrganization,
             loginMethod: webData.loginMethod,
-            rawText: nil)
+            rawText: nil,
+            resetCredits: webData.resetCredits)
     }
 
     private static func formatResetDate(_ date: Date) -> String {
@@ -440,7 +446,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                     accountEmail: snapshot.accountEmail,
                     accountOrganization: snapshot.accountOrganization,
                     loginMethod: snapshot.loginMethod,
-                    rawText: snapshot.rawText)
+                    rawText: snapshot.rawText,
+                    resetCredits: snapshot.resetCredits)
             }
         } catch {
             Self.log.debug("Claude web extras fetch failed: \(error.localizedDescription)")
