@@ -23,6 +23,10 @@ protocol ProviderImplementation: Sendable {
     /// Optional provider-specific login flow. Returns whether to refresh after completion.
     @MainActor
     func runLoginFlow(context: ProviderLoginContext) async -> Bool
+
+    /// Runs before a user-pressed reload. The user is present, so this may show
+    /// one credential prompt that background refreshes must never raise.
+    func prepareManualReload() async
 }
 
 extension ProviderImplementation {
@@ -44,6 +48,8 @@ extension ProviderImplementation {
     func runLoginFlow(context _: ProviderLoginContext) async -> Bool {
         false
     }
+
+    func prepareManualReload() async {}
 }
 
 struct ProviderLoginContext {

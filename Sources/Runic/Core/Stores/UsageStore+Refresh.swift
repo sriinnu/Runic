@@ -157,6 +157,16 @@ extension UsageStore {
         self.menuSlots(for: provider).first ?? provider
     }
 
+    /// The Settings reload button: lets the provider re-read changed
+    /// credentials (may prompt once), then refreshes every slot of its brand.
+    func reloadProvider(_ provider: UsageProvider) async {
+        guard !self.refreshSlots(for: provider).contains(where: { self.refreshingProviders.contains($0) }) else {
+            return
+        }
+        await ProviderImplementationRegistry.implementation(for: provider)?.prepareManualReload()
+        await self.refreshSingleProvider(provider)
+    }
+
     func refreshSingleProvider(_ provider: UsageProvider) async {
         self.isRefreshing = true
         defer { self.isRefreshing = false }

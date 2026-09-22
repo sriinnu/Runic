@@ -45,6 +45,7 @@ struct ProviderListProviderRowView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: RunicSpacing.xs)
+                        ProviderReloadButton(provider: self.provider, store: self.store, isEnabled: self.isEnabled)
                     }
 
                     HStack(alignment: .center, spacing: RunicSpacing.xs) {

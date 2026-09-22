@@ -24,6 +24,8 @@ public enum ClaudeOAuthCredentialCache {
         let expiresAt: Date?
         let scopes: [String]
         let rateLimitTier: String?
+        /// When Runic copied the token. Absent on caches written before 2.8.1.
+        let cachedAt: Date?
     }
 
     /// Cached credentials, or nil when absent, unreadable, or past expiry.
@@ -45,13 +47,28 @@ public enum ClaudeOAuthCredentialCache {
         #endif
     }
 
+    /// When the current cache entry was written, or nil when there is none or
+    /// it predates the timestamp. Read even past expiry — the reload button
+    /// compares it against the CLI item's modification date.
+    public static func cachedAt() -> Date? {
+        #if os(macOS)
+        guard let data = self.read(),
+              let payload = try? JSONDecoder().decode(Payload.self, from: data)
+        else { return nil }
+        return payload.cachedAt
+        #else
+        return nil
+        #endif
+    }
+
     public static func store(_ credentials: ClaudeOAuthCredentials) {
         #if os(macOS)
         let payload = Payload(
             accessToken: credentials.accessToken,
             expiresAt: credentials.expiresAt,
             scopes: credentials.scopes,
-            rateLimitTier: credentials.rateLimitTier)
+            rateLimitTier: credentials.rateLimitTier,
+            cachedAt: Date())
         guard let data = try? JSONEncoder().encode(payload) else { return }
 
         // Delete-then-add: SecItemUpdate leaves a stale ACL behind.
