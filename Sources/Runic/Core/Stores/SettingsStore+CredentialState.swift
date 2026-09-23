@@ -29,6 +29,8 @@ struct SettingsStoreCredentialStores {
     let qwenCN: any QwenCNTokenStoring
     let azureOpenAI: any AzureOpenAITokenStoring
     let typeSafe: any TypeSafeTokenStoring
+    let cline: any ClineTokenStoring
+    let muse: any MuseTokenStoring
 }
 
 extension SettingsStore {
@@ -61,7 +63,9 @@ extension SettingsStore {
         qwenTokenStore: any QwenTokenStoring = KeychainQwenTokenStore(),
         qwenCNTokenStore: any QwenCNTokenStoring = KeychainQwenCNTokenStore(),
         azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore(),
-        typeSafeTokenStore: any TypeSafeTokenStoring = KeychainTypeSafeTokenStore())
+        typeSafeTokenStore: any TypeSafeTokenStoring = KeychainTypeSafeTokenStore(),
+        clineTokenStore: any ClineTokenStoring = KeychainClineTokenStore(),
+        museTokenStore: any MuseTokenStoring = KeychainMuseTokenStore())
     {
         self.init(
             userDefaults: userDefaults,
@@ -93,7 +97,9 @@ extension SettingsStore {
                 qwen: qwenTokenStore,
                 qwenCN: qwenCNTokenStore,
                 azureOpenAI: azureOpenAITokenStore,
-                typeSafe: typeSafeTokenStore))
+                typeSafe: typeSafeTokenStore,
+                cline: clineTokenStore,
+                muse: museTokenStore))
     }
 }
 
@@ -107,6 +113,8 @@ struct SettingsStoreCredentialPersistTasks {
     var vercelAI: Task<Void, Never>?
     var groq: Task<Void, Never>?
     var typeSafe: Task<Void, Never>?
+    var cline: Task<Void, Never>?
+    var muse: Task<Void, Never>?
     var deepSeek: Task<Void, Never>?
     var fireworks: Task<Void, Never>?
     var mistral: Task<Void, Never>?

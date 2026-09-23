@@ -275,6 +275,8 @@ struct ProvidersPane: View {
             .vercelai,
             .groq,
             .typesafe,
+            .cline,
+            .muse,
             .deepseek,
             .fireworks,
             .mistral,

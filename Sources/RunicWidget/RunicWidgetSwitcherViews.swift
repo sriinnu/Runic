@@ -77,6 +77,8 @@ struct ProviderSwitchChip: View {
         case .vercelai: "Vercel"
         case .groq: "Groq"
         case .typesafe: "TypeSafe"
+        case .cline: "Cline"
+        case .muse: "Muse"
         case .deepseek: "DeepSeek"
         case .fireworks: "Fireworks"
         case .mistral: "Mistral"

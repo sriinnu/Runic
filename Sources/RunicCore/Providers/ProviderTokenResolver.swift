@@ -49,6 +49,8 @@ public enum ProviderTokenResolver {
     private static let cerebrasAccount = "cerebras-api-token"
     private static let sambanovaAccount = "sambanova-api-token"
     private static let typeSafeAccount = "typesafe-api-token"
+    private static let clineAccount = "cline-api-token"
+    private static let museAccount = "muse-api-token"
     private static let azureOpenAIAccount = "azure-openai-api-token"
     private static let qwenAccount = "qwen-api-token"
     private static let qwenCNAccount = "qwen-cn-api-token"
@@ -104,6 +106,18 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
         self.typeSafeResolution(environment: environment)?.token
+    }
+
+    public static func clineToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.clineResolution(environment: environment)?.token
+    }
+
+    public static func museToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.museResolution(environment: environment)?.token
     }
 
     public static func deepSeekToken(
@@ -335,6 +349,35 @@ public enum ProviderTokenResolver {
         }
         if let token = self.cleaned(environment["JEV_API_KEY"]) {
             return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    public static func clineResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.clineAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["CLINE_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
+    /// Meta's Model API docs export the key as `MODEL_API_KEY`; accept a
+    /// Muse-specific and a Meta-prefixed name first so a generic
+    /// `MODEL_API_KEY` meant for another tool doesn't win when both exist.
+    public static func museResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.museAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        for name in ["MUSE_API_KEY", "META_MODEL_API_KEY", "MODEL_API_KEY"] {
+            if let token = self.cleaned(environment[name]) {
+                return ProviderTokenResolution(token: token, source: .environment)
+            }
         }
         return nil
     }
@@ -615,6 +658,8 @@ public enum ProviderTokenResolver {
         .vercelai: { ProviderTokenResolver.vercelAIResolution(environment: $0) },
         .groq: { ProviderTokenResolver.groqResolution(environment: $0) },
         .typesafe: { ProviderTokenResolver.typeSafeResolution(environment: $0) },
+        .cline: { ProviderTokenResolver.clineResolution(environment: $0) },
+        .muse: { ProviderTokenResolver.museResolution(environment: $0) },
         .deepseek: { ProviderTokenResolver.deepSeekResolution(environment: $0) },
         .fireworks: { ProviderTokenResolver.fireworksResolution(environment: $0) },
         .mistral: { ProviderTokenResolver.mistralResolution(environment: $0) },

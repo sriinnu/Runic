@@ -31,6 +31,8 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, `openT
 | StepFun / StepFun (China) | API key (Keychain/env) → `/v1/accounts` balance on `api.stepfun.ai` / `api.stepfun.com` (`api`; response parsed defensively). |
 | DeepSeek | API key (Keychain/env) → balance API (`api`). |
 | TypeSafe | API key (Keychain/env `TYPESAFE_API_KEY` or `JEV_API_KEY`) → `GET /v1/models` (`api`). The published OpenAPI spec has exactly two endpoints and neither reports spend, so this is key health and model inventory only; account totals exist solely in the web console. |
+| Cline | API key (Keychain/env `CLINE_API_KEY`) → `GET /api/v1/users/me`, `/users/{id}/balance`, `/users/{id}/usages` on `api.cline.bot` (`api`). Balance in USD plus today/month spend summed from usage records. |
+| Muse (Meta) | API key (Keychain/env `MUSE_API_KEY`, `META_MODEL_API_KEY` or `MODEL_API_KEY`) → `GET /v1/models` on `api.meta.ai` (`api`). No usage endpoint; shows per-minute request/token limits from `x-ratelimit-*` headers, or model count when absent. |
 | opencode | Local session logs (`local`); history-only, no live gauge. |
 | Local LLM | Local runtime probe for Ollama/LM Studio/vLLM/llama.cpp/Open WebUI (`local`); usage comes from OpenTelemetry GenAI or local logs when configured. |
 

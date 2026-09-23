@@ -75,6 +75,8 @@ struct UsageStoreProviderHistorySupport {
              .qwen,
              .qwenCN,
              .typesafe,
+             .cline,
+             .muse,
              .localLLM:
             return self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:
