@@ -6,7 +6,13 @@ import Foundation
 /// null. Same shape on `claude.ai/api/organizations/{org}/usage`; observed
 /// 2026-09-22 with an Opus 5.5 launch grant.
 struct ClaudeLimitResetStatus: Decodable {
-    static let queryItem = URLQueryItem(name: "cedar_ember", value: "1")
+    /// Exactly what Claude Code sends for its own resets view
+    /// (`/api/oauth/usage?cedar_ember=1&skip_spend=1`, CLI 2.1.280). The flag
+    /// alone came back without the block for OAuth logins.
+    static let queryItems = [
+        URLQueryItem(name: "cedar_ember", value: "1"),
+        URLQueryItem(name: "skip_spend", value: "1"),
+    ]
 
     let eligible: Bool?
     let grants: [Grant]?

@@ -37,7 +37,7 @@ extension ClaudeWebAPIFetcher {
         logger: ((String) -> Void)? = nil) async throws -> WebUsageData
     {
         var components = URLComponents(string: "\(baseURL)/organizations/\(orgId)/usage")!
-        components.queryItems = [ClaudeLimitResetStatus.queryItem]
+        components.queryItems = ClaudeLimitResetStatus.queryItems
         let url = components.url!
         var request = URLRequest(url: url)
         request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")

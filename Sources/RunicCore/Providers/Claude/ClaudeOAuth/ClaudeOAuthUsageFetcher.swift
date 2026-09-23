@@ -47,12 +47,16 @@ enum ClaudeOAuthUsageFetcher {
         statusCode == 400 || statusCode == 422
     }
 
-    private static func fetchUsage(accessToken: String, requestResets: Bool) async throws -> OAuthUsageResponse {
+    static func usageURL(requestResets: Bool) -> URL? {
         var components = URLComponents(string: baseURL + self.usagePath)
         if requestResets {
-            components?.queryItems = [ClaudeLimitResetStatus.queryItem]
+            components?.queryItems = ClaudeLimitResetStatus.queryItems
         }
-        guard let url = components?.url else {
+        return components?.url
+    }
+
+    private static func fetchUsage(accessToken: String, requestResets: Bool) async throws -> OAuthUsageResponse {
+        guard let url = usageURL(requestResets: requestResets) else {
             throw ClaudeOAuthFetchError.invalidResponse
         }
 

@@ -82,6 +82,14 @@ struct ClaudeLimitResetsTests {
 
 extension ClaudeLimitResetsTests {
     @Test
+    func `usage request matches what Claude Code sends for resets`() {
+        #expect(ClaudeOAuthUsageFetcher.usageURL(requestResets: true)?.absoluteString
+            == "https://api.anthropic.com/api/oauth/usage?cedar_ember=1&skip_spend=1")
+        #expect(ClaudeOAuthUsageFetcher.usageURL(requestResets: false)?.absoluteString
+            == "https://api.anthropic.com/api/oauth/usage")
+    }
+
+    @Test
     func `only a rejected query retries without the resets flag`() {
         #expect(ClaudeOAuthUsageFetcher.rejectsQuery(400))
         #expect(ClaudeOAuthUsageFetcher.rejectsQuery(422))
