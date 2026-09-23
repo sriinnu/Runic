@@ -93,6 +93,7 @@ extension IconRenderer {
         .typesafe: 28,
         .cline: 29,
         .muse: 30,
+        .ollamacloud: 31,
         .combined: 99,
     ]
 

@@ -12,6 +12,7 @@ struct SettingsStoreCredentialValues {
     var typeSafeAPIToken = ""
     var clineAPIToken = ""
     var museAPIToken = ""
+    var ollamaCloudAPIToken = ""
     var deepSeekAPIToken = ""
     var fireworksAPIToken = ""
     var mistralAPIToken = ""
@@ -140,6 +141,16 @@ extension SettingsStore {
             self.credentialValues.museAPIToken = newValue
             self.schedulePersistMuseAPIToken()
             self.autoEnableProviderIfCredentialPresent(newValue, cliName: "muse")
+        }
+    }
+
+    /// Ollama Cloud API key (stored in Keychain).
+    var ollamaCloudAPIToken: String {
+        get { self.credentialValues.ollamaCloudAPIToken }
+        set {
+            self.credentialValues.ollamaCloudAPIToken = newValue
+            self.schedulePersistOllamaCloudAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "ollama-cloud")
         }
     }
 

@@ -51,6 +51,7 @@ public enum ProviderTokenResolver {
     private static let typeSafeAccount = "typesafe-api-token"
     private static let clineAccount = "cline-api-token"
     private static let museAccount = "muse-api-token"
+    private static let ollamaCloudAccount = "ollama-cloud-api-token"
     private static let azureOpenAIAccount = "azure-openai-api-token"
     private static let qwenAccount = "qwen-api-token"
     private static let qwenCNAccount = "qwen-cn-api-token"
@@ -118,6 +119,12 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
         self.museResolution(environment: environment)?.token
+    }
+
+    public static func ollamaCloudToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.ollamaCloudResolution(environment: environment)?.token
     }
 
     public static func deepSeekToken(
@@ -378,6 +385,18 @@ public enum ProviderTokenResolver {
             if let token = self.cleaned(environment[name]) {
                 return ProviderTokenResolution(token: token, source: .environment)
             }
+        }
+        return nil
+    }
+
+    public static func ollamaCloudResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.ollamaCloudAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["OLLAMA_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
         }
         return nil
     }
@@ -660,6 +679,7 @@ public enum ProviderTokenResolver {
         .typesafe: { ProviderTokenResolver.typeSafeResolution(environment: $0) },
         .cline: { ProviderTokenResolver.clineResolution(environment: $0) },
         .muse: { ProviderTokenResolver.museResolution(environment: $0) },
+        .ollamacloud: { ProviderTokenResolver.ollamaCloudResolution(environment: $0) },
         .deepseek: { ProviderTokenResolver.deepSeekResolution(environment: $0) },
         .fireworks: { ProviderTokenResolver.fireworksResolution(environment: $0) },
         .mistral: { ProviderTokenResolver.mistralResolution(environment: $0) },

@@ -246,6 +246,9 @@ enum UsageDebugCredentialCatalog {
         .muse: [
             .init(label: "muse", resolution: { ProviderTokenResolver.museResolution() }),
         ],
+        .ollamacloud: [
+            .init(label: "ollama-cloud", resolution: { ProviderTokenResolver.ollamaCloudResolution() }),
+        ],
         .deepseek: [
             .init(label: "deepseek", resolution: { ProviderTokenResolver.deepSeekResolution() }),
         ],

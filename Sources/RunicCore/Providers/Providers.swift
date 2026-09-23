@@ -40,6 +40,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case typesafe
     case cline
     case muse
+    case ollamacloud
     case localLLM = "local-llm"
 }
 
@@ -78,6 +79,7 @@ public enum IconStyle: Sendable, Hashable {
     case typesafe
     case cline
     case muse
+    case ollamacloud
     case localLLM
     case combined
 }

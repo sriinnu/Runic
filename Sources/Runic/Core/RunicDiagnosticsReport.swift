@@ -64,6 +64,7 @@ enum RunicDiagnosticsReport {
         .typesafe: (\.typeSafeAPIToken, "API key"),
         .cline: (\.clineAPIToken, "API key"),
         .muse: (\.museAPIToken, "API key"),
+        .ollamacloud: (\.ollamaCloudAPIToken, "API key"),
         .deepseek: (\.deepSeekAPIToken, "API key"),
         .fireworks: (\.fireworksAPIToken, "API key"),
         .mistral: (\.mistralAPIToken, "API key"),

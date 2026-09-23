@@ -91,6 +91,7 @@ public enum ProviderDescriptorRegistry {
         _ = ProviderDescriptorRegistry.register(TypeSafeProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(ClineProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(MuseProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(OllamaCloudProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(LocalLLMProviderDescriptor.descriptor)
     }()
 
