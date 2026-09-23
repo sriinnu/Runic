@@ -627,6 +627,7 @@ extension UsageMenuCardView.Model {
     {
         guard provider == .claude || provider == .cursor || provider == .ollamacloud else { return nil }
         guard let cost else { return nil }
+        if provider == .claude, let section = Self.claudeUsageCreditsSection(cost) { return section }
         let title = switch provider {
         case .cursor: "On-demand usage"
         case .ollamacloud: "Cloud spend"
@@ -653,6 +654,35 @@ extension UsageMenuCardView.Model {
             title: title,
             percentUsed: percentUsed,
             spendLine: "This month: \(used) / \(limit)")
+    }
+
+    /// Claude usage credits from the `spend` block: on/off, spent against the
+    /// monthly limit, and the prepaid balance. Only for the newer block
+    /// (`isEnabled` or `balance` set); the older `extra_usage` path below
+    /// keeps its original behavior.
+    static func claudeUsageCreditsSection(_ cost: ProviderCostSnapshot) -> ProviderCostSection? {
+        guard cost.isEnabled != nil || cost.balance != nil else { return nil }
+        let money = { (value: Double) in UsageFormatter.currencyString(value, currencyCode: cost.currencyCode) }
+        let balance = cost.balance.map { "Balance \(money($0))" }
+        if cost.isEnabled == false {
+            return ProviderCostSection(
+                title: "Usage credits",
+                percentUsed: nil,
+                spendLine: (["Off"] + [balance].compactMap(\.self)).joined(separator: " · "))
+        }
+        var parts: [String] = []
+        var percent: Double?
+        if cost.limit > 0 {
+            parts.append("This month: \(money(cost.used)) / \(money(cost.limit))")
+            percent = Self.clamped(cost.used / cost.limit * 100)
+        } else {
+            parts.append("This month: \(money(cost.used))")
+        }
+        if let balance { parts.append(balance) }
+        return ProviderCostSection(
+            title: "Usage credits",
+            percentUsed: percent,
+            spendLine: parts.joined(separator: " · "))
     }
 
     private static func clamped(_ value: Double) -> Double {

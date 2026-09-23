@@ -110,6 +110,10 @@ enum ClaudeOAuthUsageFetcher {
             "topLevelKeys": root.keys.sorted(),
             "cedarEmber": blockState,
             "cedarEmberKeys": ((block as? [String: Any])?.keys.sorted()) ?? [],
+            "spendKeys": ((root["spend"] as? [String: Any])?.keys.sorted()) ?? [],
+            "spendFieldsPresent": ["used", "limit", "balance", "enabled"].filter {
+                !((root["spend"] as? [String: Any])?[$0] is NSNull) && (root["spend"] as? [String: Any])?[$0] != nil
+            },
             "grantCount": grants.count,
             "resetsLeft": grants.map { $0.resetsLeft ?? -1 },
             "paused": grants.map { $0.paused ?? false },
@@ -159,6 +163,8 @@ struct OAuthUsageResponse: Decodable {
     let sevenDaySonnet: OAuthUsageWindow?
     let iguanaNecktie: OAuthUsageWindow?
     let extraUsage: OAuthExtraUsage?
+    /// Usage credits (used / monthly limit / balance / on-off).
+    let spend: OAuthSpend?
     /// Newer payloads carry every limit as a list, including model-scoped
     /// weekly windows (`kind: "weekly_scoped"`, `scope.model.display_name`).
     let limits: [OAuthLimitEntry]?
@@ -173,6 +179,7 @@ struct OAuthUsageResponse: Decodable {
         case sevenDaySonnet = "seven_day_sonnet"
         case iguanaNecktie = "iguana_necktie"
         case extraUsage = "extra_usage"
+        case spend
         case limits
         case cedarEmber = "cedar_ember"
     }
