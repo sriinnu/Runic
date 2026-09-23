@@ -30,11 +30,13 @@ enum ClaudeOAuthUsageFetcher {
     private static let baseURL = "https://api.anthropic.com"
     private static let usagePath = "/api/oauth/usage"
     private static let betaHeader = "oauth-2025-04-20"
+    private static let log = RunicLog.logger("claude-oauth-usage")
 
     static func fetchUsage(accessToken: String) async throws -> OAuthUsageResponse {
         do {
             return try await self.fetchUsage(accessToken: accessToken, requestResets: true)
         } catch let ClaudeOAuthFetchError.serverError(code, _) where Self.rejectsQuery(code) {
+            Self.log.info("Usage endpoint rejected the resets flag (HTTP \(code)); retrying without it")
             // The resets flag is only confirmed on claude.ai; never let it
             // cost the usage card if this endpoint refuses unknown params.
             return try await self.fetchUsage(accessToken: accessToken, requestResets: false)
@@ -71,7 +73,16 @@ enum ClaudeOAuthUsageFetcher {
             }
             switch http.statusCode {
             case 200:
-                return try Self.decodeUsageResponse(data)
+                let usage = try Self.decodeUsageResponse(data)
+                if requestResets {
+                    // Counts only: whether the resets block came back, never tokens.
+                    let hasKey = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?
+                        .keys.contains("cedar_ember") ?? false
+                    let grants = usage.cedarEmber?.grants?.count
+                    let grantText = grants.map(String.init) ?? "null"
+                    Self.log.info("Usage with resets flag: key \(hasKey ? "present" : "absent"), grants \(grantText)")
+                }
+                return usage
             case 401, 403:
                 throw ClaudeOAuthFetchError.unauthorized
             default:
