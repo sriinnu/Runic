@@ -315,14 +315,17 @@ extension UsageMenuCardView.Model {
                 resetText: Self.resetText(for: snapshot.primary, prefersCountdown: true),
                 detailText: input.provider == .zai ? zaiTokenDetail : bankedResets))
         }
-        if snapshot.balance != nil, let spend = input.balanceSpend {
+        if snapshot.balance != nil {
+            // Without two readings there is nothing to diff yet; say so rather
+            // than hiding the row, so a balance-only card never looks final.
             metrics.append(Metric(
                 id: "balance-spend",
                 title: "Spend",
                 percent: nil,
                 percentStyle: percentStyle,
-                resetText: Self.balanceSpendText(spend),
-                detailText: Self.balanceRunwayText(spend, now: input.now)))
+                resetText: input.balanceSpend.map(Self.balanceSpendText) ?? Self.balanceSpendPendingText,
+                detailText: input.balanceSpend.map { Self.balanceRunwayText($0, now: input.now) }
+                    ?? Self.balanceSpendPendingDetail))
         }
         if let weekly = snapshot.secondary {
             let paceText = UsagePaceText.weekly(provider: input.provider, window: weekly, now: input.now)
@@ -392,6 +395,10 @@ extension UsageMenuCardView.Model {
             .map { "\(BalanceFormatter.amount($0.amount, currency: balance.currency)) \($0.label.lowercased())" }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
+
+    static let balanceSpendPendingText = "Measuring…"
+    static let balanceSpendPendingDetail =
+        "This provider only reports a balance; spend appears after the next reading (every 20 min)"
 
     /// "¥89.14 today · ¥120.30 this month".
     static func balanceSpendText(_ spend: BalanceSpendSummary) -> String {

@@ -135,6 +135,7 @@ final class UsageStore {
     @ObservationIgnored let providerMetadata: [UsageProvider: ProviderMetadata]
     @ObservationIgnored var timerTask: Task<Void, Never>?
     @ObservationIgnored var tokenTimerTask: Task<Void, Never>?
+    @ObservationIgnored var balanceSamplerTask: Task<Void, Never>?
     @ObservationIgnored var tokenRefreshSequenceTask: Task<Void, Never>?
     @ObservationIgnored var ledgerRefreshTask: Task<Void, Never>?
     @ObservationIgnored var credentialRefreshTask: Task<Void, Never>?
@@ -228,10 +229,12 @@ final class UsageStore {
         }
         self.startTimer()
         self.startTokenTimer()
+        self.startBalanceSampler()
     }
 
     deinit {
         self.timerTask?.cancel()
+        self.balanceSamplerTask?.cancel()
         self.tokenTimerTask?.cancel()
         self.tokenRefreshSequenceTask?.cancel()
         self.ledgerRefreshTask?.cancel()
