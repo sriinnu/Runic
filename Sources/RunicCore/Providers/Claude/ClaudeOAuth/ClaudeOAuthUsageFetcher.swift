@@ -37,6 +37,7 @@ enum ClaudeOAuthUsageFetcher {
             return try await self.fetchUsage(accessToken: accessToken, requestResets: true)
         } catch let ClaudeOAuthFetchError.serverError(code, _) where Self.rejectsQuery(code) {
             Self.log.info("Usage endpoint rejected the resets flag (HTTP \(code)); retrying without it")
+            Self.recordRejectedResetsQuery(status: code)
             // The resets flag is only confirmed on claude.ai; never let it
             // cost the usage card if this endpoint refuses unknown params.
             return try await self.fetchUsage(accessToken: accessToken, requestResets: false)
@@ -78,14 +79,7 @@ enum ClaudeOAuthUsageFetcher {
             switch http.statusCode {
             case 200:
                 let usage = try Self.decodeUsageResponse(data)
-                if requestResets {
-                    // Counts only: whether the resets block came back, never tokens.
-                    let hasKey = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?
-                        .keys.contains("cedar_ember") ?? false
-                    let grants = usage.cedarEmber?.grants?.count
-                    let grantText = grants.map(String.init) ?? "null"
-                    Self.log.info("Usage with resets flag: key \(hasKey ? "present" : "absent"), grants \(grantText)")
-                }
+                if requestResets { Self.recordResetsShape(data, usage: usage, url: url) }
                 return usage
             case 401, 403:
                 throw ClaudeOAuthFetchError.unauthorized
@@ -98,6 +92,48 @@ enum ClaudeOAuthUsageFetcher {
         } catch {
             throw ClaudeOAuthFetchError.networkError(error)
         }
+    }
+
+    /// Writes the reply's shape (field names, whether the resets block came
+    /// back and how many grants it holds) to
+    /// `~/Library/Application Support/Runic/diagnostics/claude-usage-shape.json`.
+    /// No values, so no tokens or usage figures; the unified log redacts
+    /// messages as <private>, which made the log line useless for this.
+    static func recordResetsShape(_ data: Data, usage: OAuthUsageResponse, url: URL) {
+        let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+        let block = root["cedar_ember"]
+        let blockState = if block == nil { "absent" } else if block is NSNull { "null" } else { "object" }
+        let grants = usage.cedarEmber?.grants ?? []
+        let shape: [String: Any] = [
+            "at": ISO8601DateFormatter().string(from: Date()),
+            "query": url.query ?? "",
+            "topLevelKeys": root.keys.sorted(),
+            "cedarEmber": blockState,
+            "cedarEmberKeys": ((block as? [String: Any])?.keys.sorted()) ?? [],
+            "grantCount": grants.count,
+            "resetsLeft": grants.map { $0.resetsLeft ?? -1 },
+            "paused": grants.map { $0.paused ?? false },
+            "bankedResets": usage.cedarEmber?.resetCredits()?.availableCount ?? 0,
+        ]
+        guard let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),
+            let json = try? JSONSerialization.data(withJSONObject: shape, options: [.prettyPrinted, .sortedKeys])
+        else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? json.write(to: directory.appendingPathComponent("claude-usage-shape.json"), options: .atomic)
+    }
+
+    static func recordRejectedResetsQuery(status: Int) {
+        let shape: [String: Any] = [
+            "at": ISO8601DateFormatter().string(from: Date()),
+            "rejectedWithStatus": status,
+        ]
+        guard let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),
+            let json = try? JSONSerialization.data(withJSONObject: shape, options: [.prettyPrinted, .sortedKeys])
+        else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? json.write(to: directory.appendingPathComponent("claude-usage-shape.json"), options: .atomic)
     }
 
     static func decodeUsageResponse(_ data: Data) throws -> OAuthUsageResponse {
