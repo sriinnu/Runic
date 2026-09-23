@@ -86,6 +86,7 @@ extension SettingsStore {
         _ = self.typeSafeAPIToken
         _ = self.clineAPIToken
         _ = self.museAPIToken
+        _ = self.ollamaCloudAPIToken
         _ = self.deepSeekAPIToken
         _ = self.fireworksAPIToken
         _ = self.mistralAPIToken

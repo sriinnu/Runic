@@ -79,6 +79,7 @@ struct ProviderSwitchChip: View {
         case .typesafe: "TypeSafe"
         case .cline: "Cline"
         case .muse: "Muse"
+        case .ollamacloud: "Ollama"
         case .deepseek: "DeepSeek"
         case .fireworks: "Fireworks"
         case .mistral: "Mistral"

@@ -31,6 +31,7 @@ struct SettingsStoreCredentialStores {
     let typeSafe: any TypeSafeTokenStoring
     let cline: any ClineTokenStoring
     let muse: any MuseTokenStoring
+    let ollamaCloud: any OllamaCloudTokenStoring
 }
 
 extension SettingsStore {
@@ -65,7 +66,8 @@ extension SettingsStore {
         azureOpenAITokenStore: any AzureOpenAITokenStoring = KeychainAzureOpenAITokenStore(),
         typeSafeTokenStore: any TypeSafeTokenStoring = KeychainTypeSafeTokenStore(),
         clineTokenStore: any ClineTokenStoring = KeychainClineTokenStore(),
-        museTokenStore: any MuseTokenStoring = KeychainMuseTokenStore())
+        museTokenStore: any MuseTokenStoring = KeychainMuseTokenStore(),
+        ollamaCloudTokenStore: any OllamaCloudTokenStoring = KeychainOllamaCloudTokenStore())
     {
         self.init(
             userDefaults: userDefaults,
@@ -99,7 +101,8 @@ extension SettingsStore {
                 azureOpenAI: azureOpenAITokenStore,
                 typeSafe: typeSafeTokenStore,
                 cline: clineTokenStore,
-                muse: museTokenStore))
+                muse: museTokenStore,
+                ollamaCloud: ollamaCloudTokenStore))
     }
 }
 
@@ -115,6 +118,7 @@ struct SettingsStoreCredentialPersistTasks {
     var typeSafe: Task<Void, Never>?
     var cline: Task<Void, Never>?
     var muse: Task<Void, Never>?
+    var ollamaCloud: Task<Void, Never>?
     var deepSeek: Task<Void, Never>?
     var fireworks: Task<Void, Never>?
     var mistral: Task<Void, Never>?

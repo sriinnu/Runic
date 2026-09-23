@@ -77,6 +77,7 @@ struct UsageStoreProviderHistorySupport {
              .typesafe,
              .cline,
              .muse,
+             .ollamacloud,
              .localLLM:
             return self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:

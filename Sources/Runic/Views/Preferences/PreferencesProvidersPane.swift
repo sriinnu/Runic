@@ -277,6 +277,7 @@ struct ProvidersPane: View {
             .typesafe,
             .cline,
             .muse,
+            .ollamacloud,
             .deepseek,
             .fireworks,
             .mistral,

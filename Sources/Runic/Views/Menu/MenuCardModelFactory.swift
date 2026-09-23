@@ -621,20 +621,25 @@ extension UsageMenuCardView.Model {
         provider: UsageProvider,
         cost: ProviderCostSnapshot?) -> ProviderCostSection?
     {
-        guard provider == .claude || provider == .cursor else { return nil }
+        guard provider == .claude || provider == .cursor || provider == .ollamacloud else { return nil }
         guard let cost else { return nil }
-        let title = provider == .cursor ? "On-demand usage" : "Extra usage"
+        let title = switch provider {
+        case .cursor: "On-demand usage"
+        case .ollamacloud: "Cloud spend"
+        default: "Extra usage"
+        }
         let used = UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode)
 
         guard cost.limit > 0 else {
             // Cursor reports on-demand spend without a limit when the plan is
             // unlimited — show the spend without a fabricated gauge. Claude
             // keeps requiring a limit, matching its previous behavior.
-            guard provider == .cursor, cost.used > 0 else { return nil }
+            // Ollama Cloud reports spend over the last four weeks, no cap.
+            guard provider == .cursor || provider == .ollamacloud, cost.used > 0 else { return nil }
             return ProviderCostSection(
                 title: title,
                 percentUsed: nil,
-                spendLine: "This month: \(used)")
+                spendLine: "\(cost.period ?? "This month"): \(used)")
         }
 
         let limit = UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode)

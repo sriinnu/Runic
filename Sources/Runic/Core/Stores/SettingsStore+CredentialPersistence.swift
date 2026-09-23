@@ -162,6 +162,18 @@ extension SettingsStore {
         }
     }
 
+    func schedulePersistOllamaCloudAPIToken() {
+        self.credentialPersistTasks.ollamaCloud?.cancel()
+        let tokenStore = self.credentialStores.ollamaCloud
+        self.credentialPersistTasks.ollamaCloud = self.makeCredentialPersistTask(
+            value: self.ollamaCloudAPIToken,
+            loggerName: "ollama-cloud-token-store",
+            failureMessage: "Failed to persist Ollama Cloud token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
     func schedulePersistDeepSeekAPIToken() {
         self.credentialPersistTasks.deepSeek?.cancel()
         let tokenStore = self.credentialStores.deepSeek

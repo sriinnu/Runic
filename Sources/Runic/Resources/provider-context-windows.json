@@ -36,5 +36,6 @@
   "typesafe": { "model": "Jev", "label": "ctx varies" },
   "cline": { "model": "Cline model", "label": "ctx varies" },
   "muse": { "model": "Muse", "label": "ctx varies" },
+  "ollamacloud": { "model": "Ollama Cloud model", "label": "ctx varies" },
   "local-llm": { "model": "Local model", "label": "ctx varies" }
 }
