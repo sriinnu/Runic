@@ -37,7 +37,10 @@ struct KeychainQueryPolicyTests {
         // keychain, so the cache must degrade to "no cached credentials"
         // instead of touching the user's real items.
         #expect(!RunicKeychainAccessPolicy.processMayUseKeychain)
-        #expect(ClaudeOAuthCredentialCache.load() == nil)
+        // Compare as a Bool: a failing expectation prints its operands, and the
+        // operand here would be a real access token.
+        let readCredentials = ClaudeOAuthCredentialCache.load() != nil
+        #expect(!readCredentials)
     }
 
     @Test
@@ -89,13 +92,16 @@ struct KeychainQueryPolicyTests {
         let account = "runic-test-custom-provider-\(UUID().uuidString)"
         self.deleteProviderCredential(account: account, dataProtection: false)
         self.deleteProviderCredential(account: account, dataProtection: true)
-        RunicKeychainAccessPolicy.testingOverride = true
         defer {
-            RunicKeychainAccessPolicy.testingOverride = nil
             self.deleteProviderCredential(account: account, dataProtection: false)
             self.deleteProviderCredential(account: account, dataProtection: true)
         }
+        try await RunicKeychainAccessPolicy.$testingOverride.withValue(true) {
+            try await self.saveAndLoadCustomProviderToken(account: account)
+        }
+    }
 
+    private func saveAndLoadCustomProviderToken(account: String) async throws {
         var addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: RunicKeychainService.providerCredentials,
