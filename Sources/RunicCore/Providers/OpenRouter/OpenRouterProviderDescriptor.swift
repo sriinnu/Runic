@@ -57,10 +57,15 @@ struct OpenRouterAPIFetchStrategy: ProviderFetchStrategy {
             throw OpenRouterSettingsError.missingToken
         }
         let (credits, keyInfo) = try await OpenRouterUsageFetcher.fetchAll(apiKey: apiKey)
-        return self.makeResult(
-            usage: credits.toUsageSnapshot(keyInfo: keyInfo),
-            credits: credits.toCreditsSnapshot(),
-            sourceLabel: "api")
+        if let credits {
+            return self.makeResult(
+                usage: credits.toUsageSnapshot(keyInfo: keyInfo),
+                credits: credits.toCreditsSnapshot(),
+                sourceLabel: "api")
+        }
+        // fetchAll only returns without credits when key info answered.
+        let usage = keyInfo?.toUsageSnapshot() ?? OpenRouterCreditsResponse(data: nil, credits: nil).toUsageSnapshot()
+        return self.makeResult(usage: usage, sourceLabel: "api")
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {

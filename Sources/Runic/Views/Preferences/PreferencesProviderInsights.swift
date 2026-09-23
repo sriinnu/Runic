@@ -17,6 +17,30 @@ struct ProviderInsightLine: Identifiable, Equatable {
 
 @MainActor
 enum ProviderInsightsComposer {
+    /// Balance-only providers: the amount left and what was spent, or that
+    /// spend is still being measured — never the balance alone.
+    private static func balanceRows(
+        snapshot: UsageSnapshot?,
+        provider: UsageProvider,
+        store: UsageStore) -> [ProviderInsightLine]
+    {
+        guard let balance = snapshot?.balance else { return [] }
+        typealias Card = UsageMenuCardView.Model
+        let spend = store.balanceSpend(for: provider)
+        let now = Date()
+        return [
+            ProviderInsightLine(
+                id: "balance",
+                label: "Balance",
+                value: BalanceFormatter.amount(balance.available, currency: balance.currency)),
+            ProviderInsightLine(
+                id: "balance-spend",
+                label: "Spent",
+                value: spend.map { Card.balanceSpendText($0) } ?? Card.balanceSpendPendingText,
+                help: spend.map { Card.balanceRunwayText($0, now: now) } ?? Card.balanceSpendPendingDetail),
+        ]
+    }
+
     static func lines(
         for provider: UsageProvider,
         store: UsageStore,
@@ -54,6 +78,7 @@ enum ProviderInsightsComposer {
         if let planAuth = self.planAuthValue(identity: identity) {
             rows.append(ProviderInsightLine(id: "plan-auth", label: "Plan/Auth", value: planAuth))
         }
+        rows += self.balanceRows(snapshot: snapshot, provider: provider, store: store)
         if let fetch = self.fetchHealthValue(attempts) {
             rows.append(ProviderInsightLine(
                 id: "fetch",

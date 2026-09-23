@@ -99,13 +99,22 @@ enum OpenRouterUsageFetcher {
     private static let log = RunicLog.logger("openrouter-usage")
 
     /// Fetches credits + key info in parallel for maximum data.
-    static func fetchAll(apiKey: String) async throws -> (OpenRouterCreditsResponse, OpenRouterKeyInfoResponse?) {
+    ///
+    /// OpenRouter's reference now lists `/credits` as management-key only, so a
+    /// regular key may get 403 there while `/key` still reports its spend. Only
+    /// fail when neither answers.
+    static func fetchAll(apiKey: String) async throws -> (OpenRouterCreditsResponse?, OpenRouterKeyInfoResponse?) {
         async let creditsTask = Self.fetchCredits(apiKey: apiKey)
         async let keyInfoTask = Self.fetchKeyInfoBestEffort(apiKey: apiKey)
 
-        let credits = try await creditsTask
         let keyInfo = await keyInfoTask
-        return (credits, keyInfo)
+        do {
+            return try await (creditsTask, keyInfo)
+        } catch {
+            guard keyInfo?.data != nil else { throw error }
+            Self.log.debug("OpenRouter credits unavailable (\(error.localizedDescription)); using key spend only")
+            return (nil, keyInfo)
+        }
     }
 
     static func fetchCredits(apiKey: String) async throws -> OpenRouterCreditsResponse {
@@ -258,6 +267,30 @@ extension OpenRouterCreditsResponse {
             remaining: self.remaining,
             events: [],
             updatedAt: Date())
+    }
+}
+
+extension OpenRouterKeyInfoResponse {
+    /// Key-only view for when `/credits` refuses the key: no account balance,
+    /// but the key's own day/month spend and limits still show.
+    func toUsageSnapshot(now: Date = Date()) -> UsageSnapshot {
+        let key = self.data
+        var parts: [String] = []
+        if let daily = key?.usage_daily { parts.append(String(format: "$%.2f today", daily)) }
+        if let monthly = key?.usage_monthly { parts.append(String(format: "$%.2f this month", monthly)) }
+        if parts.isEmpty { parts.append(String(format: "$%.2f spent", self.keyUsage)) }
+        return UsageSnapshot(
+            primary: RateWindow(
+                usedPercent: 0,
+                windowMinutes: nil,
+                resetsAt: nil,
+                resetDescription: "Spent " + parts.joined(separator: " · ") + " (this key)",
+                label: "Spend",
+                hasKnownLimit: false),
+            secondary: OpenRouterCreditsResponse.keyLimitWindow(self, now: now),
+            tertiary: OpenRouterCreditsResponse.freeRequestsWindow(self, now: now),
+            updatedAt: now,
+            identity: nil)
     }
 }
 
