@@ -20,8 +20,11 @@ public enum RunicKeychainAccessPolicy {
     }
 
     /// Tests that deliberately exercise the keychain (with items they created
-    /// themselves, so no ACL prompt) set this to `true` for their duration.
-    public nonisolated(unsafe) static var testingOverride: Bool?
+    /// themselves, so no ACL prompt) bind this to `true` with
+    /// `$testingOverride.withValue(true) { ... }`. It is task-local on purpose:
+    /// a process-wide switch leaked into tests running in parallel, and one of
+    /// them read the user's real cached Claude token.
+    @TaskLocal public static var testingOverride: Bool?
 
     private static let evaluated: Bool = Self.evaluate()
 
