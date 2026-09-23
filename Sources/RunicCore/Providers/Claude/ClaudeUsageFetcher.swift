@@ -45,6 +45,42 @@ public struct ClaudeUsageSnapshot: Sendable {
 }
 
 extension ClaudeUsageSnapshot {
+    /// The claude.ai prepaid balance, merged into the usage-credits cost (or a
+    /// balance-only cost when the OAuth reply had no spend block).
+    func with(creditBalance: ClaudeMoney) -> ClaudeUsageSnapshot {
+        let currency = creditBalance.currency ?? self.providerCost?.currencyCode ?? "USD"
+        var cost: ProviderCostSnapshot
+        if let existing = self.providerCost, existing.currencyCode == currency {
+            cost = existing
+        } else if let existing = self.providerCost, existing.used > 0 || existing.limit > 0 {
+            // Real spend in another currency: never print one currency's
+            // amount with the other's symbol.
+            return self
+        } else {
+            // No spend yet: take the balance's currency (claude.ai bills in the
+            // account's own currency; the OAuth block defaults to USD).
+            cost = ProviderCostSnapshot(
+                used: 0,
+                limit: 0,
+                currencyCode: currency,
+                period: "Monthly",
+                updatedAt: self.updatedAt)
+            cost.isEnabled = self.providerCost?.isEnabled
+        }
+        cost.balance = creditBalance.value
+        return ClaudeUsageSnapshot(
+            primary: self.primary,
+            secondary: self.secondary,
+            opus: self.opus,
+            providerCost: cost,
+            updatedAt: self.updatedAt,
+            accountEmail: self.accountEmail,
+            accountOrganization: self.accountOrganization,
+            loginMethod: self.loginMethod,
+            rawText: self.rawText,
+            resetCredits: self.resetCredits)
+    }
+
     func with(resetCredits: UsageResetCredits?) -> ClaudeUsageSnapshot {
         ClaudeUsageSnapshot(
             primary: self.primary,
@@ -306,7 +342,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             primary: primary,
             secondary: weekly,
             opus: modelSpecific,
-            providerCost: Self.oauthExtraUsageCost(usage.extraUsage),
+            providerCost: usage.spend?.costSnapshot ?? Self.oauthExtraUsageCost(usage.extraUsage),
             updatedAt: Date(),
             accountEmail: nil,
             accountOrganization: nil,

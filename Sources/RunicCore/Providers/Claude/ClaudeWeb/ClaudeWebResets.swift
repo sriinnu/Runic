@@ -1,6 +1,7 @@
 import Foundation
 #if os(macOS)
 import Security
+import Silo
 #endif
 
 /// Banked "reset your limits" grants from claude.ai.
@@ -19,7 +20,9 @@ public enum ClaudeWebResets {
         public var errorDescription: String? {
             switch self {
             case .noBrowserSession:
-                "No claude.ai login found in your browsers. Sign in at claude.ai, then turn this on again."
+                "No claude.ai login found. Runic reads Chrome, Edge, Brave and Arc (allow the Keychain "
+                    + "prompt when it appears); Safari's cookies also need Full Disk Access for Runic in "
+                    + "System Settings → Privacy & Security. Sign in at claude.ai in one of them, then turn this on again."
             case .sessionExpired:
                 "The saved claude.ai login expired. Turn this off and on again to reconnect."
             }
@@ -31,7 +34,11 @@ public enum ClaudeWebResets {
     public static func connect() throws -> String {
         let info: ClaudeWebAPIFetcher.SessionKeyInfo
         do {
-            info = try ClaudeWebAPIFetcher.sessionKeyInfo()
+            // The user just flipped the switch: this is the one read allowed
+            // to show the browser's Keychain dialog ("Chrome Safe Storage").
+            info = try BrowserCookieAccess.$allowsKeychainPrompt.withValue(true) {
+                try ClaudeWebAPIFetcher.sessionKeyInfo()
+            }
         } catch {
             throw Failure.noBrowserSession
         }
@@ -62,30 +69,61 @@ public enum ClaudeWebResets {
     /// Adds claude.ai resets to a snapshot that has none. Best effort: a
     /// failure is remembered for the settings line and the usage still shows.
     static func attach(to snapshot: ClaudeUsageSnapshot) async -> ClaudeUsageSnapshot {
-        guard snapshot.resetCredits == nil, self.isConnected else { return snapshot }
+        guard self.isConnected else { return snapshot }
         do {
-            let credits = try await self.fetchResetCredits()
+            guard let extras = try await self.fetchExtras() else { return snapshot }
             self.setLastFailure(nil)
-            return snapshot.with(resetCredits: credits)
+            var updated = snapshot
+            if updated.resetCredits == nil { updated = updated.with(resetCredits: extras.resetCredits) }
+            if let balance = extras.creditBalance { updated = updated.with(creditBalance: balance) }
+            return updated
         } catch {
             self.setLastFailure(error.localizedDescription)
             return snapshot
         }
     }
 
-    /// Resets for the chat org, using the saved session only (never the
-    /// browser, never a prompt). Nil when not connected or nothing is banked.
-    public static func fetchResetCredits() async throws -> UsageResetCredits? {
+    struct Extras {
+        let resetCredits: UsageResetCredits?
+        /// Prepaid usage-credit balance (`prepaid/credits`), with its currency.
+        let creditBalance: ClaudeMoney?
+    }
+
+    /// Resets and the usage-credit balance for the chat org, using the saved
+    /// session only (never the browser, never a prompt). Nil when not connected.
+    static func fetchExtras() async throws -> Extras? {
         guard let sessionKey = SessionStore.load() else { return nil }
         do {
             let organization = try await ClaudeWebAPIFetcher.fetchOrganizationInfo(sessionKey: sessionKey)
             let usage = try await ClaudeWebAPIFetcher.fetchUsageData(
                 orgId: organization.id,
                 sessionKey: sessionKey)
-            return usage.resetCredits
+            let balance = await Self.fetchCreditBalance(orgId: organization.id, sessionKey: sessionKey)
+            return Extras(resetCredits: usage.resetCredits, creditBalance: balance)
         } catch ClaudeWebAPIFetcher.FetchError.unauthorized {
             throw Failure.sessionExpired
         }
+    }
+
+    /// Best effort: `GET /api/organizations/{org}/prepaid/credits` →
+    /// `balance.money {amount_minor, currency, exponent}`.
+    static func fetchCreditBalance(orgId: String, sessionKey: String) async -> ClaudeMoney? {
+        guard let url = URL(string: "https://claude.ai/api/organizations/\(orgId)/prepaid/credits") else { return nil }
+        var request = URLRequest(url: url)
+        request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return Self.parseCreditBalance(data)
+    }
+
+    static func parseCreditBalance(_ data: Data) -> ClaudeMoney? {
+        struct Envelope: Decodable {
+            struct Balance: Decodable { let money: ClaudeMoney? }
+            let balance: Balance?
+        }
+        return (try? JSONDecoder().decode(Envelope.self, from: data))?.balance?.money
     }
 
     /// Runic-owned Keychain copy of the claude.ai session.

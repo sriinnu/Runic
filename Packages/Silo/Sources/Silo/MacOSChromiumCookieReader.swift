@@ -38,11 +38,14 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
     let legacyKey: Data?
     let gcmKey: Data?
 
-    var hasKey: Bool { self.legacyKey != nil || self.gcmKey != nil }
+    var hasKey: Bool {
+        self.legacyKey != nil || self.gcmKey != nil
+    }
 
     init(browser: Browser, databaseURL: URL?) {
         guard let databaseURL,
-              let serviceName = Self.serviceName(for: browser) else {
+              let serviceName = Self.serviceName(for: browser)
+        else {
             self.legacyKey = nil
             self.gcmKey = nil
             return
@@ -56,7 +59,8 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
         guard data.count > 3 else { return nil }
         let prefix = data.prefix(3)
         guard let prefixString = String(data: prefix, encoding: .utf8),
-              prefixString == "v10" || prefixString == "v11" else {
+              prefixString == "v10" || prefixString == "v11"
+        else {
             return nil
         }
 
@@ -89,12 +93,12 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
                 CCPBKDFAlgorithm(kCCPBKDF2),
                 passwordBytes,
                 passwordBytes.count,
-                [UInt8](salt),
-                salt.count,
+                [UInt8](self.salt),
+                self.salt.count,
                 CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA1),
-                iterations,
+                self.iterations,
                 keyBytes.bindMemory(to: UInt8.self).baseAddress,
-                keyLength)
+                self.keyLength)
         }
         return status == kCCSuccess ? key : nil
     }
@@ -108,10 +112,13 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
         ]
         // Never trigger an authentication dialog from background refresh loops.
         // If access requires UI, return nil and let callers fall back gracefully.
-        let authContext = LAContext()
-        authContext.interactionNotAllowed = true
+        // A user-initiated read opts in via `BrowserCookieAccess`.
+        if !BrowserCookieAccess.allowsKeychainPrompt {
+            let authContext = LAContext()
+            authContext.interactionNotAllowed = true
             query[kSecUseAuthenticationUI as String] = "u_AuthUIF" as CFString
-        query[kSecUseAuthenticationContext as String] = authContext
+            query[kSecUseAuthenticationContext as String] = authContext
+        }
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -127,7 +134,8 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let osCrypt = json["os_crypt"] as? [String: Any],
               let encryptedKeyBase64 = osCrypt["encrypted_key"] as? String,
-              let encryptedKeyData = Data(base64Encoded: encryptedKeyBase64) else {
+              let encryptedKeyData = Data(base64Encoded: encryptedKeyBase64)
+        else {
             return nil
         }
 
@@ -139,12 +147,13 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
 
         if keyData.count >= 3,
            let prefix = String(data: keyData.prefix(3), encoding: .utf8),
-           (prefix == "v10" || prefix == "v11"),
+           prefix == "v10" || prefix == "v11",
            let legacyKey,
            let decrypted = CryptoSupport.decryptAESCBC(
-                payload: Data(keyData.dropFirst(3)),
-                key: legacyKey,
-                iv: Data(repeating: 0x20, count: kCCBlockSizeAES128)) {
+               payload: Data(keyData.dropFirst(3)),
+               key: legacyKey,
+               iv: Data(repeating: 0x20, count: kCCBlockSizeAES128))
+        {
             if decrypted.count == 32 {
                 return decrypted
             }
@@ -167,24 +176,24 @@ private struct MacOSChromiumDecryptor: ChromiumCookieDecrypting {
 
     private static func serviceName(for browser: Browser) -> String? {
         switch browser {
-        case .chrome: return "Chrome Safe Storage"
-        case .chromeBeta: return "Chrome Beta Safe Storage"
-        case .chromeCanary: return "Chrome Canary Safe Storage"
-        case .chromium: return "Chromium Safe Storage"
-        case .brave: return "Brave Safe Storage"
-        case .braveBeta: return "Brave Browser Beta Safe Storage"
-        case .braveNightly: return "Brave Browser Nightly Safe Storage"
-        case .edge: return "Microsoft Edge Safe Storage"
-        case .edgeBeta: return "Microsoft Edge Beta Safe Storage"
-        case .edgeCanary: return "Microsoft Edge Canary Safe Storage"
-        case .arc: return "Arc Safe Storage"
-        case .arcBeta: return "Arc Beta Safe Storage"
-        case .arcCanary: return "Arc Canary Safe Storage"
-        case .vivaldi: return "Vivaldi Safe Storage"
-        case .helium: return "Helium Safe Storage"
-        case .chatgptAtlas: return "ChatGPT Atlas Safe Storage"
+        case .chrome: "Chrome Safe Storage"
+        case .chromeBeta: "Chrome Beta Safe Storage"
+        case .chromeCanary: "Chrome Canary Safe Storage"
+        case .chromium: "Chromium Safe Storage"
+        case .brave: "Brave Safe Storage"
+        case .braveBeta: "Brave Browser Beta Safe Storage"
+        case .braveNightly: "Brave Browser Nightly Safe Storage"
+        case .edge: "Microsoft Edge Safe Storage"
+        case .edgeBeta: "Microsoft Edge Beta Safe Storage"
+        case .edgeCanary: "Microsoft Edge Canary Safe Storage"
+        case .arc: "Arc Safe Storage"
+        case .arcBeta: "Arc Beta Safe Storage"
+        case .arcCanary: "Arc Canary Safe Storage"
+        case .vivaldi: "Vivaldi Safe Storage"
+        case .helium: "Helium Safe Storage"
+        case .chatgptAtlas: "ChatGPT Atlas Safe Storage"
         case .safari, .firefox:
-            return nil
+            nil
         }
     }
 }
