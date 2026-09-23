@@ -3,7 +3,7 @@ import CompilerPluginSupport
 import Foundation
 import PackageDescription
 
-// Prefer vendored first-party packages in-repo. Fallback to sibling workspace, then remote.
+/// Prefer vendored first-party packages in-repo. Fallback to sibling workspace, then remote.
 func localPackageDependency(paths: [String], remoteURL: String) -> Package.Dependency {
     for path in paths where FileManager.default.fileExists(atPath: path) {
         return .package(path: path)
@@ -47,6 +47,7 @@ let package = Package(
                 ],
                 resources: [
                     .process("OpenAIWeb/Resources"),
+                    .process("Pricing/Resources"),
                 ],
                 // Sync directory now enabled for iCloud CloudKit synchronization
                 swiftSettings: [
@@ -77,14 +78,14 @@ let package = Package(
                 swiftSettings: [
                     .enableUpcomingFeature("StrictConcurrency"),
                 ]),
-        .testTarget(
-            name: "RunicLinuxTests",
-            dependencies: ["RunicCore", "RunicCLI"],
-            path: "TestsLinux",
-            swiftSettings: [
-                .enableUpcomingFeature("StrictConcurrency"),
-                .enableExperimentalFeature("SwiftTesting"),
-            ]),
+            .testTarget(
+                name: "RunicLinuxTests",
+                dependencies: ["RunicCore", "RunicCLI"],
+                path: "TestsLinux",
+                swiftSettings: [
+                    .enableUpcomingFeature("StrictConcurrency"),
+                    .enableExperimentalFeature("SwiftTesting"),
+                ]),
         ]
 
         #if os(macOS)

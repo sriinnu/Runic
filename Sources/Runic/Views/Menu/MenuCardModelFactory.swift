@@ -44,6 +44,8 @@ extension UsageMenuCardView.Model {
         var liveFetchWasAvailable: Bool = true
         /// Spend and runway derived from recorded balance readings.
         var balanceSpend: BalanceSpendSummary?
+        /// Spend estimated from local-log tokens at catalog prices.
+        var logSpend: LogSpendEstimate?
         var numberStyle: UsageFormatter.NumberStyle = .abbreviated
         var dateStyle: UsageFormatter.DateStyle = .relative
     }
@@ -327,6 +329,15 @@ extension UsageMenuCardView.Model {
                 detailText: input.balanceSpend.map { Self.balanceRunwayText($0, now: input.now) }
                     ?? Self.balanceSpendPendingDetail))
         }
+        if let logs = input.logSpend {
+            metrics.append(Metric(
+                id: "log-spend",
+                title: "From logs",
+                percent: nil,
+                percentStyle: percentStyle,
+                resetText: Self.logSpendText(logs),
+                detailText: Self.logSpendDetail(logs, balance: input.balanceSpend, now: input.now)))
+        }
         if let weekly = snapshot.secondary {
             let paceText = UsagePaceText.weekly(provider: input.provider, window: weekly, now: input.now)
             metrics.append(Metric(
@@ -394,6 +405,42 @@ extension UsageMenuCardView.Model {
             .filter { $0.amount > 0.000_001 }
             .map { "\(BalanceFormatter.amount($0.amount, currency: balance.currency)) \($0.label.lowercased())" }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// "~$3.09 today · ~$41.20 this month" — tokens in the local logs priced
+    /// with the catalog, in USD whatever the balance currency.
+    static func logSpendText(_ logs: LogSpendEstimate) -> String {
+        let today = BalanceFormatter.amount(logs.today, currency: "USD")
+        let month = BalanceFormatter.amount(logs.thisMonth, currency: "USD")
+        return "~\(today) today · ~\(month) this month"
+    }
+
+    static func logSpendDetail(_ logs: LogSpendEstimate, balance: BalanceSpendSummary?, now: Date) -> String {
+        var parts = [Self.logSpendReconciliation(logs, balance: balance, now: now) ?? "Estimated at models.dev prices"]
+        if logs.unpricedTokens > 0 {
+            let tokens = UsageFormatter.tokenCountString(logs.unpricedTokens)
+            parts.append("\(tokens) tokens unpriced (\(logs.unpricedModels.joined(separator: ", ")))")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Compares today's log estimate with today's balance drop, when both are
+    /// in USD, the balance covers the whole day and its newest reading is
+    /// recent. A drop well beyond the logs means the key is spent somewhere
+    /// Runic can't see (another machine, another app).
+    static func logSpendReconciliation(_ logs: LogSpendEstimate, balance: BalanceSpendSummary?, now: Date) -> String? {
+        guard let balance, balance.isEstimated, balance.currency == "USD",
+              balance.todayKnown, !balance.todayIsPartial,
+              let latest = balance.latestReadingAt, now.timeIntervalSince(latest) < 30 * 60,
+              balance.spentToday >= 0.05
+        else { return nil }
+        guard logs.today >= 0.01 else { return "Balance fell with no logged usage today — key used elsewhere?" }
+        let ratio = logs.today / balance.spentToday
+        if ratio < 0.8 {
+            return String(format: "Balance fell %.1f× more than the logs show — key used elsewhere?", 1 / ratio)
+        }
+        if ratio > 1.25 { return "Logs price above today's balance drop" }
+        return "Matches today's balance drop"
     }
 
     static let balanceSpendPendingText = "Measuring…"

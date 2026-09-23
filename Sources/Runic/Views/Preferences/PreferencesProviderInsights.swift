@@ -24,10 +24,17 @@ enum ProviderInsightsComposer {
         provider: UsageProvider,
         store: UsageStore) -> [ProviderInsightLine]
     {
-        guard let balance = snapshot?.balance else { return [] }
         typealias Card = UsageMenuCardView.Model
-        let spend = store.balanceSpend(for: provider)
         let now = Date()
+        let logRows: [ProviderInsightLine] = store.ledgerLogSpend[provider].map { logs in
+            [ProviderInsightLine(
+                id: "log-spend",
+                label: "From logs",
+                value: Card.logSpendText(logs),
+                help: Card.logSpendDetail(logs, balance: store.balanceSpend(for: provider), now: now))]
+        } ?? []
+        guard let balance = snapshot?.balance else { return logRows }
+        let spend = store.balanceSpend(for: provider)
         return [
             ProviderInsightLine(
                 id: "balance",
@@ -38,7 +45,7 @@ enum ProviderInsightsComposer {
                 label: "Spent",
                 value: spend.map { Card.balanceSpendText($0) } ?? Card.balanceSpendPendingText,
                 help: spend.map { Card.balanceRunwayText($0, now: now) } ?? Card.balanceSpendPendingDetail),
-        ]
+        ] + logRows
     }
 
     static func lines(
