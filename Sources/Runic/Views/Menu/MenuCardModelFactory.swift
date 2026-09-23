@@ -59,8 +59,12 @@ extension UsageMenuCardView.Model {
         // there's real ledger usage to show. Only that case is suppressed: a
         // configured credential that then fails (expired OAuth, rejected key) is
         // a real issue and stays visible even alongside ledger data.
+        // Claude and Codex are never log-only: their card lives on the live
+        // fetch, so a missing credential there (a `claude /login` that replaced
+        // the token Runic had copied) must stay visible, or the bars just vanish.
         let hasLedgerData = input.ledgerTopModel != nil || input.ledgerDaily != nil
-        let effectiveError = hasLedgerData && !input.liveFetchWasAvailable ? nil : normalizedError
+        let logOnlyIsHealthy = hasLedgerData && !input.liveFetchWasAvailable && !input.metadata.isPrimaryProvider
+        let effectiveError = logOnlyIsHealthy ? nil : normalizedError
         let email = Self.email(
             for: input.provider,
             snapshot: input.snapshot,
