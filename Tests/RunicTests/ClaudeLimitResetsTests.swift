@@ -79,3 +79,13 @@ struct ClaudeLimitResetsTests {
         #expect(try ClaudeWebAPIFetcher._parseUsageResponseForTesting(data).resetCredits == nil)
     }
 }
+
+extension ClaudeLimitResetsTests {
+    @Test
+    func `only a rejected query retries without the resets flag`() {
+        #expect(ClaudeOAuthUsageFetcher.rejectsQuery(400))
+        #expect(ClaudeOAuthUsageFetcher.rejectsQuery(422))
+        #expect(!ClaudeOAuthUsageFetcher.rejectsQuery(429))
+        #expect(!ClaudeOAuthUsageFetcher.rejectsQuery(500))
+    }
+}

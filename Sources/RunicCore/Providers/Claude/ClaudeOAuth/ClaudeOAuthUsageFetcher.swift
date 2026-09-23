@@ -32,8 +32,24 @@ enum ClaudeOAuthUsageFetcher {
     private static let betaHeader = "oauth-2025-04-20"
 
     static func fetchUsage(accessToken: String) async throws -> OAuthUsageResponse {
+        do {
+            return try await self.fetchUsage(accessToken: accessToken, requestResets: true)
+        } catch let ClaudeOAuthFetchError.serverError(code, _) where Self.rejectsQuery(code) {
+            // The resets flag is only confirmed on claude.ai; never let it
+            // cost the usage card if this endpoint refuses unknown params.
+            return try await self.fetchUsage(accessToken: accessToken, requestResets: false)
+        }
+    }
+
+    static func rejectsQuery(_ statusCode: Int) -> Bool {
+        statusCode == 400 || statusCode == 422
+    }
+
+    private static func fetchUsage(accessToken: String, requestResets: Bool) async throws -> OAuthUsageResponse {
         var components = URLComponents(string: baseURL + self.usagePath)
-        components?.queryItems = [ClaudeLimitResetStatus.queryItem]
+        if requestResets {
+            components?.queryItems = [ClaudeLimitResetStatus.queryItem]
+        }
         guard let url = components?.url else {
             throw ClaudeOAuthFetchError.invalidResponse
         }
