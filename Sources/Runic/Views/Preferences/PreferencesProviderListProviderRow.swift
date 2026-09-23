@@ -28,7 +28,8 @@ struct ProviderListProviderRowView: View {
             Toggle("", isOn: self.$isEnabled)
                 .labelsHidden()
                 .runicPreferenceToggleStyle()
-                .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
+                // Centered on the icon row, not hung from the card's top edge.
+                .frame(width: ProviderListMetrics.checkboxSize, height: ProviderListMetrics.iconSize)
                 .focused(self.$isToggleFocused)
 
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
@@ -64,6 +65,7 @@ struct ProviderListProviderRowView: View {
                                 .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
                         }
                     }
+                    .padding(.leading, ProviderListMetrics.textColumnInset)
                 }
                 .contentShape(Rectangle())
                 .onTapGesture { self.isEnabled.toggle() }
@@ -71,6 +73,7 @@ struct ProviderListProviderRowView: View {
                 if !insightLines.isEmpty {
                     ProviderInsightsView(lines: insightLines)
                         .padding(.top, RunicSpacing.xxs)
+                        .padding(.leading, ProviderListMetrics.textColumnInset)
                 }
 
                 if let errorDisplay {
@@ -80,6 +83,7 @@ struct ProviderListProviderRowView: View {
                         isExpanded: self.$isErrorExpanded,
                         onCopy: { self.onCopyError(errorDisplay.full) })
                         .padding(.top, RunicSpacing.xxs)
+                        .padding(.leading, ProviderListMetrics.textColumnInset)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

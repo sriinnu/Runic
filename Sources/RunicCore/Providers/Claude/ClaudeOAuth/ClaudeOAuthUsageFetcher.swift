@@ -115,6 +115,10 @@ enum ClaudeOAuthUsageFetcher {
                 !((root["spend"] as? [String: Any])?[$0] is NSNull) && (root["spend"] as? [String: Any])?[$0] != nil
             },
             "grantCount": grants.count,
+            // Why the server gives no grants (e.g. "surface": it only lists
+            // them to Claude Code's own client, see CodexBar issue #3895).
+            "eligible": ((block as? [String: Any])?["eligible"] as? Bool).map { $0 ? "true" : "false" } ?? "absent",
+            "ineligibleReason": ((block as? [String: Any])?["ineligible_reason"] as? String) ?? "none",
             "resetsLeft": grants.map { $0.resetsLeft ?? -1 },
             "paused": grants.map { $0.paused ?? false },
             "bankedResets": usage.cedarEmber?.resetCredits()?.availableCount ?? 0,

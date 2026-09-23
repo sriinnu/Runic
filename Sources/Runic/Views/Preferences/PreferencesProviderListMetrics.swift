@@ -14,6 +14,9 @@ struct ProviderUsageStatus {
 
 enum ProviderListMetrics {
     static let contentInset: CGFloat = 16
+    /// Horizontal inset the plain-style List (NSTableView) adds to every row
+    /// on its own. Views outside the list (the header) add it to line up.
+    static let listIntrinsicInset: CGFloat = 8
     static let listHeaderCornerRadius: CGFloat = RunicCornerRadius.md
     static let listHeaderPadding: EdgeInsets = .init(
         top: RunicSpacing.xs,
@@ -32,9 +35,17 @@ enum ProviderListMetrics {
         bottom: RunicSpacing.xxs,
         trailing: contentInset)
     static let sectionEdgeInset: CGFloat = RunicSpacing.md
-    static let dividerBottomInset: CGFloat = RunicSpacing.xxs
+    /// Extra space after a provider's last row: groups sit further apart
+    /// than rows within a group, so no hairline divider is needed.
+    static let dividerBottomInset: CGFloat = RunicSpacing.xs
     static let checkboxSize: CGFloat = 20
     static let iconSize: CGFloat = 34
+    /// Leading offset of the name/subtitle column inside a provider card
+    /// (icon + gap); badges, insights and errors align to it.
+    static let textColumnInset: CGFloat = iconSize + RunicSpacing.sm
+    /// Where a provider's settings rows start, measured from the list inset:
+    /// under the provider's text column, so they read as its children.
+    static let nestedRowInset: CGFloat = RunicSpacing.sm + checkboxSize + rowSpacing + textColumnInset
     static let dividerLeadingInset: CGFloat = contentInset
     static let dividerTrailingInset: CGFloat = contentInset
     static let providerCardPadding = EdgeInsets(
@@ -46,7 +57,8 @@ enum ProviderListMetrics {
     static let providerCardBorderOpacity: Double = 0.25
     static let providerCardCornerRadius: CGFloat = RunicCornerRadius.md
     static let providerInsightsCardCornerRadius: CGFloat = RunicCornerRadius.sm
-    static let providerInsightsGridItemMinWidth: CGFloat = 210
+    /// Two insight chips side by side in the (text-column) width of a card.
+    static let providerInsightsGridItemMinWidth: CGFloat = 170
     static let providerInsightsChipCornerRadius: CGFloat = RunicCornerRadius.sm
     static let providerInsightsChipSpacing: CGFloat = RunicSpacing.xxs
     static let providerInsightsChipPadding: CGFloat = RunicSpacing.xs

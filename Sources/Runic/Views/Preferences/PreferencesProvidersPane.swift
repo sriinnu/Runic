@@ -116,7 +116,7 @@ struct ProvidersPane: View {
                 .strokeBorder(
                     self.runicTheme.menuSeparatorColor.opacity(ProviderListMetrics.listHeaderBorderOpacity + 0.12),
                     lineWidth: 1))
-        .padding(.horizontal, ProviderListMetrics.contentInset)
+        .padding(.horizontal, ProviderListMetrics.contentInset + ProviderListMetrics.listIntrinsicInset)
     }
 
     private func credentialMigrationNoticeCard(_ notice: String) -> some View {
