@@ -138,6 +138,30 @@ extension SettingsStore {
         }
     }
 
+    func schedulePersistClineAPIToken() {
+        self.credentialPersistTasks.cline?.cancel()
+        let tokenStore = self.credentialStores.cline
+        self.credentialPersistTasks.cline = self.makeCredentialPersistTask(
+            value: self.clineAPIToken,
+            loggerName: "cline-token-store",
+            failureMessage: "Failed to persist Cline token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
+    func schedulePersistMuseAPIToken() {
+        self.credentialPersistTasks.muse?.cancel()
+        let tokenStore = self.credentialStores.muse
+        self.credentialPersistTasks.muse = self.makeCredentialPersistTask(
+            value: self.museAPIToken,
+            loggerName: "muse-token-store",
+            failureMessage: "Failed to persist Muse token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
     func schedulePersistDeepSeekAPIToken() {
         self.credentialPersistTasks.deepSeek?.cancel()
         let tokenStore = self.credentialStores.deepSeek

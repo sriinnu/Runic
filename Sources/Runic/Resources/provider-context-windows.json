@@ -34,5 +34,7 @@
   "qwen": { "model": "Qwen 2.5 72B", "contextK": 128 },
   "qwenCN": { "model": "Qwen 2.5 72B", "contextK": 128 },
   "typesafe": { "model": "Jev", "label": "ctx varies" },
+  "cline": { "model": "Cline model", "label": "ctx varies" },
+  "muse": { "model": "Muse", "label": "ctx varies" },
   "local-llm": { "model": "Local model", "label": "ctx varies" }
 }

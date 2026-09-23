@@ -91,6 +91,8 @@ extension IconRenderer {
         .vercelai: 26,
         .localLLM: 27,
         .typesafe: 28,
+        .cline: 29,
+        .muse: 30,
         .combined: 99,
     ]
 

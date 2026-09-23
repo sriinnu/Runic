@@ -83,6 +83,8 @@ extension SettingsStore {
         _ = self.vercelAIAPIToken
         _ = self.groqAPIToken
         _ = self.typeSafeAPIToken
+        _ = self.clineAPIToken
+        _ = self.museAPIToken
         _ = self.deepSeekAPIToken
         _ = self.fireworksAPIToken
         _ = self.mistralAPIToken

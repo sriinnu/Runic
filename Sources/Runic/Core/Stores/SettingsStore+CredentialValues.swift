@@ -10,6 +10,8 @@ struct SettingsStoreCredentialValues {
     var vercelAIAPIToken = ""
     var groqAPIToken = ""
     var typeSafeAPIToken = ""
+    var clineAPIToken = ""
+    var museAPIToken = ""
     var deepSeekAPIToken = ""
     var fireworksAPIToken = ""
     var mistralAPIToken = ""
@@ -118,6 +120,26 @@ extension SettingsStore {
             self.credentialValues.typeSafeAPIToken = newValue
             self.schedulePersistTypeSafeAPIToken()
             self.autoEnableProviderIfCredentialPresent(newValue, cliName: "typesafe")
+        }
+    }
+
+    /// Cline API key (stored in Keychain).
+    var clineAPIToken: String {
+        get { self.credentialValues.clineAPIToken }
+        set {
+            self.credentialValues.clineAPIToken = newValue
+            self.schedulePersistClineAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "cline")
+        }
+    }
+
+    /// Muse (Meta Model API) key (stored in Keychain).
+    var museAPIToken: String {
+        get { self.credentialValues.museAPIToken }
+        set {
+            self.credentialValues.museAPIToken = newValue
+            self.schedulePersistMuseAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "muse")
         }
     }
 

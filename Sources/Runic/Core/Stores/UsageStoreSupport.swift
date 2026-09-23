@@ -240,6 +240,12 @@ enum UsageDebugCredentialCatalog {
         .typesafe: [
             .init(label: "typesafe", resolution: { ProviderTokenResolver.typeSafeResolution() }),
         ],
+        .cline: [
+            .init(label: "cline", resolution: { ProviderTokenResolver.clineResolution() }),
+        ],
+        .muse: [
+            .init(label: "muse", resolution: { ProviderTokenResolver.museResolution() }),
+        ],
         .deepseek: [
             .init(label: "deepseek", resolution: { ProviderTokenResolver.deepSeekResolution() }),
         ],

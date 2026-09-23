@@ -24,6 +24,8 @@ enum ProviderImplementationRegistry {
         _ = ProviderImplementationRegistry.register(VercelAIProviderImplementation())
         _ = ProviderImplementationRegistry.register(GroqProviderImplementation())
         _ = ProviderImplementationRegistry.register(TypeSafeProviderImplementation())
+        _ = ProviderImplementationRegistry.register(ClineProviderImplementation())
+        _ = ProviderImplementationRegistry.register(MuseProviderImplementation())
         _ = ProviderImplementationRegistry.register(DeepSeekProviderImplementation())
         _ = ProviderImplementationRegistry.register(FireworksProviderImplementation())
         _ = ProviderImplementationRegistry.register(MistralProviderImplementation())

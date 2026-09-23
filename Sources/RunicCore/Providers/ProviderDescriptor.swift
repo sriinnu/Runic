@@ -89,6 +89,8 @@ public enum ProviderDescriptorRegistry {
         _ = ProviderDescriptorRegistry.register(QwenProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(QwenCNProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(TypeSafeProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(ClineProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(MuseProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(LocalLLMProviderDescriptor.descriptor)
     }()
 
