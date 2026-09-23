@@ -401,16 +401,21 @@ extension UsageMenuCardView.Model {
         "This provider only reports a balance; spend appears after the next reading (every 20 min)"
 
     /// "¥89.14 today · ¥120.30 this month".
+    /// A period with no reading yet reads "—", never a made-up zero.
     static func balanceSpendText(_ spend: BalanceSpendSummary) -> String {
-        let today = BalanceFormatter.amount(spend.spentToday, currency: spend.currency)
-        let month = BalanceFormatter.amount(spend.spentThisMonth, currency: spend.currency)
+        let today = spend.todayKnown ? BalanceFormatter.amount(spend.spentToday, currency: spend.currency) : "—"
+        let month = spend.monthKnown
+            ? BalanceFormatter.amount(spend.spentThisMonth, currency: spend.currency)
+            : "—"
         return "\(today) today · \(month) this month"
     }
 
     /// "~1.2 days left at ¥89.14/day · tracked since 4:10 PM". Totals only cover
     /// time Runic was recording, so a partial period says when that began.
     static func balanceRunwayText(_ spend: BalanceSpendSummary, now: Date, calendar: Calendar = .current) -> String {
-        var parts: [String] = []
+        // Where the number comes from: the provider's own totals, or the
+        // difference between balance readings Runic took.
+        var parts: [String] = [spend.isEstimated ? "Estimated" : "Official"]
         if let rate = spend.dailyBurnRate, let runway = spend.runwayDays {
             let perDay = BalanceFormatter.amount(rate, currency: spend.currency)
             parts.append("\(Self.runwayPhrase(days: runway)) at \(perDay)/day")
@@ -425,7 +430,7 @@ extension UsageMenuCardView.Model {
                 : spend.trackedSince.formatted(.dateTime.month(.abbreviated).day())
             parts.append("tracked since \(since)")
         }
-        return parts.isEmpty ? "Spend from balance changes" : parts.joined(separator: " · ")
+        return parts.joined(separator: " · ")
     }
 
     static func runwayPhrase(days: Double) -> String {

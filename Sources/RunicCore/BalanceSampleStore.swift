@@ -162,6 +162,13 @@ public struct BalanceSpendSummary: Sendable, Equatable {
     public let monthIsPartial: Bool
     /// Set when totals are provider-reported and narrower than the account.
     public var scope: String?
+    /// True when derived from balance readings, false when the provider
+    /// reported the totals itself. Shown as "Estimated" / "Official".
+    public var isEstimated = true
+    /// Whether a reading since the start of today (this month) exists. Without
+    /// one, today's figure is unknown, not zero, and the card says so.
+    public var todayKnown = true
+    public var monthKnown = true
 
     /// Totals the provider reports itself (exact, whole periods, no tracking gap).
     /// The burn rate still prefers recorded readings; without enough of them it
@@ -191,6 +198,7 @@ public struct BalanceSpendSummary: Sendable, Equatable {
             todayIsPartial: false,
             monthIsPartial: false)
         summary.scope = reported.scope
+        summary.isEstimated = false
         return summary
     }
 
@@ -223,10 +231,14 @@ public struct BalanceSpendSummary: Sendable, Equatable {
         for (previous, current) in zip(run, run.dropFirst()) {
             let delta = previous.available - current.available
             if delta > 0.000_001 {
-                if current.at >= dayStart { today += delta }
-                if current.at >= monthStart { month += delta }
-                if current.at > rateStart { rateSpend += delta }
+                // The drop happened somewhere between the two readings, so
+                // spread it over that gap: a gap across midnight splits
+                // between yesterday and today instead of landing on today.
+                today += delta * Self.share(from: previous.at, to: current.at, after: dayStart)
+                month += delta * Self.share(from: previous.at, to: current.at, after: monthStart)
+                rateSpend += delta * Self.share(from: previous.at, to: current.at, after: rateStart)
             } else if delta < -0.000_001, current.at >= monthStart {
+                // A top-up is a single event; it lands when it was seen.
                 toppedUp += -delta
             }
         }
@@ -237,7 +249,7 @@ public struct BalanceSpendSummary: Sendable, Equatable {
             : nil
         let runway = rate.map { max(0, latest.available) / $0 }
 
-        return BalanceSpendSummary(
+        var summary = BalanceSpendSummary(
             currency: latest.currency,
             spentToday: today,
             spentThisMonth: month,
@@ -247,5 +259,16 @@ public struct BalanceSpendSummary: Sendable, Equatable {
             trackedSince: first.at,
             todayIsPartial: first.at > dayStart,
             monthIsPartial: first.at > monthStart)
+        summary.todayKnown = latest.at >= dayStart
+        summary.monthKnown = latest.at >= monthStart
+        return summary
+    }
+
+    /// Fraction of the interval `from...to` that falls at or after `start`.
+    static func share(from: Date, to: Date, after start: Date) -> Double {
+        let length = to.timeIntervalSince(from)
+        guard length > 0 else { return to >= start ? 1 : 0 }
+        let inside = to.timeIntervalSince(max(from, start))
+        return min(1, max(0, inside / length))
     }
 }

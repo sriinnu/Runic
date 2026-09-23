@@ -25,12 +25,12 @@ struct BalanceSpendTests {
             self.sample(40, 200), // Sep 14 midnight: before today, same month
             self.sample(30, 180), // spend 20 (Sep 15)
             self.sample(20, 230), // top-up 50
-            self.sample(10, 210), // spend 20 (Sep 16 06:00)
+            self.sample(10, 210), // spend 20 over Sep 15 20:00 → Sep 16 06:00: 6 of 10 hours today
             self.sample(1, 110.04), // spend 99.96 (today)
         ]
         let spend = try #require(BalanceSpendSummary.make(samples: samples, now: self.now, calendar: self.calendar))
 
-        #expect(abs(spend.spentToday - 119.96) < 0.001)
+        #expect(abs(spend.spentToday - (12 + 99.96)) < 0.001)
         #expect(abs(spend.spentThisMonth - 139.96) < 0.001)
         #expect(spend.toppedUpThisMonth == 50)
         #expect(spend.currency == "CNY")
@@ -68,8 +68,9 @@ struct BalanceSpendTests {
             self.sample(1, 420),
         ]
         let spend = try #require(BalanceSpendSummary.make(samples: samples, now: self.now, calendar: self.calendar))
-        // Only the 10 + 70 spent inside the last 7 days count, over 7 days.
-        #expect(abs((spend.dailyBurnRate ?? 0) - 80.0 / 7) < 0.001)
+        // Only spend inside the last 7 days counts: all of the 70, and 1 hour
+        // of the 25-hour gap that lost 10. The 500 lost before is outside.
+        #expect(abs((spend.dailyBurnRate ?? 0) - (70 + 10.0 / 25) / 7) < 0.001)
     }
 
     @Test
@@ -164,14 +165,64 @@ struct BalanceSpendTests {
 
         let spend = try #require(BalanceSpendSummary.make(
             samples: [self.sample(40, 250), self.sample(1, 110.04)], now: self.now, calendar: self.calendar))
-        #expect(UsageMenuCardView.Model.balanceSpendText(spend) == "¥139.96 today · ¥139.96 this month")
+        // 39h gap, 15h of it today.
+        #expect(UsageMenuCardView.Model.balanceSpendText(spend) == "¥53.83 today · ¥139.96 this month")
         let runway = UsageMenuCardView.Model.balanceRunwayText(spend, now: self.now, calendar: self.calendar)
-        #expect(runway.hasPrefix("~1.3 days left at ¥83.98/day"))
+        #expect(runway.hasPrefix("Estimated · ~1.3 days left at ¥83.98/day"))
         #expect(runway.contains("tracked since"))
 
         #expect(UsageMenuCardView.Model.runwayPhrase(days: 0.2) == "~5h left")
         #expect(UsageMenuCardView.Model.runwayPhrase(days: 23.6) == "~24 days left")
         #expect(UsageMenuCardView.Model.runwayPhrase(days: 500) == "over a year left")
+    }
+}
+
+/// Where a spend figure comes from and which day it belongs to.
+struct BalanceSpendAttributionTests {
+    /// 2026-09-16 16:00 UTC.
+    private let now = Date(timeIntervalSince1970: 1_789_574_400)
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }
+
+    private func at(_ hoursAgo: Double, _ available: Double) -> BalanceSample {
+        BalanceSample(at: self.now.addingTimeInterval(-hoursAgo * 3600), available: available, currency: "USD")
+    }
+
+    @Test
+    func `a gap across midnight splits the drop between the days`() throws {
+        // 22:00 yesterday → 02:00 today, $8 gone: half of the gap is today.
+        let spend = try #require(BalanceSpendSummary.make(
+            samples: [self.at(18, 20), self.at(14, 12)], now: self.now, calendar: self.calendar))
+        #expect(abs(spend.spentToday - 4) < 0.000_1)
+        #expect(abs(spend.spentThisMonth - 8) < 0.000_1)
+    }
+
+    @Test
+    func `no reading today means today is unknown, not zero`() throws {
+        let spend = try #require(BalanceSpendSummary.make(
+            samples: [self.at(40, 20), self.at(20, 15)], now: self.now, calendar: self.calendar))
+        #expect(spend.todayKnown == false)
+        #expect(spend.monthKnown)
+        #expect(UsageMenuCardView.Model.balanceSpendText(spend) == "— today · $5.00 this month")
+    }
+
+    @Test
+    func `readings are estimated, provider totals are official`() throws {
+        let estimated = try #require(BalanceSpendSummary.make(
+            samples: [self.at(3, 20), self.at(1, 19)], now: self.now, calendar: self.calendar))
+        #expect(estimated.isEstimated)
+        #expect(UsageMenuCardView.Model.balanceRunwayText(estimated, now: self.now).hasPrefix("Estimated"))
+
+        let official = BalanceSpendSummary.make(
+            reported: .init(today: 1, thisWeek: nil, thisMonth: 5, scope: nil),
+            balance: ProviderBalance(available: 10, currency: "USD"),
+            samples: [],
+            now: self.now)
+        #expect(official.isEstimated == false)
+        #expect(UsageMenuCardView.Model.balanceRunwayText(official, now: self.now).hasPrefix("Official"))
     }
 }
 
