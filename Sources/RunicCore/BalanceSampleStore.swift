@@ -142,8 +142,8 @@ public final class BalanceSampleStore: @unchecked Sendable {
 
 /// Spend and runway derived from balance readings.
 ///
-/// Every drop between consecutive readings is spend, attributed to the later
-/// reading's time; every rise is a top-up and is excluded. A top-up and spend
+/// Every drop between consecutive readings is spend, spread evenly over the
+/// gap between them; every rise is a top-up and is excluded. A top-up and spend
 /// landing between the same two readings net out, so spend is a floor, not an
 /// invoice. Totals only cover time Runic was recording (`trackedSince`); the
 /// `...IsPartial` flags say when that started after the period began.
@@ -169,6 +169,8 @@ public struct BalanceSpendSummary: Sendable, Equatable {
     /// one, today's figure is unknown, not zero, and the card says so.
     public var todayKnown = true
     public var monthKnown = true
+    /// Time of the newest reading behind the figures (derived summaries only).
+    public var latestReadingAt: Date?
 
     /// Totals the provider reports itself (exact, whole periods, no tracking gap).
     /// The burn rate still prefers recorded readings; without enough of them it
@@ -259,6 +261,7 @@ public struct BalanceSpendSummary: Sendable, Equatable {
             trackedSince: first.at,
             todayIsPartial: first.at > dayStart,
             monthIsPartial: first.at > monthStart)
+        summary.latestReadingAt = latest.at
         summary.todayKnown = latest.at >= dayStart
         summary.monthKnown = latest.at >= monthStart
         return summary

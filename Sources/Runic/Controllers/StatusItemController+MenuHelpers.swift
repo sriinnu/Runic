@@ -366,6 +366,7 @@ extension StatusItemController {
             showOptionalCreditsAndExtraUsage: self.settings.showOptionalCreditsAndExtraUsage,
             now: Date(),
             balanceSpend: self.store.balanceSpend(for: target),
+            logSpend: self.store.ledgerLogSpend[target],
             numberStyle: self.settings.numberFormat.formatterStyle,
             dateStyle: self.settings.dateFormat.formatterStyle)
         return UsageMenuCardView.Model.make(input)

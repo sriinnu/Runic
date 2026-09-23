@@ -63,6 +63,8 @@ final class UsageStore {
     var ledgerTopModels: [UsageProvider: UsageLedgerModelSummary] = [:]
     var ledgerTopProjects: [UsageProvider: UsageLedgerProjectSummary] = [:]
     var ledgerModelBreakdowns: [UsageProvider: [UsageLedgerModelSummary]] = [:]
+    /// Spend estimated from local-log tokens (balance-only providers).
+    var ledgerLogSpend: [UsageProvider: LogSpendEstimate] = [:]
     var ledgerProjectBreakdowns: [UsageProvider: [UsageLedgerProjectSummary]] = [:]
     var ledgerSpendForecasts: [UsageProvider: UsageLedgerSpendForecast] = [:]
     var ledgerProjectSpendForecasts: [UsageProvider: [UsageLedgerSpendForecast]] = [:]

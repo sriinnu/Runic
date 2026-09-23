@@ -1,0 +1,136 @@
+{
+ "prices": {
+  "deepseek": {
+   "deepseek-flash": {
+    "cache_read": 0.003,
+    "input": 0.15,
+    "output": 0.6
+   },
+   "deepseek-v4-flash": {
+    "cache_read": 0.003,
+    "input": 0.15,
+    "output": 0.6
+   },
+   "deepseek-v4-flash-vision-exp": {
+    "cache_read": 0.003,
+    "input": 0.15,
+    "output": 0.6
+   },
+   "deepseek-v4-pro": {
+    "cache_read": 0.003625,
+    "input": 0.435,
+    "output": 0.87
+   }
+  },
+  "moonshotai": {
+   "kimi-k2.6": {
+    "cache_read": 0.16,
+    "input": 0.95,
+    "output": 4
+   },
+   "kimi-k2.7-code": {
+    "cache_read": 0.19,
+    "input": 0.95,
+    "output": 4
+   },
+   "kimi-k2.7-code-highspeed": {
+    "cache_read": 0.38,
+    "input": 1.9,
+    "output": 8
+   },
+   "kimi-k3": {
+    "cache_read": 0.3,
+    "input": 3,
+    "output": 15
+   }
+  },
+  "moonshotai-cn": {
+   "kimi-k2.6": {
+    "cache_read": 0.16,
+    "input": 0.95,
+    "output": 4
+   },
+   "kimi-k2.7-code": {
+    "cache_read": 0.19,
+    "input": 0.95,
+    "output": 4
+   },
+   "kimi-k2.7-code-highspeed": {
+    "cache_read": 0.38,
+    "input": 1.9,
+    "output": 8
+   },
+   "kimi-k3": {
+    "cache_read": 0.3,
+    "input": 3,
+    "output": 15
+   }
+  },
+  "stepfun": {
+   "step-1-32k": {
+    "cache_read": 0.41,
+    "input": 2.05,
+    "output": 9.59
+   },
+   "step-2-16k": {
+    "cache_read": 1.04,
+    "input": 5.21,
+    "output": 16.44
+   },
+   "step-3.5-flash": {
+    "cache_read": 0.02,
+    "input": 0.1,
+    "output": 0.3
+   },
+   "step-3.5-flash-2603": {
+    "cache_read": 0.02,
+    "input": 0.1,
+    "output": 0.3
+   },
+   "step-3.7-flash": {
+    "cache_read": 0.037,
+    "input": 0.185,
+    "output": 1.11
+   },
+   "step-5-preview": {
+    "cache_read": 0.048,
+    "input": 0.959,
+    "output": 2.741
+   }
+  },
+  "stepfun-ai": {
+   "step-1-32k": {
+    "cache_read": 0.41,
+    "input": 2.05,
+    "output": 9.59
+   },
+   "step-2-16k": {
+    "cache_read": 1.04,
+    "input": 5.21,
+    "output": 16.44
+   },
+   "step-3.5-flash": {
+    "cache_read": 0.02,
+    "input": 0.1,
+    "output": 0.3
+   },
+   "step-3.5-flash-2603": {
+    "cache_read": 0.02,
+    "input": 0.1,
+    "output": 0.3
+   },
+   "step-3.7-flash": {
+    "cache_read": 0.037,
+    "input": 0.185,
+    "output": 1.11
+   },
+   "step-5-preview": {
+    "cache_read": 0.05,
+    "input": 1,
+    "output": 2.7
+   }
+  }
+ },
+ "snapshot": "2026-09-23",
+ "source": "models.dev"
+}

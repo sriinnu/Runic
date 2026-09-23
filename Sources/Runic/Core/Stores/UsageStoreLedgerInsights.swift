@@ -15,6 +15,7 @@ struct LedgerRefreshResult {
     let topProjectSpendForecastsByProvider: [UsageProvider: UsageLedgerSpendForecast]
     let anomaliesByProvider: [UsageProvider: UsageLedgerAnomalySummary]
     let compactionsByProvider: [UsageProvider: UsageLedgerCompactionSummary]
+    var logSpendByProvider: [UsageProvider: LogSpendEstimate] = [:]
     let errorsByProvider: [UsageProvider: String]
     let lastActivityByProvider: [UsageProvider: Date]
     let updatedAt: Date
@@ -86,6 +87,9 @@ struct UsageStoreLedgerInsightLoader {
             return .empty(updatedAt: now, scanDays: scanDays)
         }
 
+        // Prices refresh from models.dev at most daily, off this path; the
+        // estimate below uses whatever is cached (bundled on first launch).
+        Task.detached(priority: .utility) { await ModelPriceCatalogStore.shared.refreshIfStale() }
         let load = await self.loadLedgerEntries(from: sources)
         // Live context-window fill piggybacks on this refresh (small tail
         // reads only) so menu open never does transcript IO synchronously.
@@ -119,6 +123,17 @@ struct UsageStoreLedgerInsightLoader {
             now: now,
             calendar: calendar)
 
+        var logSpendByProvider: [UsageProvider: LogSpendEstimate] = [:]
+        let catalog = ModelPriceCatalogStore.shared.catalog()
+        for provider in load.providers {
+            logSpendByProvider[provider] = LogSpendEstimator.estimate(
+                provider: provider,
+                entries: load.entries,
+                catalog: catalog,
+                now: now,
+                calendar: calendar)
+        }
+
         return LedgerRefreshResult(
             dailyByProvider: dailyBuckets.dailyByProvider,
             allDailySummariesByProvider: dailyBuckets.allDailySummariesByProvider,
@@ -133,6 +148,7 @@ struct UsageStoreLedgerInsightLoader {
             topProjectSpendForecastsByProvider: forecastBuckets.topProjectSpendForecastsByProvider,
             anomaliesByProvider: anomaliesByProvider,
             compactionsByProvider: self.compactionsByProvider(entries: load.entries),
+            logSpendByProvider: logSpendByProvider,
             errorsByProvider: load.errors,
             lastActivityByProvider: self.lastActivityByProvider(entries: load.entries),
             updatedAt: now,
