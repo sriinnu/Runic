@@ -9,6 +9,7 @@ struct SettingsStoreUsageFeatureValues {
     var insightsReportDays: Int
     var ledgerMaxAgeDays: Int
     var claudeWebExtrasEnabled: Bool
+    var claudeWebResetsEnabled: Bool
     var showOptionalCreditsAndExtraUsage: Bool
     var openAIWebAccessEnabled: Bool
     var codexUsageDataSourceRaw: String?
@@ -23,6 +24,7 @@ struct SettingsStoreUsageFeatureValues {
         self.insightsReportDays = defaults.insightsReportDays
         self.ledgerMaxAgeDays = defaults.ledgerMaxAgeDays
         self.claudeWebExtrasEnabled = defaults.claudeWebExtrasEnabled
+        self.claudeWebResetsEnabled = defaults.claudeWebResetsEnabled
         self.showOptionalCreditsAndExtraUsage = defaults.showOptionalCreditsAndExtraUsage
         self.openAIWebAccessEnabled = defaults.openAIWebAccessEnabled
         self.codexUsageDataSourceRaw = defaults.codexUsageDataSourceRaw
@@ -90,6 +92,16 @@ extension SettingsStore {
         set {
             self.usageFeatureValues.ledgerMaxAgeDays = newValue
             self.userDefaults.set(newValue, forKey: "ledgerMaxAgeDays")
+        }
+    }
+
+    /// Opt-in: read banked limit resets from claude.ai with a saved copy of the
+    /// browser's claude.ai login. Claude Code's OAuth login doesn't list them.
+    var claudeWebResetsEnabled: Bool {
+        get { self.usageFeatureValues.claudeWebResetsEnabled }
+        set {
+            self.usageFeatureValues.claudeWebResetsEnabled = newValue
+            self.userDefaults.set(newValue, forKey: "claudeWebResetsEnabled")
         }
     }
 

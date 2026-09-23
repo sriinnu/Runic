@@ -34,6 +34,7 @@ struct SettingsStoreDefaultsSnapshot {
     let ledgerMaxAgeDays: Int
     let randomBlinkEnabled: Bool
     let claudeWebExtrasEnabled: Bool
+    let claudeWebResetsEnabled: Bool
     let showOptionalCreditsAndExtraUsage: Bool
     let openAIWebAccessEnabled: Bool
     let codexUsageDataSourceRaw: String?
@@ -152,6 +153,10 @@ struct SettingsStoreDefaultsSnapshot {
             randomBlinkEnabled: Self.bool("randomBlinkEnabled", defaultValue: false, userDefaults: userDefaults),
             claudeWebExtrasEnabled: Self.bool(
                 "claudeWebExtrasEnabled",
+                defaultValue: false,
+                userDefaults: userDefaults),
+            claudeWebResetsEnabled: Self.bool(
+                "claudeWebResetsEnabled",
                 defaultValue: false,
                 userDefaults: userDefaults),
             showOptionalCreditsAndExtraUsage: showOptionalCreditsAndExtraUsage,

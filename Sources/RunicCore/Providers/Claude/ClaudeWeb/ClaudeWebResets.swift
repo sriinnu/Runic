@@ -47,6 +47,32 @@ public enum ClaudeWebResets {
         SessionStore.load() != nil
     }
 
+    private static let failureLock = NSLock()
+    private nonisolated(unsafe) static var failure: String?
+
+    /// Why the last claude.ai resets fetch failed, for the settings status line.
+    public static var lastFailure: String? {
+        self.failureLock.withLock { self.failure }
+    }
+
+    static func setLastFailure(_ message: String?) {
+        self.failureLock.withLock { self.failure = message }
+    }
+
+    /// Adds claude.ai resets to a snapshot that has none. Best effort: a
+    /// failure is remembered for the settings line and the usage still shows.
+    static func attach(to snapshot: ClaudeUsageSnapshot) async -> ClaudeUsageSnapshot {
+        guard snapshot.resetCredits == nil, self.isConnected else { return snapshot }
+        do {
+            let credits = try await self.fetchResetCredits()
+            self.setLastFailure(nil)
+            return snapshot.with(resetCredits: credits)
+        } catch {
+            self.setLastFailure(error.localizedDescription)
+            return snapshot
+        }
+    }
+
     /// Resets for the chat org, using the saved session only (never the
     /// browser, never a prompt). Nil when not connected or nothing is banked.
     public static func fetchResetCredits() async throws -> UsageResetCredits? {

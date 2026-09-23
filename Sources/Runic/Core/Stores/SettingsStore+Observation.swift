@@ -65,6 +65,7 @@ extension SettingsStore {
         _ = self.ledgerMaxAgeDays
         _ = self.randomBlinkEnabled
         _ = self.claudeWebExtrasEnabled
+        _ = self.claudeWebResetsEnabled
         _ = self.showOptionalCreditsAndExtraUsage
         _ = self.openAIWebAccessEnabled
         _ = self.providerCredentialMigrationNotice
