@@ -107,25 +107,11 @@ private struct ProviderInsightChip: View {
     }
 }
 
-@MainActor
-private struct ProviderListSectionDividerView: View {
-    @Environment(\.runicFonts) private var fonts
-
-    var body: some View {
-        Rectangle()
-            .fill(Color(nsColor: .separatorColor).opacity(0.5))
-            .frame(height: 1)
-            .padding(.leading, ProviderListMetrics.dividerLeadingInset)
-            .padding(.trailing, ProviderListMetrics.dividerTrailingInset)
-    }
-}
-
 extension View {
-    func providerSectionDivider(isVisible: Bool) -> some View {
-        overlay(alignment: .bottom) {
-            if isVisible {
-                ProviderListSectionDividerView()
-            }
-        }
+    /// Groups are separated by spacing (`dividerBottomInset`); the card edges
+    /// already delimit them, so the hairline that sat on the next card's top
+    /// edge is no longer drawn.
+    func providerSectionDivider(isVisible _: Bool) -> some View {
+        self
     }
 }

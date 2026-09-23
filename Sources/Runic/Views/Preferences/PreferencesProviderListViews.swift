@@ -107,7 +107,9 @@ struct ProviderListView: View {
 
     private func rowInsets(withDivider: Bool, addTopPadding: Bool, addBottomPadding: Bool) -> EdgeInsets {
         let base = ProviderListMetrics.rowInsets
-        let topInset = addTopPadding ? ProviderListMetrics.sectionEdgeInset : base.top
+        // The pane's section spacing already separates the list from the
+        // header above it; a full section inset on top doubled that gap.
+        let topInset = addTopPadding ? RunicSpacing.xs : base.top
         let bottomInset = addBottomPadding
             ? ProviderListMetrics.sectionEdgeInset
             : (withDivider ? ProviderListMetrics.dividerBottomInset : base.bottom)

@@ -33,8 +33,8 @@ struct ClaudeProviderImplementation: ProviderImplementation {
             ProviderSettingsToggleDescriptor(
                 id: id,
                 title: "Banked resets from claude.ai",
-                subtitle: "Claude Code's login doesn't list launch and promo resets; claude.ai does. "
-                    + "Turning this on reads your claude.ai login from your browser once "
+                subtitle: "Claude only lists launch and promo resets to claude.ai and to Claude Code itself, "
+                    + "not to other apps. Turning this on reads your claude.ai login from your browser once "
                     + "(macOS may ask for your password) and keeps a copy in Runic's own Keychain item.",
                 binding: binding,
                 statusText: { ClaudeWebResets.lastFailure ?? context.statusText(id) },

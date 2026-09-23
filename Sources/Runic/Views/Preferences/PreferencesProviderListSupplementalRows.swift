@@ -13,7 +13,7 @@ struct ProviderListToggleRowView: View {
             Toggle("", isOn: self.toggle.binding)
                 .labelsHidden()
                 .toggleStyle(.checkbox)
-                .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
+                .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
@@ -63,7 +63,6 @@ struct ProviderListToggleRowView: View {
                     }
                 }
             }
-            .padding(.leading, ProviderListMetrics.iconSize + RunicSpacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(ProviderListMetrics.supplementalCardPadding)
@@ -72,6 +71,7 @@ struct ProviderListToggleRowView: View {
             RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
                 .strokeBorder(self.supplementalCardBorderColor, lineWidth: 1)
         }
+        .padding(.leading, ProviderListMetrics.nestedRowInset)
         .onChange(of: self.toggle.binding.wrappedValue) { _, enabled in
             guard let onChange = self.toggle.onChange else { return }
             Task { @MainActor in
@@ -104,10 +104,6 @@ struct ProviderListFieldRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: ProviderListMetrics.rowSpacing) {
-            Color.clear
-                .frame(width: ProviderListMetrics.checkboxSize, height: ProviderListMetrics.checkboxSize)
-                .alignmentGuide(.top) { d in d[VerticalAlignment.center] }
-
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                     Text(self.field.title)
@@ -146,7 +142,6 @@ struct ProviderListFieldRowView: View {
                     }
                 }
             }
-            .padding(.leading, ProviderListMetrics.iconSize + RunicSpacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(ProviderListMetrics.supplementalCardPadding)
@@ -155,6 +150,7 @@ struct ProviderListFieldRowView: View {
             RoundedRectangle(cornerRadius: ProviderListMetrics.providerCardCornerRadius, style: .continuous)
                 .strokeBorder(self.supplementalCardBorderColor, lineWidth: 1)
         }
+        .padding(.leading, ProviderListMetrics.nestedRowInset)
     }
 
     private var supplementalCardBackground: some View {
