@@ -49,7 +49,7 @@ struct OllamaCloudUsageFetcherTests {
         #expect(snapshot.primary.resetsAt == nil)
         #expect(snapshot.primary.label == "Monthly credits")
         #expect(snapshot.primary.hasKnownLimit == true)
-        #expect(snapshot.primary.resetDescription == "Top: glm-5 (120), qwen3-coder (40), gpt-oss (7)")
+        #expect(snapshot.primary.resetDescription == "Most requests: glm-5 120 · qwen3-coder 40 · gpt-oss 7")
         #expect(snapshot.secondary == nil)
     }
 
@@ -60,7 +60,7 @@ struct OllamaCloudUsageFetcherTests {
         #expect(abs(snapshot.primary.usedPercent - 25) < 1e-9)
         #expect(snapshot.primary.windowMinutes == 300)
         #expect(snapshot.primary.label == "Session")
-        #expect(snapshot.primary.resetDescription == "Top: glm-5 (31), deepseek-v3.1 (9)")
+        #expect(snapshot.primary.resetDescription == "Most requests: glm-5 31 · deepseek-v3.1 9")
         let weekly = try #require(snapshot.secondary)
         #expect(abs(weekly.usedPercent - 60) < 1e-9)
         #expect(weekly.windowMinutes == 10080)
@@ -75,7 +75,7 @@ struct OllamaCloudUsageFetcherTests {
 
         #expect(snapshot.primary.label == "Weekly")
         #expect(snapshot.secondary == nil)
-        #expect(snapshot.primary.resetDescription == "Top: glm-5 (2)")
+        #expect(snapshot.primary.resetDescription == "Most requests: glm-5 2")
     }
 
     @Test
@@ -157,5 +157,18 @@ struct OllamaCloudUsageFetcherTests {
         for value in ["0.42", "12.34", "glm-5", "qwen3-coder", "last_4_weeks", "2026", "deepseek", "120"] {
             #expect(!joined.contains(value))
         }
+    }
+
+    @Test
+    func `usage reads as a fraction, or as a percent when above one`() {
+        #expect(OllamaCloudUsage.percent(fromUsage: 0.42) == 42)
+        #expect(OllamaCloudUsage.percent(fromUsage: 1) == 100)
+        #expect(OllamaCloudUsage.percent(fromUsage: 42) == 42)
+    }
+
+    @Test
+    func `a model name is never read as a reset countdown`() {
+        #expect(UsageResetParsing.date(fromRelative: "Most requests: kimi-k2-1m 12 · glm-5 3") == nil)
+        #expect(UsageResetParsing.date(fromRelative: "resets in 1h 5m") != nil)
     }
 }

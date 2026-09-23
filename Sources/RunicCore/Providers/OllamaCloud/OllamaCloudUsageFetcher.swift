@@ -93,10 +93,12 @@ struct OllamaCloudUsage: Equatable {
         }
     }
 
-    /// "Top: glm-5 (120), qwen3-coder (40)" for the three busiest models.
+    /// "Most requests: glm-5 120 · qwen3-coder 40" for the three busiest
+    /// models. The word "requests" keeps the reset-phrase parser from reading a
+    /// model name like "kimi-k2-1m" as "resets in 1 minute".
     var topModelsText: String? {
-        let top = self.models.prefix(3).map { "\($0.name) (\(Int($0.requests.rounded())))" }
-        return top.isEmpty ? nil : "Top: " + top.joined(separator: ", ")
+        let top = self.models.prefix(3).map { "\($0.name) \(Int($0.requests.rounded()))" }
+        return top.isEmpty ? nil : "Most requests: " + top.joined(separator: " · ")
     }
 }
 
@@ -158,9 +160,15 @@ extension OllamaCloudUsage {
             identity: nil)
     }
 
+    /// The endpoint is undocumented: every reply seen so far sends a 0–1
+    /// fraction, but a value above 1 can only be a percentage already.
+    static func percent(fromUsage value: Double) -> Double {
+        value > 1 ? value : value * 100
+    }
+
     private static func window(fraction: Double, minutes: Int, label: String, description: String?) -> RateWindow {
         RateWindow(
-            usedPercent: min(100, max(0, fraction * 100)),
+            usedPercent: min(100, max(0, self.percent(fromUsage: fraction))),
             windowMinutes: minutes,
             resetsAt: nil,
             resetDescription: description,

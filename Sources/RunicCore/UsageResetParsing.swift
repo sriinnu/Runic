@@ -15,7 +15,8 @@ public enum UsageResetParsing {
         let lowered = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         guard !lowered.isEmpty else { return nil }
         // Balance / counter descriptions contain currency or "left"; bail early.
-        if lowered.contains("$") || lowered.contains("balance") || lowered.contains("remaining") { return nil }
+        if lowered.contains("$") || lowered.contains("balance") || lowered.contains("remaining")
+            || lowered.contains("requests") { return nil }
         guard let regex = Self.relativeRegex else { return nil }
         var seconds: TimeInterval = 0
         var matched = false
