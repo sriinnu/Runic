@@ -44,6 +44,22 @@ public struct ClaudeUsageSnapshot: Sendable {
     }
 }
 
+extension ClaudeUsageSnapshot {
+    func with(resetCredits: UsageResetCredits?) -> ClaudeUsageSnapshot {
+        ClaudeUsageSnapshot(
+            primary: self.primary,
+            secondary: self.secondary,
+            opus: self.opus,
+            providerCost: self.providerCost,
+            updatedAt: self.updatedAt,
+            accountEmail: self.accountEmail,
+            accountOrganization: self.accountOrganization,
+            loginMethod: self.loginMethod,
+            rawText: self.rawText,
+            resetCredits: resetCredits)
+    }
+}
+
 public enum ClaudeUsageError: LocalizedError, Sendable {
     case claudeNotInstalled
     case parseFailed(String)
@@ -217,7 +233,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         case .oauth:
             var snap = try await self.loadViaOAuth()
             snap = await self.applyWebExtrasIfNeeded(to: snap)
-            return snap
+            return await ClaudeWebResets.attach(to: snap)
         case .web:
             return try await self.loadViaWebAPI()
         case .cli:

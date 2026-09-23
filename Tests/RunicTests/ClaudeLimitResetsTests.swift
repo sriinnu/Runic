@@ -82,10 +82,54 @@ struct ClaudeLimitResetsTests {
 
 extension ClaudeLimitResetsTests {
     @Test
+    func `usage request matches what Claude Code sends for resets`() {
+        #expect(ClaudeOAuthUsageFetcher.usageURL(requestResets: true)?.absoluteString
+            == "https://api.anthropic.com/api/oauth/usage?cedar_ember=1&skip_spend=1")
+        #expect(ClaudeOAuthUsageFetcher.usageURL(requestResets: false)?.absoluteString
+            == "https://api.anthropic.com/api/oauth/usage")
+    }
+
+    @Test
     func `only a rejected query retries without the resets flag`() {
         #expect(ClaudeOAuthUsageFetcher.rejectsQuery(400))
         #expect(ClaudeOAuthUsageFetcher.rejectsQuery(422))
         #expect(!ClaudeOAuthUsageFetcher.rejectsQuery(429))
         #expect(!ClaudeOAuthUsageFetcher.rejectsQuery(500))
+    }
+}
+
+extension ClaudeLimitResetsTests {
+    @Test
+    func `claude.ai org pick prefers the chat subscription over an API org`() throws {
+        let json = """
+        [{"uuid": "api-org", "name": "Individual Org", "capabilities": ["api", "api_individual"]},
+         {"uuid": "max-org", "name": "Max", "capabilities": ["claude_max", "chat"]}]
+        """
+        let org = try ClaudeWebAPIFetcher._parseOrganizationsResponseForTesting(Data(json.utf8))
+        #expect(org.id == "max-org")
+        // Without capabilities the first org still wins, as before.
+        let bare = try ClaudeWebAPIFetcher._parseOrganizationsResponseForTesting(
+            Data(#"[{"uuid": "only", "name": "x"}]"#.utf8))
+        #expect(bare.id == "only")
+    }
+
+    @Test
+    func `web resets attach without touching the rest of the snapshot`() {
+        let window = RateWindow(usedPercent: 48, windowMinutes: 300, resetsAt: nil, resetDescription: nil)
+        let snapshot = ClaudeUsageSnapshot(
+            primary: window,
+            secondary: nil,
+            opus: nil,
+            updatedAt: Date(timeIntervalSince1970: 0),
+            accountEmail: "a@b.c",
+            accountOrganization: nil,
+            loginMethod: "Max",
+            rawText: nil)
+        let credits = UsageResetCredits(availableCount: 1)
+        let updated = snapshot.with(resetCredits: credits)
+        #expect(updated.resetCredits == credits)
+        #expect(updated.primary == window)
+        #expect(updated.loginMethod == "Max")
+        #expect(updated.accountEmail == "a@b.c")
     }
 }

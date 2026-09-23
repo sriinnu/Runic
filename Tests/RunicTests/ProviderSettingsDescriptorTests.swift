@@ -111,7 +111,7 @@ struct ProviderSettingsDescriptorTests {
     }
 
     @Test
-    func `claude does not expose settings toggles`() throws {
+    func `claude exposes only the opt-in claude.ai resets toggle`() throws {
         let defaults = try #require(UserDefaults(suiteName: "ProviderSettingsDescriptorTests-claude"))
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-claude")
         let settings = SettingsStore(
@@ -144,7 +144,9 @@ struct ProviderSettingsDescriptorTests {
             setLastAppActiveRunAt: { _, _ in },
             requestConfirmation: { _ in })
         let toggles = ClaudeProviderImplementation().settingsToggles(context: context)
-        #expect(toggles.isEmpty)
+        // Only the opt-in claude.ai resets switch, off until the user turns it on.
+        #expect(toggles.map(\.id) == [ClaudeProviderImplementation.webResetsToggleID])
+        #expect(toggles.first?.binding.wrappedValue == false)
     }
 
     @Test

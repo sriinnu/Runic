@@ -18,6 +18,7 @@ private struct OverageSpendLimitResponse: Decodable {
 private struct OrganizationResponse: Decodable {
     let uuid: String
     let name: String?
+    let capabilities: [String]?
 }
 
 private struct AccountResponse: Decodable {
@@ -165,7 +166,10 @@ extension ClaudeWebAPIFetcher {
         guard let organizations = try? JSONDecoder().decode([OrganizationResponse].self, from: data) else {
             throw FetchError.invalidResponse
         }
-        guard let first = organizations.first else { throw FetchError.noOrganization }
+        // An account can hold an API-only org next to the chat subscription;
+        // usage and resets live on the one with the "chat" capability.
+        let chat = organizations.first { ($0.capabilities ?? []).contains("chat") }
+        guard let first = chat ?? organizations.first else { throw FetchError.noOrganization }
         let name = first.name?.trimmingCharacters(in: .whitespacesAndNewlines)
         let sanitized = (name?.isEmpty ?? true) ? nil : name
         return OrganizationInfo(id: first.uuid, name: sanitized)
