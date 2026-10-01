@@ -13,7 +13,7 @@ struct KimiCNProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "kimi-cn-api-token",
                 title: "API key",
-                subtitle: "China platform (api.moonshot.cn) key. Stored in Keychain (encrypted). Press Return to save.",
+                subtitle: "China platform (api.moonshot.cn) key. Saved automatically to Keychain (encrypted).",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.kimiCNAPIToken),

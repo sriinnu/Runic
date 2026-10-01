@@ -5,6 +5,32 @@ import Testing
 
 @MainActor
 struct StatusMenuTests {
+    @Test(arguments: [false, true])
+    func `OpenAI web errors follow the web access setting`(enabled: Bool) throws {
+        let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+        settings.statusChecksEnabled = false
+        settings.refreshFrequency = .manual
+        settings.openAIWebAccessEnabled = enabled
+        let fetcher = UsageFetcher()
+        let store = UsageStore(fetcher: fetcher, settings: settings)
+        store.lastOpenAIDashboardError = "Web sign-in needed"
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: fetcher.loadAccountInfo(),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection())
+        let model = try #require(controller.menuCardModel(for: .codex))
+        #expect((model.creditsHintText != nil) == enabled)
+    }
+
     /// Each test gets a fresh defaults suite so it neither reads the developer's
     /// real Runic preferences (a menu selection made in the running app) nor
     /// writes provider toggles back into them.
@@ -15,6 +41,41 @@ struct StatusMenuTests {
         TestDefaults.track(suite)
         defaults.set(true, forKey: "providerDetectionCompleted")
         return defaults
+    }
+
+    @Test(arguments: [MenuMode.glance, .analyst, .operator])
+    func `standard menu reserves credit purchase action for operator`(mode: MenuMode) throws {
+        let settings = SettingsStore(
+            userDefaults: Self.isolatedDefaults(),
+            zaiTokenStore: NoopZaiTokenStore(),
+            minimaxTokenStore: NoopMiniMaxTokenStore(),
+            minimaxCookieHeaderStore: NoopMiniMaxCookieHeaderStore(),
+            minimaxGroupIDStore: NoopMiniMaxGroupIDStore(),
+            openRouterTokenStore: NoopOpenRouterTokenStore(),
+            groqTokenStore: NoopGroqTokenStore())
+        settings.statusChecksEnabled = false
+        settings.refreshFrequency = .manual
+        settings.mergeIcons = false
+        settings.menuMode = mode
+        settings.showOptionalCreditsAndExtraUsage = true
+        let metadata = try #require(ProviderRegistry.shared.metadata[.codex])
+        settings.setProviderEnabled(provider: .codex, metadata: metadata, enabled: true)
+        let fetcher = UsageFetcher()
+        let store = UsageStore(fetcher: fetcher, settings: settings)
+        store.credits = CreditsSnapshot(remaining: 42, events: [], updatedAt: Date())
+        store._setSnapshotForTesting(UsageSnapshot(
+            primary: RateWindow(usedPercent: 10, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+            secondary: nil,
+            updatedAt: Date()), provider: .codex)
+        let controller = StatusItemController(
+            store: store,
+            settings: settings,
+            account: fetcher.loadAccountInfo(),
+            updater: DisabledUpdaterController(),
+            preferencesSelection: PreferencesSelection())
+        let menu = controller.makeMenu(for: .codex)
+        controller.menuWillOpen(menu)
+        #expect(menu.items.contains { $0.title == "Buy Credits..." } == (mode == .operator))
     }
 
     @Test
@@ -343,8 +404,8 @@ struct StatusMenuTests {
         #expect(ids.contains("menuCardExtraUsage"))
     }
 
-    @Test
-    func `glance mode shows headline usage only`() {
+    @Test(arguments: [false, true], [UsageProvider.codex, .claude, .cursor, .ollamacloud, .xai])
+    func `glance mode respects optional credits setting`(showCredits: Bool, provider: UsageProvider) throws {
         let settings = SettingsStore(
             userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
@@ -355,10 +416,11 @@ struct StatusMenuTests {
             groqTokenStore: NoopGroqTokenStore())
         settings.statusChecksEnabled = false
         settings.refreshFrequency = .manual
-        settings.mergeIcons = true
-        settings.selectedMenuProvider = .codex
+        settings.mergeIcons = false
+        settings.selectedMenuProvider = provider
         settings.costUsageEnabled = true
         settings.menuMode = .glance
+        settings.showOptionalCreditsAndExtraUsage = showCredits
 
         let registry = ProviderRegistry.shared
         if let codexMeta = registry.metadata[.codex] {
@@ -371,6 +433,10 @@ struct StatusMenuTests {
             settings.setProviderEnabled(provider: .gemini, metadata: geminiMeta, enabled: false)
         }
 
+        if let metadata = registry.metadata[provider] {
+            settings.setProviderEnabled(provider: provider, metadata: metadata, enabled: true)
+        }
+
         let fetcher = UsageFetcher()
         let store = UsageStore(fetcher: fetcher, settings: settings)
         store.credits = CreditsSnapshot(remaining: 100, events: [], updatedAt: Date())
@@ -379,8 +445,10 @@ struct StatusMenuTests {
                 primary: RateWindow(usedPercent: 10, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
                 secondary: nil,
                 tertiary: nil,
+                providerCost: provider == .codex ? nil :
+                    ProviderCostSnapshot(used: 5, limit: 20, currencyCode: "USD", updatedAt: Date()),
                 updatedAt: Date()),
-            provider: .codex)
+            provider: provider)
         store._setTokenSnapshotForTesting(CostUsageTokenSnapshot(
             sessionTokens: 123,
             sessionCostUSD: 0.12,
@@ -405,14 +473,25 @@ struct StatusMenuTests {
             updater: DisabledUpdaterController(),
             preferencesSelection: PreferencesSelection())
 
-        let menu = controller.makeMenu()
-        controller.menuWillOpen(menu)
+        let menu = controller.makeMenu(for: provider)
+        let model = try #require(controller.menuCardModel(for: provider))
+        controller.addMenuCardSections(
+            to: menu,
+            request: .init(
+                model: model,
+                provider: provider,
+                width: 320,
+                sidebar: nil,
+                webItems: .init(hasUsageBreakdown: false, hasCreditsHistory: false, hasCostHistory: false),
+                animateEntrance: false))
         let ids = menu.items.compactMap { $0.representedObject as? String }
         let usageItem = menu.items.first { ($0.representedObject as? String) == "menuCardUsage" }
 
         #expect(ids.contains("menuCardUsage"))
-        #expect(!ids.contains("menuCardCredits"))
-        #expect(!ids.contains("menuCardExtraUsage"))
+        #expect(ids
+            .contains("menuCardCredits") ==
+            (showCredits && registry.metadata[provider]?.supportsCredits == true && provider != .cursor))
+        #expect(ids.contains("menuCardExtraUsage") == (showCredits && provider != .codex))
         #expect(!ids.contains("menuCardCost"))
         #expect(!ids.contains("menuCardInsights"))
         #expect(usageItem?.submenu == nil)

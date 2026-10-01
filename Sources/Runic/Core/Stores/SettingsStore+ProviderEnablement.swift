@@ -29,10 +29,11 @@ extension SettingsStore {
     }
 
     @MainActor
-    func setLaunchAtLoginFromPreferences(_ enabled: Bool) {
-        guard self.launchAtLogin != enabled else { return }
-        self.launchAtLogin = enabled
-        LaunchAtLoginManager.setEnabled(enabled)
+    @discardableResult
+    func setLaunchAtLoginFromPreferences(_ enabled: Bool) -> Bool {
+        let applied = LaunchAtLoginManager.setEnabled(enabled)
+        self.launchAtLogin = LaunchAtLoginManager.isEnabled()
+        return applied
     }
 
     func isProviderEnabled(provider: UsageProvider, metadata: ProviderMetadata) -> Bool {

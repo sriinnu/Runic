@@ -5,7 +5,6 @@ extension IconRenderer {
     struct IconCacheKey: Hashable {
         let primary: Int
         let weekly: Int
-        let credits: Int
         let stale: Bool
         let style: Int
         let indicator: Int
@@ -105,12 +104,6 @@ extension IconRenderer {
     static func quantizedPercent(_ value: Double?) -> Int {
         guard let value else { return -1 }
         return Int((value * 10).rounded())
-    }
-
-    static func quantizedCredits(_ value: Double?) -> Int {
-        guard let value else { return -1 }
-        let clamped = max(0, min(value, self.creditsCap))
-        return Int((clamped * 10).rounded())
     }
 
     static func styleKey(_ style: IconStyle) -> Int {

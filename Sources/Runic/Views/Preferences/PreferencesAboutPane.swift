@@ -245,7 +245,7 @@ struct AboutPane: View {
         GlassCard {
             if self.updater.isAvailable {
                 VStack(spacing: RunicSpacing.sm) {
-                    Toggle("Check for updates automatically", isOn: self.$autoUpdateEnabled)
+                    Toggle("Check and download updates automatically", isOn: self.$autoUpdateEnabled)
                         .toggleStyle(.checkbox)
                         .font(.system(size: 12.5))
                         .frame(maxWidth: .infinity, alignment: .center)

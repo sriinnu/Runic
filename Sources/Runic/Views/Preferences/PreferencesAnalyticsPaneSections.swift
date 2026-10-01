@@ -12,8 +12,9 @@ extension AnalyticsPane {
                 self.usageMetricsPicker
                 self.menuModePicker
                 PreferenceToggleRow(
-                    title: "Show credits + extra usage",
-                    subtitle: "Show Codex Credits and Claude Extra usage sections in the menu.",
+                    title: "Show credit + extra usage sections",
+                    subtitle: "Show detailed credit and extra-usage sections in every menu mode. " +
+                        "Balances and on-demand spend stay in usage.",
                     binding: self.$settings.showOptionalCreditsAndExtraUsage)
                 PreferenceToggleRow(
                     title: "Merge Icons",
@@ -157,7 +158,9 @@ extension AnalyticsPane {
             Text("Menu mode")
                 .font(self.fonts.body)
             RunicSegmentedPicker(selection: self.$settings.menuMode, cases: MenuMode.allCases, label: \.label)
-            Text("Glance: usage only. Analyst: usage + credits/cost. Operator: full insights and actions.")
+            Text(
+                "Glance: usage and optional credits/extra usage. " +
+                    "Analyst: adds token cost. Operator: insights and actions.")
                 .font(self.fonts.footnote)
                 .foregroundStyle(self.runicTheme.subduedSecondaryText)
                 .fixedSize(horizontal: false, vertical: true)

@@ -53,7 +53,7 @@ extension StatusItemController {
             updateReady: self.updater.updateStatus.isUpdateReady)
         let dashboard = self.store.openAIDashboard
         let currentProvider = selectedProvider ?? enabledProviders.first ?? .codex
-        let openAIWebEligible = !isOverviewMode &&
+        let openAIWebEligible = self.settings.openAIWebAccessEnabled && !isOverviewMode &&
             currentProvider == .codex &&
             self.store.openAIDashboardRequiresLogin == false &&
             dashboard != nil

@@ -324,7 +324,7 @@ extension StatusItemController {
         let ledgerUpdatedAt = self.store.ledgerUpdatedAt(for: target)
         credits = self.store.credits(for: target)
         creditsError = self.store.creditsError(for: target)
-        if target == .codex {
+        if target == .codex, self.settings.openAIWebAccessEnabled {
             dashboard = self.store.openAIDashboardRequiresLogin ? nil : self.store.openAIDashboard
             dashboardError = self.store.lastOpenAIDashboardError
         } else {

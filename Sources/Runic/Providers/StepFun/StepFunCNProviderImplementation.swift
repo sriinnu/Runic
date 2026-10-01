@@ -12,7 +12,7 @@ struct StepFunCNProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "stepfun-cn-api-token",
                 title: "API key",
-                subtitle: "China platform (platform.stepfun.com) key. Stored in Keychain (encrypted). Press Return to save.",
+                subtitle: "China platform (platform.stepfun.com) key. Saved automatically to Keychain (encrypted).",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.stepfunCNAPIToken),

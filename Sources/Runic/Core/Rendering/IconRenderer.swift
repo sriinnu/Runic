@@ -47,7 +47,6 @@ enum IconDataMode {
 }
 
 enum IconRenderer {
-    static let creditsCap: Double = 1000
     static let baseSize = NSSize(width: 38, height: 22)
     // Render to a 38×22 pt template (76×44 px at 2×) for better visibility.
     static let outputSize = NSSize(width: 38, height: 22)
@@ -81,7 +80,10 @@ enum IconRenderer {
             self.renderImage(isTemplate: appearance == .template) {
                 let topValue = primaryRemaining
                 let bottomValue = weeklyRemaining
-                let creditsRatio = creditsRemaining.map { min($0 / Self.creditsCap * 100, 100) }
+                // The provider reports remaining credits but no total. A
+                // made-up denominator would turn the balance into a false
+                // usage percentage, so only rate windows drive the icon.
+                let creditsRatio: Double? = nil
                 let pressure = Self.usagePressure(
                     primary: topValue,
                     weekly: bottomValue,
@@ -118,7 +120,6 @@ enum IconRenderer {
             let key = IconCacheKey(
                 primary: self.quantizedPercent(primaryRemaining),
                 weekly: self.quantizedPercent(weeklyRemaining),
-                credits: self.quantizedCredits(creditsRemaining),
                 stale: stale,
                 style: self.styleKey(style),
                 indicator: self.indicatorKey(statusIndicator),

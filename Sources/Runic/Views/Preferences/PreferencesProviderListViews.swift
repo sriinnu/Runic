@@ -171,6 +171,7 @@ struct ProviderListView: View {
                 provider: sibling,
                 displayName: self.store.metadata(for: sibling).displayName,
                 isExpanded: self.addAccountExpandedBinding(for: sibling),
+                isEnabled: self.isEnabled(sibling),
                 fields: siblingFields)
                 .padding(.leading, ProviderListMetrics.regionalSiblingIndent)
                 .padding(.bottom, shouldShowDivider ? ProviderListMetrics.dividerBottomInset : 0)

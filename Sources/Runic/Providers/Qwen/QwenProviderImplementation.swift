@@ -13,7 +13,7 @@ struct QwenProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "qwen-api-token",
                 title: "DashScope API key",
-                subtitle: "Stored in Keychain (encrypted). Press Return to save.",
+                subtitle: "Saved automatically to Keychain (encrypted).",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.qwenAPIToken),

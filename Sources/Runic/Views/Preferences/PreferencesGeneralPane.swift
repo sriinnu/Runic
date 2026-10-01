@@ -12,6 +12,7 @@ struct GeneralPane: View {
     @State private var appeared = false
     @State private var diagnosticsStatus: String?
     @State private var guardrailStatus: String?
+    @State private var launchAtLoginStatus: String?
     @State private var isImportingOpenAIWebCookies = false
 
     var body: some View {
@@ -21,6 +22,11 @@ struct GeneralPane: View {
                     title: "Start at Login",
                     subtitle: "Open Runic when your Mac starts.",
                     binding: self.launchAtLoginBinding)
+                if let launchAtLoginStatus = self.launchAtLoginStatus {
+                    Text(launchAtLoginStatus)
+                        .font(self.preferenceHelpFont)
+                        .foregroundStyle(.orange)
+                }
             }
             .liquidEntrance(appeared: self.appeared, index: 0)
 
@@ -83,7 +89,7 @@ struct GeneralPane: View {
                         }
                         .runicPreferenceToggleStyle()
 
-                        Text("Shows local cost totals in the menu.")
+                        Text("Shows local cost totals in Analyst and Operator menu modes.")
                             .font(self.preferenceHelpFont)
                             .fontDesign(self.preferenceHelpDesign)
                             .tracking(self.preferenceHelpTracking)
@@ -178,7 +184,9 @@ struct GeneralPane: View {
                             cases: RefreshFrequency.allCases,
                             label: \.label)
 
-                        Text("How often to automatically refresh usage data.")
+                        Text(
+                            "How often to refresh usage data. " +
+                                "Manual updates only when you reload; it won't update the menu bar on its own.")
                             .font(self.preferenceHelpFont)
                             .foregroundStyle(self.preferenceHelpColor)
                     }
@@ -329,8 +337,12 @@ struct GeneralPane: View {
             .liquidEntrance(appeared: self.appeared, index: 7)
         }
         .onAppear {
+            self.settings.launchAtLogin = LaunchAtLoginManager.isEnabled()
             guard !self.appeared else { return }
             withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) { self.appeared = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            self.settings.launchAtLogin = LaunchAtLoginManager.isEnabled()
         }
     }
 
@@ -365,7 +377,10 @@ struct GeneralPane: View {
     private var launchAtLoginBinding: Binding<Bool> {
         Binding(
             get: { self.settings.launchAtLogin },
-            set: { self.settings.setLaunchAtLoginFromPreferences($0) })
+            set: { enabled in
+                self.launchAtLoginStatus = self.settings.setLaunchAtLoginFromPreferences(enabled)
+                    ? nil : "macOS did not apply this change. Check System Settings > Login Items."
+            })
     }
 
     private var preferenceTitleFont: Font {

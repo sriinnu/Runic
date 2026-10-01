@@ -13,7 +13,7 @@ struct VercelAIProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "vercelai-api-token",
                 title: "AI Gateway API key",
-                subtitle: "Stored in Keychain (encrypted). Press Return to save.",
+                subtitle: "Saved automatically to Keychain (encrypted).",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.vercelAIAPIToken),

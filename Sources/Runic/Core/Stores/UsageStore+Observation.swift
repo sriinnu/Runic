@@ -71,6 +71,7 @@ extension UsageStore {
             _ = self.settings.costUsageEnabled
             _ = self.settings.randomBlinkEnabled
             _ = self.settings.claudeWebExtrasEnabled
+            _ = self.settings.openAIWebAccessEnabled
             _ = self.settings.claudeUsageDataSource
             _ = self.settings.mergeIcons
             _ = self.settings.debugLoadingPattern

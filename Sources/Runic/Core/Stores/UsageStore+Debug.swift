@@ -18,8 +18,7 @@ extension UsageStore {
         }
     }
 
-    func dumpLog(toFileFor provider: UsageProvider) async -> URL? {
-        let text = await self.debugLog(for: provider)
+    func dumpLog(_ text: String, toFileFor provider: UsageProvider) async -> URL? {
         let filename = "runic-\(provider.rawValue)-probe.txt"
         let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)
         do {

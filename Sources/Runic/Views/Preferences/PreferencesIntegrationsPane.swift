@@ -29,12 +29,27 @@ struct IntegrationsPane: View {
         NSString(string: "~/.kosha/registry.json").expandingTildeInPath
     }
 
-    private var repositoryGitPath: String {
-        (self.githubRepositoryPath as NSString).appendingPathComponent(".git")
+    private var isRepositoryPathValid: Bool {
+        Self.gitDirectory(for: self.githubRepositoryPath) != nil
     }
 
-    private var isRepositoryPathValid: Bool {
-        !self.githubRepositoryPath.isEmpty && FileManager.default.fileExists(atPath: self.repositoryGitPath)
+    static func gitDirectory(for repositoryPath: String) -> String? {
+        let repository = repositoryPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !repository.isEmpty else { return nil }
+        let marker = URL(fileURLWithPath: repository, isDirectory: true).appendingPathComponent(".git")
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: marker.path, isDirectory: &isDirectory) else { return nil }
+        if isDirectory.boolValue { return marker.standardizedFileURL.path }
+        guard let content = try? String(contentsOf: marker, encoding: .utf8),
+              let line = content.split(whereSeparator: \.isNewline).first,
+              line.hasPrefix("gitdir:")
+        else { return nil }
+        let path = String(line.dropFirst("gitdir:".count)).trimmingCharacters(in: .whitespaces)
+        guard !path.isEmpty else { return nil }
+        let resolved = URL(fileURLWithPath: path, relativeTo: marker.deletingLastPathComponent()).standardizedFileURL
+        guard FileManager.default.fileExists(atPath: resolved.path, isDirectory: &isDirectory), isDirectory.boolValue
+        else { return nil }
+        return resolved.path
     }
 
     var body: some View {
@@ -260,11 +275,15 @@ struct IntegrationsPane: View {
     }
 
     private var githubInsightsCommand: String {
-        let path = self.githubRepositoryPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        if path.isEmpty {
-            return "runic insights --with-commits --format json --pretty"
+        Self.insightsCommand(for: self.githubRepositoryPath)
+    }
+
+    static func insightsCommand(for repositoryPath: String) -> String {
+        guard let gitDirectory = self.gitDirectory(for: repositoryPath) else {
+            return "runic insights --with-commits --json --pretty"
         }
-        return "runic insights --with-commits --git-directory \"\(path)/.git\" --json --pretty"
+        let quoted = "'\(gitDirectory.replacingOccurrences(of: "'", with: "'\"'\"'"))'"
+        return "runic insights --with-commits --git-directory \(quoted) --json --pretty"
     }
 
     private func docsURL(_ filename: String) -> URL? {

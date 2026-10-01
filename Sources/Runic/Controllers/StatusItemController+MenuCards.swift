@@ -82,8 +82,8 @@ extension StatusItemController {
         let includeInsights = menuMode == .operator
         let includeActions = menuMode == .operator
         let hasUsageBlock = !model.metrics.isEmpty || model.placeholder != nil
-        let hasCredits = includeSummarySections && model.creditsText != nil
-        let hasExtraUsage = includeSummarySections && model.providerCost != nil
+        let hasCredits = model.creditsText != nil
+        let hasExtraUsage = model.providerCost != nil
         let hasCost = includeSummarySections && model.tokenUsage != nil
         let hasInsights = includeInsights && model.insights != nil
         let bottomPadding = MenuCardMetrics.sectionBottomPadding

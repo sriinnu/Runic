@@ -107,7 +107,7 @@ extension StatusItemController {
             UsageMenuCardView(model: model, width: $0)
         }
         menu.addItem(self.makeMenuCardItem(cardView, id: "menuCard", width: context.menuWidth))
-        if context.currentProvider == .codex, model.creditsText != nil {
+        if self.settings.menuMode == .operator, context.currentProvider == .codex, model.creditsText != nil {
             menu.addItem(self.makeBuyCreditsItem())
         }
         menu.addItem(.separator())
@@ -119,7 +119,8 @@ extension StatusItemController {
         context: MenuPopulationContext,
         cardAlreadyAdded: Bool)
     {
-        guard !context.isOverviewMode, context.hasOpenAIWebMenuItems else { return }
+        guard self.settings.menuMode == .operator, !context.isOverviewMode,
+              context.hasOpenAIWebMenuItems else { return }
         if !cardAlreadyAdded {
             if context.webItems.hasUsageBreakdown {
                 _ = self.addUsageBreakdownSubmenu(to: menu)
