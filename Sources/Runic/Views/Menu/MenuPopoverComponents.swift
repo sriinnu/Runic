@@ -109,6 +109,7 @@ struct MenuPopoverBackground: View {
                     endRadius: 320)
             }
             if self.runicTheme.isTerminalHUD {
+                RunicTerminalCodeRainOverlay()
                 RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
                 RunicTerminalCornerOverlay(
                     inset: 10,

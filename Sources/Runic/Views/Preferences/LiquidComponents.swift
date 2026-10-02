@@ -11,6 +11,7 @@ struct LiquidMeshBackground: View {
         if self.runicTheme.isTerminalHUD {
             ZStack {
                 self.runicTheme.menuSurfaceGradient
+                RunicTerminalCodeRainOverlay()
                 RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
             }
         } else if self.runicTheme.hasSurfaceTexture ||

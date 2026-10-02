@@ -1,32 +1,32 @@
 {
   "id": "terminal",
   "displayName": "Terminal",
-  "tagline": "Operator console",
+  "tagline": "Phosphor console",
   "symbolName": "terminal.fill",
   "isCustom": true,
   "prefersDarkAppearance": true,
   "colors": {
-    "primary":       "#FFC94D",
-    "secondary":     "#7DD3FC",
-    "accent":        "#FFB000",
-    "highlight":     "#FF8C42",
-    "warm":          "#FF5C5C",
-    "tertiary":      "#4CE0A0",
-    "surface":       "#0B0B0D",
-    "surfaceAlt":    "#141416E6",
-    "cardFill":      "#FFFFFF0D",
-    "cardStroke":    "#FFB00059",
-    "primaryText":   "#F2EDE4",
-    "secondaryText": "#B8B0A3"
+    "primary":       "#B8F6C4",
+    "secondary":     "#69BE87",
+    "accent":        "#65EF93",
+    "highlight":     "#B9F87A",
+    "warm":          "#FF6975",
+    "tertiary":      "#72D69B",
+    "surface":       "#020904",
+    "surfaceAlt":    "#081B0D",
+    "cardFill":      "#102416D9",
+    "cardStroke":    "#60DE8666",
+    "primaryText":   "#E4FFE9",
+    "secondaryText": "#A7CDB0"
   },
   "fonts":   { "body": "mono", "numeric": "mono" },
-  "shape":   { "cornerMultiplier": 0.62, "separator": "hairline" },
+  "shape":   { "cornerMultiplier": 0.45, "separator": "hairline" },
   "motion":  { "preset": "instant" },
   "density": { "preset": "normal" },
   "style": {
     "typography": { "bodyFamily": "Geist Mono", "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.0, "lineSpacing": 1.2, "contrast": "strong" },
-    "chrome": { "borderStyle": "hud", "borderWeight": 0.75, "borderOpacity": 0.44, "cornerStyle": "compact", "panelDepth": "low" },
-    "effects": { "scanlineOpacity": 0.08, "glowStrength": 0.12, "materialIntensity": 0.0 },
+    "chrome": { "borderStyle": "hud", "borderWeight": 0.8, "borderOpacity": 0.46, "cornerStyle": "compact", "panelDepth": "low" },
+    "effects": { "scanlineOpacity": 0.2, "glowStrength": 0.18, "materialIntensity": 0.0 },
     "controls": { "selectedFillStyle": "terminalSolid", "progressStyle": "segmentedHUD", "hoverStyle": "neutral" }
   }
 }

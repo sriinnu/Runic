@@ -212,12 +212,12 @@ struct RunicThemePalette {
         } else if self.isTerminalHUD {
             LinearGradient(
                 colors: [
+                    self.surfaceAlt.opacity(0.86),
                     self.surface,
-                    self.surfaceAlt.opacity(0.72),
-                    self.surface,
+                    self.surfaceAlt.opacity(0.38),
                 ],
-                startPoint: .top,
-                endPoint: .bottom)
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
         } else {
             LinearGradient(
                 colors: [
@@ -243,8 +243,9 @@ struct RunicThemePalette {
         } else if self.isTerminalHUD {
             LinearGradient(
                 colors: [
-                    self.cardFill.opacity(0.88),
-                    self.surface.opacity(0.98),
+                    self.surfaceAlt.opacity(0.94),
+                    self.cardFill.opacity(0.72),
+                    self.surface.opacity(0.94),
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing)
@@ -690,6 +691,45 @@ private struct RunicFilmGrainCanvas: View {
                     startRadius: min(size.width, size.height) * 0.25,
                     endRadius: max(size.width, size.height) * 0.85))
         }
+    }
+}
+
+/// Sparse, static code streams at the edges of Terminal panels. The text is
+/// decoration only and never animates, so content remains readable and Reduce
+/// Motion needs no alternate path.
+@MainActor
+struct RunicTerminalCodeRainOverlay: View {
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        Canvas { context, size in
+            guard size.width > 0, size.height > 0 else { return }
+
+            let glyphs = Array("10A07F31")
+            let edgeWidth = min(112, size.width * 0.2)
+            let rowCount = Int(size.height / 12) + 2
+            let columnCount = Int(size.width / 32) + 1
+
+            for column in 0..<columnCount {
+                let x = CGFloat(column) * 32 + 8
+                let edgeDistance = min(x, size.width - x)
+                guard edgeDistance < edgeWidth else { continue }
+
+                let stream = (0..<rowCount)
+                    .map { String(glyphs[($0 * 3 + column * 5) % glyphs.count]) }
+                    .joined(separator: "\n")
+                let opacity = 0.012 + 0.10 * Double(1 - edgeDistance / edgeWidth)
+                let text = Text(stream)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(self.runicTheme.accent.opacity(opacity))
+                context.draw(
+                    context.resolve(text),
+                    at: CGPoint(x: x, y: -CGFloat((column * 11) % 17)),
+                    anchor: .topLeading)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
