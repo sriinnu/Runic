@@ -36,6 +36,10 @@ enum RunicMCPCommand {
                     print(
                         "\(package.manifest.id)\t\(package.enabled ? "enabled" : "disabled")\t" +
                             "\(package.discovered ? "mcpservers" : "registered")\t\(package.directory.path)")
+                    for tool in package.manifest.tools {
+                        print("\(package.manifest.id)_\(tool.name)\t\(package.enabled ? "enabled" : "disabled")\t" +
+                            package.manifest.name)
+                    }
                 }
                 let invalidDiscovered = Set(RunicMCPPluginRegistry.invalidDiscoveredPaths())
                 for path in invalidDiscovered.sorted() {
