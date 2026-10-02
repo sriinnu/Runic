@@ -21,6 +21,7 @@ SwiftPM-only; package/sign/notarize manually (no Xcode project). Sparkle feed is
 - Sparkle key probe runs before format/lint/test/build/notarization; appcast entry + signature verified automatically after generation.
 - Release notes are extracted directly from the current changelog section and passed to the GitHub release (no manual notes flag needed).
 - Sparkle appcast notes are generated as HTML from the same changelog section and embedded into the appcast entry.
+- After publishing signed assets, the script opens a separate appcast PR. Merge that PR and verify the live feed before calling the release complete.
 - Uses in-repo helpers (`Scripts/release-lib.sh`) so release checks no longer depend on external/private script paths.
 - Requires tools/env on PATH: `swiftformat`, `swiftlint`, `swift`, `sign_update`, `generate_appcast`, `gh`, `python3`, `zip`, `curl`, plus `APP_STORE_CONNECT_*` and `SPARKLE_PRIVATE_KEY_FILE`.
 

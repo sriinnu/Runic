@@ -79,10 +79,9 @@ fi
 check_assets "$TAG" "$ARTIFACT_PREFIX"
 
 # Bump the Homebrew cask in the tap from the just-published artifact. Best-effort:
-# the release is already published (tag, GitHub release, appcast) by this point, so
-# a tap hiccup (network, perms, push race) must NOT fail the release. On failure,
-# re-run Scripts/update-homebrew-cask.sh manually (it's idempotent).
+# the tag and release assets already exist, so a tap hiccup must not hide them.
+# On failure, inspect the tap PR and rerun Scripts/update-homebrew-cask.sh if safe.
 "$ROOT/Scripts/update-homebrew-cask.sh" || \
   echo "WARN: Homebrew cask bump failed; the release IS published. Re-run Scripts/update-homebrew-cask.sh." >&2
 
-echo "Release ${MARKETING_VERSION} complete."
+echo "Release assets published. Merge the appcast PR and verify the live update feed to complete ${MARKETING_VERSION}."

@@ -21,6 +21,7 @@ struct IntegrationsPane: View {
     @State private var invalidDiscoveredMCPPaths: [String] = []
     @State private var mcpInventorySignature = ""
     @State private var mcpPluginMessage: String?
+    @State private var mcpDataCheck: String?
     @State private var showingAddServerSheet = false
     @State private var newServerName = ""
     @State private var newServerPort = 8001
@@ -68,43 +69,6 @@ struct IntegrationsPane: View {
     var body: some View {
         PreferencesPane {
             SettingsSection(
-                title: "Scriptable Access",
-                caption: "Runic exposes local usage through the bundled CLI and local JSONL files. " +
-                    "Nothing here starts a network service.",
-                contentSpacing: PreferencesLayoutMetrics.sectionSpacing)
-            {
-                IntegrationRow(
-                    icon: "terminal",
-                    title: "CLI JSON API",
-                    status: "Ready",
-                    detail: "Use the command-line helper for scripts, CI, dashboards, and local automations.",
-                    actions: {
-                        IntegrationCopyButton(
-                            title: "Copy JSON command",
-                            value: "runic usage --format json --pretty",
-                            copiedValue: self.$copiedValue,
-                            onCopy: self.copy)
-                        IntegrationLinkButton(title: "CLI docs", systemImage: "book", url: self.docsURL("cli.md"))
-                    })
-                IntegrationRow(
-                    icon: "waveform.path.ecg.rectangle",
-                    title: "OpenTelemetry GenAI ledger",
-                    status: FileManager.default.fileExists(atPath: self.collectorPath) ? "Found" : "Ready",
-                    detail: "The collector writes sanitized metric JSONL here. " +
-                        "Prompts and responses are not persisted.",
-                    path: self.collectorPath,
-                    actions: {
-                        IntegrationCopyButton(
-                            title: "Copy path",
-                            value: self.collectorPath,
-                            copiedValue: self.$copiedValue,
-                            onCopy: self.copy)
-                        IntegrationRevealButton(path: self.collectorPath)
-                    })
-                AdditionalUsageLogPathsEditor(paths: self.$settings.otelGenAILogPaths)
-            }
-            PreferencesDivider()
-            SettingsSection(
                 title: "Runic MCP",
                 caption: "Let AI clients read Runic's latest local limits and refresh health. " +
                     "Add trusted local tool packages without rebuilding Runic.",
@@ -123,7 +87,17 @@ struct IntegrationsPane: View {
                             copiedValue: self.$copiedValue,
                             onCopy: self.copy)
                             .disabled(!self.runicMCPHelperAvailable)
+                        Button("Check data") { self.checkMCPData() }
+                            .buttonStyle(.runicBordered)
+                            .controlSize(.small)
+                        IntegrationLinkButton(title: "MCP guide", systemImage: "book", url: self.docsURL("mcp.md"))
                     })
+                if let mcpDataCheck = self.mcpDataCheck {
+                    Text(mcpDataCheck)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                        .textSelection(.enabled)
+                }
 
                 HStack(spacing: RunicSpacing.sm) {
                     Label("Local tool packages", systemImage: "shippingbox")
@@ -152,8 +126,9 @@ struct IntegrationsPane: View {
                 {
                     IntegrationEmptyState(
                         icon: "shippingbox",
-                        title: "No local packages",
-                        detail: "Drop a folder containing runic-mcp-plugin.json and an executable into mcpservers.")
+                        title: "No optional packages installed",
+                        detail: "The built-in Runic server and its two tools are ready above. " +
+                            "Drop a package folder into mcpservers to add more tools.")
                 } else {
                     ForEach(self.mcpPlugins, id: \.manifest.id) { package in
                         HStack(spacing: RunicSpacing.sm) {
@@ -220,6 +195,43 @@ struct IntegrationsPane: View {
                         .font(self.fonts.footnote)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
+            }
+            PreferencesDivider()
+            SettingsSection(
+                title: "Scriptable Access",
+                caption: "Runic exposes local usage through the bundled CLI and local JSONL files. " +
+                    "Nothing here starts a network service.",
+                contentSpacing: PreferencesLayoutMetrics.sectionSpacing)
+            {
+                IntegrationRow(
+                    icon: "terminal",
+                    title: "CLI JSON API",
+                    status: "Ready",
+                    detail: "Use the command-line helper for scripts, CI, dashboards, and local automations.",
+                    actions: {
+                        IntegrationCopyButton(
+                            title: "Copy JSON command",
+                            value: "runic usage --format json --pretty",
+                            copiedValue: self.$copiedValue,
+                            onCopy: self.copy)
+                        IntegrationLinkButton(title: "CLI docs", systemImage: "book", url: self.docsURL("cli.md"))
+                    })
+                IntegrationRow(
+                    icon: "waveform.path.ecg.rectangle",
+                    title: "OpenTelemetry GenAI ledger",
+                    status: FileManager.default.fileExists(atPath: self.collectorPath) ? "Found" : "Ready",
+                    detail: "The collector writes sanitized metric JSONL here. " +
+                        "Prompts and responses are not persisted.",
+                    path: self.collectorPath,
+                    actions: {
+                        IntegrationCopyButton(
+                            title: "Copy path",
+                            value: self.collectorPath,
+                            copiedValue: self.$copiedValue,
+                            onCopy: self.copy)
+                        IntegrationRevealButton(path: self.collectorPath)
+                    })
+                AdditionalUsageLogPathsEditor(paths: self.$settings.otelGenAILogPaths)
             }
             PreferencesDivider()
             SettingsSection(
@@ -452,6 +464,22 @@ struct IntegrationsPane: View {
         } catch {
             self.mcpPluginMessage = "Could not create mcpservers: \(error.localizedDescription)"
         }
+    }
+
+    private func checkMCPData() {
+        guard let state = RunicMCPStateStore.load() else {
+            self.mcpDataCheck = "No MCP data snapshot yet. Refresh usage in Runic, then check again."
+            return
+        }
+        let age = max(0, Int(Date().timeIntervalSince(state.generatedAt)))
+        let populated = state.providers.filter { provider in
+            provider.primary != nil || provider.secondary != nil || provider.tertiary != nil ||
+                provider.creditsRemaining != nil || provider.balance != nil || provider.extraUsage != nil
+        }
+        let names = populated.map(\.id.rawValue).joined(separator: ", ")
+        self.mcpDataCheck = "Snapshot \(age)s old · \(state.providers.count) enabled providers, " +
+            "\(populated.count) with values" + (names.isEmpty ? "." : ": \(names).") +
+            " Inspect tool output with runic mcp call runic_limits or runic_health."
     }
 
     private func openMCPDiscoveryDirectory() {

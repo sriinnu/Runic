@@ -47,6 +47,8 @@ enum RunicMCPCommand {
                 {
                     print("invalid\t\(registration.path)\t(remove with: runic mcp remove <path>)")
                 }
+            case "call":
+                try await self.call(args)
             case "help", "--help", "-h":
                 print(self.help)
             default:
@@ -61,6 +63,7 @@ enum RunicMCPCommand {
     Runic MCP (local stdio server)
       runic mcp serve                 Start the MCP server for an AI client
       runic mcp list                  List built-in and installed capabilities
+      runic mcp call <tool> [json]    Test a tool and print its local data
       runic mcp add <folder>          Register a local plugin package
       runic mcp remove <id|path>      Unregister a plugin without deleting its files
       runic mcp enable|disable <id>   Toggle an installed plugin
@@ -68,10 +71,34 @@ enum RunicMCPCommand {
 
     private enum CommandError: LocalizedError {
         case usage
+        case unknownTool(String)
+        case toolFailed
 
         var errorDescription: String? {
-            "Invalid MCP command. Run 'runic mcp help'."
+            switch self {
+            case .usage: "Invalid MCP command. Run 'runic mcp help'."
+            case let .unknownTool(name): "Unknown or disabled MCP tool: \(name). Run 'runic mcp list'."
+            case .toolFailed: "MCP tool returned an error."
+            }
         }
+    }
+
+    private static func call(_ args: [String]) async throws {
+        guard (2...3).contains(args.count) else { throw CommandError.usage }
+        let arguments: [String: Value] = if args.count == 3 {
+            try JSONDecoder().decode([String: Value].self, from: Data(args[2].utf8))
+        } else {
+            [:]
+        }
+        let service = RunicMCPService()
+        guard service.tools().contains(where: { $0.name == args[1] }) else {
+            throw CommandError.unknownTool(args[1])
+        }
+        let result = await service.call(name: args[1], arguments: arguments)
+        for content in result.content {
+            if case let .text(text, _, _) = content { print(text) }
+        }
+        if result.isError == true { throw CommandError.toolFailed }
     }
 
     private static func serve() async throws {

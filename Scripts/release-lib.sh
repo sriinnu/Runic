@@ -280,28 +280,15 @@ check_appcast_deltas() {
   echo "Appcast deltas verified against $tag."
 }
 
-# main requires pull requests, so the appcast commit can never be pushed
-# directly: the release stopped here and was finished by hand every time. The
-# branch and PR are made here; merging stays a human decision.
+# Route the appcast through a new branch and PR without rewriting any history.
 push_appcast_commit() {
   local version="$1"
-  local branch="appcast/${version}"
-
-  if git push origin main 2>/dev/null; then
-    echo "Appcast pushed to main."
-    return 0
-  fi
-
-  echo "Direct push to main refused (branch ruleset); opening a PR instead." >&2
+  local branch="sriinnu/appcast-${version}"
   require_command gh
-  local sha
-  sha=$(git rev-parse HEAD)
-  git fetch -q origin main
-  git branch -f "$branch" "$sha"
-  git reset --hard origin/main
-  git push -f -q origin "$branch"
+  git switch -c "$branch"
+  git push -q -u origin "$branch"
   gh pr create --head "$branch" \
     --title "docs: update appcast for ${version}" \
-    --body "Appcast entry for ${version}, written by release.sh. main refuses direct pushes, so the release routes this commit through a PR."
-  echo "Appcast PR opened from $branch — review and merge it to finish the release." >&2
+    --body "Signed Sparkle appcast entry for Runic ${version}. Merge this PR to publish the update feed after the release assets are live."
+  echo "Appcast PR opened from $branch — merge it to finish the release." >&2
 }
