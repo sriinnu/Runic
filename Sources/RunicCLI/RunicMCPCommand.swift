@@ -34,10 +34,16 @@ enum RunicMCPCommand {
                 let packages = RunicMCPPluginRegistry.packages()
                 for package in packages {
                     print(
-                        "\(package.manifest.id)\t\(package.enabled ? "enabled" : "disabled")\t\(package.directory.path)")
+                        "\(package.manifest.id)\t\(package.enabled ? "enabled" : "disabled")\t" +
+                            "\(package.discovered ? "mcpservers" : "registered")\t\(package.directory.path)")
+                }
+                let invalidDiscovered = Set(RunicMCPPluginRegistry.invalidDiscoveredPaths())
+                for path in invalidDiscovered.sorted() {
+                    print("invalid\tmcpservers\t\(path)")
                 }
                 for registration in RunicMCPPluginRegistry.registrations()
-                    where !packages.contains(where: { $0.directory.path == registration.path })
+                    where !packages.contains(where: { $0.directory.path == registration.path }) &&
+                    !invalidDiscovered.contains(registration.path)
                 {
                     print("invalid\t\(registration.path)\t(remove with: runic mcp remove <path>)")
                 }

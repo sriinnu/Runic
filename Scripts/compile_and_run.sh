@@ -199,6 +199,9 @@ fi
 # 4) Copy to /Applications for easy access.
 log "==> install to /Applications"
 if [[ -d "${APP_BUNDLE}" ]]; then
+  # Runic can be opened again during a long build. Stop that older process
+  # immediately before replacement so the launch below cannot reuse it.
+  kill_all_runic
   rm -rf "${INSTALLED_APP_BUNDLE}" 2>/dev/null || true
   [[ ! -e "${INSTALLED_APP_BUNDLE}" ]] || fail "Could not remove ${INSTALLED_APP_BUNDLE}"
   cp -R "${APP_BUNDLE}" "${INSTALLED_APP_BUNDLE}" \
@@ -210,7 +213,7 @@ fi
 
 # 5) Launch the packaged app.
 log "==> launch app"
-if ! open "${INSTALLED_APP_BUNDLE}"; then
+if ! open -n "${INSTALLED_APP_BUNDLE}"; then
   log "WARN: launch app returned non-zero; falling back to direct binary launch."
   "${INSTALLED_PROCESS_PATTERN}" >/dev/null 2>&1 &
   disown

@@ -1,6 +1,6 @@
 # Runic MCP
 
-Runic includes a local MCP server. An AI client starts the bundled `RunicCLI` over stdio when it needs a tool; Runic does not open a network port. The server reads the latest account-free usage snapshot written by the Runic app. Open Runic and refresh usage once before calling a built-in tool.
+Runic includes one local MCP server with two built-in tools. An AI client starts the bundled `RunicCLI` over stdio when it needs a tool; Runic does not open a network port. The server reads the latest account-free usage snapshot written by the Runic app. Open Runic and refresh usage once before calling a built-in tool.
 
 In **Preferences → Sync → Integrations → Runic MCP**, choose **Copy client config**. The configuration has this shape (adjust the app path if you installed Runic elsewhere):
 
@@ -26,7 +26,9 @@ Runic only exports enabled providers. The snapshot does not contain account emai
 
 ## Local tool packages
 
-Runic can load a tool package from any local folder you trust. Add the folder in the Runic MCP Settings section or run `runic mcp add /path/to/folder`. `runic mcp list`, `enable <id>`, `disable <id>`, and `remove <id>` manage registrations. Removing a package leaves its files in place. Changes become visible after the MCP client reconnects.
+Runic automatically discovers tool packages in direct child folders of `~/Library/Application Support/Runic/mcpservers/`. Open **Preferences → Sync → Integrations → Runic MCP → Open mcpservers** to create and reveal the folder. Drop a package folder there; Runic lists it in Settings within a few seconds, and `runic mcp list` lists it too. A connected MCP client may need to reconnect to refresh its tool list. Removing the folder stops discovery; switching its Enabled control off keeps the files in place and saves that choice.
+
+You can also load a package from another trusted local folder with **Add folder** or `runic mcp add /path/to/folder`. `runic mcp enable <id>`, `disable <id>`, and `remove <id>` manage these registrations. Removing a registered package leaves its files in place. A package inside `mcpservers` cannot be removed through the registry; move its folder instead.
 
 A package contains `runic-mcp-plugin.json` and an executable within the same folder. For example:
 

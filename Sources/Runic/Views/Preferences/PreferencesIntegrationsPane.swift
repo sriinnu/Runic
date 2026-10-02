@@ -18,6 +18,8 @@ struct IntegrationsPane: View {
     @State private var mcpServers: [MCPServer] = []
     @State private var mcpPlugins: [RunicMCPPluginPackage] = []
     @State private var invalidMCPPluginPaths: [String] = []
+    @State private var invalidDiscoveredMCPPaths: [String] = []
+    @State private var mcpInventorySignature = ""
     @State private var mcpPluginMessage: String?
     @State private var showingAddServerSheet = false
     @State private var newServerName = ""
@@ -127,6 +129,11 @@ struct IntegrationsPane: View {
                     Label("Local tool packages", systemImage: "shippingbox")
                         .font(self.fonts.callout.weight(.semibold))
                     Spacer()
+                    Button("Open mcpservers") {
+                        self.openMCPDiscoveryDirectory()
+                    }
+                    .buttonStyle(.runicBordered)
+                    .controlSize(.small)
                     Button {
                         self.addLocalMCPPlugin()
                     } label: {
@@ -135,18 +142,30 @@ struct IntegrationsPane: View {
                     .buttonStyle(.runicBordered)
                     .controlSize(.small)
                 }
-                if self.mcpPlugins.isEmpty, self.invalidMCPPluginPaths.isEmpty {
+                Text(
+                    "Packages placed in \(RunicMCPPluginRegistry.discoveryDirectory().path) appear here automatically.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .textSelection(.enabled)
+                if self.mcpPlugins.isEmpty, self.invalidMCPPluginPaths.isEmpty,
+                   self.invalidDiscoveredMCPPaths.isEmpty
+                {
                     IntegrationEmptyState(
                         icon: "shippingbox",
                         title: "No local packages",
-                        detail: "Add a folder containing runic-mcp-plugin.json and an executable.")
+                        detail: "Drop a folder containing runic-mcp-plugin.json and an executable into mcpservers.")
                 } else {
                     ForEach(self.mcpPlugins, id: \.manifest.id) { package in
                         HStack(spacing: RunicSpacing.sm) {
                             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                                 Text(package.manifest.name)
                                     .font(self.fonts.callout.weight(.semibold))
-                                Text("\(package.manifest.id) · \(package.manifest.tools.count) tools")
+                                Text("\(package.manifest.id) · \(package.manifest.tools.count) tools · " +
+                                    (package.discovered ? "mcpservers" : "Added folder"))
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                                Text(package.manifest.tools.map { "\(package.manifest.id)_\($0.name)" }
+                                    .joined(separator: ", "))
                                     .font(self.fonts.footnote)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
@@ -156,9 +175,13 @@ struct IntegrationsPane: View {
                                 set: { self.setMCPPlugin(package.manifest.id, enabled: $0) }))
                                 .toggleStyle(.switch)
                                 .controlSize(.small)
-                            Button("Remove") { self.removeMCPPlugin(package.manifest.id) }
-                                .buttonStyle(.runicBordered)
-                                .controlSize(.small)
+                            if package.discovered {
+                                IntegrationRevealButton(path: package.directory.path)
+                            } else {
+                                Button("Remove") { self.removeMCPPlugin(package.manifest.id) }
+                                    .buttonStyle(.runicBordered)
+                                    .controlSize(.small)
+                            }
                         }
                     }
                     ForEach(self.invalidMCPPluginPaths, id: \.self) { path in
@@ -175,6 +198,20 @@ struct IntegrationsPane: View {
                             Button("Remove") { self.removeMCPPluginRegistration(path) }
                                 .buttonStyle(.runicBordered)
                                 .controlSize(.small)
+                        }
+                    }
+                    ForEach(self.invalidDiscoveredMCPPaths, id: \.self) { path in
+                        HStack(spacing: RunicSpacing.sm) {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                                Text("Invalid package in mcpservers")
+                                    .font(self.fonts.callout.weight(.semibold))
+                                Text(path)
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                                    .lineLimit(2)
+                            }
+                            Spacer()
+                            IntegrationRevealButton(path: path)
                         }
                     }
                 }
@@ -353,7 +390,15 @@ struct IntegrationsPane: View {
         }
         .onAppear {
             self.loadMCPServers()
+            self.prepareMCPDiscoveryDirectory()
             self.loadMCPPlugins()
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled else { break }
+                self.loadMCPPlugins()
+            }
         }
         .sheet(isPresented: self.$showingAddServerSheet) {
             AddMCPServerSheet(
@@ -380,10 +425,38 @@ struct IntegrationsPane: View {
     }
 
     private func loadMCPPlugins() {
-        self.mcpPlugins = RunicMCPPluginRegistry.packages()
-        self.invalidMCPPluginPaths = RunicMCPPluginRegistry.registrations()
+        let packages = RunicMCPPluginRegistry.packages()
+        let invalidDiscovered = RunicMCPPluginRegistry.invalidDiscoveredPaths()
+        let invalidRegistered = RunicMCPPluginRegistry.registrations()
             .map(\.path)
-            .filter { path in !self.mcpPlugins.contains(where: { $0.directory.path == path }) }
+            .filter { path in
+                !packages.contains(where: { $0.directory.path == path }) &&
+                    !invalidDiscovered.contains(path)
+            }
+        let signature = packages.map { package in
+            "\(package.directory.path)|\(package.manifest.id)|\(package.manifest.name)|" +
+                "\(package.manifest.version)|\(package.enabled)|" +
+                package.manifest.tools.map(\.name).joined(separator: ",")
+        }.joined(separator: "\n") + "\n" + invalidRegistered.joined(separator: "\n") +
+            "\n" + invalidDiscovered.joined(separator: "\n")
+        guard signature != self.mcpInventorySignature else { return }
+        self.mcpInventorySignature = signature
+        self.mcpPlugins = packages
+        self.invalidMCPPluginPaths = invalidRegistered
+        self.invalidDiscoveredMCPPaths = invalidDiscovered
+    }
+
+    private func prepareMCPDiscoveryDirectory() {
+        do {
+            try RunicMCPPluginRegistry.ensureDiscoveryDirectory()
+        } catch {
+            self.mcpPluginMessage = "Could not create mcpservers: \(error.localizedDescription)"
+        }
+    }
+
+    private func openMCPDiscoveryDirectory() {
+        self.prepareMCPDiscoveryDirectory()
+        NSWorkspace.shared.open(RunicMCPPluginRegistry.discoveryDirectory())
     }
 
     private func addLocalMCPPlugin() {

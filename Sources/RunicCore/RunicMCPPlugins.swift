@@ -72,18 +72,21 @@ public struct RunicMCPPluginPackage: Sendable {
     public let executable: URL
     public let manifest: RunicMCPPluginManifest
     public let enabled: Bool
+    public let discovered: Bool
 }
 
 public enum RunicMCPPluginError: Error, LocalizedError {
     case invalidPackage(String)
     case alreadyInstalled(String)
     case notInstalled(String)
+    case autoDiscovered(String)
 
     public var errorDescription: String? {
         switch self {
         case let .invalidPackage(detail): "Invalid Runic MCP plugin: \(detail)"
         case let .alreadyInstalled(id): "Plugin \(id) is already installed."
         case let .notInstalled(id): "Plugin \(id) is not installed."
+        case let .autoDiscovered(id): "Move \(id) out of the mcpservers folder to remove it."
         }
     }
 }
@@ -96,14 +99,60 @@ public enum RunicMCPPluginRegistry {
             .appendingPathComponent("mcp-plugins.json")
     }
 
+    /// One package per direct child directory. This is deliberately separate
+    /// from the registration file so dropping a package here needs no setup.
+    public static func discoveryDirectory(at url: URL = defaultURL) -> URL {
+        url.deletingLastPathComponent().appendingPathComponent("mcpservers", isDirectory: true)
+    }
+
+    public static func ensureDiscoveryDirectory(at url: URL = defaultURL) throws {
+        let directory = self.discoveryDirectory(at: url)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700])
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+    }
+
     public static func registrations(at url: URL = defaultURL) -> [RunicMCPPluginRegistration] {
         guard let data = try? Data(contentsOf: url) else { return [] }
         return (try? JSONDecoder().decode([RunicMCPPluginRegistration].self, from: data)) ?? []
     }
 
     public static func packages(at url: URL = defaultURL) -> [RunicMCPPluginPackage] {
-        self.registrations(at: url).compactMap { registration in
-            try? self.loadPackage(at: URL(fileURLWithPath: registration.path), enabled: registration.enabled)
+        let discoveredRoot = self.discoveryDirectory(at: url).standardizedFileURL.resolvingSymlinksInPath()
+        let registered = self.registrations(at: url).compactMap { registration in
+            try? self.loadPackage(
+                at: URL(fileURLWithPath: registration.path),
+                enabled: registration.enabled,
+                discovered: URL(fileURLWithPath: registration.path)
+                    .standardizedFileURL.resolvingSymlinksInPath().deletingLastPathComponent() == discoveredRoot)
+        }
+        var seenPaths = Set(registered.map(\.directory.path))
+        var seenIDs = Set(registered.map(\.manifest.id))
+        var packages = registered
+        for directory in self.discoveredDirectories(at: url) {
+            guard let package = try? self.loadPackage(at: directory, discovered: true),
+                  seenPaths.insert(package.directory.path).inserted,
+                  seenIDs.insert(package.manifest.id).inserted
+            else { continue }
+            packages.append(package)
+        }
+        return packages
+    }
+
+    public static func invalidDiscoveredPaths(at url: URL = defaultURL) -> [String] {
+        let registered = self.registrations(at: url).compactMap { registration in
+            try? self.loadPackage(at: URL(fileURLWithPath: registration.path))
+        }
+        var seenPaths = Set(registered.map(\.directory.path))
+        var seenIDs = Set(registered.map(\.manifest.id))
+        return self.discoveredDirectories(at: url).compactMap { directory in
+            guard let package = try? self.loadPackage(at: directory, discovered: true) else {
+                return directory.path
+            }
+            if !seenPaths.insert(package.directory.path).inserted { return nil }
+            return seenIDs.insert(package.manifest.id).inserted ? nil : directory.path
         }
     }
 
@@ -123,6 +172,7 @@ public enum RunicMCPPluginRegistry {
     public static func remove(_ id: String, at url: URL = defaultURL) throws {
         let packages = self.packages(at: url)
         if let package = packages.first(where: { $0.manifest.id == id }) {
+            guard !package.discovered else { throw RunicMCPPluginError.autoDiscovered(id) }
             try self.removeRegistration(path: package.directory.path, at: url)
         } else {
             try self.removeRegistration(path: id, at: url)
@@ -143,12 +193,19 @@ public enum RunicMCPPluginRegistry {
             throw RunicMCPPluginError.notInstalled(id)
         }
         var registrations = self.registrations(at: url)
-        guard let index = registrations.firstIndex(where: { $0.path == package.directory.path }) else { return }
-        registrations[index].enabled = enabled
+        if let index = registrations.firstIndex(where: { $0.path == package.directory.path }) {
+            registrations[index].enabled = enabled
+        } else {
+            registrations.append(.init(path: package.directory.path, enabled: enabled))
+        }
         try self.save(registrations, to: url)
     }
 
-    public static func loadPackage(at url: URL, enabled: Bool = true) throws -> RunicMCPPluginPackage {
+    public static func loadPackage(
+        at url: URL,
+        enabled: Bool = true,
+        discovered: Bool = false) throws -> RunicMCPPluginPackage
+    {
         let directory = url.standardizedFileURL.resolvingSymlinksInPath()
         let manifestURL = directory.appendingPathComponent("runic-mcp-plugin.json")
         let manifest: RunicMCPPluginManifest
@@ -183,7 +240,27 @@ public enum RunicMCPPluginRegistry {
               FileManager.default.isExecutableFile(atPath: executable.path)
         else { throw RunicMCPPluginError.invalidPackage("executable is missing or outside the package") }
         return RunicMCPPluginPackage(
-            directory: directory, executable: executable, manifest: manifest, enabled: enabled)
+            directory: directory,
+            executable: executable,
+            manifest: manifest,
+            enabled: enabled,
+            discovered: discovered)
+    }
+
+    private static func discoveredDirectories(at url: URL) -> [URL] {
+        let root = self.discoveryDirectory(at: url).standardizedFileURL.resolvingSymlinksInPath()
+        guard let children = try? FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+            options: [.skipsHiddenFiles])
+        else { return [] }
+        return children.filter { child in
+            let values = try? child.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            return values?.isDirectory == true && values?.isSymbolicLink != true &&
+                child.resolvingSymlinksInPath().deletingLastPathComponent() == root &&
+                FileManager.default.fileExists(
+                    atPath: child.appendingPathComponent("runic-mcp-plugin.json").path)
+        }.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     private static func isObjectSchema(_ value: RunicJSONValue) -> Bool {

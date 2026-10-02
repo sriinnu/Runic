@@ -121,6 +121,63 @@ struct RunicMCPTests {
         #expect(RunicMCPPluginRegistry.registrations(at: registryURL).isEmpty)
     }
 
+    @Test
+    func `mcpservers packages appear without registration and respect disabled state`() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let registryURL = root.appendingPathComponent("mcp-plugins.json")
+        try RunicMCPPluginRegistry.ensureDiscoveryDirectory(at: registryURL)
+        let discovery = RunicMCPPluginRegistry.discoveryDirectory(at: registryURL)
+        let permissions = try FileManager.default
+            .attributesOfItem(atPath: discovery.path)[.posixPermissions] as? NSNumber
+        #expect(permissions?.intValue == 0o700)
+        let packageURL = discovery.appendingPathComponent("sample")
+        try FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
+        let manifest = """
+        {"apiVersion":1,"id":"sample","name":"Sample","version":"1.0.0",
+         "executable":"tool.sh","tools":[{"name":"hello","description":"Greeting",
+         "inputSchema":{"type":"object","properties":{}}}]}
+        """
+        try manifest.write(
+            to: packageURL.appendingPathComponent("runic-mcp-plugin.json"),
+            atomically: true,
+            encoding: .utf8)
+        let script = packageURL.appendingPathComponent("tool.sh")
+        try "#!/bin/sh\nread request\nprintf '{\"ok\":true}'\n".write(
+            to: script,
+            atomically: true,
+            encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
+
+        let service = RunicMCPService(stateURL: root.appendingPathComponent("none"), registryURL: registryURL)
+        #expect(RunicMCPPluginRegistry.registrations(at: registryURL).isEmpty)
+        #expect(RunicMCPPluginRegistry.packages(at: registryURL).first?.discovered == true)
+        #expect(service.tools().map(\.name).contains("sample_hello"))
+        #expect(await (service.call(name: "sample_hello", arguments: [:])).isError == false)
+
+        try RunicMCPPluginRegistry.setEnabled(false, id: "sample", at: registryURL)
+        #expect(!service.tools().map(\.name).contains("sample_hello"))
+        #expect(RunicMCPPluginRegistry.packages(at: registryURL).first?.enabled == false)
+        try RunicMCPPluginRegistry.setEnabled(true, id: "sample", at: registryURL)
+        #expect(service.tools().map(\.name).contains("sample_hello"))
+        #expect(throws: RunicMCPPluginError.self) {
+            try RunicMCPPluginRegistry.remove("sample", at: registryURL)
+        }
+
+        let duplicate = discovery.appendingPathComponent("sample-copy")
+        try FileManager.default.copyItem(at: packageURL, to: duplicate)
+        #expect(RunicMCPPluginRegistry.packages(at: registryURL).count(where: { $0.manifest.id == "sample" }) == 1)
+        #expect(RunicMCPPluginRegistry.invalidDiscoveredPaths(at: registryURL)
+            .contains { URL(fileURLWithPath: $0).lastPathComponent == "sample-copy" })
+        try FileManager.default.removeItem(at: duplicate)
+
+        try FileManager.default.removeItem(at: script)
+        #expect(!service.tools().map(\.name).contains("sample_hello"))
+        let invalid = RunicMCPPluginRegistry.invalidDiscoveredPaths(at: registryURL)
+        #expect(invalid.count == 1)
+        #expect(invalid.first.map { URL(fileURLWithPath: $0).lastPathComponent } == "sample")
+    }
+
     private static func text(_ result: CallTool.Result) -> String? {
         guard let first = result.content.first, case let .text(text, _, _) = first else { return nil }
         return text
