@@ -3,31 +3,35 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.9.0</title>
+            <pubDate>Fri, 02 Oct 2026 22:10:17 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>142</sparkle:version>
+            <sparkle:shortVersionString>2.9.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.9.0</h2>
+<ul>
+<li>MCP: Runic now includes a local stdio server with read-only limits and health tools. Settings puts the server first, shows the actual provider values available to MCP clients, and distinguishes the built-in tools from optional packages. Local packages are discovered automatically from <code>~/Library/Application Support/Runic/mcpservers/</code>; <code>runic mcp call</code> lets users inspect built-in or package tool output without an MCP client.</li>
+<li>Usage: optional provider credits and balances appear consistently in the menu and settings when the source supplies them. Muse Code subscription usage is supported.</li>
+<li>Appearance: Glass and Terminal themes are available; Terminal uses a green phosphor palette. The Settings tab strip stays fixed, and the Burn chart's labels no longer overlap.</li>
+<li>Documentation: the README and MCP guide explain where to find the server, connect a client, test its data, and add a local tool package.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic-2.9.0.zip" length="40383025" type="application/octet-stream" sparkle:edSignature="S3tgcgR/1y6XpZ2/VgZJKrTbp4E3DoQzfthND5hj0R7jsmQHzOZZkoWb65nA8B3Uzcib/dc9l8gSckjjYUxjAw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic142-141.delta" sparkle:deltaFrom="141" length="9048470" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="qrN7NYbOcyn6Me0ADTPchkZDToGISa3y393Ef6HOCOSZYJ5QwittaP4kaF6N+WDb3NOuLY3HSF4lZ6n2gnQ6Ag=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic142-125.delta" sparkle:deltaFrom="125" length="10800946" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="7tCuaR1ClGdJwH2CD4zlZh4/UbS9c29V6xghDXFtX37MlpRYUVNrDAavZN5RvVtNoS4Wry3LCW/7SSg7zdSJCA=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic142-121.delta" sparkle:deltaFrom="121" length="10958702" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="oAHg38PTwSmT8HYyOCtAMGVC7jMwD+NkDRUcDkBrzet8fVV5LBh8tf23obMtTDiiNmqnYA4HnhrGHyelnMe8Bw=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.8.1</title>
             <pubDate>Wed, 23 Sep 2026 22:10:41 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>141</sparkle:version>
             <sparkle:shortVersionString>2.8.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.8.1</h2>
-<ul>
-<li>Settings → Providers: every provider has a reload button (↻). It re-fetches that provider right away, and for Claude it first checks whether the CLI's Keychain item changed since Runic last copied the token, for example after a <code>claude /login</code> in the terminal. If it did, Runic re-reads it (one Keychain dialog, because you pressed the button) instead of failing with "No non-interactive Claude credentials found". The check reads only the item's modification date, so pressing reload with a current token never prompts.</li>
-<li>Claude: banked limit resets (the one-off "reset your limits" grants, like the Opus 5.5 launch reset usable until Oct 22) show up next to Codex's. Claude Code's login returns the resets block with an empty list for these grants; only claude.ai lists them. Turn on <strong>Banked resets from claude.ai</strong> in Settings → Providers → Claude: Runic reads your claude.ai login from your browser once (macOS may ask for your password, only then), keeps a copy in its own Keychain item, and fetches resets with every Claude refresh without prompting. Each reset shows with its expiry on the card, the Resets panel and the menu. Runic only displays them; redeem on claude.ai. The claude.ai path also now picks your chat subscription org instead of whichever org the account lists first.</li>
-<li>Balances: prepaid providers (DeepSeek, Kimi, StepFun, OpenRouter, Vercel AI) show what you spent, not just what's left. Their APIs only report a balance, so spend comes from the difference between readings, and those used to be taken only on refresh. With refresh on Manual, a week could hold two readings and the Spend row never appeared. Runic now takes a balance reading every 20 minutes whatever the refresh mode (one small request per provider, no prompts), the Spend row always shows ("Measuring…" until a second reading exists), and Settings → Providers lists Balance and Spent for each of them.</li>
-<li>OpenRouter: if <code>/credits</code> refuses a regular key (OpenRouter's reference now lists it as management-key only), the card keeps the key's own spend today and this month instead of failing.</li>
-<li>Cline: new provider. Add a Cline API key (app.cline.bot → Settings → API Keys, or <code>CLINE_API_KEY</code>) to see your credit balance plus exact spend today and this month, summed from Cline's per-request usage records (<code>costUsd</code>).</li>
-<li>Muse (Meta): new provider for Meta's Model API (Muse Spark, api.meta.ai). Meta publishes no usage or billing endpoint, so the card shows key health, per-minute request and token limits from the rate-limit headers when Meta sends them, and "out of credits" when the API answers 402. The key comes from <code>MUSE_API_KEY</code>, <code>META_MODEL_API_KEY</code> or Meta's documented <code>MODEL_API_KEY</code>.</li>
-<li>Spend: a balance drop is spread over the gap between the two readings it came from, so a gap across midnight splits between yesterday and today instead of landing on today (and the burn rate only counts what fell inside its week). Every spend line now says where it comes from: "Official" when the provider reports the totals (OpenRouter, Cline), "Estimated" when Runic derives them from balance readings. A day or month with no reading yet shows "—" instead of a made-up $0.</li>
-<li>Codex: <strong>Add Account</strong> no longer spins forever when the browser login isn't finished. The runner waited for <code>codex login</code> to exit inside a task group that couldn't return until it did, so the 2-minute timeout never fired. It now polls the process against the deadline (and stops on cancel), and reads output as it arrives so a leftover helper holding the pipe open can't hang it either.</li>
-<li>DeepSeek, Kimi, StepFun: a "From logs" line shows spend right away, estimated from the tokens in your local logs (DeepSeek or Kimi routed through Claude Code, opencode, and so on) at models.dev prices, in USD. Prices come from a bundled copy, refreshed from models.dev at most once a day, and you can override any model in <code>~/Library/Application Support/Runic/pricing/custom-prices.json</code>. Models without a price are counted as "N tokens unpriced", never as $0. When the balance is in USD and was read within the last half hour, the line also checks today's estimate against today's balance drop: "Matches today's balance drop", or "Balance fell 3.0× more than the logs show — key used elsewhere?".</li>
-<li>Ollama Cloud: new provider for an ollama.com Pro/Max subscription (separate from Local LLM, which only sees the Ollama server on your Mac). Add an API key from ollama.com/settings/keys (or <code>OLLAMA_API_KEY</code>) to see the monthly credit pool, or session and weekly limits on older plans, your spend over the last four weeks, and which models you sent the most requests to. It reads <code>ollama.com/api/usage</code>, which Ollama doesn't document yet, so Runic decodes it loosely and keeps the reply's shape (field names only) in <code>diagnostics/ollama-cloud-usage-shape.json</code> in case it changes.</li>
-<li>Claude and Codex: when the login Runic copied stops working (for example after <code>claude /logout</code> and <code>/login</code>), the card says so instead of silently dropping its Session and Weekly bars. The "no credentials" error was hidden whenever usage history existed, a rule meant for log-only providers like Qwen and GLM; it no longer applies to providers with their own login.</li>
-<li>Claude: a <strong>Usage credits</strong> section on the card. It reads the newer <code>spend</code> block of Claude's usage reply (on or off, spent this month against the monthly limit) and, with the claude.ai switch on, your prepaid credit balance from claude.ai in your account's own currency: "Off · Balance €0.00", or "This month: €4.50 / €10.00 · Balance €12.50" with a gauge. A balance in one currency is never shown with another currency's symbol.</li>
-<li>Claude: turning on <strong>Banked resets from claude.ai</strong> now works with Chrome, Edge, Brave and Arc. The cookie reader always blocked the Keychain dialog that unlocks Chrome's cookie key, so connecting failed with "No claude.ai login found" even when you were signed in. Only that switch may show the dialog; background refreshes still never do. Safari needs Full Disk Access for Runic, which the message now says.</li>
-<li>Settings → Providers (list): tidier layout. Checkboxes line up with the provider icon instead of riding above it; badges, insight chips and errors share the name's text column; a provider's own settings rows (usage log paths, the claude.ai resets switch) sit nested under it rather than as separate full-width cards; the hairline that sat on each next card's edge is gone in favour of consistent gaps; the header lines up with the cards; insight chips stay two across.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.1/Runic-2.8.1.zip" length="37427393" type="application/octet-stream" sparkle:edSignature="/wqrpWPEg1FoWq9jhVuiDlZRrTH9mZllsWnpf7VKfcXPwUY0hn6SNk7hvahH+xfuFjE/yZC0+bDUuzDerzhPDw=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.1/Runic141-125.delta" sparkle:deltaFrom="125" length="7832634" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="bIsxsV6mF2eOpBm/ID9iFzNpw8VrDRSTVOrCAlSbffW8EU1qKv3maIgZvZPR/+qgVRHbKl4Vw5q38tcpKaYtBw=="/>
@@ -45,15 +49,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.0/Runic125-121.delta" sparkle:deltaFrom="121" length="4791810" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="vVo6RQIZHmysD4G90PjrXUvul9OAQWDwYaSlJOhOHBbwcGNifw1CynVcapUDsGm2CEwE8K8+d+KyfsQMBo11CA=="/>
             </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.7.3</title>
-            <pubDate>Wed, 16 Sep 2026 17:48:02 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>121</sparkle:version>
-            <sparkle:shortVersionString>2.7.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.7.3/Runic-2.7.3.zip" length="36357398" type="application/octet-stream" sparkle:edSignature="1FtiaN1sNjckZt28DlnqxyqNqLQ2Y5UfIM6ZPfrr29kz7lA9Xw+iav8wNhjs/l29XhaRC+1soplMt7uKXBSyCQ=="/>
         </item>
     </channel>
 </rss>
