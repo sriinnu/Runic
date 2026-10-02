@@ -13,7 +13,7 @@ struct ZaiProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "zai-api-token",
                 title: "API token",
-                subtitle: "Stored in Keychain (encrypted). Press Return to save.",
+                subtitle: "Saved automatically to Keychain (encrypted).",
                 kind: .secure,
                 placeholder: "Paste token…",
                 binding: context.stringBinding(\.zaiAPIToken),

@@ -160,7 +160,6 @@ struct UsageMenuCardView: View {
         let usageMetricDisplayMode: UsageMetricDisplayMode
         let menuMode: MenuMode
         let creditsText: String?
-        let creditsRemaining: Double?
         let creditsHintText: String?
         let creditsHintCopyText: String?
         let providerCost: ProviderCostSection?
@@ -198,12 +197,13 @@ struct UsageMenuCardView: View {
                         isHighlighted: self.isHighlighted)
                         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
                 }
-            } else {
+            }
+            if self.hasDetails {
                 let hasUsage = !self.model.metrics.isEmpty
                 let includeSummarySections = self.model.menuMode != .glance
                 let includeInsightSections = self.model.menuMode == .operator
-                let hasCredits = includeSummarySections && self.model.creditsText != nil
-                let hasExtraUsage = includeSummarySections && self.model.providerCost != nil
+                let hasCredits = self.model.creditsText != nil
+                let hasExtraUsage = self.model.providerCost != nil
                 let hasTokenCost = includeSummarySections && self.model.tokenUsage != nil
                 let hasCost = hasExtraUsage || hasTokenCost
                 let hasInsights = includeInsightSections && self.model.insights != nil
@@ -226,12 +226,10 @@ struct UsageMenuCardView: View {
                             .padding(.vertical, RunicSpacing.xxs)
                     }
                     if hasCredits, let credits = self.model.creditsText {
-                        CreditsBarContent(
+                        CreditsContent(
                             creditsText: credits,
-                            creditsRemaining: self.model.creditsRemaining,
                             hintText: self.model.creditsHintText,
-                            hintCopyText: self.model.creditsHintCopyText,
-                            progressColor: self.model.progressColor)
+                            hintCopyText: self.model.creditsHintCopyText)
                     }
                     if hasCredits, hasCost || hasInsights {
                         RunicDivider()
@@ -320,8 +318,9 @@ struct UsageMenuCardView: View {
     private var hasDetails: Bool {
         let includeSummarySections = self.model.menuMode != .glance
         let includeInsightSections = self.model.menuMode == .operator
-        return !self.model.metrics.isEmpty || self.model.placeholder != nil || (includeSummarySections && (
-            self.model.tokenUsage != nil || self.model.providerCost != nil)) || (includeInsightSections &&
-            self.model.insights != nil)
+        return !self.model.metrics.isEmpty || self.model.placeholder != nil || self.model.creditsText != nil ||
+            self.model.providerCost != nil || (includeSummarySections && self.model.tokenUsage != nil) ||
+            (includeInsightSections &&
+                self.model.insights != nil)
     }
 }

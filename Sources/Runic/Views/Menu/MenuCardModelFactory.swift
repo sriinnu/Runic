@@ -76,15 +76,19 @@ extension UsageMenuCardView.Model {
             account: input.account,
             metadata: input.metadata)
         let metrics = Self.metrics(input: input)
-        let creditsText: String? = if input.provider == .codex, !input.showOptionalCreditsAndExtraUsage {
+        let creditsText: String? = if !input.showOptionalCreditsAndExtraUsage {
             nil
         } else if input.provider != .codex, input.snapshot?.balance != nil {
             // The Balance row already shows this number, with its currency.
             nil
+        } else if input.provider != .codex, input.credits == nil, input.snapshot?.providerCost != nil {
+            // Actual spend already appears in Extra usage; do not repeat a credits hint.
+            nil
         } else {
             Self.creditsLine(metadata: input.metadata, credits: input.credits, error: input.creditsError)
         }
-        let creditsHintText = Self.dashboardHint(provider: input.provider, error: input.dashboardError)
+        let creditsHintText = input.credits == nil
+            ? Self.dashboardHint(provider: input.provider, error: input.dashboardError) : nil
         let providerCost: ProviderCostSection? = if !input.showOptionalCreditsAndExtraUsage {
             nil
         } else {
@@ -131,14 +135,8 @@ extension UsageMenuCardView.Model {
             usageMetricDisplayMode: input.usageMetricDisplayMode,
             menuMode: input.menuMode,
             creditsText: creditsText,
-            // The credits gauge reads "remaining of 1,000 credits" — a
-            // codex-specific scale. Other providers' CreditsSnapshots carry
-            // currency-like balances with no unit or denominator information,
-            // so they render as a text line only (no bar against an invented
-            // 1K-credit scale).
-            creditsRemaining: input.provider == .codex ? input.credits?.remaining : nil,
             creditsHintText: creditsHintText,
-            creditsHintCopyText: (input.dashboardError?.isEmpty ?? true) ? nil : input.dashboardError,
+            creditsHintCopyText: creditsHintText,
             providerCost: providerCost,
             tokenUsage: tokenUsage,
             insights: insights,
@@ -516,10 +514,10 @@ extension UsageMenuCardView.Model {
         credits: CreditsSnapshot?,
         error: String?) -> String?
     {
-        guard metadata.supportsCredits else { return nil }
         if let credits {
             return UsageFormatter.creditsString(from: credits.remaining)
         }
+        guard metadata.supportsCredits else { return nil }
         if let error, !error.isEmpty {
             return error.trimmingCharacters(in: .whitespacesAndNewlines)
         }
@@ -625,7 +623,6 @@ extension UsageMenuCardView.Model {
         provider: UsageProvider,
         cost: ProviderCostSnapshot?) -> ProviderCostSection?
     {
-        guard provider == .claude || provider == .cursor || provider == .ollamacloud else { return nil }
         guard let cost else { return nil }
         if provider == .claude, let section = Self.claudeUsageCreditsSection(cost) { return section }
         let title = switch provider {
@@ -640,7 +637,7 @@ extension UsageMenuCardView.Model {
             // unlimited — show the spend without a fabricated gauge. Claude
             // keeps requiring a limit, matching its previous behavior.
             // Ollama Cloud reports spend over the last four weeks, no cap.
-            guard provider == .cursor || provider == .ollamacloud, cost.used > 0 else { return nil }
+            guard provider != .claude, cost.used > 0 else { return nil }
             return ProviderCostSection(
                 title: title,
                 percentUsed: nil,
@@ -701,6 +698,9 @@ extension UsageMenuCardView.Model {
         if let date = window.resetsAt ?? UsageResetParsing.date(fromRelative: window.resetDescription) {
             let expiry = UsageFormatter.resetExpiryString(from: date)
             if prefersCountdown {
+                if expiry.hasPrefix("tomorrow ") {
+                    return "Resets \(expiry)"
+                }
                 return "Resets \(UsageFormatter.resetCountdownDescription(from: date)) · \(expiry)"
             }
             return "Resets \(expiry)"

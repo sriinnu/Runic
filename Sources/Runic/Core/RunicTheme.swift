@@ -113,6 +113,8 @@ struct RunicThemePalette {
     var meshColors: [Color] {
         if self.isTerminalHUD {
             [self.surface, self.accent, self.highlight, self.secondary, self.tertiary]
+        } else if self.id == "glass" {
+            [self.primary, self.secondary, self.highlight, self.accent]
         } else {
             [self.primary, self.secondary, self.accent, self.warm, self.tertiary]
         }
@@ -171,13 +173,11 @@ struct RunicThemePalette {
         self.primaryText.opacity(0.22 * self.style.effects.elevation)
     }
 
-    /// Card-surface fill that switches to frosted material on Glass theme.
-    /// Lets every existing `fill(menuCardGradient)` callsite become themed by
-    /// swapping `.menuCardGradient` → `.cardBackgroundStyle`. Other themes
-    /// keep their gradient; Glass gets actual translucency.
+    /// Shared card fill. Glass uses a tinted translucent gradient so native
+    /// material cannot turn nested panels into opaque gray slabs.
     var cardBackgroundStyle: AnyShapeStyle {
         if self.id == "glass" {
-            return AnyShapeStyle(.regularMaterial)
+            return AnyShapeStyle(self.menuCardGradient)
         }
         // A glued-on sheet is opaque; a translucent gradient over the
         // hatching reads as gray.
@@ -187,16 +187,22 @@ struct RunicThemePalette {
         return AnyShapeStyle(self.menuCardGradient)
     }
 
-    /// Outer-surface fill that switches to thin material on Glass theme.
+    /// Outer-surface fill shared by menu panels.
     var surfaceBackgroundStyle: AnyShapeStyle {
-        if self.id == "glass" {
-            return AnyShapeStyle(.thinMaterial)
-        }
-        return AnyShapeStyle(self.menuSurfaceGradient)
+        AnyShapeStyle(self.menuSurfaceGradient)
     }
 
     var menuSurfaceGradient: LinearGradient {
-        if self.hasSurfaceTexture || self.isElevated {
+        if self.id == "glass" {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.071, green: 0.116, blue: 0.151),
+                    self.surface,
+                    Color(red: 0.042, green: 0.064, blue: 0.112),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
+        } else if self.hasSurfaceTexture || self.isElevated {
             // Paper and film need a solid ground — the texture is the depth.
             // A translucent tail here let the desktop bleed through the panel.
             LinearGradient(
@@ -206,12 +212,12 @@ struct RunicThemePalette {
         } else if self.isTerminalHUD {
             LinearGradient(
                 colors: [
+                    self.surfaceAlt.opacity(0.86),
                     self.surface,
-                    self.surfaceAlt.opacity(0.72),
-                    self.surface,
+                    self.surfaceAlt.opacity(0.38),
                 ],
-                startPoint: .top,
-                endPoint: .bottom)
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
         } else {
             LinearGradient(
                 colors: [
@@ -225,11 +231,21 @@ struct RunicThemePalette {
     }
 
     var menuCardGradient: LinearGradient {
-        if self.isTerminalHUD {
+        if self.id == "glass" {
             LinearGradient(
                 colors: [
-                    self.cardFill.opacity(0.88),
-                    self.surface.opacity(0.98),
+                    Color(red: 0.153, green: 0.221, blue: 0.259).opacity(0.90),
+                    self.cardFill,
+                    self.surfaceAlt.opacity(0.78),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
+        } else if self.isTerminalHUD {
+            LinearGradient(
+                colors: [
+                    self.surfaceAlt.opacity(0.94),
+                    self.cardFill.opacity(0.72),
+                    self.surface.opacity(0.94),
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing)
@@ -675,6 +691,45 @@ private struct RunicFilmGrainCanvas: View {
                     startRadius: min(size.width, size.height) * 0.25,
                     endRadius: max(size.width, size.height) * 0.85))
         }
+    }
+}
+
+/// Sparse, static code streams at the edges of Terminal panels. The text is
+/// decoration only and never animates, so content remains readable and Reduce
+/// Motion needs no alternate path.
+@MainActor
+struct RunicTerminalCodeRainOverlay: View {
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        Canvas { context, size in
+            guard size.width > 0, size.height > 0 else { return }
+
+            let glyphs = Array("10A07F31")
+            let edgeWidth = min(112, size.width * 0.2)
+            let rowCount = Int(size.height / 12) + 2
+            let columnCount = Int(size.width / 32) + 1
+
+            for column in 0..<columnCount {
+                let x = CGFloat(column) * 32 + 8
+                let edgeDistance = min(x, size.width - x)
+                guard edgeDistance < edgeWidth else { continue }
+
+                let stream = (0..<rowCount)
+                    .map { String(glyphs[($0 * 3 + column * 5) % glyphs.count]) }
+                    .joined(separator: "\n")
+                let opacity = 0.012 + 0.10 * Double(1 - edgeDistance / edgeWidth)
+                let text = Text(stream)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(self.runicTheme.accent.opacity(opacity))
+                context.draw(
+                    context.resolve(text),
+                    at: CGPoint(x: x, y: -CGFloat((column * 11) % 17)),
+                    anchor: .topLeading)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

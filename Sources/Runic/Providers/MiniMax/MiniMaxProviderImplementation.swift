@@ -21,7 +21,7 @@ struct MiniMaxProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "minimax-cookie-header",
                 title: "Cookie header (manual)",
-                subtitle: "Paste a Cookie: header or Copy as cURL. Stored in Keychain. Press Return to save.",
+                subtitle: "Paste a Cookie: header or Copy as cURL. Saved automatically to Keychain.",
                 kind: .secure,
                 placeholder: "Paste Cookie header or cURL…",
                 binding: context.stringBinding(\.minimaxCookieHeader),

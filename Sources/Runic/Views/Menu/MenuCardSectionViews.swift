@@ -74,12 +74,10 @@ struct UsageMenuCardCreditsSectionView: View {
     var body: some View {
         if let credits = self.model.creditsText {
             VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
-                CreditsBarContent(
+                CreditsContent(
                     creditsText: credits,
-                    creditsRemaining: self.model.creditsRemaining,
                     hintText: self.model.creditsHintText,
-                    hintCopyText: self.model.creditsHintCopyText,
-                    progressColor: self.model.progressColor)
+                    hintCopyText: self.model.creditsHintCopyText)
                 if self.showBottomDivider {
                     RunicDivider()
                         .padding(.vertical, RunicSpacing.xxs)

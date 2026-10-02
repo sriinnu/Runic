@@ -9,22 +9,20 @@ public enum MuseProviderDescriptor {
             id: .muse,
             metadata: ProviderMetadata(
                 id: .muse,
-                displayName: "Muse (Meta)",
-                sessionLabel: "Requests",
-                weeklyLabel: "Tokens",
+                displayName: "Muse Code (Meta)",
+                sessionLabel: "Current",
+                weeklyLabel: "Weekly",
                 opusLabel: nil,
                 supportsOpus: false,
                 supportsCredits: false,
                 creditsHint: "",
-                toggleTitle: "Show Muse usage",
+                toggleTitle: "Show Muse Code usage",
                 cliName: "muse",
                 defaultEnabled: false,
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
-                // Meta's Model API has no usage/billing endpoint: only
-                // GET /v1/models (and the unauthenticated /v1/status). Spend
-                // lives in the developer console.
-                dashboardURL: "https://dev.meta.ai",
+                dashboardURL: "https://dev.meta.ai/products/muse-code",
+                subscriptionDashboardURL: "https://dev.meta.ai/docs/muse-code/subscriptions",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
                     supportsModelBreakdown: false,
@@ -36,14 +34,39 @@ public enum MuseProviderDescriptor {
                 color: ProviderColor(red: 8 / 255, green: 102 / 255, blue: 255 / 255)),
             tokenCost: ProviderTokenCostConfig(
                 supportsTokenCost: false,
-                noDataMessage: { "Muse cost summary is not supported." }),
+                noDataMessage: { "Muse Code subscription spend is not reported as token cost." }),
             fetchPlan: ProviderFetchPlan(
-                sourceModes: [.auto, .cli],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [MuseAPIFetchStrategy()] })),
+                sourceModes: [.auto, .cli, .api],
+                pipeline: ProviderFetchPipeline(resolveStrategies: { context in
+                    switch context.sourceMode {
+                    case .cli: [MuseCodeCLIFetchStrategy()]
+                    case .api: [MuseAPIFetchStrategy()]
+                    case .auto: [MuseCodeCLIFetchStrategy(), MuseAPIFetchStrategy()]
+                    case .web, .oauth: []
+                    }
+                })),
             cli: ProviderCLIConfig(
                 name: "muse",
                 aliases: ["meta"],
                 versionDetector: nil))
+    }
+}
+
+struct MuseCodeCLIFetchStrategy: ProviderFetchStrategy {
+    let id: String = "muse.code-cli"
+    let kind: ProviderFetchKind = .cli
+
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        TTYCommandRunner.which("muse") != nil
+    }
+
+    func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
+        let usage = try await MuseCodeCLIUsageFetcher.load()
+        return self.makeResult(usage: usage, sourceLabel: "muse-code-cli")
+    }
+
+    func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
+        false
     }
 }
 
@@ -80,7 +103,8 @@ enum MuseSettingsError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingToken:
-            "Muse API key not found. Set it in Preferences → Providers → Muse (Meta) or export MODEL_API_KEY."
+            "Muse Model API key not found. Set it in Preferences → Providers → " +
+                "Muse Code (Meta) or export MODEL_API_KEY."
         }
     }
 }

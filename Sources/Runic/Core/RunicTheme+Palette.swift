@@ -249,59 +249,68 @@ extension Theme {
                         hoverStyle: .neutral,
                         chartSeries: .themed)))
         case .glass:
-            // Aurora-glass: deep indigo base, neon cyan/magenta/violet accents.
-            // Translucent surfaces with hairline glow strokes, springy motion.
-            // The "showroom" theme — bold and kinetic without being noisy.
+            // A cool, dark stage gives translucent cards something to reveal.
+            // Keep color in the ambient light and controls, not every border.
             RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Aurora glass",
+                tagline: "Frosted midnight",
                 symbolName: "sparkle.magnifyingglass",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.040, green: 0.060, blue: 0.170),
-                secondary: Color(red: 0.240, green: 0.880, blue: 1.000), // cyan
-                accent: Color(red: 0.540, green: 0.380, blue: 1.000), // violet
-                highlight: Color(red: 1.000, green: 0.420, blue: 0.760), // magenta
-                warm: Color(red: 1.000, green: 0.560, blue: 0.230), // amber
-                tertiary: Color(red: 0.180, green: 0.980, blue: 0.620), // mint
-                surface: Color(red: 0.020, green: 0.028, blue: 0.060),
-                surfaceAlt: Color(red: 0.080, green: 0.140, blue: 0.260).opacity(0.46),
-                cardFill: Color.white.opacity(0.10),
-                cardStroke: Color(red: 0.540, green: 0.380, blue: 1.000).opacity(0.40),
-                primaryText: Color.white.opacity(0.94),
-                secondaryText: Color.white.opacity(0.66),
+                primary: Color(red: 0.125, green: 0.232, blue: 0.310),
+                secondary: Color(red: 0.427, green: 0.741, blue: 0.831),
+                accent: Color(red: 0.529, green: 0.805, blue: 0.902),
+                highlight: Color(red: 0.720, green: 0.673, blue: 0.889),
+                warm: Color(red: 0.957, green: 0.631, blue: 0.514),
+                tertiary: Color(red: 0.518, green: 0.827, blue: 0.714),
+                surface: Color(red: 0.030, green: 0.055, blue: 0.086),
+                surfaceAlt: Color(red: 0.070, green: 0.123, blue: 0.164),
+                cardFill: Color(red: 0.107, green: 0.166, blue: 0.205).opacity(0.82),
+                cardStroke: Color.white.opacity(0.23),
+                primaryText: Color(red: 0.952, green: 0.975, blue: 0.989),
+                secondaryText: Color(red: 0.735, green: 0.815, blue: 0.849),
                 fonts: .system,
-                shape: .glassy,
+                shape: RunicThemeShape(cornerMultiplier: 1.0, separator: .hairline),
                 motion: .snappy,
-                density: .normal)
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: .standard,
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hairline,
+                        borderWeight: 0.7,
+                        borderOpacity: 0.48,
+                        cornerStyle: .soft,
+                        panelDepth: .low),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0.08,
+                        materialIntensity: 0),
+                    controls: .standard))
         case .terminal:
-            // Operator console, the Bloomberg kind, not the CRT kind. True
-            // black, amber phosphor for everything the system says (brackets,
-            // selection, labels, progress), bone-white Geist Mono for every
-            // number, and color reserved for status: green headroom, orange
-            // warning, red exhausted. Scanlines stay at a whisper.
+            // Near-black green phosphor with clear data typography. This is a
+            // terminal skin, not a colorful dashboard in terminal clothing.
             RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Operator console",
+                tagline: "Phosphor console",
                 symbolName: "terminal.fill",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 1.000, green: 0.788, blue: 0.302), // light amber
-                secondary: Color(red: 0.490, green: 0.827, blue: 0.988), // informational cyan
-                accent: Color(red: 1.000, green: 0.690, blue: 0.000), // amber phosphor
-                highlight: Color(red: 1.000, green: 0.549, blue: 0.259), // warning orange
-                warm: Color(red: 1.000, green: 0.361, blue: 0.361), // exhausted red
-                tertiary: Color(red: 0.298, green: 0.878, blue: 0.627), // headroom green
-                surface: Color(red: 0.043, green: 0.043, blue: 0.051), // true black
-                surfaceAlt: Color(red: 0.078, green: 0.078, blue: 0.086).opacity(0.90),
-                cardFill: Color.white.opacity(0.05),
-                cardStroke: Color(red: 1.000, green: 0.690, blue: 0.000).opacity(0.35),
-                primaryText: Color(red: 0.949, green: 0.929, blue: 0.894), // bone
-                secondaryText: Color(red: 0.722, green: 0.690, blue: 0.639),
+                primary: Color(red: 0.722, green: 0.965, blue: 0.769),
+                secondary: Color(red: 0.412, green: 0.745, blue: 0.529),
+                accent: Color(red: 0.396, green: 0.937, blue: 0.576),
+                highlight: Color(red: 0.725, green: 0.973, blue: 0.478),
+                warm: Color(red: 1.000, green: 0.412, blue: 0.459),
+                tertiary: Color(red: 0.447, green: 0.839, blue: 0.608),
+                surface: Color(red: 0.008, green: 0.035, blue: 0.016),
+                surfaceAlt: Color(red: 0.031, green: 0.106, blue: 0.051),
+                cardFill: Color(red: 0.063, green: 0.141, blue: 0.086).opacity(0.85),
+                cardStroke: Color(red: 0.376, green: 0.871, blue: 0.525).opacity(0.40),
+                primaryText: Color(red: 0.894, green: 1.000, blue: 0.914),
+                secondaryText: Color(red: 0.655, green: 0.804, blue: 0.690),
                 fonts: RunicThemeFonts(body: .mono, numeric: .mono),
-                shape: RunicThemeShape(cornerMultiplier: 0.62, separator: .hairline),
+                shape: RunicThemeShape(cornerMultiplier: 0.45, separator: .hairline),
                 motion: .instant,
                 density: .normal,
                 style: RunicThemeStyle(
@@ -314,13 +323,13 @@ extension Theme {
                         contrast: .strong),
                     chrome: RunicThemeChromeStyle(
                         borderStyle: .hud,
-                        borderWeight: 0.75,
-                        borderOpacity: 0.44,
+                        borderWeight: 0.8,
+                        borderOpacity: 0.46,
                         cornerStyle: .compact,
                         panelDepth: .low),
                     effects: RunicThemeEffectsStyle(
-                        scanlineOpacity: 0.08,
-                        glowStrength: 0.12,
+                        scanlineOpacity: 0.2,
+                        glowStrength: 0.18,
                         materialIntensity: 0),
                     controls: RunicThemeControlStyle(
                         selectedFillStyle: .terminalSolid,

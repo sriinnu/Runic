@@ -12,10 +12,12 @@ extension MenuPopoverView {
         let ledgerTopModelContextLabel = providerContextStatus?.text
         let credits: CreditsSnapshot? = self.store.credits(for: provider)
         let creditsError: String? = self.store.creditsError(for: provider)
-        let dashboard: OpenAIDashboardSnapshot? = provider == .codex && !self.store.openAIDashboardRequiresLogin
+        let dashboard: OpenAIDashboardSnapshot? = provider == .codex
+            && self.settings.openAIWebAccessEnabled && !self.store.openAIDashboardRequiresLogin
             ? self.store.openAIDashboard
             : nil
-        let dashboardError: String? = provider == .codex ? self.store.lastOpenAIDashboardError : nil
+        let dashboardError: String? = provider == .codex && self.settings.openAIWebAccessEnabled
+            ? self.store.lastOpenAIDashboardError : nil
 
         let input = UsageMenuCardView.Model.Input(
             provider: provider,

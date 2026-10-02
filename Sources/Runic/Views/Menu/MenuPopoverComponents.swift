@@ -102,11 +102,14 @@ struct MenuPopoverBackground: View {
         ZStack {
             self.runicTheme.menuSurfaceGradient
             if self.runicTheme.id == "glass" {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.52)
+                RadialGradient(
+                    colors: [self.runicTheme.accent.opacity(0.14), .clear],
+                    center: .topLeading,
+                    startRadius: 8,
+                    endRadius: 320)
             }
             if self.runicTheme.isTerminalHUD {
+                RunicTerminalCodeRainOverlay()
                 RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
                 RunicTerminalCornerOverlay(
                     inset: 10,
@@ -139,7 +142,7 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(isGlass
-                        ? AnyShapeStyle(.regularMaterial)
+                        ? self.runicTheme.cardBackgroundStyle
                         : AnyShapeStyle(elevated || borderStyle == .cutout
                             ? self.runicTheme.cardFill
                             : self.runicTheme.menuSubtleFill))
@@ -159,15 +162,14 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
                     }
                     .background {
                         if isGlass {
-                            // Soft accent bloom behind the frost — what makes
-                            // Glass read as "club showroom" instead of "just
-                            // another translucent panel".
+                            // A small ambient glow separates the frosted card
+                            // from the dark canvas without neon outlines.
                             RoundedRectangle(cornerRadius: radius, style: .continuous)
                                 .fill(
                                     RadialGradient(
                                         colors: [
-                                            self.runicTheme.accent.opacity(0.32),
-                                            self.runicTheme.highlight.opacity(0.18),
+                                            self.runicTheme.accent.opacity(0.14),
+                                            self.runicTheme.highlight.opacity(0.08),
                                             .clear,
                                         ],
                                         center: .topLeading,

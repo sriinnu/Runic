@@ -1,14 +1,22 @@
 ---
-summary: "Muse (Meta Model API) provider data sources: API key in Keychain/env, models list + rate-limit headers, billing errors."
+summary: "Muse Code subscription usage from the signed-in CLI, plus separate Meta Model API rate limits."
 read_when:
-  - Debugging Muse / Meta Model API key auth or rate-limit display
-  - Revisiting Muse usage reporting if Meta ships a usage endpoint
+  - Debugging Muse Code subscription usage or Meta Model API rate-limit display
+  - Revisiting consumer Muse AI usage if Meta ships a verifiable quota source
 ---
 
-# Muse (Meta) provider
+# Muse Code (Meta) provider
 
-Muse is served through Meta's Model API (`https://api.meta.ai/v1`), API-key based.
-Keys and billing live at `https://dev.meta.ai`.
+Runic's Auto source uses a locally installed, signed-in `muse` CLI first. It
+opens the CLI's read-only `/usage` card and reports its Current and Weekly
+subscription windows. This does not send a model prompt or require a Model API
+key. Choose CLI explicitly to require that source; when the CLI is installed
+but cannot show usage, Runic reports the error instead of relabeling API limits
+as subscription usage.
+
+An explicit API source uses Meta's separate, pay-as-you-go Model API
+(`https://api.meta.ai/v1`). Keys and billing live at `https://dev.meta.ai`.
+Auto uses API only when the CLI is unavailable and an API key is configured.
 
 ## What this provider can and cannot show
 
@@ -25,8 +33,9 @@ tile shows key health plus whatever rate-limit state the models call returns.
 - No headers → primary is an informational "N models available" line
   (`hasKnownLimit: false`), like Groq and TypeSafe.
 
-`supportsTokenCost` and `supportsTokenMetrics` are false. The dashboard link
-goes to dev.meta.ai.
+`supportsTokenCost` and `supportsTokenMetrics` are false. Meta's consumer Muse
+agent and the Meta AI web assistant are separate from Muse Code. Runic has no
+verified source for their remaining quota yet.
 
 ## Errors
 
@@ -51,6 +60,8 @@ Fallback order: Keychain first, then the variables above.
 
 ## Key files
 - `Sources/RunicCore/Providers/Muse/MuseProviderDescriptor.swift`
+- `Sources/RunicCore/Providers/Muse/MuseCodeCLIUsageFetcher.swift`
 - `Sources/RunicCore/Providers/Muse/MuseUsageFetcher.swift`
 - `Sources/Runic/Core/Stores/MuseTokenStore.swift`
+- `Tests/RunicTests/MuseCodeCLIUsageFetcherTests.swift`
 - `Tests/RunicTests/MuseUsageFetcherTests.swift`

@@ -6,6 +6,11 @@ enum RunicCLI {
         let rawArgv = Array(CommandLine.arguments.dropFirst())
         let argv = Self.effectiveArgv(rawArgv)
 
+        if argv.first == "mcp" {
+            await RunicMCPCommand.run(Array(argv.dropFirst()))
+            return
+        }
+
         // Handle help/version
         if argv.contains("-h") || argv.contains("--help") {
             let command = argv.first { $0 != "-h" && $0 != "--help" && !$0.hasPrefix("-") }

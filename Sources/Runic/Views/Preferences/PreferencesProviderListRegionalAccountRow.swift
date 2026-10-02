@@ -13,22 +13,29 @@ struct ProviderListAddRegionalAccountView: View {
     let provider: UsageProvider
     let displayName: String
     @Binding var isExpanded: Bool
+    @Binding var isEnabled: Bool
     let fields: [ProviderSettingsFieldDescriptor]
 
     var body: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    self.isExpanded.toggle()
+            HStack(spacing: RunicSpacing.sm) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        self.isExpanded.toggle()
+                    }
+                } label: {
+                    Label(
+                        self.isExpanded ? "Cancel" : "Add \(self.displayName)",
+                        systemImage: self.isExpanded ? "xmark.circle" : "plus.circle")
+                        .font(self.fonts.footnote.weight(.medium))
                 }
-            } label: {
-                Label(
-                    self.isExpanded ? "Cancel" : "Add \(self.displayName)",
-                    systemImage: self.isExpanded ? "xmark.circle" : "plus.circle")
+                .buttonStyle(.plain)
+                .foregroundStyle(self.isExpanded ? self.runicTheme.secondaryText : Color.accentColor)
+
+                Button("Enable") { self.isEnabled = true }
+                    .buttonStyle(.plain)
                     .font(self.fonts.footnote.weight(.medium))
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(self.isExpanded ? self.runicTheme.secondaryText : Color.accentColor)
 
             if self.isExpanded {
                 ForEach(self.fields) { field in

@@ -124,15 +124,13 @@ struct PreferencesView: View {
     }
 
     private var tabStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: RunicSpacing.xs) {
-                ForEach(self.visibleTabs) { tab in
-                    self.tabButton(tab)
-                }
+        HStack(spacing: RunicSpacing.xs) {
+            ForEach(self.visibleTabs) { tab in
+                self.tabButton(tab)
             }
-            .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-            .padding(.vertical, RunicSpacing.sm)
         }
+        .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+        .padding(.vertical, RunicSpacing.sm)
         .background(self.settings.theme.palette.isPaperCutout
             ? Color.clear
             : self.settings.theme.palette.surfaceAlt.opacity(self.headerBackgroundOpacity))
@@ -238,7 +236,8 @@ struct PreferencesView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .frame(width: 72, height: 56)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)

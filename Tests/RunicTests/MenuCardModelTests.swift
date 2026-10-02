@@ -75,6 +75,40 @@ extension UsageMenuCardView.Model.Input {
 }
 
 struct MenuCardModelTests {
+    @Test(arguments: UsageProvider.allCases, [false, true])
+    func `reported credits and extra usage respect the setting for every provider`(
+        provider: UsageProvider,
+        enabled: Bool) throws
+    {
+        let now = Date()
+        let metadata = try #require(ProviderDefaults.metadata[provider])
+        let snapshot = UsageSnapshot(
+            primary: RateWindow(usedPercent: 10, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+            secondary: nil,
+            providerCost: ProviderCostSnapshot(used: 5, limit: 20, currencyCode: "USD", updatedAt: now),
+            updatedAt: now)
+        let model = UsageMenuCardView.Model.make(.init(
+            provider: provider,
+            metadata: metadata,
+            snapshot: snapshot,
+            credits: CreditsSnapshot(remaining: 42, events: [], updatedAt: now),
+            creditsError: nil,
+            dashboard: nil,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            menuMode: .glance,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: enabled,
+            now: now))
+        #expect((model.creditsText != nil) == enabled)
+        #expect((model.providerCost != nil) == enabled)
+    }
+
     @Test
     func `builds metrics using remaining percent`() throws {
         let now = Date()
@@ -401,14 +435,12 @@ struct MenuCardModelTests {
             showOptionalCreditsAndExtraUsage: true,
             now: now))
 
-        // The balance renders as a text line; the "of 1K credits" gauge is
-        // codex-only, so no bar denominator is invented for currency balances.
+        // A provider balance stays a plain amount because no total was reported.
         #expect(model.creditsText == "49.58 left")
-        #expect(model.creditsRemaining == nil)
     }
 
     @Test
-    func `codex credits keep the thousand-credit bar`() throws {
+    func `codex credits show reported balance without web auth error`() throws {
         let now = Date()
         let metadata = try #require(ProviderDefaults.metadata[.codex])
         let snapshot = UsageSnapshot(
@@ -421,10 +453,10 @@ struct MenuCardModelTests {
             provider: .codex,
             metadata: metadata,
             snapshot: snapshot,
-            credits: CreditsSnapshot(remaining: 250, events: [], updatedAt: now),
+            credits: CreditsSnapshot(remaining: 57785.18, events: [], updatedAt: now),
             creditsError: nil,
             dashboard: nil,
-            dashboardError: nil,
+            dashboardError: "OpenAI web dashboard returned a public page (not signed in).",
             tokenSnapshot: nil,
             tokenError: nil,
             account: AccountInfo(email: nil, plan: nil),
@@ -435,8 +467,9 @@ struct MenuCardModelTests {
             showOptionalCreditsAndExtraUsage: true,
             now: now))
 
-        #expect(model.creditsText == "250 left")
-        #expect(model.creditsRemaining == 250)
+        #expect(model.creditsText == "57,785.18 left")
+        #expect(model.creditsHintText == nil)
+        #expect(model.creditsHintCopyText == nil)
     }
 
     @Test

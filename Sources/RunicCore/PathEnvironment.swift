@@ -108,6 +108,27 @@ public enum BinaryLocator {
             aliasResolver: aliasResolver)
     }
 
+    public static func resolveMuseBinary(
+        env: [String: String] = ProcessInfo.processInfo.environment,
+        loginPATH: [String]? = LoginShellPathCache.shared.current,
+        commandV: (String, String?, TimeInterval, FileManager) -> String? = ShellCommandLocator.commandV,
+        aliasResolver: (String, String?, TimeInterval, FileManager, String) -> String? = ShellCommandLocator
+            .resolveAlias,
+        fileManager: FileManager = .default,
+        home: String = NSHomeDirectory()) -> String?
+    {
+        self.resolveBinary(
+            .init(
+                name: "muse",
+                overrideKey: "MUSE_CLI_PATH",
+                env: env,
+                loginPATH: loginPATH,
+                fileManager: fileManager,
+                home: home),
+            commandV: commandV,
+            aliasResolver: aliasResolver)
+    }
+
     private static func resolveBinary(
         _ request: BinaryResolutionRequest,
         commandV: (String, String?, TimeInterval, FileManager) -> String?,

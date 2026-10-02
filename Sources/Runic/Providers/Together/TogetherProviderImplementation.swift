@@ -13,7 +13,7 @@ struct TogetherProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "together-api-token",
                 title: "API key",
-                subtitle: "Stored in Keychain (encrypted). Press Return to save.",
+                subtitle: "Saved automatically to Keychain (encrypted).",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.togetherAPIToken),

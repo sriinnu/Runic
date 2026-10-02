@@ -11,9 +11,12 @@ struct LiquidMeshBackground: View {
         if self.runicTheme.isTerminalHUD {
             ZStack {
                 self.runicTheme.menuSurfaceGradient
+                RunicTerminalCodeRainOverlay()
                 RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
             }
-        } else if self.runicTheme.hasSurfaceTexture || self.runicTheme.style.effects.materialIntensity < 0.1 {
+        } else if self.runicTheme.hasSurfaceTexture ||
+            (self.runicTheme.id != "glass" && self.runicTheme.style.effects.materialIntensity < 0.1)
+        {
             // Paper, film, parchment: the texture is the ground. A blurred
             // mesh under it only produced a stray gray band mid-window.
             Color.clear
@@ -200,13 +203,13 @@ private struct LiquidGlassCore: ViewModifier {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(self.runicTheme.cardBackgroundStyle)
 
-                    if !isTerminalHUD, self.runicTheme.style.effects.materialIntensity > 0.05 {
+                    if !isGlassTheme, !isTerminalHUD, self.runicTheme.style.effects.materialIntensity > 0.05 {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(.ultraThinMaterial)
                             .opacity(self.runicTheme.style.effects.materialIntensity)
                             .overlay(
                                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                                    .fill(self.runicTheme.cardFill.opacity(isGlassTheme ? 0.92 : 0.36)))
+                                    .fill(self.runicTheme.cardFill.opacity(0.36)))
                     }
 
                     if isTerminalHUD {
@@ -229,6 +232,12 @@ private struct LiquidGlassCore: ViewModifier {
                                     self.runicTheme.highlight.opacity(self.hovering ? 0.34 : 0.18),
                                     self.runicTheme.accent.opacity(
                                         self.hovering ? 0.46 : self.runicTheme.style.chrome.borderOpacity * 0.8),
+                                ]
+                                : isGlassTheme
+                                ? [
+                                    Color.white.opacity(self.hovering ? 0.40 : 0.29),
+                                    Color.white.opacity(self.hovering ? 0.18 : 0.11),
+                                    self.runicTheme.accent.opacity(self.hovering ? 0.28 : 0.13),
                                 ]
                                 : [
                                     self.runicTheme.highlight.opacity(self.hovering ? 0.26 : 0.12),

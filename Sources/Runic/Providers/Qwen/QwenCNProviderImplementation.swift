@@ -13,7 +13,7 @@ struct QwenCNProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "qwen-cn-api-token",
                 title: "DashScope API key (China)",
-                subtitle: "China platform (dashscope.aliyuncs.com) key. Stored in Keychain (encrypted). Press Return to save.",
+                subtitle: "China platform (dashscope.aliyuncs.com) key. Saved automatically to Keychain (encrypted).",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.qwenCNAPIToken),

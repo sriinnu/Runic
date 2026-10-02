@@ -82,10 +82,26 @@ Install it from Preferences -> Performance -> Refresh -> Install CLI.
 
 `runic cost` refreshes today's live usage by default. `--rebuild` is the explicit historical repair path and may scan provider JSONL history.
 
+## MCP server and local tools
+
+Runic includes **one local MCP server** with two read-only tools: `runic_limits` (provider limits, resets, credits and balances where available) and `runic_health` (snapshot and refresh status). In the app, open **Settings → Sync → Integrations → Runic MCP**. **Check data** shows whether Runic has a usable local snapshot; **Copy client config** gives you the command for your AI client's MCP settings. The server starts on demand over stdio, so there is no port or always-running server to find.
+
+To see the same tool data locally, install the bundled CLI from **Settings → Performance → Refresh & Safety → Install CLI**, then run:
+
+```bash
+runic mcp list
+runic mcp call runic_health
+runic mcp call runic_limits
+runic mcp call runic_limits '{"provider":"codex"}'
+```
+
+Refresh usage in Runic first. A missing field means that provider has not supplied a verified value. To add tools, put a package folder containing `runic-mcp-plugin.json` and its executable in `~/Library/Application Support/Runic/mcpservers/`; Runic discovers it automatically and lists it in Settings. The built-in tools work even when that optional package list is empty. See the [MCP guide](docs/mcp.md) for a complete package example, client setup, and troubleshooting.
+
 ## Docs
 
 - Provider behavior: [docs/providers.md](docs/providers.md)
 - CLI details: [docs/cli.md](docs/cli.md)
+- MCP server and tool packages: [docs/mcp.md](docs/mcp.md)
 - Architecture: [docs/architecture.md](docs/architecture.md)
 - Refresh loop: [docs/refresh-loop.md](docs/refresh-loop.md)
 - UI and widgets: [docs/ui.md](docs/ui.md), [docs/widgets.md](docs/widgets.md)

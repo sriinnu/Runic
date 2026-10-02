@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.0 — 2026-10-02
+- MCP: Runic now includes a local stdio server with read-only limits and health tools. Settings puts the server first, shows whether its snapshot is ready, and distinguishes the built-in tools from optional packages. Local packages are discovered automatically from `~/Library/Application Support/Runic/mcpservers/`; `runic mcp call` lets users inspect built-in or package tool output without an MCP client.
+- Usage: optional provider credits and balances appear consistently in the menu and settings when the source supplies them. Muse Code subscription usage is supported.
+- Appearance: Glass and Terminal themes are available; Terminal uses a green phosphor palette. The Settings tab strip stays fixed, and the Burn chart's labels no longer overlap.
+- Documentation: the README and MCP guide explain where to find the server, connect a client, test its data, and add a local tool package.
+
 ## 2.8.1 — 2026-09-23
 - Settings → Providers: every provider has a reload button (↻). It re-fetches that provider right away, and for Claude it first checks whether the CLI's Keychain item changed since Runic last copied the token, for example after a `claude /login` in the terminal. If it did, Runic re-reads it (one Keychain dialog, because you pressed the button) instead of failing with "No non-interactive Claude credentials found". The check reads only the item's modification date, so pressing reload with a current token never prompts.
 - Claude: banked limit resets (the one-off "reset your limits" grants, like the Opus 5.5 launch reset usable until Oct 22) show up next to Codex's. Claude Code's login returns the resets block with an empty list for these grants; only claude.ai lists them. Turn on **Banked resets from claude.ai** in Settings → Providers → Claude: Runic reads your claude.ai login from your browser once (macOS may ask for your password, only then), keeps a copy in its own Keychain item, and fetches resets with every Claude refresh without prompting. Each reset shows with its expiry on the card, the Resets panel and the menu. Runic only displays them; redeem on claude.ai. The claude.ai path also now picks your chat subscription org instead of whichever org the account lists first.

@@ -16,6 +16,12 @@ struct IntegrationsPane: View {
 
     @State private var copiedValue: String?
     @State private var mcpServers: [MCPServer] = []
+    @State private var mcpPlugins: [RunicMCPPluginPackage] = []
+    @State private var invalidMCPPluginPaths: [String] = []
+    @State private var invalidDiscoveredMCPPaths: [String] = []
+    @State private var mcpInventorySignature = ""
+    @State private var mcpPluginMessage: String?
+    @State private var mcpDataCheck: String?
     @State private var showingAddServerSheet = false
     @State private var newServerName = ""
     @State private var newServerPort = 8001
@@ -25,20 +31,172 @@ struct IntegrationsPane: View {
         OTelGenAICollectorConfiguration.defaultOutputFile().path
     }
 
+    private var runicMCPHelperPath: String {
+        Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/RunicCLI").path
+    }
+
+    private var runicMCPHelperAvailable: Bool {
+        FileManager.default.isExecutableFile(atPath: self.runicMCPHelperPath)
+    }
+
     private var koshaPath: String {
         NSString(string: "~/.kosha/registry.json").expandingTildeInPath
     }
 
-    private var repositoryGitPath: String {
-        (self.githubRepositoryPath as NSString).appendingPathComponent(".git")
+    private var isRepositoryPathValid: Bool {
+        Self.gitDirectory(for: self.githubRepositoryPath) != nil
     }
 
-    private var isRepositoryPathValid: Bool {
-        !self.githubRepositoryPath.isEmpty && FileManager.default.fileExists(atPath: self.repositoryGitPath)
+    static func gitDirectory(for repositoryPath: String) -> String? {
+        let repository = repositoryPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !repository.isEmpty else { return nil }
+        let marker = URL(fileURLWithPath: repository, isDirectory: true).appendingPathComponent(".git")
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: marker.path, isDirectory: &isDirectory) else { return nil }
+        if isDirectory.boolValue { return marker.standardizedFileURL.path }
+        guard let content = try? String(contentsOf: marker, encoding: .utf8),
+              let line = content.split(whereSeparator: \.isNewline).first,
+              line.hasPrefix("gitdir:")
+        else { return nil }
+        let path = String(line.dropFirst("gitdir:".count)).trimmingCharacters(in: .whitespaces)
+        guard !path.isEmpty else { return nil }
+        let resolved = URL(fileURLWithPath: path, relativeTo: marker.deletingLastPathComponent()).standardizedFileURL
+        guard FileManager.default.fileExists(atPath: resolved.path, isDirectory: &isDirectory), isDirectory.boolValue
+        else { return nil }
+        return resolved.path
     }
 
     var body: some View {
         PreferencesPane {
+            SettingsSection(
+                title: "Runic MCP",
+                caption: "Let AI clients read Runic's latest local limits and refresh health. " +
+                    "Add trusted local tool packages without rebuilding Runic.",
+                contentSpacing: PreferencesLayoutMetrics.sectionSpacing)
+            {
+                IntegrationRow(
+                    icon: "point.3.connected.trianglepath.dotted",
+                    title: "Local MCP server",
+                    status: self.runicMCPHelperAvailable ? "Ready" : "Unavailable",
+                    detail: "Built-in tools: runic_limits and runic_health. " +
+                        "Your AI client starts Runic on demand through stdio.",
+                    actions: {
+                        IntegrationCopyButton(
+                            title: "Copy client config",
+                            value: self.runicMCPClientConfig,
+                            copiedValue: self.$copiedValue,
+                            onCopy: self.copy)
+                            .disabled(!self.runicMCPHelperAvailable)
+                        Button("Check data") { self.checkMCPData() }
+                            .buttonStyle(.runicBordered)
+                            .controlSize(.small)
+                        IntegrationLinkButton(title: "MCP guide", systemImage: "book", url: self.docsURL("mcp.md"))
+                    })
+                if let mcpDataCheck = self.mcpDataCheck {
+                    Text(mcpDataCheck)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                        .textSelection(.enabled)
+                }
+
+                HStack(spacing: RunicSpacing.sm) {
+                    Label("Local tool packages", systemImage: "shippingbox")
+                        .font(self.fonts.callout.weight(.semibold))
+                    Spacer()
+                    Button("Open mcpservers") {
+                        self.openMCPDiscoveryDirectory()
+                    }
+                    .buttonStyle(.runicBordered)
+                    .controlSize(.small)
+                    Button {
+                        self.addLocalMCPPlugin()
+                    } label: {
+                        Label("Add folder", systemImage: "plus")
+                    }
+                    .buttonStyle(.runicBordered)
+                    .controlSize(.small)
+                }
+                Text(
+                    "Packages placed in \(RunicMCPPluginRegistry.discoveryDirectory().path) appear here automatically.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .textSelection(.enabled)
+                if self.mcpPlugins.isEmpty, self.invalidMCPPluginPaths.isEmpty,
+                   self.invalidDiscoveredMCPPaths.isEmpty
+                {
+                    IntegrationEmptyState(
+                        icon: "shippingbox",
+                        title: "No optional packages installed",
+                        detail: "The built-in Runic server and its two tools are ready above. " +
+                            "Drop a package folder into mcpservers to add more tools.")
+                } else {
+                    ForEach(self.mcpPlugins, id: \.manifest.id) { package in
+                        HStack(spacing: RunicSpacing.sm) {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                                Text(package.manifest.name)
+                                    .font(self.fonts.callout.weight(.semibold))
+                                Text("\(package.manifest.id) · \(package.manifest.tools.count) tools · " +
+                                    (package.discovered ? "mcpservers" : "Added folder"))
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                                Text(package.manifest.tools.map { "\(package.manifest.id)_\($0.name)" }
+                                    .joined(separator: ", "))
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                            }
+                            Spacer()
+                            Toggle("Enabled", isOn: Binding(
+                                get: { package.enabled },
+                                set: { self.setMCPPlugin(package.manifest.id, enabled: $0) }))
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                            if package.discovered {
+                                IntegrationRevealButton(path: package.directory.path)
+                            } else {
+                                Button("Remove") { self.removeMCPPlugin(package.manifest.id) }
+                                    .buttonStyle(.runicBordered)
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
+                    ForEach(self.invalidMCPPluginPaths, id: \.self) { path in
+                        HStack(spacing: RunicSpacing.sm) {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                                Text("Package unavailable")
+                                    .font(self.fonts.callout.weight(.semibold))
+                                Text(path)
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                                    .lineLimit(2)
+                            }
+                            Spacer()
+                            Button("Remove") { self.removeMCPPluginRegistration(path) }
+                                .buttonStyle(.runicBordered)
+                                .controlSize(.small)
+                        }
+                    }
+                    ForEach(self.invalidDiscoveredMCPPaths, id: \.self) { path in
+                        HStack(spacing: RunicSpacing.sm) {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                                Text("Invalid package in mcpservers")
+                                    .font(self.fonts.callout.weight(.semibold))
+                                Text(path)
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                                    .lineLimit(2)
+                            }
+                            Spacer()
+                            IntegrationRevealButton(path: path)
+                        }
+                    }
+                }
+                if let message = self.mcpPluginMessage {
+                    Text(message)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                }
+            }
+            PreferencesDivider()
             SettingsSection(
                 title: "Scriptable Access",
                 caption: "Runic exposes local usage through the bundled CLI and local JSONL files. " +
@@ -244,6 +402,15 @@ struct IntegrationsPane: View {
         }
         .onAppear {
             self.loadMCPServers()
+            self.prepareMCPDiscoveryDirectory()
+            self.loadMCPPlugins()
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled else { break }
+                self.loadMCPPlugins()
+            }
         }
         .sheet(isPresented: self.$showingAddServerSheet) {
             AddMCPServerSheet(
@@ -260,11 +427,119 @@ struct IntegrationsPane: View {
     }
 
     private var githubInsightsCommand: String {
-        let path = self.githubRepositoryPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        if path.isEmpty {
-            return "runic insights --with-commits --format json --pretty"
+        Self.insightsCommand(for: self.githubRepositoryPath)
+    }
+
+    private var runicMCPClientConfig: String {
+        let quoted = self.runicMCPHelperPath.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "{\"mcpServers\":{\"runic\":{\"command\":\"\(quoted)\",\"args\":[\"mcp\",\"serve\"]}}}"
+    }
+
+    private func loadMCPPlugins() {
+        let packages = RunicMCPPluginRegistry.packages()
+        let invalidDiscovered = RunicMCPPluginRegistry.invalidDiscoveredPaths()
+        let invalidRegistered = RunicMCPPluginRegistry.registrations()
+            .map(\.path)
+            .filter { path in
+                !packages.contains(where: { $0.directory.path == path }) &&
+                    !invalidDiscovered.contains(path)
+            }
+        let signature = packages.map { package in
+            "\(package.directory.path)|\(package.manifest.id)|\(package.manifest.name)|" +
+                "\(package.manifest.version)|\(package.enabled)|" +
+                package.manifest.tools.map(\.name).joined(separator: ",")
+        }.joined(separator: "\n") + "\n" + invalidRegistered.joined(separator: "\n") +
+            "\n" + invalidDiscovered.joined(separator: "\n")
+        guard signature != self.mcpInventorySignature else { return }
+        self.mcpInventorySignature = signature
+        self.mcpPlugins = packages
+        self.invalidMCPPluginPaths = invalidRegistered
+        self.invalidDiscoveredMCPPaths = invalidDiscovered
+    }
+
+    private func prepareMCPDiscoveryDirectory() {
+        do {
+            try RunicMCPPluginRegistry.ensureDiscoveryDirectory()
+        } catch {
+            self.mcpPluginMessage = "Could not create mcpservers: \(error.localizedDescription)"
         }
-        return "runic insights --with-commits --git-directory \"\(path)/.git\" --json --pretty"
+    }
+
+    private func checkMCPData() {
+        guard let state = RunicMCPStateStore.load() else {
+            self.mcpDataCheck = "No MCP data snapshot yet. Refresh usage in Runic, then check again."
+            return
+        }
+        let age = max(0, Int(Date().timeIntervalSince(state.generatedAt)))
+        let populated = state.providers.filter { provider in
+            provider.primary != nil || provider.secondary != nil || provider.tertiary != nil ||
+                provider.creditsRemaining != nil || provider.balance != nil || provider.extraUsage != nil
+        }
+        let names = populated.map(\.id.rawValue).joined(separator: ", ")
+        self.mcpDataCheck = "Snapshot \(age)s old · \(state.providers.count) enabled providers, " +
+            "\(populated.count) with values" + (names.isEmpty ? "." : ": \(names).") +
+            " Inspect tool output with runic mcp call runic_limits or runic_health."
+    }
+
+    private func openMCPDiscoveryDirectory() {
+        self.prepareMCPDiscoveryDirectory()
+        NSWorkspace.shared.open(RunicMCPPluginRegistry.discoveryDirectory())
+    }
+
+    private func addLocalMCPPlugin() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Add package"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let package = try RunicMCPPluginRegistry.add(url.path)
+            self.mcpPluginMessage = "Added \(package.manifest.name). Restart your MCP client to refresh its tool list."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
+    }
+
+    private func setMCPPlugin(_ id: String, enabled: Bool) {
+        do {
+            try RunicMCPPluginRegistry.setEnabled(enabled, id: id)
+            self.mcpPluginMessage = "Restart your MCP client to refresh its tool list."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
+    }
+
+    private func removeMCPPlugin(_ id: String) {
+        do {
+            try RunicMCPPluginRegistry.remove(id)
+            self.mcpPluginMessage = "Removed \(id). Its folder was left untouched. " +
+                "Restart your MCP client to refresh its tool list."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
+    }
+
+    private func removeMCPPluginRegistration(_ path: String) {
+        do {
+            try RunicMCPPluginRegistry.removeRegistration(path: path)
+            self.mcpPluginMessage = "Removed unavailable package registration. Its folder was left untouched."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
+    }
+
+    static func insightsCommand(for repositoryPath: String) -> String {
+        guard let gitDirectory = self.gitDirectory(for: repositoryPath) else {
+            return "runic insights --with-commits --json --pretty"
+        }
+        let quoted = "'\(gitDirectory.replacingOccurrences(of: "'", with: "'\"'\"'"))'"
+        return "runic insights --with-commits --git-directory \(quoted) --json --pretty"
     }
 
     private func docsURL(_ filename: String) -> URL? {

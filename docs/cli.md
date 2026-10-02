@@ -12,7 +12,7 @@ A lightweight Helix-based CLI that mirrors the menubar app’s data paths (Codex
 Use it when you need usage numbers in scripts, CI, or dashboards without UI.
 
 ## Install
-- In the app: **Preferences → Advanced → Install CLI**. This symlinks `RunicCLI` to `/usr/local/bin/runic` and `/opt/homebrew/bin/runic`.
+- In the app: **Settings → Performance → Refresh & Safety → Install CLI**. This symlinks `RunicCLI` to `/usr/local/bin/runic` and `/opt/homebrew/bin/runic`.
 - From the repo: `./bin/install-runic-cli.sh` (same symlink targets).
 - Manual: `ln -sf "/Applications/Runic.app/Contents/Helpers/RunicCLI" /usr/local/bin/runic`.
 
@@ -32,8 +32,10 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 - Dependencies: Swift 6.2+, Helix package (`https://github.com/sriinnu/Helix`).
 
 ## Command
+- `runic mcp list` lists the local MCP server's built-in tools and discovered package tools; `runic mcp call <tool> [json-arguments]` invokes one tool locally and prints its JSON output. See [MCP setup and testing](mcp.md).
 - `runic` defaults to the `usage` command.
   - `--format text|json` (default: text).
+- `runic mcp serve` starts the bundled local MCP server over stdio for an AI client. `runic mcp add|remove|enable|disable|list` manages local tool packages. See [MCP setup](mcp.md). The MCP server currently depends on the macOS app's latest saved usage snapshot.
 - `runic cost` prints local token cost usage (Claude + Codex) from Runic event relay history plus today's local logs, without web/CLI access.
   - `--format text|json` (default: text).
   - `--refresh` is accepted for compatibility; `runic cost` already normalizes today's live logs by default.

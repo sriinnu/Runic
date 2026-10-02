@@ -7,6 +7,8 @@ import WidgetKit
 extension UsageStore {
     func persistWidgetSnapshot(reason: String) {
         let snapshot = self.makeWidgetSnapshot()
+        let mcpState = self.makeMCPState()
+        try? RunicMCPStateStore.save(mcpState)
         Task.detached(priority: .utility) {
             WidgetSnapshotStore.save(snapshot)
             #if canImport(WidgetKit)
@@ -15,6 +17,42 @@ extension UsageStore {
             }
             #endif
         }
+    }
+
+    private func makeMCPState() -> RunicMCPState {
+        let providers = self.enabledProviders().map { provider in
+            let snapshot = self.snapshots[provider]
+            return RunicMCPState.Provider(
+                id: provider,
+                updatedAt: snapshot?.updatedAt,
+                primary: snapshot?.primary,
+                secondary: snapshot?.secondary,
+                tertiary: snapshot?.tertiary,
+                creditsRemaining: self.credits(for: provider)?.remaining,
+                creditsUpdatedAt: self.credits(for: provider)?.updatedAt,
+                creditsHasError: self.creditsError(for: provider) != nil,
+                balance: snapshot?.balance,
+                extraUsage: snapshot?.providerCost,
+                source: Self.mcpSourceKind(self.lastSourceLabels[provider]),
+                hasError: self.errors[provider] != nil)
+        }
+        return RunicMCPState(
+            generatedAt: Date(),
+            refreshFrequency: self.settings.refreshFrequency.rawValue,
+            refreshStatus: self.autoRefreshStatusLine() ?? "Unknown",
+            lastRefreshAt: self.lastRefreshAt,
+            providers: providers)
+    }
+
+    private static func mcpSourceKind(_ label: String?) -> String? {
+        guard let label else { return nil }
+        let lower = label.lowercased()
+        if lower.contains("web") || lower.contains("browser") { return "web" }
+        if lower.contains("oauth") { return "oauth" }
+        if lower.contains("cli") || lower.contains("gcloud") { return "cli" }
+        if lower.contains("api") { return "api" }
+        if lower.contains("local") { return "local" }
+        return "other"
     }
 
     private func makeWidgetSnapshot() -> WidgetSnapshot {

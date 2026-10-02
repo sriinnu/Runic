@@ -281,6 +281,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         if self.startScreenshotRendererIfRequested() { return }
         if Self.terminateIfDuplicateInstance() { return }
+        do {
+            try RunicMCPPluginRegistry.ensureDiscoveryDirectory()
+        } catch {
+            RunicLog.logger("mcp").error("Could not prepare mcpservers folder: \(error)")
+        }
         AppNotifications.shared.requestAuthorizationOnStartup()
         self.settings?.migrateKimiChinaOverrideIfNeeded()
         self.applyInitialConfig()

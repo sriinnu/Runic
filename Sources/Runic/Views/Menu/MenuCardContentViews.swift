@@ -194,7 +194,7 @@ struct UsageMenuMetricCard: View {
             if self.displayMode.showsBars, let percent = self.metric.percent {
                 UsageProgressBar(
                     percent: percent,
-                    tint: self.tint,
+                    tint: self.isExhausted ? self.runicTheme.warm : self.tint,
                     accessibilityLabel: self.metric.percentStyle.accessibilityLabel)
             }
 
@@ -212,7 +212,8 @@ struct UsageMenuMetricCard: View {
                 Text(detail)
                     .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                     .textCase(.none)
             }
         }
@@ -237,6 +238,14 @@ struct UsageMenuMetricCard: View {
         .runicRaised(radius: MenuCardMetrics.metricCardCornerRadius, lift: 0.5)
     }
 
+    private var isExhausted: Bool {
+        guard let percent = self.metric.percent else { return false }
+        switch self.metric.percentStyle {
+        case .used: return percent >= 99.5
+        case .left: return percent <= 0.5
+        }
+    }
+
     private var titleFont: Font {
         self.runicTheme.isTerminalHUD ? self.fonts.footnote.weight(.semibold) : self.fonts.caption.weight(.semibold)
     }
@@ -246,54 +255,21 @@ struct UsageMenuMetricCard: View {
     }
 }
 
-struct CreditsBarContent: View {
+struct CreditsContent: View {
     @Environment(\.runicFonts) private var fonts
-    /// Bar full-scale: the bar reads "remaining out of 1,000 credits". This
-    /// scale is codex-specific — the model factory passes `creditsRemaining`
-    /// only for codex, so every other provider takes the text-only branch
-    /// below (their balances are currency amounts with no 1K denominator).
-    private static let fullScaleCredits: Double = 1000
-
     let creditsText: String
-    let creditsRemaining: Double?
     let hintText: String?
     let hintCopyText: String?
-    let progressColor: Color
     @Environment(\.menuItemHighlighted) private var isHighlighted
     @Environment(\.runicTheme) private var runicTheme
-
-    private var percentLeft: Double? {
-        guard let creditsRemaining else { return nil }
-        let percent = (creditsRemaining / Self.fullScaleCredits) * 100
-        return min(100, max(0, percent))
-    }
-
-    private var scaleText: String {
-        "of \(UsageFormatter.tokenCountString(Int(Self.fullScaleCredits))) credits"
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: MenuCardMetrics.lineSpacing) {
             Text("Credits")
                 .font(self.fonts.body)
                 .fontWeight(.medium)
-            if let percentLeft {
-                UsageProgressBar(
-                    percent: percentLeft,
-                    tint: self.progressColor,
-                    accessibilityLabel: "Credits remaining")
-                HStack(alignment: .firstTextBaseline) {
-                    Text(self.creditsText)
-                        .font(self.fonts.caption)
-                    Spacer()
-                    Text(self.scaleText)
-                        .font(self.fonts.caption)
-                        .foregroundStyle(self.runicTheme.secondaryText)
-                }
-            } else {
-                Text(self.creditsText)
-                    .font(self.fonts.caption)
-            }
+            Text(self.creditsText)
+                .font(self.fonts.caption)
             if let hintText, !hintText.isEmpty {
                 Text(hintText)
                     .font(self.fonts.footnote)

@@ -12,6 +12,7 @@ struct DebugPane: View {
     @State private var currentFetchProvider: UsageProvider = .codex
     @State private var isLoadingLog = false
     @State private var logText: String = ""
+    @State private var logRequestID = UUID()
     @State private var isClearingCostCache = false
     @State private var costCacheStatus: String?
     #if DEBUG
@@ -92,6 +93,11 @@ struct DebugPane: View {
                     selection: self.$currentLogProvider,
                     options: [(UsageProvider.codex, "Codex"), (UsageProvider.claude, "Claude")])
                     .frame(width: 240)
+                    .onChange(of: self.currentLogProvider) { _, _ in
+                        self.logRequestID = UUID()
+                        self.logText = ""
+                        self.isLoadingLog = false
+                    }
 
                 HStack(spacing: RunicSpacing.sm) {
                     Button { self.loadLog(self.currentLogProvider) } label: {
@@ -373,10 +379,13 @@ struct DebugPane: View {
     }
 
     private func loadLog(_ provider: UsageProvider) {
+        let requestID = UUID()
+        self.logRequestID = requestID
         self.isLoadingLog = true
         Task {
             let text = await self.store.debugLog(for: provider)
             await MainActor.run {
+                guard self.logRequestID == requestID, self.currentLogProvider == provider else { return }
                 self.logText = text
                 self.isLoadingLog = false
             }
@@ -385,13 +394,17 @@ struct DebugPane: View {
 
     private func saveLog(_ provider: UsageProvider) {
         Task {
+            let text: String
             if self.logText.isEmpty {
                 self.isLoadingLog = true
-                let text = await self.store.debugLog(for: provider)
+                text = await self.store.debugLog(for: provider)
+                guard self.currentLogProvider == provider else { return }
                 await MainActor.run { self.logText = text }
                 self.isLoadingLog = false
+            } else {
+                text = self.logText
             }
-            _ = await self.store.dumpLog(toFileFor: provider)
+            _ = await self.store.dumpLog(text, toFileFor: provider)
         }
     }
 
@@ -412,10 +425,13 @@ struct DebugPane: View {
     }
 
     private func loadClaudeDump() {
+        let requestID = UUID()
+        self.logRequestID = requestID
         self.isLoadingLog = true
         Task {
             let text = await self.store.debugClaudeDump()
             await MainActor.run {
+                guard self.logRequestID == requestID, self.currentLogProvider == .claude else { return }
                 self.logText = text
                 self.isLoadingLog = false
             }
