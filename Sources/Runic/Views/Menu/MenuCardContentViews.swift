@@ -194,7 +194,7 @@ struct UsageMenuMetricCard: View {
             if self.displayMode.showsBars, let percent = self.metric.percent {
                 UsageProgressBar(
                     percent: percent,
-                    tint: self.tint,
+                    tint: self.isExhausted ? self.runicTheme.warm : self.tint,
                     accessibilityLabel: self.metric.percentStyle.accessibilityLabel)
             }
 
@@ -212,7 +212,8 @@ struct UsageMenuMetricCard: View {
                 Text(detail)
                     .font(self.fonts.caption)
                     .foregroundStyle(self.runicTheme.secondaryText)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                     .textCase(.none)
             }
         }
@@ -235,6 +236,14 @@ struct UsageMenuMetricCard: View {
                     lineWidth: 1))
         .runicCutout(radius: MenuCardMetrics.metricCardCornerRadius, lift: 0.5, seed: 29)
         .runicRaised(radius: MenuCardMetrics.metricCardCornerRadius, lift: 0.5)
+    }
+
+    private var isExhausted: Bool {
+        guard let percent = self.metric.percent else { return false }
+        switch self.metric.percentStyle {
+        case .used: return percent >= 99.5
+        case .left: return percent <= 0.5
+        }
     }
 
     private var titleFont: Font {

@@ -273,8 +273,8 @@ private struct ResetCreditRow: View {
                 Text(self.detailText)
                     .font(self.fonts.caption2)
                     .foregroundStyle(self.runicTheme.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: RunicSpacing.xs)
@@ -285,10 +285,6 @@ private struct ResetCreditRow: View {
                         .font(self.fonts.numericFootnote.weight(.semibold))
                         .foregroundStyle(self.expiryColor(latest))
                         .monospacedDigit()
-                    Text("until \(latest.formatted(.dateTime.month(.abbreviated).day()))")
-                        .font(self.fonts.caption2)
-                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
-                        .lineLimit(1)
                 } else {
                     Text("no expiry")
                         .font(self.fonts.caption2)
@@ -300,14 +296,14 @@ private struct ResetCreditRow: View {
         .accessibilityLabel(self.accessibilityText)
     }
 
-    /// "expire Oct 4, Oct 5" — each credit's own deadline when they differ,
+    /// "expires Oct 4 · Oct 5" — each credit's own deadline when they differ,
     /// one date when they don't. Falls back to the provider's title when no
     /// expiry is known, so the line never goes empty.
     private var detailText: String {
         let dates = self.entry.expiries.map { $0.formatted(.dateTime.month(.abbreviated).day()) }
         let distinct = Array(NSOrderedSet(array: dates)) as? [String] ?? dates
         if !distinct.isEmpty {
-            return (distinct.count == 1 ? "expires " : "expire ") + distinct.joined(separator: ", ")
+            return "expires " + distinct.joined(separator: " · ")
         }
         if let title = self.entry.title, !title.isEmpty { return title }
         return "one-time limit reset"

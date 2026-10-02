@@ -162,7 +162,7 @@ extension UsageMenuCardView.Model {
         guard let summary else { return nil }
         let tokens = UsageFormatter.tokenCountString(summary.totals.totalTokens, style: numberStyle)
         let modelName = UsageFormatter.modelDisplayName(summary.model)
-        var parts = ["Top model: \(modelName) · \(tokens) tokens · \(summary.entryCount) req"]
+        var parts = ["Top model: \(modelName) · \(tokens) tokens\n\(summary.entryCount) req"]
         if let contextLabel {
             parts.append(contextLabel)
         }

@@ -698,6 +698,9 @@ extension UsageMenuCardView.Model {
         if let date = window.resetsAt ?? UsageResetParsing.date(fromRelative: window.resetDescription) {
             let expiry = UsageFormatter.resetExpiryString(from: date)
             if prefersCountdown {
+                if expiry.hasPrefix("tomorrow ") {
+                    return "Resets \(expiry)"
+                }
                 return "Resets \(UsageFormatter.resetCountdownDescription(from: date)) · \(expiry)"
             }
             return "Resets \(expiry)"
