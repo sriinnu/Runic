@@ -84,7 +84,7 @@ Install it from Preferences -> Performance -> Refresh -> Install CLI.
 
 ## MCP server and local tools
 
-Runic includes **one local MCP server** with two read-only tools: `runic_limits` (provider limits, resets, credits and balances where available) and `runic_health` (snapshot and refresh status). In the app, open **Settings → Sync → Integrations → Runic MCP**. **Check data** shows whether Runic has a usable local snapshot; **Copy client config** gives you the command for your AI client's MCP settings. The server starts on demand over stdio, so there is no port or always-running server to find.
+Runic includes **one local MCP server** with two read-only tools: `runic_limits` (provider limits, resets, credits and balances where available) and `runic_health` (snapshot and refresh status). In the app, open **Settings → Sync → Integrations → Runic MCP**. The **Values available to MCP clients** section shows the actual provider readings from the local snapshot; **Check data** reloads that preview. Refresh usage in Runic to fetch new provider readings. **Copy client config** gives you the command for your AI client's MCP settings. The server starts on demand over stdio, so there is no port or always-running server to find.
 
 To see the same tool data locally, install the bundled CLI from **Settings → Performance → Refresh & Safety → Install CLI**, then run:
 
