@@ -22,6 +22,7 @@ struct IntegrationsPane: View {
     @State private var mcpInventorySignature = ""
     @State private var mcpPluginMessage: String?
     @State private var mcpDataCheck: String?
+    @State private var mcpSnapshot: RunicMCPState?
     @State private var showingAddServerSheet = false
     @State private var newServerName = ""
     @State private var newServerPort = 8001
@@ -97,6 +98,9 @@ struct IntegrationsPane: View {
                         .font(self.fonts.footnote)
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .textSelection(.enabled)
+                }
+                if let mcpSnapshot = self.mcpSnapshot {
+                    MCPDataPreview(state: mcpSnapshot)
                 }
 
                 HStack(spacing: RunicSpacing.sm) {
@@ -404,12 +408,16 @@ struct IntegrationsPane: View {
             self.loadMCPServers()
             self.prepareMCPDiscoveryDirectory()
             self.loadMCPPlugins()
+            self.checkMCPData()
         }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
                 guard !Task.isCancelled else { break }
                 self.loadMCPPlugins()
+                if let latest = RunicMCPStateStore.load(), latest.generatedAt != self.mcpSnapshot?.generatedAt {
+                    self.checkMCPData()
+                }
             }
         }
         .sheet(isPresented: self.$showingAddServerSheet) {
@@ -468,9 +476,11 @@ struct IntegrationsPane: View {
 
     private func checkMCPData() {
         guard let state = RunicMCPStateStore.load() else {
+            self.mcpSnapshot = nil
             self.mcpDataCheck = "No MCP data snapshot yet. Refresh usage in Runic, then check again."
             return
         }
+        self.mcpSnapshot = state
         let age = max(0, Int(Date().timeIntervalSince(state.generatedAt)))
         let populated = state.providers.filter { provider in
             provider.primary != nil || provider.secondary != nil || provider.tertiary != nil ||
@@ -478,8 +488,7 @@ struct IntegrationsPane: View {
         }
         let names = populated.map(\.id.rawValue).joined(separator: ", ")
         self.mcpDataCheck = "Snapshot \(age)s old · \(state.providers.count) enabled providers, " +
-            "\(populated.count) with values" + (names.isEmpty ? "." : ": \(names).") +
-            " Inspect tool output with runic mcp call runic_limits or runic_health."
+            "\(populated.count) with values" + (names.isEmpty ? "." : ": \(names).")
     }
 
     private func openMCPDiscoveryDirectory() {
@@ -666,5 +675,93 @@ struct IntegrationsPane: View {
     private func persistMCPServers() {
         guard let data = try? JSONEncoder().encode(self.mcpServers) else { return }
         UserDefaults.standard.set(data, forKey: "runicMCPServers.v1")
+    }
+}
+
+private struct MCPDataPreview: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var theme
+    let state: RunicMCPState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+            Text("Values available to MCP clients")
+                .font(self.fonts.callout.weight(.semibold))
+            Text("From Runic's local snapshot. Check data reloads it; refresh usage to fetch new provider values.")
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.theme.secondaryText)
+
+            ForEach(self.state.providers, id: \.id) { provider in
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    Text(provider.id.rawValue)
+                        .font(self.fonts.callout.weight(.semibold))
+                    if let primary = provider.primary {
+                        self.value(Self.windowText(primary, name: "Primary"))
+                    }
+                    if let secondary = provider.secondary {
+                        self.value(Self.windowText(secondary, name: "Secondary"))
+                    }
+                    if let tertiary = provider.tertiary {
+                        self.value(Self.windowText(tertiary, name: "Tertiary"))
+                    }
+                    if let credits = provider.creditsRemaining {
+                        self.value("Credits remaining: \(Self.number(credits))")
+                    } else if provider.creditsHasError == true {
+                        self.value("Credits: refresh failed")
+                    }
+                    if let balance = provider.balance {
+                        let amount = BalanceFormatter.amount(balance.available, currency: balance.currency)
+                        self.value("Balance available: \(amount)")
+                    }
+                    if let extra = provider.extraUsage {
+                        self
+                            .value(
+                                "Extra usage: \(BalanceFormatter.amount(extra.used, currency: extra.currencyCode)) " +
+                                    "of \(BalanceFormatter.amount(extra.limit, currency: extra.currencyCode))" +
+                                    (extra.period.map { " · \($0)" } ?? ""))
+                        if let balance = extra.balance {
+                            self.value("Extra usage balance: " +
+                                BalanceFormatter.amount(balance, currency: extra.currencyCode))
+                        }
+                    }
+                    if provider.primary == nil, provider.secondary == nil, provider.tertiary == nil,
+                       provider.creditsRemaining == nil, provider.balance == nil, provider.extraUsage == nil
+                    {
+                        self.value(provider.hasError ? "Usage refresh failed" : "No provider values yet")
+                    }
+                    if let updatedAt = provider.updatedAt {
+                        self.value("Updated \(updatedAt.formatted(date: .abbreviated, time: .shortened))")
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, RunicSpacing.xs)
+                Divider()
+            }
+        }
+        .textSelection(.enabled)
+    }
+
+    private func value(_ text: String) -> some View {
+        Text(text)
+            .font(self.fonts.footnote)
+            .foregroundStyle(self.theme.secondaryText)
+    }
+
+    private static func windowText(_ window: RateWindow, name: String) -> String {
+        let label = window.label ?? name
+        let reading = window.hasKnownLimit == false
+            ? "usage reported; no published limit"
+            : "\(Self.number(window.usedPercent))% used"
+        if let description = window.resetDescription {
+            return "\(label): \(reading) · \(description)"
+        }
+        if let resetsAt = window.resetsAt {
+            return "\(label): \(reading) · resets \(resetsAt.formatted(date: .abbreviated, time: .shortened))"
+        }
+        return "\(label): \(reading)"
+    }
+
+    private static func number(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(0...2)))
     }
 }

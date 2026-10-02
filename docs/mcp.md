@@ -26,7 +26,7 @@ Runic only exports enabled providers. The snapshot does not contain account emai
 
 ## Check the server and its data
 
-1. Open Runic and refresh usage. In **Settings → Sync → Integrations → Runic MCP**, click **Check data**. It reports the snapshot age, enabled provider count, and which providers have quota, credit, balance, or extra-usage values. An empty optional package list does not affect the built-in server.
+1. Open Runic and refresh usage. In **Settings → Sync → Integrations → Runic MCP**, inspect **Values available to MCP clients** for the actual quota, credit, balance, and extra-usage readings exposed from Runic's local snapshot. **Check data** reloads the preview and reports snapshot age and provider coverage. An empty optional package list does not affect the built-in server.
 2. Install the CLI from **Settings → Performance → Refresh & Safety → Install CLI**, or use `/Applications/Runic.app/Contents/Helpers/RunicCLI` in place of `runic` below.
 3. Run these local checks:
 
