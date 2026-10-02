@@ -162,4 +162,26 @@ struct QuotaBurnTests {
         #expect(text.contains("resets "))
         #expect(QuotaBurnChartMenuView.sampleSummary(series).hasPrefix("2 samples"))
     }
+
+    @Test
+    func `exhausted burn copy stays clear of the chart`() throws {
+        let now = Calendar.current.startOfDay(for: self.now).addingTimeInterval(19 * 3600)
+        let resetsAt = now.addingTimeInterval(24 * 3600)
+        let window = RateWindow(usedPercent: 100, windowMinutes: 10080, resetsAt: resetsAt, resetDescription: nil)
+        let sample = QuotaSample(
+            at: now.addingTimeInterval(-3600),
+            usedPercent: 100,
+            resetsAt: resetsAt,
+            windowMinutes: 10080)
+        let series = try #require(QuotaBurnSeries.make(samples: [sample], window: window, now: now))
+        #expect(QuotaBurnChartMenuView.runOutText(series).hasPrefix("Resets "))
+        #expect(!QuotaBurnChartMenuView.runOutText(series).contains("Exhausted ·"))
+        let axis = QuotaBurnChartMenuView.axisDates(for: series)
+        #expect(axis.first == series.windowStart)
+        #expect(axis.last == series.resetsAt)
+        #expect(axis.count < 9)
+        #expect(axis.dropFirst().dropLast().allSatisfy {
+            $0.timeIntervalSince(series.windowStart) >= series.windowDuration * 0.12
+        })
+    }
 }

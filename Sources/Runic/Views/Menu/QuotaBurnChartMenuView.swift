@@ -103,8 +103,7 @@ struct QuotaBurnChartMenuView: View {
     nonisolated static func runOutText(_ series: QuotaBurnSeries) -> String {
         let resetText = UsageFormatter.resetExpiryString(from: series.resetsAt, now: series.now)
         if series.currentUsedPercent >= 99.5 {
-            let countdown = UsageFormatter.resetCountdownDescription(from: series.resetsAt, now: series.now)
-            return "Exhausted · resets \(resetText) (\(countdown))"
+            return "Resets \(resetText)"
         }
         let measured = series.projections.filter { $0.measuredSpan >= QuotaBurnSeries.minimumProjectionSpan }
         guard let longest = measured.last else {
@@ -201,11 +200,6 @@ struct QuotaBurnChartMenuView: View {
             RuleMark(x: .value("Time", series.now))
                 .foregroundStyle(self.runicTheme.primaryText.opacity(0.35))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [1, 2]))
-                .annotation(position: .top, alignment: .leading) {
-                    Text("now")
-                        .font(self.fonts.caption2)
-                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
-                }
             PointMark(x: .value("Time", series.now), y: .value("Used", series.currentUsedPercent))
                 .foregroundStyle(actualColor)
                 .symbolSize(40)
@@ -250,10 +244,10 @@ struct QuotaBurnChartMenuView: View {
                 Spacer()
             }
             HStack(spacing: RunicSpacing.sm) {
-                ForEach(Array(series.projections.enumerated()), id: \.offset) { index, projection in
+                ForEach(series.projections, id: \.horizon) { projection in
                     if projection.measuredSpan >= QuotaBurnSeries.minimumProjectionSpan {
                         self.legendItem(
-                            color: self.runicTheme.warm.opacity(index == 0 ? 0.6 : 0.9),
+                            color: self.runicTheme.warm,
                             text: "last \(Self.horizonLabel(projection.horizon)): \(Self.rateText(projection))",
                             dashed: true)
                     }
@@ -291,7 +285,7 @@ struct QuotaBurnChartMenuView: View {
     /// Window start, reset, and clean intermediate ticks: hourly up to 8h,
     /// every 6h up to 36h, otherwise each day boundary. The last tick before
     /// the reset is dropped if it would sit on the reset mark.
-    static func axisDates(for series: QuotaBurnSeries) -> [Date] {
+    nonisolated static func axisDates(for series: QuotaBurnSeries) -> [Date] {
         var dates: [Date] = [series.windowStart]
         let duration = series.windowDuration
         let calendar = Calendar.current
@@ -309,8 +303,12 @@ struct QuotaBurnChartMenuView: View {
                 tick = tick.addingTimeInterval(86400)
             }
         }
-        dates.append(series.resetsAt)
-        return dates
+        let minimumLabelGap = duration * 0.12
+        dates = dates.filter {
+            $0.timeIntervalSince(series.windowStart) >= minimumLabelGap
+                && series.resetsAt.timeIntervalSince($0) >= minimumLabelGap
+        }
+        return [series.windowStart] + dates + [series.resetsAt]
     }
 
     static func axisLabel(_ date: Date, series: QuotaBurnSeries) -> String {
