@@ -62,6 +62,7 @@ extension UsageStore {
     }
 
     func handleSettingsChange() async {
+        self.persistWidgetSnapshot(reason: "settings-change")
         let refreshChanged = self.settings.refreshFrequency != self.lastRefreshFrequency
         let warningEnabledChanged = self.settings.autoRefreshWarningEnabled != self.lastAutoRefreshWarningEnabled
         let warningThresholdChanged = self.settings.autoRefreshWarningThreshold

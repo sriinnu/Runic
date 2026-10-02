@@ -127,6 +127,20 @@ struct PathBuilderTests {
     }
 
     @Test
+    func `resolves muse from local bin when GUI path is minimal`() {
+        let path = "/home/test/.local/bin/muse"
+        let fm = MockFileManager(executables: [path])
+        let resolved = BinaryLocator.resolveMuseBinary(
+            env: ["PATH": "/usr/bin:/bin"],
+            loginPATH: nil,
+            commandV: { _, _, _, _ in nil },
+            aliasResolver: { _, _, _, _, _ in nil },
+            fileManager: fm,
+            home: "/home/test")
+        #expect(resolved == path)
+    }
+
+    @Test
     func `resolves claude from login path`() {
         let fm = MockFileManager(executables: ["/login/bin/claude"])
         let resolved = BinaryLocator.resolveClaudeBinary(

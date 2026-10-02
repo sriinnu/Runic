@@ -58,6 +58,7 @@ extension UsageStore {
     func observeSettingsChanges() {
         withObservationTracking {
             _ = self.settings.refreshFrequency
+            _ = self.settings.providerToggleRevision
             _ = self.settings.autoDisableRefreshWhenIdleEnabled
             _ = self.settings.autoDisableRefreshWhenIdleMinutes
             _ = self.settings.autoDisableRefreshOnSleepEnabled

@@ -34,6 +34,7 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 ## Command
 - `runic` defaults to the `usage` command.
   - `--format text|json` (default: text).
+- `runic mcp serve` starts the bundled local MCP server over stdio for an AI client. `runic mcp add|remove|enable|disable|list` manages local tool packages. See [MCP setup](mcp.md). The MCP server currently depends on the macOS app's latest saved usage snapshot.
 - `runic cost` prints local token cost usage (Claude + Codex) from Runic event relay history plus today's local logs, without web/CLI access.
   - `--format text|json` (default: text).
   - `--refresh` is accepted for compatibility; `runic cost` already normalizes today's live logs by default.

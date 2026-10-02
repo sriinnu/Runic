@@ -16,6 +16,9 @@ struct IntegrationsPane: View {
 
     @State private var copiedValue: String?
     @State private var mcpServers: [MCPServer] = []
+    @State private var mcpPlugins: [RunicMCPPluginPackage] = []
+    @State private var invalidMCPPluginPaths: [String] = []
+    @State private var mcpPluginMessage: String?
     @State private var showingAddServerSheet = false
     @State private var newServerName = ""
     @State private var newServerPort = 8001
@@ -23,6 +26,14 @@ struct IntegrationsPane: View {
 
     private var collectorPath: String {
         OTelGenAICollectorConfiguration.defaultOutputFile().path
+    }
+
+    private var runicMCPHelperPath: String {
+        Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/RunicCLI").path
+    }
+
+    private var runicMCPHelperAvailable: Bool {
+        FileManager.default.isExecutableFile(atPath: self.runicMCPHelperPath)
     }
 
     private var koshaPath: String {
@@ -89,6 +100,89 @@ struct IntegrationsPane: View {
                         IntegrationRevealButton(path: self.collectorPath)
                     })
                 AdditionalUsageLogPathsEditor(paths: self.$settings.otelGenAILogPaths)
+            }
+            PreferencesDivider()
+            SettingsSection(
+                title: "Runic MCP",
+                caption: "Let AI clients read Runic's latest local limits and refresh health. " +
+                    "Add trusted local tool packages without rebuilding Runic.",
+                contentSpacing: PreferencesLayoutMetrics.sectionSpacing)
+            {
+                IntegrationRow(
+                    icon: "point.3.connected.trianglepath.dotted",
+                    title: "Local MCP server",
+                    status: self.runicMCPHelperAvailable ? "Ready" : "Unavailable",
+                    detail: "Built-in tools: runic_limits and runic_health. " +
+                        "Your AI client starts Runic on demand through stdio.",
+                    actions: {
+                        IntegrationCopyButton(
+                            title: "Copy client config",
+                            value: self.runicMCPClientConfig,
+                            copiedValue: self.$copiedValue,
+                            onCopy: self.copy)
+                            .disabled(!self.runicMCPHelperAvailable)
+                    })
+
+                HStack(spacing: RunicSpacing.sm) {
+                    Label("Local tool packages", systemImage: "shippingbox")
+                        .font(self.fonts.callout.weight(.semibold))
+                    Spacer()
+                    Button {
+                        self.addLocalMCPPlugin()
+                    } label: {
+                        Label("Add folder", systemImage: "plus")
+                    }
+                    .buttonStyle(.runicBordered)
+                    .controlSize(.small)
+                }
+                if self.mcpPlugins.isEmpty, self.invalidMCPPluginPaths.isEmpty {
+                    IntegrationEmptyState(
+                        icon: "shippingbox",
+                        title: "No local packages",
+                        detail: "Add a folder containing runic-mcp-plugin.json and an executable.")
+                } else {
+                    ForEach(self.mcpPlugins, id: \.manifest.id) { package in
+                        HStack(spacing: RunicSpacing.sm) {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                                Text(package.manifest.name)
+                                    .font(self.fonts.callout.weight(.semibold))
+                                Text("\(package.manifest.id) · \(package.manifest.tools.count) tools")
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                            }
+                            Spacer()
+                            Toggle("Enabled", isOn: Binding(
+                                get: { package.enabled },
+                                set: { self.setMCPPlugin(package.manifest.id, enabled: $0) }))
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                            Button("Remove") { self.removeMCPPlugin(package.manifest.id) }
+                                .buttonStyle(.runicBordered)
+                                .controlSize(.small)
+                        }
+                    }
+                    ForEach(self.invalidMCPPluginPaths, id: \.self) { path in
+                        HStack(spacing: RunicSpacing.sm) {
+                            VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                                Text("Package unavailable")
+                                    .font(self.fonts.callout.weight(.semibold))
+                                Text(path)
+                                    .font(self.fonts.footnote)
+                                    .foregroundStyle(self.runicTheme.secondaryText)
+                                    .lineLimit(2)
+                            }
+                            Spacer()
+                            Button("Remove") { self.removeMCPPluginRegistration(path) }
+                                .buttonStyle(.runicBordered)
+                                .controlSize(.small)
+                        }
+                    }
+                }
+                if let message = self.mcpPluginMessage {
+                    Text(message)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                }
             }
             PreferencesDivider()
             SettingsSection(
@@ -259,6 +353,7 @@ struct IntegrationsPane: View {
         }
         .onAppear {
             self.loadMCPServers()
+            self.loadMCPPlugins()
         }
         .sheet(isPresented: self.$showingAddServerSheet) {
             AddMCPServerSheet(
@@ -276,6 +371,66 @@ struct IntegrationsPane: View {
 
     private var githubInsightsCommand: String {
         Self.insightsCommand(for: self.githubRepositoryPath)
+    }
+
+    private var runicMCPClientConfig: String {
+        let quoted = self.runicMCPHelperPath.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "{\"mcpServers\":{\"runic\":{\"command\":\"\(quoted)\",\"args\":[\"mcp\",\"serve\"]}}}"
+    }
+
+    private func loadMCPPlugins() {
+        self.mcpPlugins = RunicMCPPluginRegistry.packages()
+        self.invalidMCPPluginPaths = RunicMCPPluginRegistry.registrations()
+            .map(\.path)
+            .filter { path in !self.mcpPlugins.contains(where: { $0.directory.path == path }) }
+    }
+
+    private func addLocalMCPPlugin() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Add package"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let package = try RunicMCPPluginRegistry.add(url.path)
+            self.mcpPluginMessage = "Added \(package.manifest.name). Restart your MCP client to refresh its tool list."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
+    }
+
+    private func setMCPPlugin(_ id: String, enabled: Bool) {
+        do {
+            try RunicMCPPluginRegistry.setEnabled(enabled, id: id)
+            self.mcpPluginMessage = "Restart your MCP client to refresh its tool list."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
+    }
+
+    private func removeMCPPlugin(_ id: String) {
+        do {
+            try RunicMCPPluginRegistry.remove(id)
+            self.mcpPluginMessage = "Removed \(id). Its folder was left untouched. " +
+                "Restart your MCP client to refresh its tool list."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
+    }
+
+    private func removeMCPPluginRegistration(_ path: String) {
+        do {
+            try RunicMCPPluginRegistry.removeRegistration(path: path)
+            self.mcpPluginMessage = "Removed unavailable package registration. Its folder was left untouched."
+            self.loadMCPPlugins()
+        } catch {
+            self.mcpPluginMessage = error.localizedDescription
+        }
     }
 
     static func insightsCommand(for repositoryPath: String) -> String {

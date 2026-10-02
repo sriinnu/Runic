@@ -249,8 +249,7 @@ build_product_path() {
 
 # The app binary links Runic + RunicCore (+ macro support); if it is older than
 # any of their sources, this build did not produce it. Refuse to package it
-# rather than silently shipping old code. (Helpers are exempt: an app-only change
-# legitimately leaves RunicCLI un-relinked.)
+# rather than silently shipping old code.
 verify_binary_fresh() {
   local binary="$1"
   local newer
@@ -258,6 +257,17 @@ verify_binary_fresh() {
     -newer "$binary" \( -name '*.swift' -o -name '*.json' \) -print -quit)
   if [[ -n "$newer" ]]; then
     echo "ERROR: $binary is older than $newer; the build did not produce it (stale product)." >&2
+    exit 1
+  fi
+}
+
+verify_cli_binary_fresh() {
+  local binary="$1"
+  local newer
+  newer=$(find "$ROOT/Sources/RunicCLI" "$ROOT/Sources/RunicCore" \
+    -newer "$binary" -name '*.swift' -print -quit)
+  if [[ -n "$newer" ]]; then
+    echo "ERROR: $binary is older than $newer; refusing to package a stale MCP helper." >&2
     exit 1
   fi
 }
@@ -293,6 +303,8 @@ install_binary() {
   fi
   if [[ "$name" == "Runic" ]]; then
     verify_binary_fresh "$src"
+  elif [[ "$name" == "RunicCLI" ]]; then
+    verify_cli_binary_fresh "$src"
   fi
   cp "$src" "$dest"
   chmod +x "$dest"
@@ -300,10 +312,8 @@ install_binary() {
 }
 
 install_binary "Runic" "$APP/Contents/MacOS/${APP_NAME}"
-# Ship RunicCLI alongside the app for easy symlinking.
-if [[ -f "$(build_product_path "RunicCLI")" ]]; then
-  install_binary "RunicCLI" "$APP/Contents/Helpers/RunicCLI"
-fi
+# The local MCP server and CLI settings require this helper in every app bundle.
+install_binary "RunicCLI" "$APP/Contents/Helpers/RunicCLI"
 # Watchdog helper: ensures `claude` probes die when Runic crashes/gets killed.
 if [[ -f "$(build_product_path "RunicClaudeWatchdog")" ]]; then
   install_binary "RunicClaudeWatchdog" "$APP/Contents/Helpers/RunicClaudeWatchdog"
@@ -376,7 +386,13 @@ else
     CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
   else
     echo "Using Developer ID signing identity: $CODESIGN_ID"
-    CODESIGN_ARGS=(--force --timestamp --options runtime --sign "$CODESIGN_ID")
+    # A local install can skip Apple's timestamp service when it is unavailable;
+    # release packaging keeps the timestamped Developer ID signature by default.
+    if [[ "${RUNIC_SIGNING_TIMESTAMP:-auto}" == "none" ]]; then
+      CODESIGN_ARGS=(--force --timestamp=none --options runtime --sign "$CODESIGN_ID")
+    else
+      CODESIGN_ARGS=(--force --timestamp --options runtime --sign "$CODESIGN_ID")
+    fi
   fi
 fi
 

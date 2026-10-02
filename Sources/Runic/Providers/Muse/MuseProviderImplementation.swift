@@ -12,8 +12,9 @@ struct MuseProviderImplementation: ProviderImplementation {
         [
             ProviderSettingsFieldDescriptor(
                 id: "muse-api-token",
-                title: "API key",
-                subtitle: "Saved automatically to Keychain (encrypted).",
+                title: "Model API key (optional)",
+                subtitle: "Muse Code subscription usage comes from your signed-in muse CLI. " +
+                    "This separate key is pay-as-you-go and is saved to Keychain.",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.museAPIToken),

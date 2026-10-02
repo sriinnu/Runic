@@ -29,6 +29,7 @@ let package = Package(
         helixDependency,
         .package(url: "https://github.com/apple/swift-log", from: "1.8.0"),
         .package(url: "https://github.com/apple/swift-syntax", from: "600.0.0"),
+        .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.11.0"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "1.10.0"),
         siloDependency,
     ],
@@ -70,6 +71,7 @@ let package = Package(
                 dependencies: [
                     "RunicCore",
                     .product(name: "Helix", package: "Helix"),
+                    .product(name: "MCP", package: "swift-sdk"),
                 ],
                 path: "Sources/RunicCLI",
                 exclude: [

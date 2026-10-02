@@ -269,6 +269,9 @@ struct ProvidersPane: View {
         if provider == .cursor || provider == .minimax {
             return "web\(coverageSuffix)"
         }
+        if provider == .muse {
+            return "CLI subscription · Model API optional\(coverageSuffix)"
+        }
         let apiBackedProviders: Set<UsageProvider> = [
             .zai,
             .openrouter,
@@ -276,7 +279,6 @@ struct ProvidersPane: View {
             .groq,
             .typesafe,
             .cline,
-            .muse,
             .ollamacloud,
             .deepseek,
             .fireworks,
