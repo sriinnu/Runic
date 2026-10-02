@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2.9.0 — 2026-10-02
-- MCP: Runic now includes a local stdio server with read-only limits and health tools. Settings puts the server first, shows whether its snapshot is ready, and distinguishes the built-in tools from optional packages. Local packages are discovered automatically from `~/Library/Application Support/Runic/mcpservers/`; `runic mcp call` lets users inspect built-in or package tool output without an MCP client.
+- MCP: Runic now includes a local stdio server with read-only limits and health tools. Settings puts the server first, shows the actual provider values available to MCP clients, and distinguishes the built-in tools from optional packages. Local packages are discovered automatically from `~/Library/Application Support/Runic/mcpservers/`; `runic mcp call` lets users inspect built-in or package tool output without an MCP client.
 - Usage: optional provider credits and balances appear consistently in the menu and settings when the source supplies them. Muse Code subscription usage is supported.
 - Appearance: Glass and Terminal themes are available; Terminal uses a green phosphor palette. The Settings tab strip stays fixed, and the Burn chart's labels no longer overlap.
 - Documentation: the README and MCP guide explain where to find the server, connect a client, test its data, and add a local tool package.
