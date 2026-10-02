@@ -249,32 +249,44 @@ extension Theme {
                         hoverStyle: .neutral,
                         chartSeries: .themed)))
         case .glass:
-            // Aurora-glass: deep indigo base, neon cyan/magenta/violet accents.
-            // Translucent surfaces with hairline glow strokes, springy motion.
-            // The "showroom" theme — bold and kinetic without being noisy.
+            // A cool, dark stage gives translucent cards something to reveal.
+            // Keep color in the ambient light and controls, not every border.
             RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Aurora glass",
+                tagline: "Frosted midnight",
                 symbolName: "sparkle.magnifyingglass",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.040, green: 0.060, blue: 0.170),
-                secondary: Color(red: 0.240, green: 0.880, blue: 1.000), // cyan
-                accent: Color(red: 0.540, green: 0.380, blue: 1.000), // violet
-                highlight: Color(red: 1.000, green: 0.420, blue: 0.760), // magenta
-                warm: Color(red: 1.000, green: 0.560, blue: 0.230), // amber
-                tertiary: Color(red: 0.180, green: 0.980, blue: 0.620), // mint
-                surface: Color(red: 0.020, green: 0.028, blue: 0.060),
-                surfaceAlt: Color(red: 0.080, green: 0.140, blue: 0.260).opacity(0.46),
-                cardFill: Color.white.opacity(0.10),
-                cardStroke: Color(red: 0.540, green: 0.380, blue: 1.000).opacity(0.40),
-                primaryText: Color.white.opacity(0.94),
-                secondaryText: Color.white.opacity(0.66),
+                primary: Color(red: 0.125, green: 0.232, blue: 0.310),
+                secondary: Color(red: 0.427, green: 0.741, blue: 0.831),
+                accent: Color(red: 0.529, green: 0.805, blue: 0.902),
+                highlight: Color(red: 0.720, green: 0.673, blue: 0.889),
+                warm: Color(red: 0.957, green: 0.631, blue: 0.514),
+                tertiary: Color(red: 0.518, green: 0.827, blue: 0.714),
+                surface: Color(red: 0.030, green: 0.055, blue: 0.086),
+                surfaceAlt: Color(red: 0.070, green: 0.123, blue: 0.164),
+                cardFill: Color(red: 0.107, green: 0.166, blue: 0.205).opacity(0.82),
+                cardStroke: Color.white.opacity(0.23),
+                primaryText: Color(red: 0.952, green: 0.975, blue: 0.989),
+                secondaryText: Color(red: 0.735, green: 0.815, blue: 0.849),
                 fonts: .system,
-                shape: .glassy,
+                shape: RunicThemeShape(cornerMultiplier: 1.0, separator: .hairline),
                 motion: .snappy,
-                density: .normal)
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: .standard,
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hairline,
+                        borderWeight: 0.7,
+                        borderOpacity: 0.48,
+                        cornerStyle: .soft,
+                        panelDepth: .low),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0.08,
+                        materialIntensity: 0),
+                    controls: .standard))
         case .terminal:
             // Operator console, the Bloomberg kind, not the CRT kind. True
             // black, amber phosphor for everything the system says (brackets,

@@ -113,6 +113,8 @@ struct RunicThemePalette {
     var meshColors: [Color] {
         if self.isTerminalHUD {
             [self.surface, self.accent, self.highlight, self.secondary, self.tertiary]
+        } else if self.id == "glass" {
+            [self.primary, self.secondary, self.highlight, self.accent]
         } else {
             [self.primary, self.secondary, self.accent, self.warm, self.tertiary]
         }
@@ -171,13 +173,11 @@ struct RunicThemePalette {
         self.primaryText.opacity(0.22 * self.style.effects.elevation)
     }
 
-    /// Card-surface fill that switches to frosted material on Glass theme.
-    /// Lets every existing `fill(menuCardGradient)` callsite become themed by
-    /// swapping `.menuCardGradient` → `.cardBackgroundStyle`. Other themes
-    /// keep their gradient; Glass gets actual translucency.
+    /// Shared card fill. Glass uses a tinted translucent gradient so native
+    /// material cannot turn nested panels into opaque gray slabs.
     var cardBackgroundStyle: AnyShapeStyle {
         if self.id == "glass" {
-            return AnyShapeStyle(.regularMaterial)
+            return AnyShapeStyle(self.menuCardGradient)
         }
         // A glued-on sheet is opaque; a translucent gradient over the
         // hatching reads as gray.
@@ -187,16 +187,22 @@ struct RunicThemePalette {
         return AnyShapeStyle(self.menuCardGradient)
     }
 
-    /// Outer-surface fill that switches to thin material on Glass theme.
+    /// Outer-surface fill shared by menu panels.
     var surfaceBackgroundStyle: AnyShapeStyle {
-        if self.id == "glass" {
-            return AnyShapeStyle(.thinMaterial)
-        }
-        return AnyShapeStyle(self.menuSurfaceGradient)
+        AnyShapeStyle(self.menuSurfaceGradient)
     }
 
     var menuSurfaceGradient: LinearGradient {
-        if self.hasSurfaceTexture || self.isElevated {
+        if self.id == "glass" {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.071, green: 0.116, blue: 0.151),
+                    self.surface,
+                    Color(red: 0.042, green: 0.064, blue: 0.112),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
+        } else if self.hasSurfaceTexture || self.isElevated {
             // Paper and film need a solid ground — the texture is the depth.
             // A translucent tail here let the desktop bleed through the panel.
             LinearGradient(
@@ -225,7 +231,16 @@ struct RunicThemePalette {
     }
 
     var menuCardGradient: LinearGradient {
-        if self.isTerminalHUD {
+        if self.id == "glass" {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.153, green: 0.221, blue: 0.259).opacity(0.90),
+                    self.cardFill,
+                    self.surfaceAlt.opacity(0.78),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing)
+        } else if self.isTerminalHUD {
             LinearGradient(
                 colors: [
                     self.cardFill.opacity(0.88),
