@@ -168,6 +168,7 @@ extension UsageStore {
     }
 
     func refreshSingleProvider(_ provider: UsageProvider) async {
+        let startedAt = Date()
         self.isRefreshing = true
         defer { self.isRefreshing = false }
         await withTaskGroup(of: Void.self) { group in
@@ -175,6 +176,11 @@ extension UsageStore {
                 group.addTask { await self.refreshProvider(slot, trigger: .manual) }
                 group.addTask { await self.refreshStatus(slot, trigger: .manual) }
             }
+        }
+        if provider.brandSlots.contains(.codex), self.isEnabled(.codex),
+           (self.credits?.updatedAt ?? .distantPast) < startedAt
+        {
+            await self.refreshCreditsIfNeeded()
         }
         self.scheduleLedgerRefresh(force: true, inactiveProviders: [])
         self.persistWidgetSnapshot(reason: "refresh")
@@ -207,9 +213,14 @@ extension UsageStore {
                 group.addTask { await self.refreshProvider(provider, trigger: trigger) }
                 group.addTask { await self.refreshStatus(provider, trigger: trigger) }
             }
-            if !skipCodexExtras {
-                group.addTask { await self.refreshCreditsIfNeeded() }
-            }
+        }
+
+        // Codex OAuth and CLI usage responses can already contain a balance.
+        // Probe separately only when this refresh did not provide one.
+        if !skipCodexExtras, self.isEnabled(.codex),
+           (self.credits?.updatedAt ?? .distantPast) < now
+        {
+            await self.refreshCreditsIfNeeded()
         }
 
         // Token-cost usage can be slow; run it outside the refresh group so we don't block menu updates.
@@ -219,11 +230,6 @@ extension UsageStore {
         // Run this after Codex usage refresh so we don't accidentally scrape with stale credentials.
         if !skipCodexExtras {
             await self.refreshOpenAIDashboardIfNeeded(force: forceTokenUsage)
-        }
-
-        if self.openAIDashboardRequiresLogin, !skipCodexExtras {
-            await self.refreshProvider(.codex, trigger: trigger)
-            await self.refreshCreditsIfNeeded()
         }
 
         self.scheduleLedgerRefresh(force: !trigger.isAuto || forceTokenUsage, inactiveProviders: inactiveProviders)
@@ -326,15 +332,17 @@ extension UsageStore {
                 if let balance = scoped.balance {
                     BalanceSampleStore.shared.record(provider: provider, balance: balance, at: scoped.updatedAt)
                 }
-                // Providers whose fetchers attach a credits snapshot (DeepSeek,
-                // OpenRouter, Vercel AI, ...) surface it per provider; a nil
-                // result keeps the last-known snapshot, mirroring how usage
-                // snapshots survive transient gaps. Codex is excluded: its
-                // accessor reads the dedicated `credits` slot (see
-                // `credits(for:)`), so a `providerCredits[.codex]` entry would
-                // only be a stale duplicate for anything iterating the map.
-                if let credits = result.credits, provider != .codex {
-                    self.providerCredits[provider] = credits
+                // Keep credits returned with usage. Codex reads a dedicated
+                // slot; other providers use the per-provider map.
+                if let credits = result.credits {
+                    if provider == .codex {
+                        self.credits = credits
+                        self.lastCreditsSnapshot = credits
+                        self.lastCreditsError = nil
+                        self.creditsFailureStreak = 0
+                    } else {
+                        self.providerCredits[provider] = credits
+                    }
                 }
                 self.lastSourceLabels[provider] = result.sourceLabel
                 self.errors[provider] = nil

@@ -82,6 +82,8 @@ The OAuth API is the default app source when credentials are available; web acce
 
 ## Credits
 - Web dashboard fills credits only when OAuth/CLI do not provide them.
+- Credits returned with the primary usage response populate the app directly; a separate CLI probe runs only when that refresh has no balance.
+- When no balance can be retrieved, the menu shows 0 with an unavailable note. A reported zero has no unavailable note, and web fetch errors stay out of the credits section.
 - CLI RPC: `account/rateLimits/read` → credits balance.
 - CLI PTY fallback: parse `Credits:` from `/status`.
 
