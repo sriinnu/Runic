@@ -3,21 +3,34 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.9.1</title>
+            <pubDate>Sat, 03 Oct 2026 16:56:35 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>143</sparkle:version>
+            <sparkle:shortVersionString>2.9.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.9.1</h2>
+<ul>
+<li>Codex: credits reported with usage now appear immediately. Runic only tries a separate credit lookup when the usage response has no balance, and an optional web dashboard failure no longer triggers duplicate refreshes.</li>
+<li>Credits: providers with credit support show the reported balance, or 0 with an unavailable note while a balance cannot be retrieved. Providers without credit support hide the field. Fetch errors no longer replace the balance in the menu.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic-2.9.1.zip" length="40386356" type="application/octet-stream" sparkle:edSignature="hdVhwJlid6qMn8XC0+BTt7hGFc1nLqp+RevTwmnU/V3nt8ADUe20QXT7mm8ghA/c9L1udV9gn1KB6VLyf5pLCA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-142.delta" sparkle:deltaFrom="142" length="1776286" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Cj68W8f3NF+yVXOGd8p6qpp36u7wQBNvQUUq2duXFpaoO8rZMMClvm1B2Czht2swO+ms8F7ripo69XmvcaNnCg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-141.delta" sparkle:deltaFrom="141" length="9064418" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="PuWaMeYjmPFMqQhivwNnkQIQRH6tKS7eiuQp8vIoktevjabvVjn3u/ClvZscvf0KCLfE0DKj8evy7iCZJtW4Dg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-125.delta" sparkle:deltaFrom="125" length="10859458" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="NpYARDSEfHEy3H+bKNNCSta5Xb5Pe1Kvz6dKMmSkK7b47kTKkzSVoydn+hqT/MWJBctEZbvQsMr3EVYiG4y9Dw=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-121.delta" sparkle:deltaFrom="121" length="10982950" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="piqrVVWo9+bhe8YauSktXVXM85vcrSFcN6sXL+5XcuxGXlATdtVRLI5efAGCI3+PGn5sSicUd1UxqIv8OHx/Bg=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.9.0</title>
             <pubDate>Fri, 02 Oct 2026 22:10:17 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>142</sparkle:version>
             <sparkle:shortVersionString>2.9.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.9.0</h2>
-<ul>
-<li>MCP: Runic now includes a local stdio server with read-only limits and health tools. Settings puts the server first, shows the actual provider values available to MCP clients, and distinguishes the built-in tools from optional packages. Local packages are discovered automatically from <code>~/Library/Application Support/Runic/mcpservers/</code>; <code>runic mcp call</code> lets users inspect built-in or package tool output without an MCP client.</li>
-<li>Usage: optional provider credits and balances appear consistently in the menu and settings when the source supplies them. Muse Code subscription usage is supported.</li>
-<li>Appearance: Glass and Terminal themes are available; Terminal uses a green phosphor palette. The Settings tab strip stays fixed, and the Burn chart's labels no longer overlap.</li>
-<li>Documentation: the README and MCP guide explain where to find the server, connect a client, test its data, and add a local tool package.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic-2.9.0.zip" length="40383025" type="application/octet-stream" sparkle:edSignature="S3tgcgR/1y6XpZ2/VgZJKrTbp4E3DoQzfthND5hj0R7jsmQHzOZZkoWb65nA8B3Uzcib/dc9l8gSckjjYUxjAw=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic142-141.delta" sparkle:deltaFrom="141" length="9048470" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="qrN7NYbOcyn6Me0ADTPchkZDToGISa3y393Ef6HOCOSZYJ5QwittaP4kaF6N+WDb3NOuLY3HSF4lZ6n2gnQ6Ag=="/>
@@ -36,18 +49,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.1/Runic141-125.delta" sparkle:deltaFrom="125" length="7832634" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="bIsxsV6mF2eOpBm/ID9iFzNpw8VrDRSTVOrCAlSbffW8EU1qKv3maIgZvZPR/+qgVRHbKl4Vw5q38tcpKaYtBw=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.1/Runic141-121.delta" sparkle:deltaFrom="121" length="8040062" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="cljeCSWuTvEBDX1BSY8QRjf7c6Qo3qk7cH64OsECkfPHbLaaZ/BEOkriuSPMVuV+7MKtqc43Gn2TcjqOVbCPCA=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.8.0</title>
-            <pubDate>Sat, 19 Sep 2026 16:04:57 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>125</sparkle:version>
-            <sparkle:shortVersionString>2.8.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.0/Runic-2.8.0.zip" length="36485052" type="application/octet-stream" sparkle:edSignature="JNlGndIvcRyKawSDbcrSstidXdwq2T1cLI/cgLDY6CnEJ5LTpThBKxByJkf0Yr7zvdXRg8Gx1K5pggFHf22KCA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.0/Runic125-121.delta" sparkle:deltaFrom="121" length="4791810" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="vVo6RQIZHmysD4G90PjrXUvul9OAQWDwYaSlJOhOHBbwcGNifw1CynVcapUDsGm2CEwE8K8+d+KyfsQMBo11CA=="/>
             </sparkle:deltas>
         </item>
     </channel>
