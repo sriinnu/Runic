@@ -473,6 +473,58 @@ struct MenuCardModelTests {
     }
 
     @Test
+    func `missing supported credits show zero without raw fetch errors`() throws {
+        let now = Date()
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
+        let model = UsageMenuCardView.Model.make(.init(
+            provider: .codex,
+            metadata: metadata,
+            snapshot: nil,
+            credits: nil,
+            creditsError: "RunicCore.RPCWireError error 2",
+            dashboard: nil,
+            dashboardError: "OpenAI web dashboard returned a public page (not signed in).",
+            tokenSnapshot: nil,
+            tokenError: nil,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            now: now))
+
+        #expect(model.creditsText == "0 left")
+        #expect(model.creditsHintText == "Balance unavailable; showing 0 until the next refresh.")
+    }
+
+    @Test
+    func `providers without credits hide an absent balance`() throws {
+        let now = Date()
+        let metadata = try #require(ProviderDefaults.metadata[.claude])
+        let model = UsageMenuCardView.Model.make(.init(
+            provider: .claude,
+            metadata: metadata,
+            snapshot: nil,
+            credits: nil,
+            creditsError: nil,
+            dashboard: nil,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            now: now))
+
+        #expect(model.creditsText == nil)
+        #expect(model.creditsHintText == nil)
+    }
+
+    @Test
     func `hides codex credits when disabled`() throws {
         let now = Date()
         let identity = ProviderIdentitySnapshot(

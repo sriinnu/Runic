@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.1 — 2026-10-03
+- Codex: credits reported with usage now appear immediately. Runic only tries a separate credit lookup when the usage response has no balance, and an optional web dashboard failure no longer triggers duplicate refreshes.
+- Credits: providers with credit support show the reported balance, or 0 with an unavailable note while a balance cannot be retrieved. Providers without credit support hide the field. Fetch errors no longer replace the balance in the menu.
+
 ## 2.9.0 — 2026-10-02
 - MCP: Runic now includes a local stdio server with read-only limits and health tools. Settings puts the server first, shows the actual provider values available to MCP clients, and distinguishes the built-in tools from optional packages. Local packages are discovered automatically from `~/Library/Application Support/Runic/mcpservers/`; `runic mcp call` lets users inspect built-in or package tool output without an MCP client.
 - Usage: optional provider credits and balances appear consistently in the menu and settings when the source supplies them. Muse Code subscription usage is supported.

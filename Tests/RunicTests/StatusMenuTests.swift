@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct StatusMenuTests {
     @Test(arguments: [false, true])
-    func `OpenAI web errors follow the web access setting`(enabled: Bool) throws {
+    func `OpenAI web errors do not replace the credits balance`(enabled: Bool) throws {
         let settings = SettingsStore(
             userDefaults: Self.isolatedDefaults(),
             zaiTokenStore: NoopZaiTokenStore(),
@@ -18,6 +18,7 @@ struct StatusMenuTests {
         settings.statusChecksEnabled = false
         settings.refreshFrequency = .manual
         settings.openAIWebAccessEnabled = enabled
+        settings.showOptionalCreditsAndExtraUsage = true
         let fetcher = UsageFetcher()
         let store = UsageStore(fetcher: fetcher, settings: settings)
         store.lastOpenAIDashboardError = "Web sign-in needed"
@@ -28,7 +29,9 @@ struct StatusMenuTests {
             updater: DisabledUpdaterController(),
             preferencesSelection: PreferencesSelection())
         let model = try #require(controller.menuCardModel(for: .codex))
-        #expect((model.creditsHintText != nil) == enabled)
+        #expect(model.creditsText == "0 left")
+        #expect(model.creditsHintText == "Balance unavailable; showing 0 until the next refresh.")
+        #expect(model.creditsHintText?.contains("Web sign-in needed") == false)
     }
 
     /// Each test gets a fresh defaults suite so it neither reads the developer's

@@ -80,8 +80,10 @@ struct UsageStoreProviderCreditsTests {
         await store.refreshProvider(.codex, trigger: .manual)
 
         #expect(store.providerCredits[.codex] == nil)
-        // The dedicated slot stays owned by the OpenAI web flow.
-        #expect(store.credits == nil)
+        // Codex usage results populate the dedicated slot directly.
+        #expect(store.credits?.remaining == 7)
+        #expect(store.lastCreditsSnapshot?.remaining == 7)
+        #expect(store.lastCreditsError == nil)
     }
 
     @Test

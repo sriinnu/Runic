@@ -85,10 +85,10 @@ extension UsageMenuCardView.Model {
             // Actual spend already appears in Extra usage; do not repeat a credits hint.
             nil
         } else {
-            Self.creditsLine(metadata: input.metadata, credits: input.credits, error: input.creditsError)
+            Self.creditsLine(metadata: input.metadata, credits: input.credits)
         }
-        let creditsHintText = input.credits == nil
-            ? Self.dashboardHint(provider: input.provider, error: input.dashboardError) : nil
+        let creditsHintText = creditsText != nil && input.credits == nil && input.metadata.supportsCredits
+            ? "Balance unavailable; showing 0 until the next refresh." : nil
         let providerCost: ProviderCostSection? = if !input.showOptionalCreditsAndExtraUsage {
             nil
         } else {
@@ -511,23 +511,13 @@ extension UsageMenuCardView.Model {
 
     private static func creditsLine(
         metadata: ProviderMetadata,
-        credits: CreditsSnapshot?,
-        error: String?) -> String?
+        credits: CreditsSnapshot?) -> String?
     {
         if let credits {
             return UsageFormatter.creditsString(from: credits.remaining)
         }
         guard metadata.supportsCredits else { return nil }
-        if let error, !error.isEmpty {
-            return error.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return metadata.creditsHint
-    }
-
-    private static func dashboardHint(provider: UsageProvider, error: String?) -> String? {
-        guard provider == .codex else { return nil }
-        guard let error, !error.isEmpty else { return nil }
-        return error
+        return UsageFormatter.creditsString(from: 0)
     }
 
     private static func tokenUsageSection(
