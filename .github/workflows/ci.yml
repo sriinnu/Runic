@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  SWIFTFORMAT_VERSION: 0.60.1
+  SWIFTLINT_VERSION: 0.63.2
+
+jobs:
+  # One job on purpose: hosted macOS runners are scarce, and a second job can
+  # sit in the queue until GitHub cancels it.
+  macos:
+    name: Lint, build and test (macOS)
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: swift --version
+      # Same gates Scripts/release.sh and .githooks/pre-commit enforce.
+      # Pinned: newer releases add rules and flag hundreds of files, so bump
+      # these together with a reformat, not by accident.
+      - name: Install SwiftFormat and SwiftLint
+        run: |
+          mkdir -p "$RUNNER_TEMP/lint"
+          curl -sfL -o "$RUNNER_TEMP/swiftformat.zip" \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/$SWIFTFORMAT_VERSION/swiftformat.zip"
+          curl -sfL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT_VERSION/portable_swiftlint.zip"
+          unzip -o -q "$RUNNER_TEMP/swiftformat.zip" -d "$RUNNER_TEMP/lint"
+          unzip -o -q "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/lint"
+          chmod +x "$RUNNER_TEMP/lint/swiftformat" "$RUNNER_TEMP/lint/swiftlint"
+      - name: SwiftFormat
+        run: |
+          "$RUNNER_TEMP/lint/swiftformat" --version
+          "$RUNNER_TEMP/lint/swiftformat" Sources Tests --lint
+      - name: SwiftLint
+        run: |
+          "$RUNNER_TEMP/lint/swiftlint" version
+          "$RUNNER_TEMP/lint/swiftlint" --strict
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-macos-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: spm-macos-
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test

@@ -50,6 +50,10 @@ final class ProviderRegistryTests: XCTestCase {
             "Context fallback entries need either contextK or label: \(invalid.keys.sorted()).")
     }
 
+    /// Provider docs kept out of the repo by .gitignore (internal auth notes), so a
+    /// clean checkout never has them.
+    private static let localOnlyDocs: Set<String> = ["antigravity", "cursor", "factory", "minimax"]
+
     /// One walk over every provider for the wiring that has drifted before:
     /// unique CLI names, aliases that don't shadow a CLI name, a doc file named
     /// after the CLI name, and a China slot whose parent exists.
@@ -71,7 +75,7 @@ final class ProviderRegistryTests: XCTestCase {
                 problems.append("\(provider) alias '\(alias)' shadows another provider's CLI name")
             }
             let doc = root.appendingPathComponent("docs/\(cliName).md")
-            if !FileManager.default.fileExists(atPath: doc.path) {
+            if !Self.localOnlyDocs.contains(cliName), !FileManager.default.fileExists(atPath: doc.path) {
                 problems.append("\(provider) has no docs/\(cliName).md")
             }
             if descriptor.metadata.displayName.trimmingCharacters(in: .whitespaces).isEmpty {
