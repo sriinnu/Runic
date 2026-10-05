@@ -13,6 +13,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  SWIFTFORMAT_VERSION: 0.60.1
+  SWIFTLINT_VERSION: 0.63.2
+
 jobs:
   # One job on purpose: hosted macOS runners are scarce, and a second job can
   # sit in the queue until GitHub cancels it.
@@ -25,12 +29,26 @@ jobs:
       - name: Toolchain
         run: swift --version
       # Same gates Scripts/release.sh and .githooks/pre-commit enforce.
+      # Pinned: newer releases add rules and flag hundreds of files, so bump
+      # these together with a reformat, not by accident.
       - name: Install SwiftFormat and SwiftLint
-        run: brew install swiftformat swiftlint
+        run: |
+          mkdir -p "$RUNNER_TEMP/lint"
+          curl -sfL -o "$RUNNER_TEMP/swiftformat.zip" \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/$SWIFTFORMAT_VERSION/swiftformat.zip"
+          curl -sfL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT_VERSION/portable_swiftlint.zip"
+          unzip -o -q "$RUNNER_TEMP/swiftformat.zip" -d "$RUNNER_TEMP/lint"
+          unzip -o -q "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/lint"
+          chmod +x "$RUNNER_TEMP/lint/swiftformat" "$RUNNER_TEMP/lint/swiftlint"
       - name: SwiftFormat
-        run: swiftformat Sources Tests --lint
+        run: |
+          "$RUNNER_TEMP/lint/swiftformat" --version
+          "$RUNNER_TEMP/lint/swiftformat" Sources Tests --lint
       - name: SwiftLint
-        run: swiftlint --strict
+        run: |
+          "$RUNNER_TEMP/lint/swiftlint" version
+          "$RUNNER_TEMP/lint/swiftlint" --strict
       - uses: actions/cache@v4
         with:
           path: .build
