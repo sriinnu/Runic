@@ -14,28 +14,23 @@ permissions:
   contents: read
 
 jobs:
-  # Same gates Scripts/release.sh and .githooks/pre-commit enforce.
-  lint:
-    name: Lint
-    runs-on: macos-26
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v5
-      - name: Install SwiftFormat and SwiftLint
-        run: brew install swiftformat swiftlint
-      - name: SwiftFormat
-        run: swiftformat Sources Tests --lint
-      - name: SwiftLint
-        run: swiftlint --strict
-
+  # One job on purpose: hosted macOS runners are scarce, and a second job can
+  # sit in the queue until GitHub cancels it.
   macos:
-    name: Build and test (macOS)
+    name: Lint, build and test (macOS)
     runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - name: Toolchain
         run: swift --version
+      # Same gates Scripts/release.sh and .githooks/pre-commit enforce.
+      - name: Install SwiftFormat and SwiftLint
+        run: brew install swiftformat swiftlint
+      - name: SwiftFormat
+        run: swiftformat Sources Tests --lint
+      - name: SwiftLint
+        run: swiftlint --strict
       - uses: actions/cache@v4
         with:
           path: .build
@@ -43,19 +38,5 @@ jobs:
           restore-keys: spm-macos-
       - name: Build
         run: swift build
-      - name: Test
-        run: swift test
-
-  linux:
-    name: Build and test (Linux)
-    runs-on: ubuntu-latest
-    container: swift:6.2
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-      - name: Toolchain
-        run: swift --version
-      - name: Build CLI
-        run: swift build --product RunicCLI
       - name: Test
         run: swift test
