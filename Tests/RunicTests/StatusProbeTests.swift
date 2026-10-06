@@ -84,6 +84,32 @@ struct StatusProbeTests {
         #expect(snap.opusResetDescription == "Resets Nov 27")
     }
 
+    /// The 2.1 TUI as it arrives over the PTY: column moves between words,
+    /// a Fable weekly window, and a trailing settings line.
+    @Test
+    func `parse claude status 2_1 screen with cursor positioning`() throws {
+        let esc = "\u{001B}"
+        let sample = [
+            "\(esc)[3G\(esc)[1mCurrent\(esc)[11Gsession\(esc)[22m",
+            "\(esc)[3G████▌\(esc)[53G9%\(esc)[56Gused",
+            "\(esc)[3GResets\(esc)[10G6:10pm\(esc)[17G(Europe/Vienna)",
+            "",
+            "\(esc)[3G\(esc)[1mCurrent\(esc)[11Gweek\(esc)[16G(all\(esc)[21Gmodels)\(esc)[22m",
+            "\(esc)[3G███████\(esc)[53G14%\(esc)[57Gused",
+            "\(esc)[3GResets\(esc)[10GOct\(esc)[14G10\(esc)[17Gat\(esc)[20G4am\(esc)[24G(Europe/Vienna)",
+            "",
+            "\(esc)[3G\(esc)[1mCurrent\(esc)[11Gweek\(esc)[16G(Fable)\(esc)[22m",
+            "\(esc)[3G████\(esc)[53G8%\(esc)[56Gused",
+            "\(esc)[3GResets\(esc)[10GOct\(esc)[14G10\(esc)[17Gat\(esc)[20G4am\(esc)[24G(Europe/Vienna)",
+        ].joined(separator: "\r\r\n")
+        let snap = try ClaudeStatusProbe.parse(text: sample)
+        #expect(snap.sessionPercentLeft == 91)
+        #expect(snap.weeklyPercentLeft == 86)
+        #expect(snap.opusPercentLeft == 92)
+        #expect(snap.primaryResetDescription == "Resets 6:10pm (Europe/Vienna)")
+        #expect(snap.secondaryResetDescription == "Resets Oct 10 at 4am (Europe/Vienna)")
+    }
+
     @Test
     func `parse claude status legacy opus label`() throws {
         let sample = """

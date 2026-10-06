@@ -139,6 +139,14 @@ extension StatusItemController {
     /// Settings → Providers with this slot focused. A China slot selects its
     /// brand row and flips the region switch, so "Add China" lands on the
     /// right key field.
+    /// A card's "Reconnect" button: same path as the ↻ in Settings → Providers,
+    /// so Claude re-reads the CLI's Keychain item (one prompt) and refreshes.
+    @objc func handleReloadProviderNotification(_ notification: Notification) {
+        guard let raw = notification.userInfo?["provider"] as? String,
+              let provider = UsageProvider(rawValue: raw) else { return }
+        Task { await self.store.reloadProvider(provider) }
+    }
+
     func showProviderSettings(_ provider: UsageProvider) {
         self.preferencesSelection.provider = provider
         self.openSettings(tab: .providers)

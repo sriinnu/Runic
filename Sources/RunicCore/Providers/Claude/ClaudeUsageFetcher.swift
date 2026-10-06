@@ -267,7 +267,12 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     public func loadLatestUsage(model: String = "sonnet") async throws -> ClaudeUsageSnapshot {
         switch self.dataSource {
         case .oauth:
-            var snap = try await self.loadViaOAuth()
+            var snap: ClaudeUsageSnapshot
+            do {
+                snap = try await self.loadViaOAuth()
+            } catch let gap as OAuthCredentialGap {
+                snap = try await self.loadViaCLIFallback(model: model, gap: gap)
+            }
             snap = await self.applyWebExtrasIfNeeded(to: snap)
             return await ClaudeWebResets.attach(to: snap)
         case .web:
@@ -287,28 +292,59 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
 
     // MARK: - OAuth API path
 
+    /// The OAuth path never got a usable token: Runic's copy is missing or past
+    /// expiry, or the server rejected it. Everything else (scope, parse,
+    /// network) is a failure the CLI would not fix, so it is not a gap.
+    struct OAuthCredentialGap: Error {
+        let underlying: ClaudeUsageError
+    }
+
     private func loadViaOAuth() async throws -> ClaudeUsageSnapshot {
+        let creds: ClaudeOAuthCredentials
         do {
-            let creds = try ClaudeOAuthCredentialsStore.load()
-            if creds.isExpired {
-                throw ClaudeUsageError.oauthFailed("Claude OAuth token expired. Run `claude` to refresh.")
-            }
-            // The usage endpoint requires user:profile scope.
-            if !creds.scopes.contains("user:profile") {
-                throw ClaudeUsageError.oauthFailed(
-                    "Claude OAuth token missing 'user:profile' scope (has: \(creds.scopes.joined(separator: ", "))). "
-                        + "Rate limit data unavailable.")
-            }
+            creds = try ClaudeOAuthCredentialsStore.load()
+        } catch {
+            throw OAuthCredentialGap(underlying: .oauthFailed(error.localizedDescription))
+        }
+        if creds.isExpired {
+            throw OAuthCredentialGap(underlying: .oauthFailed("Claude OAuth token expired. Run `claude` to refresh."))
+        }
+        // The usage endpoint requires user:profile scope.
+        if !creds.scopes.contains("user:profile") {
+            throw ClaudeUsageError.oauthFailed(
+                "Claude OAuth token missing 'user:profile' scope (has: \(creds.scopes.joined(separator: ", "))). "
+                    + "Rate limit data unavailable.")
+        }
+        do {
             let usage = try await ClaudeOAuthUsageFetcher.fetchUsage(accessToken: creds.accessToken)
             return try Self.mapOAuthUsage(usage, credentials: creds)
+        } catch ClaudeOAuthFetchError.unauthorized {
+            throw OAuthCredentialGap(
+                underlying: .oauthFailed(ClaudeOAuthFetchError.unauthorized.localizedDescription))
         } catch let error as ClaudeUsageError {
             throw error
-        } catch let error as ClaudeOAuthCredentialsError {
-            throw ClaudeUsageError.oauthFailed(error.localizedDescription)
-        } catch let error as ClaudeOAuthFetchError {
-            throw ClaudeUsageError.oauthFailed(error.localizedDescription)
         } catch {
             throw ClaudeUsageError.oauthFailed(error.localizedDescription)
+        }
+    }
+
+    /// Runic's copy of the CLI token lasts about eight hours and cannot be
+    /// renewed without a Keychain dialog, so instead of erroring until the user
+    /// presses reload, read the numbers through the CLI itself — it refreshes
+    /// its own token silently. The CLI session is torn down right after: a
+    /// background refresh must not leave a Node process resident between ticks.
+    /// On failure the OAuth error is what surfaces; it names the real fix.
+    private func loadViaCLIFallback(model: String, gap: OAuthCredentialGap) async throws -> ClaudeUsageSnapshot {
+        guard TTYCommandRunner.which("claude") != nil else { throw gap.underlying }
+        do {
+            let snap = try await self.loadViaPTY(model: model, timeout: 24)
+            await ClaudeCLISession.shared.reset()
+            Self.log.info("Claude OAuth copy unavailable; usage read through the CLI")
+            return snap
+        } catch {
+            await ClaudeCLISession.shared.reset()
+            Self.log.warning("Claude CLI fallback failed: \(error.localizedDescription)")
+            throw gap.underlying
         }
     }
 

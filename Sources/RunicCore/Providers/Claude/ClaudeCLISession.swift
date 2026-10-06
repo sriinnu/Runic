@@ -32,6 +32,9 @@ actor ClaudeCLISession {
     private var lastActivityAt: Date?
     private var idleShutdownTask: Task<Void, Never>?
     private var isCapturing = false
+    /// Claude Code 2.1 drops keystrokes typed before its prompt is up (about a
+    /// second after launch), so the first command waits for it.
+    private var promptSeen = false
     private let idleShutdownDelay: TimeInterval = 90
 
     private let sendOnSubstrings: [String: String] = [
@@ -84,12 +87,8 @@ actor ClaudeCLISession {
             self.lastActivityAt = Date()
             self.scheduleIdleShutdown()
         }
-        if let startedAt {
-            let sinceStart = Date().timeIntervalSince(startedAt)
-            if sinceStart < 0.4 {
-                let delay = UInt64((0.4 - sinceStart) * 1_000_000_000)
-                try await Task.sleep(nanoseconds: delay)
-            }
+        if !self.promptSeen {
+            try await self.waitForPrompt(timeout: 8)
         }
         self.drainOutput()
 
@@ -183,6 +182,39 @@ actor ClaudeCLISession {
             throw SessionError.timedOut
         }
         return text
+    }
+
+    /// Reads startup output until the input prompt (❯) shows, or output has
+    /// gone quiet after painting something, answering trust/cursor prompts on
+    /// the way. Falls through on timeout so a changed TUI degrades to the old
+    /// fixed delay rather than failing.
+    private func waitForPrompt(timeout: TimeInterval) async throws {
+        let prompt = Data("❯".utf8)
+        let cursorQuery = Data([0x1B, 0x5B, 0x36, 0x6E])
+        let sendNeedles = self.sendOnSubstrings.map { (needle: Data($0.key.utf8), keys: Data($0.value.utf8)) }
+        var seen = Data()
+        var lastOutputAt: Date?
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let chunk = self.readChunk()
+            if !chunk.isEmpty {
+                seen.append(chunk)
+                lastOutputAt = Date()
+                if seen.range(of: cursorQuery) != nil {
+                    try? self.send("\u{1b}[1;1R")
+                    seen.removeAll(keepingCapacity: true)
+                }
+                for item in sendNeedles where chunk.range(of: item.needle) != nil {
+                    try? self.primaryHandle?.write(contentsOf: item.keys)
+                }
+                if seen.range(of: prompt) != nil { break }
+            } else if let lastOutputAt, Date().timeIntervalSince(lastOutputAt) >= 0.7 {
+                break
+            }
+            if let proc = self.process, !proc.isRunning { throw SessionError.processExited }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        self.promptSeen = true
     }
 
     func reset() {
@@ -285,6 +317,7 @@ actor ClaudeCLISession {
         self.startedAt = nil
         self.lastActivityAt = nil
         self.isCapturing = false
+        self.promptSeen = false
     }
 
     private func readChunk() -> Data {
