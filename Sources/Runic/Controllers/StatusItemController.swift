@@ -188,6 +188,11 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
             selector: #selector(self.handleDebugBlinkNotification),
             name: .runicDebugBlinkNow,
             object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.handleReloadProviderNotification(_:)),
+            name: .runicReloadProvider,
+            object: nil)
     }
 
     private func wireBindings() {

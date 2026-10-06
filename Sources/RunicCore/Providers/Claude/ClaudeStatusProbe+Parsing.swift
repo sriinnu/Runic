@@ -45,6 +45,7 @@ extension ClaudeStatusProbe {
         var opusPct = self.extractPercent(
             labelSubstrings: [
                 "Current week (Opus)",
+                "Current week (Fable)",
                 "Current week (Sonnet only)",
                 "Current week (Sonnet)",
             ],
@@ -82,6 +83,7 @@ extension ClaudeStatusProbe {
             ? self.extractReset(
                 labelSubstrings: [
                     "Current week (Opus)",
+                    "Current week (Fable)",
                     "Current week (Sonnet only)",
                     "Current week (Sonnet)",
                 ],

@@ -105,19 +105,42 @@ struct UsageMenuCardHeaderView: View {
             if self.model.subtitleStyle == .error,
                MenuCardErrorClassifier.isAuthLike(self.model.subtitleText)
             {
-                Button {
-                    SettingsWindowBridge.open(tab: .providers, selection: nil)
-                } label: {
-                    HStack(spacing: RunicSpacing.xxs) {
-                        Image(systemName: "person.badge.key")
-                            .font(self.fonts.caption.weight(.semibold))
-                        Text("Add Account\u{2026}")
-                            .font(self.fonts.caption.weight(.semibold))
+                if self.model.provider == .claude {
+                    // Claude's auth errors are almost always Runic's copied token
+                    // ageing out; the fix is a re-read of the CLI's item, which
+                    // the ↻ in Settings does. Offer it here, one click away.
+                    Button {
+                        NotificationCenter.default.post(
+                            name: .runicReloadProvider,
+                            object: nil,
+                            userInfo: ["provider": UsageProvider.claude.rawValue])
+                    } label: {
+                        HStack(spacing: RunicSpacing.xxs) {
+                            Image(systemName: "key.horizontal")
+                                .font(self.fonts.caption.weight(.semibold))
+                            Text("Reconnect Claude\u{2026}")
+                                .font(self.fonts.caption.weight(.semibold))
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(self.runicTheme.accent)
+                    .help("Re-reads the Claude CLI's login from Keychain. macOS may ask once.")
+                    .accessibilityLabel("Reconnect Claude from the CLI's Keychain login")
+                } else {
+                    Button {
+                        SettingsWindowBridge.open(tab: .providers, selection: nil)
+                    } label: {
+                        HStack(spacing: RunicSpacing.xxs) {
+                            Image(systemName: "person.badge.key")
+                                .font(self.fonts.caption.weight(.semibold))
+                            Text("Add Account\u{2026}")
+                                .font(self.fonts.caption.weight(.semibold))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(self.runicTheme.accent)
+                    .accessibilityLabel("Add account in provider settings")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(self.runicTheme.accent)
-                .accessibilityLabel("Add account in provider settings")
             }
 
             if let topModelLine = self.model.topModelLine {
