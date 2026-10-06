@@ -217,6 +217,19 @@ check_assets() {
 # of the release. Its version field is still kept in step with version.env by
 # convention, and without a check it drifts silently: the manifest sat at 2.0.0
 # from March to September while the app shipped eight versions past it.
+ensure_cli_version() {
+  local version="$1"
+  local source="${2:-Sources/RunicCore/RunicVersion.swift}"
+
+  [[ -f "$source" ]] || err "RunicVersion source not found: $source"
+  local current
+  current=$(sed -n 's/.*marketing = "\([^"]*\)".*/\1/p' "$source")
+  [[ -n "$current" ]] || err "Could not read RunicVersion.marketing from $source"
+  if [[ "$current" != "$version" ]]; then
+    err "RunicVersion.marketing ($current) must match MARKETING_VERSION ($version)."
+  fi
+}
+
 ensure_package_version() {
   local version="$1"
   local manifest="${2:-package.json}"

@@ -165,7 +165,7 @@ extension RunicCLI {
     }
 
     static func printVersion() {
-        print("Runic CLI - Version 1.0.0")
+        print("Runic CLI - Version \(RunicVersion.marketing)")
         Foundation.exit(0)
     }
 
