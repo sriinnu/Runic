@@ -187,9 +187,9 @@ actor ClaudeCLISession {
     }
 
     /// Reads startup output until the input prompt (❯) shows, or output has
-    /// gone quiet after painting something, answering trust/cursor prompts on
-    /// the way. Falls through on timeout so a changed TUI degrades to the old
-    /// fixed delay rather than failing.
+    /// gone quiet for a few seconds after painting something, answering
+    /// trust/cursor prompts on the way. Falls through on timeout so a changed
+    /// TUI degrades to a fixed delay rather than failing.
     private func waitForPrompt(timeout: TimeInterval) async throws {
         let prompt = Data("❯".utf8)
         let cursorQuery = Data([0x1B, 0x5B, 0x36, 0x6E])
@@ -210,7 +210,10 @@ actor ClaudeCLISession {
                     try? self.primaryHandle?.write(contentsOf: item.keys)
                 }
                 if seen.range(of: prompt) != nil { break }
-            } else if let lastOutputAt, Date().timeIntervalSince(lastOutputAt) >= 0.7 {
+            } else if let lastOutputAt, Date().timeIntervalSince(lastOutputAt) >= 3.0 {
+                // No prompt glyph in this TUI build: treat a long silence after
+                // the banner as ready. A cold start pauses for well over a
+                // second between banner and prompt, so this has to be generous.
                 break
             }
             if let proc = self.process, !proc.isRunning { throw SessionError.processExited }
