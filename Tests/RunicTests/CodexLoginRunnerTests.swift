@@ -16,7 +16,9 @@ struct CodexLoginRunnerTests {
         let started = Date()
         let timedOut = await CodexLoginRunner.wait(for: process, timeout: 0.5)
         #expect(timedOut)
-        #expect(Date().timeIntervalSince(started) < 3)
+        // Generous: the point is "not forever", and a loaded CI runner has
+        // taken 3.6s to honour a 0.5s timeout.
+        #expect(Date().timeIntervalSince(started) < 10)
     }
 
     @Test
@@ -43,6 +45,8 @@ struct CodexLoginRunnerTests {
         let started = Date()
         let text = await collector.finish(timeout: 0.5)
         #expect(text.contains("signed-in"))
-        #expect(Date().timeIntervalSince(started) < 3)
+        // Generous: the point is "not forever", and a loaded CI runner has
+        // taken 3.6s to honour a 0.5s timeout.
+        #expect(Date().timeIntervalSince(started) < 10)
     }
 }
