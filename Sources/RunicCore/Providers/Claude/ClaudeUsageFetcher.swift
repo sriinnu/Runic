@@ -358,9 +358,29 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             } catch {
                 await ClaudeCLISession.shared.reset()
                 Self.log.warning("Claude CLI fallback attempt \(attempt) failed: \(error.localizedDescription)")
+                Self.recordFallbackFailure(attempt: attempt, error: error, gap: gap)
             }
         }
         throw gap.underlying
+    }
+
+    /// Unified-log bodies are private, so keep the last fallback failure where
+    /// the user can read it: `~/Library/Application Support/Runic/diagnostics`.
+    /// Error descriptions only — no token, account or screen text.
+    private static func recordFallbackFailure(attempt: Int, error: Error, gap: OAuthCredentialGap) {
+        let shape: [String: Any] = [
+            "at": ISO8601DateFormatter().string(from: Date()),
+            "attempt": attempt,
+            "cancelled": Task.isCancelled,
+            "oauthGap": gap.underlying.localizedDescription,
+            "cliError": String(describing: error),
+        ]
+        guard let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),
+            let json = try? JSONSerialization.data(withJSONObject: shape, options: [.prettyPrinted, .sortedKeys])
+        else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? json.write(to: directory.appendingPathComponent("claude-cli-fallback-\(attempt).json"), options: .atomic)
     }
 
     private static func mapOAuthUsage(

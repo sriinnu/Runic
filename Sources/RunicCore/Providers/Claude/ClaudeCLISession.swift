@@ -10,14 +10,16 @@ actor ClaudeCLISession {
 
     enum SessionError: LocalizedError {
         case launchFailed(String)
-        case timedOut
-        case processExited
+        /// No output arrived within the timeout; carries how long we waited.
+        case timedOut(afterSeconds: Int)
+        /// The CLI quit under us; carries its termination status when known.
+        case processExited(status: Int32?)
 
         var errorDescription: String? {
             switch self {
             case let .launchFailed(msg): "Failed to launch Claude CLI session: \(msg)"
-            case .timedOut: "Claude CLI session timed out."
-            case .processExited: "Claude CLI session exited."
+            case let .timedOut(seconds): "Claude CLI session produced no output in \(seconds)s."
+            case let .processExited(status): "Claude CLI session exited (status \(status.map(String.init) ?? "?"))."
             }
         }
     }
@@ -162,7 +164,7 @@ actor ClaudeCLISession {
             }
 
             if let proc = self.process, !proc.isRunning {
-                throw SessionError.processExited
+                throw SessionError.processExited(status: proc.terminationStatus)
             }
 
             try await Task.sleep(nanoseconds: 60_000_000)
@@ -181,7 +183,7 @@ actor ClaudeCLISession {
         }
 
         guard !buffer.isEmpty, let text = String(data: buffer, encoding: .utf8) else {
-            throw SessionError.timedOut
+            throw SessionError.timedOut(afterSeconds: Int(timeout))
         }
         return text
     }
@@ -216,7 +218,9 @@ actor ClaudeCLISession {
                 // second between banner and prompt, so this has to be generous.
                 break
             }
-            if let proc = self.process, !proc.isRunning { throw SessionError.processExited }
+            if let proc = self.process, !proc.isRunning {
+                throw SessionError.processExited(status: proc.terminationStatus)
+            }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         self.promptSeen = true
@@ -346,7 +350,7 @@ actor ClaudeCLISession {
 
     private func send(_ text: String) throws {
         guard let data = text.data(using: .utf8) else { return }
-        guard let handle = self.primaryHandle else { throw SessionError.processExited }
+        guard let handle = self.primaryHandle else { throw SessionError.processExited(status: nil) }
         try handle.write(contentsOf: data)
     }
 

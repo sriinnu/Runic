@@ -29,6 +29,9 @@ public enum ClaudeStatusProbeError: LocalizedError, Sendable {
     case claudeNotInstalled
     case parseFailed(String)
     case timedOut
+    /// The CLI exited before answering — distinct from silence so a crash or
+    /// refused launch is visible in diagnostics.
+    case sessionExited(String)
 
     public var errorDescription: String? {
         switch self {
@@ -38,6 +41,8 @@ public enum ClaudeStatusProbeError: LocalizedError, Sendable {
             "Could not parse Claude usage: \(msg)"
         case .timedOut:
             "Claude usage probe timed out."
+        case let .sessionExited(detail):
+            detail
         }
     }
 }
@@ -132,13 +137,16 @@ public struct ClaudeStatusProbe: Sendable {
                 stopOnSubstrings: stopOnSubstrings,
                 settleAfterStop: subcommand == "/usage" ? 2.0 : 0.25,
                 sendEnterEvery: nil)
-        } catch ClaudeCLISession.SessionError.processExited {
-            await ClaudeCLISession.shared.reset()
-            throw ClaudeStatusProbeError.timedOut
-        } catch ClaudeCLISession.SessionError.timedOut {
-            throw ClaudeStatusProbeError.timedOut
-        } catch ClaudeCLISession.SessionError.launchFailed(_) {
-            throw ClaudeStatusProbeError.claudeNotInstalled
+        } catch let error as ClaudeCLISession.SessionError {
+            switch error {
+            case .processExited:
+                await ClaudeCLISession.shared.reset()
+                throw ClaudeStatusProbeError.sessionExited(error.localizedDescription)
+            case .timedOut:
+                throw ClaudeStatusProbeError.timedOut
+            case .launchFailed:
+                throw ClaudeStatusProbeError.claudeNotInstalled
+            }
         } catch {
             await ClaudeCLISession.shared.reset()
             throw error
