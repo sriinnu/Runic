@@ -48,6 +48,8 @@ extension UsageMenuCardView.Model {
         var logSpend: LogSpendEstimate?
         var numberStyle: UsageFormatter.NumberStyle = .abbreviated
         var dateStyle: UsageFormatter.DateStyle = .relative
+        /// The store's source label for the last successful fetch.
+        var sourceLabel: String = ""
     }
 
     static func make(_ input: Input) -> UsageMenuCardView.Model {
@@ -112,10 +114,15 @@ extension UsageMenuCardView.Model {
             lastError: effectiveError,
             ledgerUpdatedAt: input.ledgerUpdatedAt,
             dateStyle: input.dateStyle)
+        let isServedByCLIFallback = input.provider == .claude
+            && input.snapshot != nil
+            && input.sourceLabel == ClaudeUsageDataSource.cliFallbackSourceLabel
         let headerBadge: HeaderBadge? = if input.isRefreshing {
             HeaderBadge(text: "Refreshing", style: .info)
         } else if effectiveError != nil {
             HeaderBadge(text: "Issue", style: .error)
+        } else if isServedByCLIFallback {
+            HeaderBadge(text: "Via CLI", style: .warning)
         } else {
             Self.balanceBadge(balance: input.snapshot?.balance, spend: input.balanceSpend)
         }
@@ -142,7 +149,8 @@ extension UsageMenuCardView.Model {
             insights: insights,
             placeholder: placeholder,
             progressColor: Self.progressColor(for: input.provider),
-            needsCredentials: !input.liveFetchWasAvailable)
+            needsCredentials: !input.liveFetchWasAvailable,
+            isServedByCLIFallback: isServedByCLIFallback)
     }
 
     private static func topModelLine(

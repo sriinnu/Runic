@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Claude: when Runic's copy of the CLI login ages out (about every eight hours), usage is read through the Claude CLI instead of showing an error until the next manual reload. The CLI process is shut down right after each read. The Claude card offers **Reconnect Claude…** to re-read the login (one Keychain prompt) and get the richer OAuth data back.
+- Claude: when Runic's copy of the CLI login ages out (about every eight hours), usage is read through the Claude CLI instead of showing an error until the next manual reload. The CLI process is shut down right after each read. The Claude card offers **Reconnect Claude…** to re-read the login (one Keychain prompt) and get the richer OAuth data back. While the CLI is serving the numbers the card shows a **Via CLI** badge and Settings → Providers lists the source as `cli fallback`.
 - Claude CLI source: works again with Claude Code 2.1, which lays out `/usage` with cursor moves instead of spaces and needs a moment before accepting the first command. The Fable weekly window is recognised.
 - CLI and MCP: `runic --version` and the MCP server handshake report the app version instead of a fixed 1.0.0. A test and the release script refuse drift from `version.env`.
 

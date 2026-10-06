@@ -172,6 +172,9 @@ struct UsageMenuCardView: View {
         /// provider has simply never been refreshed — the empty state then asks
         /// for a ping, not for credentials.
         var needsCredentials: Bool = false
+        /// True while Claude's numbers come through the CLI because Runic's
+        /// token copy is stale: the card badges it and offers Reconnect.
+        var isServedByCLIFallback: Bool = false
     }
 
     let model: Model

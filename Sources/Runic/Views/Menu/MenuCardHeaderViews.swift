@@ -102,9 +102,9 @@ struct UsageMenuCardHeaderView: View {
                 }
             }
 
-            if self.model.subtitleStyle == .error,
-               MenuCardErrorClassifier.isAuthLike(self.model.subtitleText)
-            {
+            let isAuthError = self.model.subtitleStyle == .error
+                && MenuCardErrorClassifier.isAuthLike(self.model.subtitleText)
+            if isAuthError || self.model.isServedByCLIFallback {
                 if self.model.provider == .claude {
                     // Claude's auth errors are almost always Runic's copied token
                     // ageing out; the fix is a re-read of the CLI's item, which
@@ -124,7 +124,10 @@ struct UsageMenuCardHeaderView: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(self.runicTheme.accent)
-                    .help("Re-reads the Claude CLI's login from Keychain. macOS may ask once.")
+                    .help(self.model.isServedByCLIFallback
+                        ? "Runic's copy of the Claude login has expired, so usage is read through the Claude CLI "
+                        + "(no cost or reset credits). Reconnect re-reads the login from Keychain; macOS may ask once."
+                        : "Re-reads the Claude CLI's login from Keychain. macOS may ask once.")
                     .accessibilityLabel("Reconnect Claude from the CLI's Keychain login")
                 } else {
                     Button {
