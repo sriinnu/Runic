@@ -346,17 +346,21 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         // background at launch; the first refresh can land before it is known.
         await Self.awaitLoginShellPATH()
         guard TTYCommandRunner.which("claude") != nil else { throw gap.underlying }
-        do {
-            var snap = try await self.loadViaPTY(model: model, timeout: 24)
-            await ClaudeCLISession.shared.reset()
-            snap.servedByCLIFallback = true
-            Self.log.info("Claude OAuth copy unavailable; usage read through the CLI")
-            return snap
-        } catch {
-            await ClaudeCLISession.shared.reset()
-            Self.log.warning("Claude CLI fallback failed: \(error.localizedDescription)")
-            throw gap.underlying
+        // Two attempts: the first launch of the CLI on a cold, busy machine can
+        // miss the prompt; a fresh session right after usually lands.
+        for attempt in 1...2 {
+            do {
+                var snap = try await self.loadViaPTY(model: model, timeout: 24)
+                await ClaudeCLISession.shared.reset()
+                snap.servedByCLIFallback = true
+                Self.log.info("Claude OAuth copy unavailable; usage read through the CLI")
+                return snap
+            } catch {
+                await ClaudeCLISession.shared.reset()
+                Self.log.warning("Claude CLI fallback attempt \(attempt) failed: \(error.localizedDescription)")
+            }
         }
+        throw gap.underlying
     }
 
     private static func mapOAuthUsage(

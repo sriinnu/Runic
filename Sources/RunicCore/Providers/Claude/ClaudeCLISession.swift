@@ -88,7 +88,9 @@ actor ClaudeCLISession {
             self.scheduleIdleShutdown()
         }
         if !self.promptSeen {
-            try await self.waitForPrompt(timeout: 8)
+            // Cold start on a busy machine (app launch refreshing every
+            // provider at once) has taken well over 8s to show the prompt.
+            try await self.waitForPrompt(timeout: 20)
         }
         self.drainOutput()
 
