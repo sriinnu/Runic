@@ -10,14 +10,16 @@ actor ClaudeCLISession {
 
     enum SessionError: LocalizedError {
         case launchFailed(String)
-        case timedOut
-        case processExited
+        /// No output arrived within the timeout; carries how long we waited.
+        case timedOut(afterSeconds: Int)
+        /// The CLI quit under us; carries its termination status when known.
+        case processExited(status: Int32?)
 
         var errorDescription: String? {
             switch self {
             case let .launchFailed(msg): "Failed to launch Claude CLI session: \(msg)"
-            case .timedOut: "Claude CLI session timed out."
-            case .processExited: "Claude CLI session exited."
+            case let .timedOut(seconds): "Claude CLI session produced no output in \(seconds)s."
+            case let .processExited(status): "Claude CLI session exited (status \(status.map(String.init) ?? "?"))."
             }
         }
     }
@@ -88,7 +90,9 @@ actor ClaudeCLISession {
             self.scheduleIdleShutdown()
         }
         if !self.promptSeen {
-            try await self.waitForPrompt(timeout: 8)
+            // Cold start on a busy machine (app launch refreshing every
+            // provider at once) has taken well over 8s to show the prompt.
+            try await self.waitForPrompt(timeout: 20)
         }
         self.drainOutput()
 
@@ -160,7 +164,7 @@ actor ClaudeCLISession {
             }
 
             if let proc = self.process, !proc.isRunning {
-                throw SessionError.processExited
+                throw SessionError.processExited(status: proc.terminationStatus)
             }
 
             try await Task.sleep(nanoseconds: 60_000_000)
@@ -179,15 +183,15 @@ actor ClaudeCLISession {
         }
 
         guard !buffer.isEmpty, let text = String(data: buffer, encoding: .utf8) else {
-            throw SessionError.timedOut
+            throw SessionError.timedOut(afterSeconds: Int(timeout))
         }
         return text
     }
 
     /// Reads startup output until the input prompt (❯) shows, or output has
-    /// gone quiet after painting something, answering trust/cursor prompts on
-    /// the way. Falls through on timeout so a changed TUI degrades to the old
-    /// fixed delay rather than failing.
+    /// gone quiet for a few seconds after painting something, answering
+    /// trust/cursor prompts on the way. Falls through on timeout so a changed
+    /// TUI degrades to a fixed delay rather than failing.
     private func waitForPrompt(timeout: TimeInterval) async throws {
         let prompt = Data("❯".utf8)
         let cursorQuery = Data([0x1B, 0x5B, 0x36, 0x6E])
@@ -208,10 +212,15 @@ actor ClaudeCLISession {
                     try? self.primaryHandle?.write(contentsOf: item.keys)
                 }
                 if seen.range(of: prompt) != nil { break }
-            } else if let lastOutputAt, Date().timeIntervalSince(lastOutputAt) >= 0.7 {
+            } else if let lastOutputAt, Date().timeIntervalSince(lastOutputAt) >= 3.0 {
+                // No prompt glyph in this TUI build: treat a long silence after
+                // the banner as ready. A cold start pauses for well over a
+                // second between banner and prompt, so this has to be generous.
                 break
             }
-            if let proc = self.process, !proc.isRunning { throw SessionError.processExited }
+            if let proc = self.process, !proc.isRunning {
+                throw SessionError.processExited(status: proc.terminationStatus)
+            }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         self.promptSeen = true
@@ -341,7 +350,7 @@ actor ClaudeCLISession {
 
     private func send(_ text: String) throws {
         guard let data = text.data(using: .utf8) else { return }
-        guard let handle = self.primaryHandle else { throw SessionError.processExited }
+        guard let handle = self.primaryHandle else { throw SessionError.processExited(status: nil) }
         try handle.write(contentsOf: data)
     }
 

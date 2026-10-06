@@ -342,18 +342,45 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     /// background refresh must not leave a Node process resident between ticks.
     /// On failure the OAuth error is what surfaces; it names the real fix.
     private func loadViaCLIFallback(model: String, gap: OAuthCredentialGap) async throws -> ClaudeUsageSnapshot {
+        // The login-shell PATH (where `claude` usually lives) is captured in the
+        // background at launch; the first refresh can land before it is known.
+        await Self.awaitLoginShellPATH()
         guard TTYCommandRunner.which("claude") != nil else { throw gap.underlying }
-        do {
-            var snap = try await self.loadViaPTY(model: model, timeout: 24)
-            await ClaudeCLISession.shared.reset()
-            snap.servedByCLIFallback = true
-            Self.log.info("Claude OAuth copy unavailable; usage read through the CLI")
-            return snap
-        } catch {
-            await ClaudeCLISession.shared.reset()
-            Self.log.warning("Claude CLI fallback failed: \(error.localizedDescription)")
-            throw gap.underlying
+        // Two attempts: the first launch of the CLI on a cold, busy machine can
+        // miss the prompt; a fresh session right after usually lands.
+        for attempt in 1...2 {
+            do {
+                var snap = try await self.loadViaPTY(model: model, timeout: 24)
+                await ClaudeCLISession.shared.reset()
+                snap.servedByCLIFallback = true
+                Self.log.info("Claude OAuth copy unavailable; usage read through the CLI")
+                return snap
+            } catch {
+                await ClaudeCLISession.shared.reset()
+                Self.log.warning("Claude CLI fallback attempt \(attempt) failed: \(error.localizedDescription)")
+                Self.recordFallbackFailure(attempt: attempt, error: error, gap: gap)
+            }
         }
+        throw gap.underlying
+    }
+
+    /// Unified-log bodies are private, so keep the last fallback failure where
+    /// the user can read it: `~/Library/Application Support/Runic/diagnostics`.
+    /// Error descriptions only — no token, account or screen text.
+    private static func recordFallbackFailure(attempt: Int, error: Error, gap: OAuthCredentialGap) {
+        let shape: [String: Any] = [
+            "at": ISO8601DateFormatter().string(from: Date()),
+            "attempt": attempt,
+            "cancelled": Task.isCancelled,
+            "oauthGap": gap.underlying.localizedDescription,
+            "cliError": String(describing: error),
+        ]
+        guard let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),
+            let json = try? JSONSerialization.data(withJSONObject: shape, options: [.prettyPrinted, .sortedKeys])
+        else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? json.write(to: directory.appendingPathComponent("claude-cli-fallback-\(attempt).json"), options: .atomic)
     }
 
     private static func mapOAuthUsage(
@@ -523,6 +550,12 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             accountOrganization: snap.accountOrganization,
             loginMethod: snap.loginMethod,
             rawText: snap.rawText)
+    }
+
+    private static func awaitLoginShellPATH() async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            LoginShellPathCache.shared.captureOnce { _ in continuation.resume() }
+        }
     }
 
     private func applyWebExtrasIfNeeded(to snapshot: ClaudeUsageSnapshot) async -> ClaudeUsageSnapshot {
