@@ -16,6 +16,7 @@ TAG="v${MARKETING_VERSION}"
 require_clean_worktree
 ensure_changelog_finalized "$MARKETING_VERSION"
 ensure_package_version "$MARKETING_VERSION"
+ensure_cli_version "$MARKETING_VERSION"
 ensure_appcast_monotonic "$APPCAST" "$MARKETING_VERSION" "$BUILD_NUMBER"
 
 CURRENT_BRANCH=$(git branch --show-current)

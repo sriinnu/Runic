@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- CLI and MCP: `runic --version` and the MCP server handshake report the app version instead of a fixed 1.0.0. A test and the release script refuse drift from `version.env`.
+
 ## 2.9.1 — 2026-10-03
 - Codex: credits reported with usage now appear immediately. Runic only tries a separate credit lookup when the usage response has no balance, and an optional web dashboard failure no longer triggers duplicate refreshes.
 - Credits: providers with credit support show the reported balance, or 0 with an unavailable note while a balance cannot be retrieved. Providers without credit support hide the field. Fetch errors no longer replace the balance in the menu.

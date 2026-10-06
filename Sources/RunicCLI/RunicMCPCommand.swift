@@ -109,7 +109,7 @@ enum RunicMCPCommand {
         let service = RunicMCPService()
         let server = Server(
             name: "runic",
-            version: "1.0.0",
+            version: RunicVersion.marketing,
             capabilities: .init(tools: .init(listChanged: false)))
         await server.withMethodHandler(ListTools.self) { _ in
             .init(tools: service.tools())
