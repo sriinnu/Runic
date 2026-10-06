@@ -342,6 +342,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     /// background refresh must not leave a Node process resident between ticks.
     /// On failure the OAuth error is what surfaces; it names the real fix.
     private func loadViaCLIFallback(model: String, gap: OAuthCredentialGap) async throws -> ClaudeUsageSnapshot {
+        // The login-shell PATH (where `claude` usually lives) is captured in the
+        // background at launch; the first refresh can land before it is known.
+        await Self.awaitLoginShellPATH()
         guard TTYCommandRunner.which("claude") != nil else { throw gap.underlying }
         do {
             var snap = try await self.loadViaPTY(model: model, timeout: 24)
@@ -523,6 +526,12 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             accountOrganization: snap.accountOrganization,
             loginMethod: snap.loginMethod,
             rawText: snap.rawText)
+    }
+
+    private static func awaitLoginShellPATH() async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            LoginShellPathCache.shared.captureOnce { _ in continuation.resume() }
+        }
     }
 
     private func applyWebExtrasIfNeeded(to snapshot: ClaudeUsageSnapshot) async -> ClaudeUsageSnapshot {
