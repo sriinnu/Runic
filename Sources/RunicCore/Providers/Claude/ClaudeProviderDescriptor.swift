@@ -62,8 +62,12 @@ public enum ClaudeProviderDescriptor {
         case .app:
             let hasWebSession = ClaudeWebAPIFetcher.hasSessionKey()
             // OAuth usage endpoint requires user:profile scope.
+            // A loadable copy must carry the scope; an unloadable one (expired)
+            // still counts when the CLI is signed in, so the fetcher can fall
+            // back to it instead of the plan reporting no credentials.
             let oauthCreds = try? ClaudeOAuthCredentialsStore.load()
-            let hasOAuthCredentials = oauthCreds?.scopes.contains("user:profile") ?? false
+            let hasOAuthCredentials = oauthCreds.map { $0.scopes.contains("user:profile") }
+                ?? ClaudeOAuthCredentialsStore.hasLoginOnThisMac()
             let settings = context.settings
             let debugMenuEnabled = settings?.debugMenuEnabled ?? false
             let claudeSettings = settings?.claude
@@ -128,7 +132,9 @@ struct ClaudeOAuthFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .oauth
 
     func isAvailable(_: ProviderFetchContext) async -> Bool {
-        guard let creds = try? ClaudeOAuthCredentialsStore.load() else { return false }
+        guard let creds = try? ClaudeOAuthCredentialsStore.load() else {
+            return ClaudeOAuthCredentialsStore.hasLoginOnThisMac()
+        }
         // Usage endpoint requires user:profile scope.
         return creds.scopes.contains("user:profile")
     }
@@ -138,7 +144,7 @@ struct ClaudeOAuthFetchStrategy: ProviderFetchStrategy {
         let usage = try await fetcher.loadLatestUsage(model: "sonnet")
         return self.makeResult(
             usage: Self.snapshot(from: usage),
-            sourceLabel: "oauth")
+            sourceLabel: usage.servedByCLIFallback ? ClaudeUsageDataSource.cliFallbackSourceLabel : "oauth")
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {

@@ -17,6 +17,11 @@ public enum ClaudeUsageDataSource: String, CaseIterable, Identifiable, Sendable 
         }
     }
 
+    /// Source label when the OAuth path had no usable token and the numbers
+    /// came through the CLI instead. Shown in Settings → Providers; the menu
+    /// card badges it and offers Reconnect.
+    public static let cliFallbackSourceLabel = "cli fallback"
+
     public var sourceLabel: String {
         switch self {
         case .oauth:

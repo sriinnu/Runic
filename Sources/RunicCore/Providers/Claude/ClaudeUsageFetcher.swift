@@ -18,6 +18,9 @@ public struct ClaudeUsageSnapshot: Sendable {
     public let rawText: String?
     /// Banked "reset your limits" grants, when the source reports them.
     public let resetCredits: UsageResetCredits?
+    /// True when the OAuth path had no usable token and the numbers were read
+    /// through the Claude CLI instead (no cost block, no reset credits).
+    public var servedByCLIFallback = false
 
     public init(
         primary: RateWindow,
@@ -68,7 +71,7 @@ extension ClaudeUsageSnapshot {
             cost.isEnabled = self.providerCost?.isEnabled
         }
         cost.balance = creditBalance.value
-        return ClaudeUsageSnapshot(
+        var copy = ClaudeUsageSnapshot(
             primary: self.primary,
             secondary: self.secondary,
             opus: self.opus,
@@ -79,10 +82,12 @@ extension ClaudeUsageSnapshot {
             loginMethod: self.loginMethod,
             rawText: self.rawText,
             resetCredits: self.resetCredits)
+        copy.servedByCLIFallback = self.servedByCLIFallback
+        return copy
     }
 
     func with(resetCredits: UsageResetCredits?) -> ClaudeUsageSnapshot {
-        ClaudeUsageSnapshot(
+        var copy = ClaudeUsageSnapshot(
             primary: self.primary,
             secondary: self.secondary,
             opus: self.opus,
@@ -93,6 +98,8 @@ extension ClaudeUsageSnapshot {
             loginMethod: self.loginMethod,
             rawText: self.rawText,
             resetCredits: resetCredits)
+        copy.servedByCLIFallback = self.servedByCLIFallback
+        return copy
     }
 }
 
@@ -337,8 +344,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     private func loadViaCLIFallback(model: String, gap: OAuthCredentialGap) async throws -> ClaudeUsageSnapshot {
         guard TTYCommandRunner.which("claude") != nil else { throw gap.underlying }
         do {
-            let snap = try await self.loadViaPTY(model: model, timeout: 24)
+            var snap = try await self.loadViaPTY(model: model, timeout: 24)
             await ClaudeCLISession.shared.reset()
+            snap.servedByCLIFallback = true
             Self.log.info("Claude OAuth copy unavailable; usage read through the CLI")
             return snap
         } catch {

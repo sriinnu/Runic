@@ -57,7 +57,8 @@ extension MenuPopoverView {
             balanceSpend: self.store.balanceSpend(for: provider),
             logSpend: self.store.ledgerLogSpend[provider],
             numberStyle: self.settings.numberFormat.formatterStyle,
-            dateStyle: self.settings.dateFormat.formatterStyle)
+            dateStyle: self.settings.dateFormat.formatterStyle,
+            sourceLabel: self.store.sourceLabel(for: provider))
         return UsageMenuCardView.Model.make(input)
     }
 }

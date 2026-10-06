@@ -368,7 +368,8 @@ extension StatusItemController {
             balanceSpend: self.store.balanceSpend(for: target),
             logSpend: self.store.ledgerLogSpend[target],
             numberStyle: self.settings.numberFormat.formatterStyle,
-            dateStyle: self.settings.dateFormat.formatterStyle)
+            dateStyle: self.settings.dateFormat.formatterStyle,
+            sourceLabel: self.store.sourceLabel(for: target))
         return UsageMenuCardView.Model.make(input)
     }
 

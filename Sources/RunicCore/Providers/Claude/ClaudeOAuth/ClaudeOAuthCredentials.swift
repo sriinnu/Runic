@@ -124,6 +124,16 @@ public enum ClaudeOAuthCredentialsStore {
         return try self.loadFromSources(allowUserInteraction: false)
     }
 
+    /// True when the Claude CLI is signed in on this Mac, even if Runic's copy
+    /// of the token has expired: a copy once existed, or the CLI's own Keychain
+    /// item is present (attributes only — never prompts). The OAuth strategy
+    /// uses this to stay in the plan so its CLI fallback can run, instead of
+    /// reporting "no credentials" the moment the copy ages out.
+    public static func hasLoginOnThisMac() -> Bool {
+        if ClaudeOAuthCredentialCache.cachedAt() != nil { return true }
+        return self.keychainItemModifiedAt() != nil
+    }
+
     public static func loadAllowingInteraction() throws -> ClaudeOAuthCredentials {
         try self.loadFromSources(allowUserInteraction: true)
     }
