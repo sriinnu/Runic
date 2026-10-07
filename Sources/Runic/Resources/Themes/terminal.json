@@ -1,23 +1,23 @@
 {
   "id": "terminal",
   "displayName": "Terminal",
-  "tagline": "Phosphor console",
+  "tagline": "Amber phosphor",
   "symbolName": "terminal.fill",
   "isCustom": true,
   "prefersDarkAppearance": true,
   "colors": {
-    "primary":       "#B8F6C4",
-    "secondary":     "#69BE87",
-    "accent":        "#65EF93",
-    "highlight":     "#B9F87A",
-    "warm":          "#FF6975",
-    "tertiary":      "#72D69B",
-    "surface":       "#020904",
-    "surfaceAlt":    "#081B0D",
-    "cardFill":      "#102416D9",
-    "cardStroke":    "#60DE8666",
-    "primaryText":   "#E4FFE9",
-    "secondaryText": "#A7CDB0"
+    "primary":       "#FFBC40",
+    "secondary":     "#C99A52",
+    "accent":        "#FFB000",
+    "highlight":     "#FFC857",
+    "warm":          "#FF6E4A",
+    "tertiary":      "#D98A1F",
+    "surface":       "#16100A",
+    "surfaceAlt":    "#241A0E",
+    "cardFill":      "#221811D9",
+    "cardStroke":    "#E0A03066",
+    "primaryText":   "#FFE9C2",
+    "secondaryText": "#C9A978"
   },
   "fonts":   { "body": "mono", "numeric": "mono" },
   "shape":   { "cornerMultiplier": 0.45, "separator": "hairline" },
@@ -26,7 +26,7 @@
   "style": {
     "typography": { "bodyFamily": "Geist Mono", "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.0, "lineSpacing": 1.2, "contrast": "strong" },
     "chrome": { "borderStyle": "hud", "borderWeight": 0.8, "borderOpacity": 0.46, "cornerStyle": "compact", "panelDepth": "low" },
-    "effects": { "scanlineOpacity": 0.2, "glowStrength": 0.18, "materialIntensity": 0.0 },
+    "effects": { "scanlineOpacity": 0.2, "glowStrength": 0.2, "materialIntensity": 0.0 },
     "controls": { "selectedFillStyle": "terminalSolid", "progressStyle": "segmentedHUD", "hoverStyle": "neutral" }
   }
 }

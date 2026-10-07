@@ -18,10 +18,12 @@ extension Theme {
     private var fallbackPalette: RunicThemePalette {
         switch self {
         case .retro:
-            // Parchment + navy bevel. The signature Runic look — System 7
-            // chrome with modern info architecture. Earth-toned accents
-            // (System-7 blue, coral red, warm yellow). Pixel-display
-            // headers paired with Geist body via the `fonts` token.
+            // Illuminated ledger. Parchment + warm sepia bevel, System 7
+            // chrome with modern info architecture. Rubricated manuscript
+            // palette: cinnabar-red leads, dark gold-leaf for emphasis,
+            // terracotta earth, and a thin indigo thread (the old System-7
+            // blue, demoted) so it stays recognizably Retro. Warm ink, warm
+            // strokes — the cold blue-grey that fought the paper is gone.
             RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
@@ -29,17 +31,17 @@ extension Theme {
                 symbolName: "rectangle.connected.to.line.below",
                 isCustom: true,
                 prefersDarkAppearance: false,
-                primary: Color(red: 0.118, green: 0.133, blue: 0.220), // deep navy ink
+                primary: Color(red: 0.141, green: 0.118, blue: 0.086), // warm sepia ink
                 secondary: Color(red: 0.353, green: 0.302, blue: 0.243), // sepia muted
-                accent: Color(red: 0.231, green: 0.357, blue: 0.647), // System-7 blue
-                highlight: Color(red: 0.749, green: 0.251, blue: 0.251), // coral red, deepened for 3:1 on hover
+                accent: Color(red: 0.698, green: 0.227, blue: 0.141), // cinnabar — rubrication red
+                highlight: Color(red: 0.541, green: 0.369, blue: 0.039), // gold leaf, dark enough for the hover wash
                 warm: Color(red: 0.710, green: 0.314, blue: 0.184), // terracotta, deepened for 3:1 on hover
-                tertiary: Color(red: 0.561, green: 0.380, blue: 0.035), // ochre — the old yellow never cleared 3:1
+                tertiary: Color(red: 0.227, green: 0.306, blue: 0.549), // manuscript indigo — the old blue, a thread
                 surface: Color(red: 0.945, green: 0.910, blue: 0.823), // parchment
                 surfaceAlt: Color(red: 0.973, green: 0.949, blue: 0.898), // highlight bevel
                 cardFill: Color(red: 0.910, green: 0.867, blue: 0.760), // inset card body
-                cardStroke: Color(red: 0.478, green: 0.510, blue: 0.604), // muted blue-gray bevel — NOT black
-                primaryText: Color(red: 0.180, green: 0.180, blue: 0.220), // soft dark, not aggressive
+                cardStroke: Color(red: 0.420, green: 0.353, blue: 0.243), // warm sepia bevel — NOT blue-grey
+                primaryText: Color(red: 0.161, green: 0.137, blue: 0.094), // warm ink, not aggressive
                 secondaryText: Color(red: 0.420, green: 0.380, blue: 0.330), // warm sepia
                 fonts: RunicThemeFonts(body: .system, numeric: .mono),
                 shape: RunicThemeShape(cornerMultiplier: 0.55, separator: .rule),
@@ -317,22 +319,22 @@ extension Theme {
             RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Phosphor console",
+                tagline: "Amber phosphor",
                 symbolName: "terminal.fill",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 0.722, green: 0.965, blue: 0.769),
-                secondary: Color(red: 0.412, green: 0.745, blue: 0.529),
-                accent: Color(red: 0.396, green: 0.937, blue: 0.576),
-                highlight: Color(red: 0.725, green: 0.973, blue: 0.478),
-                warm: Color(red: 1.000, green: 0.412, blue: 0.459),
-                tertiary: Color(red: 0.447, green: 0.839, blue: 0.608),
-                surface: Color(red: 0.008, green: 0.035, blue: 0.016),
-                surfaceAlt: Color(red: 0.031, green: 0.106, blue: 0.051),
-                cardFill: Color(red: 0.063, green: 0.141, blue: 0.086).opacity(0.85),
-                cardStroke: Color(red: 0.376, green: 0.871, blue: 0.525).opacity(0.40),
-                primaryText: Color(red: 0.894, green: 1.000, blue: 0.914),
-                secondaryText: Color(red: 0.655, green: 0.804, blue: 0.690),
+                primary: Color(red: 1.000, green: 0.737, blue: 0.251), // bright amber
+                secondary: Color(red: 0.788, green: 0.604, blue: 0.322), // muted amber
+                accent: Color(red: 1.000, green: 0.690, blue: 0.000), // P3 phosphor amber
+                highlight: Color(red: 1.000, green: 0.784, blue: 0.341), // directory amber
+                warm: Color(red: 1.000, green: 0.431, blue: 0.290), // hot ember — the one non-amber alert tone
+                tertiary: Color(red: 0.851, green: 0.541, blue: 0.122), // deep amber, for series spread
+                surface: Color(red: 0.086, green: 0.063, blue: 0.039), // warm phosphor black, not cold
+                surfaceAlt: Color(red: 0.141, green: 0.102, blue: 0.055),
+                cardFill: Color(red: 0.133, green: 0.094, blue: 0.067).opacity(0.85),
+                cardStroke: Color(red: 0.878, green: 0.627, blue: 0.188).opacity(0.40),
+                primaryText: Color(red: 1.000, green: 0.914, blue: 0.761), // amber-cream
+                secondaryText: Color(red: 0.788, green: 0.663, blue: 0.471),
                 fonts: RunicThemeFonts(body: .mono, numeric: .mono),
                 shape: RunicThemeShape(cornerMultiplier: 0.45, separator: .hairline),
                 motion: .instant,
@@ -353,67 +355,12 @@ extension Theme {
                         panelDepth: .low),
                     effects: RunicThemeEffectsStyle(
                         scanlineOpacity: 0.2,
-                        glowStrength: 0.18,
+                        glowStrength: 0.2,
                         materialIntensity: 0),
                     controls: RunicThemeControlStyle(
                         selectedFillStyle: .terminalSolid,
                         progressStyle: .segmentedHUD,
                         hoverStyle: .neutral)))
-        case .kirigami:
-            // Paper craft. Cream card stock with pencil hatching, every card a
-            // sticker — marker outline, white halo, hard offset shadow. A
-            // handwriting face for titles only, Nunito's rounded sans for the
-            // body; numbers stay in Geist Mono so they read at menu size. Bars are warp pipes, the mascot is
-            // a cut-out sticker, and a strip of paper hills sits under it all.
-            RunicThemePalette(
-                id: self.rawValue,
-                displayName: self.label,
-                tagline: "Paper, cut and glued",
-                symbolName: "scissors",
-                isCustom: true,
-                prefersDarkAppearance: false,
-                primary: Color(red: 0.416, green: 0.298, blue: 0.651), // craft purple
-                secondary: Color(red: 0.169, green: 0.416, blue: 0.588), // sky ink
-                accent: Color(red: 0.776, green: 0.224, blue: 0.165), // marker red
-                highlight: Color(red: 0.549, green: 0.416, blue: 0.071), // star ochre
-                warm: Color(red: 0.627, green: 0.255, blue: 0.478), // plum
-                tertiary: Color(red: 0.137, green: 0.447, blue: 0.251), // pipe green
-                surface: Color(red: 0.953, green: 0.918, blue: 0.839), // cream card stock
-                surfaceAlt: Color(red: 0.973, green: 0.949, blue: 0.894),
-                cardFill: Color(red: 0.984, green: 0.965, blue: 0.918), // lighter sheet, glued on
-                cardStroke: Color(red: 0.165, green: 0.129, blue: 0.098), // marker ink, opaque
-                primaryText: Color(red: 0.165, green: 0.129, blue: 0.098),
-                secondaryText: Color(red: 0.353, green: 0.306, blue: 0.259),
-                fonts: RunicThemeFonts(body: .system, numeric: .mono),
-                shape: RunicThemeShape(cornerMultiplier: 1.1, separator: .stitch),
-                motion: .snappy,
-                density: .normal,
-                style: RunicThemeStyle(
-                    typography: RunicThemeTypographyStyle(
-                        bodyFamily: RunicFontChoice.nunito.id,
-                        numericFamily: RunicFontChoice.geistMono.id,
-                        displayFamily: RunicFontChoice.patrickHand.id,
-                        scale: 1.0,
-                        tracking: 0,
-                        lineSpacing: nil,
-                        contrast: .strong),
-                    chrome: RunicThemeChromeStyle(
-                        borderStyle: .cutout,
-                        borderWeight: 1.5,
-                        borderOpacity: 0.92,
-                        cornerStyle: .soft,
-                        panelDepth: .low),
-                    effects: RunicThemeEffectsStyle(
-                        scanlineOpacity: 0,
-                        glowStrength: 0,
-                        materialIntensity: 0,
-                        texture: .hatch,
-                        textureOpacity: 0.5),
-                    controls: RunicThemeControlStyle(
-                        selectedFillStyle: .accentSoft,
-                        progressStyle: .pipe,
-                        hoverStyle: .neutral,
-                        chartSeries: .themed)))
         case .yantra:
             // Instrument panel. White paper, black ink, square-cornered cards
             // behind a hard offset shadow (block chrome), Geist Mono
@@ -467,61 +414,6 @@ extension Theme {
                         selectedFillStyle: .accentSolid,
                         progressStyle: .flatBar,
                         hoverStyle: .neutral,
-                        chartSeries: .themed)))
-        case .tamra:
-            // Copper-plate inscription. The tāmra-śāsana — ancient land grants
-            // engraved on copper — were the original usage ledgers. Warm
-            // bronze-black stock under lamplight, copper and verdigris with a
-            // gold-leaf accent, serif body with engraved mono numerals, aged
-            // metal grain, a gentle emboss. Dark, but never cold.
-            RunicThemePalette(
-                id: self.rawValue,
-                displayName: self.label,
-                tagline: "Inscribed in copper.",
-                symbolName: "seal.fill",
-                isCustom: true,
-                prefersDarkAppearance: true,
-                primary: Color(red: 0.780, green: 0.486, blue: 0.235), // copper
-                secondary: Color(red: 0.435, green: 0.698, blue: 0.631), // verdigris
-                accent: Color(red: 0.894, green: 0.694, blue: 0.290), // gold leaf
-                highlight: Color(red: 0.941, green: 0.796, blue: 0.412), // bright brass
-                warm: Color(red: 0.808, green: 0.369, blue: 0.259), // ember
-                tertiary: Color(red: 0.310, green: 0.557, blue: 0.502), // deep verdigris
-                surface: Color(red: 0.082, green: 0.067, blue: 0.039), // bronze-black
-                surfaceAlt: Color(red: 0.118, green: 0.090, blue: 0.063),
-                cardFill: Color(red: 0.141, green: 0.106, blue: 0.063).opacity(0.85),
-                cardStroke: Color(red: 0.753, green: 0.541, blue: 0.243).opacity(0.45), // copper edge
-                primaryText: Color(red: 0.949, green: 0.890, blue: 0.761), // candlelit parchment
-                secondaryText: Color(red: 0.698, green: 0.604, blue: 0.431), // muted bronze
-                fonts: RunicThemeFonts(body: .serif, numeric: .mono),
-                shape: RunicThemeShape(cornerMultiplier: 0.5, separator: .rule),
-                motion: .slow,
-                density: .normal,
-                style: RunicThemeStyle(
-                    typography: RunicThemeTypographyStyle(
-                        bodyFamily: nil,
-                        numericFamily: RunicFontChoice.geistMono.id,
-                        scale: 1.0,
-                        tracking: 0.01,
-                        lineSpacing: nil,
-                        contrast: .strong),
-                    chrome: RunicThemeChromeStyle(
-                        borderStyle: .ink,
-                        borderWeight: 1.0,
-                        borderOpacity: 0.5,
-                        cornerStyle: .soft,
-                        panelDepth: .medium),
-                    effects: RunicThemeEffectsStyle(
-                        scanlineOpacity: 0,
-                        glowStrength: 0.15,
-                        materialIntensity: 0,
-                        texture: .grain,
-                        textureOpacity: 0.4,
-                        elevation: 0.6),
-                    controls: RunicThemeControlStyle(
-                        selectedFillStyle: .accentSolid,
-                        progressStyle: .flatBar,
-                        hoverStyle: .glow,
                         chartSeries: .themed)))
         }
     }

@@ -17,7 +17,7 @@ struct ProviderCostContent: View {
             if let percentUsed = self.section.percentUsed {
                 UsageProgressBar(
                     percent: percentUsed,
-                    tint: self.progressColor,
+                    tint: self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.progressColor,
                     accessibilityLabel: "Extra usage spent")
             }
             HStack(alignment: .firstTextBaseline) {
@@ -194,7 +194,7 @@ struct UsageMenuMetricCard: View {
             if self.displayMode.showsBars, let percent = self.metric.percent {
                 UsageProgressBar(
                     percent: percent,
-                    tint: self.isExhausted ? self.runicTheme.warm : self.tint,
+                    tint: self.barTint,
                     accessibilityLabel: self.metric.percentStyle.accessibilityLabel)
             }
 
@@ -244,6 +244,14 @@ struct UsageMenuMetricCard: View {
         case .used: return percent >= 99.5
         case .left: return percent <= 0.5
         }
+    }
+
+    /// Exhausted bars stay semantic (warm). Otherwise the Terminal HUD mutes
+    /// the per-provider brand tint to its own phosphor accent so the bars read
+    /// monochrome — matching how the tab bar already treats the selected tab.
+    private var barTint: Color {
+        if self.isExhausted { return self.runicTheme.warm }
+        return self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.tint
     }
 
     private var titleFont: Font {
