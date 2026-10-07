@@ -1,0 +1,32 @@
+{
+  "id": "tamra",
+  "displayName": "Tāmra",
+  "tagline": "Inscribed in copper.",
+  "symbolName": "seal.fill",
+  "isCustom": true,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#C77C3C",
+    "secondary":     "#6FB2A1",
+    "accent":        "#E4B14A",
+    "highlight":     "#F0CB69",
+    "warm":          "#CE5E42",
+    "tertiary":      "#4F8E80",
+    "surface":       "#15110A",
+    "surfaceAlt":    "#1E1710",
+    "cardFill":      "#241B10D9",
+    "cardStroke":    "#C08A3E73",
+    "primaryText":   "#F2E3C2",
+    "secondaryText": "#B29A6E"
+  },
+  "fonts":   { "body": "serif", "numeric": "mono" },
+  "shape":   { "cornerMultiplier": 0.5, "separator": "rule" },
+  "motion":  { "preset": "slow" },
+  "density": { "preset": "normal" },
+  "style": {
+    "typography": { "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.01, "contrast": "strong" },
+    "chrome": { "borderStyle": "ink", "borderWeight": 1.0, "borderOpacity": 0.5, "cornerStyle": "soft", "panelDepth": "medium" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.15, "materialIntensity": 0.0, "texture": "grain", "textureOpacity": 0.4, "elevation": 0.6 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "glow", "chartSeries": "themed" }
+  }
+}

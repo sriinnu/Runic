@@ -20,13 +20,13 @@
     "secondaryText": "#5D554A"
   },
   "fonts":   { "body": "system", "numeric": "mono" },
-  "shape":   { "preset": "retroBevel" },
+  "shape":   { "cornerMultiplier": 0.55, "separator": "rule" },
   "motion":  { "preset": "mechanical" },
   "density": { "preset": "normal" },
   "style": {
-    "typography": { "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "typography": { "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
     "chrome": { "borderStyle": "bevelSoft", "borderWeight": 0.75, "borderOpacity": 0.52, "cornerStyle": "compact", "panelDepth": "low" },
-    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.04, "materialIntensity": 0.06 },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.04, "materialIntensity": 0.06, "texture": "paper", "textureOpacity": 0.4 },
     "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "accent" }
   }
 }

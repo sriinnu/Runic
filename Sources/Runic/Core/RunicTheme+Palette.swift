@@ -42,9 +42,33 @@ extension Theme {
                 primaryText: Color(red: 0.180, green: 0.180, blue: 0.220), // soft dark, not aggressive
                 secondaryText: Color(red: 0.420, green: 0.380, blue: 0.330), // warm sepia
                 fonts: RunicThemeFonts(body: .system, numeric: .mono),
-                shape: .retroBevel,
+                shape: RunicThemeShape(cornerMultiplier: 0.55, separator: .rule),
                 motion: .mechanical,
-                density: .normal)
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: nil,
+                        numericFamily: RunicFontChoice.geistMono.id,
+                        scale: 1.0,
+                        tracking: 0.0,
+                        lineSpacing: nil,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .bevelSoft,
+                        borderWeight: 0.75,
+                        borderOpacity: 0.52,
+                        cornerStyle: .compact,
+                        panelDepth: .low),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0.04,
+                        materialIntensity: 0.06,
+                        texture: .paper,
+                        textureOpacity: 0.4),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSoft,
+                        progressStyle: .softBar,
+                        hoverStyle: .accent)))
         case .system:
             // Auto-adapts to macOS appearance. Uses native colors and standard
             // shape/motion — this is the "Runic dressed in the OS's clothes"
@@ -389,6 +413,115 @@ extension Theme {
                         selectedFillStyle: .accentSoft,
                         progressStyle: .pipe,
                         hoverStyle: .neutral,
+                        chartSeries: .themed)))
+        case .yantra:
+            // Instrument panel. White paper, black ink, square-cornered cards
+            // behind a hard offset shadow (block chrome), Geist Mono
+            // everywhere. One deep-amber accent plus magenta / orange / cobalt
+            // for the series, all deepened to clear the contrast audit on
+            // white — a brutalist data grid, not a colourful dashboard.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "The grid, the number.",
+                symbolName: "square.grid.3x3.fill",
+                isCustom: true,
+                prefersDarkAppearance: false,
+                primary: Color(red: 0.043, green: 0.043, blue: 0.047), // ink
+                secondary: Color(red: 0.290, green: 0.290, blue: 0.298), // steel grey
+                accent: Color(red: 0.604, green: 0.455, blue: 0.063), // deep amber
+                highlight: Color(red: 0.886, green: 0.118, blue: 0.420), // magenta
+                warm: Color(red: 0.800, green: 0.290, blue: 0.051), // deep orange
+                tertiary: Color(red: 0.184, green: 0.263, blue: 1.000), // cobalt
+                surface: Color(red: 0.988, green: 0.988, blue: 0.984), // paper white
+                surfaceAlt: Color(red: 0.949, green: 0.949, blue: 0.941),
+                cardFill: Color.white,
+                cardStroke: Color(red: 0.043, green: 0.043, blue: 0.047).opacity(0.95), // black border
+                primaryText: Color(red: 0.043, green: 0.043, blue: 0.047),
+                secondaryText: Color(red: 0.361, green: 0.361, blue: 0.369),
+                fonts: RunicThemeFonts(body: .mono, numeric: .mono),
+                shape: RunicThemeShape(cornerMultiplier: 0.28, separator: .rule),
+                motion: .snappy,
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: RunicFontChoice.geistMono.id,
+                        numericFamily: RunicFontChoice.geistMono.id,
+                        scale: 1.0,
+                        tracking: 0.02,
+                        lineSpacing: nil,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .block,
+                        borderWeight: 1.6,
+                        borderOpacity: 1.0,
+                        cornerStyle: .sharp,
+                        panelDepth: .flat),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
+                        materialIntensity: 0,
+                        texture: .none,
+                        textureOpacity: 0),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSolid,
+                        progressStyle: .flatBar,
+                        hoverStyle: .neutral,
+                        chartSeries: .themed)))
+        case .tamra:
+            // Copper-plate inscription. The tāmra-śāsana — ancient land grants
+            // engraved on copper — were the original usage ledgers. Warm
+            // bronze-black stock under lamplight, copper and verdigris with a
+            // gold-leaf accent, serif body with engraved mono numerals, aged
+            // metal grain, a gentle emboss. Dark, but never cold.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Inscribed in copper.",
+                symbolName: "seal.fill",
+                isCustom: true,
+                prefersDarkAppearance: true,
+                primary: Color(red: 0.780, green: 0.486, blue: 0.235), // copper
+                secondary: Color(red: 0.435, green: 0.698, blue: 0.631), // verdigris
+                accent: Color(red: 0.894, green: 0.694, blue: 0.290), // gold leaf
+                highlight: Color(red: 0.941, green: 0.796, blue: 0.412), // bright brass
+                warm: Color(red: 0.808, green: 0.369, blue: 0.259), // ember
+                tertiary: Color(red: 0.310, green: 0.557, blue: 0.502), // deep verdigris
+                surface: Color(red: 0.082, green: 0.067, blue: 0.039), // bronze-black
+                surfaceAlt: Color(red: 0.118, green: 0.090, blue: 0.063),
+                cardFill: Color(red: 0.141, green: 0.106, blue: 0.063).opacity(0.85),
+                cardStroke: Color(red: 0.753, green: 0.541, blue: 0.243).opacity(0.45), // copper edge
+                primaryText: Color(red: 0.949, green: 0.890, blue: 0.761), // candlelit parchment
+                secondaryText: Color(red: 0.698, green: 0.604, blue: 0.431), // muted bronze
+                fonts: RunicThemeFonts(body: .serif, numeric: .mono),
+                shape: RunicThemeShape(cornerMultiplier: 0.5, separator: .rule),
+                motion: .slow,
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: nil,
+                        numericFamily: RunicFontChoice.geistMono.id,
+                        scale: 1.0,
+                        tracking: 0.01,
+                        lineSpacing: nil,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .ink,
+                        borderWeight: 1.0,
+                        borderOpacity: 0.5,
+                        cornerStyle: .soft,
+                        panelDepth: .medium),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0.15,
+                        materialIntensity: 0,
+                        texture: .grain,
+                        textureOpacity: 0.4,
+                        elevation: 0.6),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSolid,
+                        progressStyle: .flatBar,
+                        hoverStyle: .glow,
                         chartSeries: .themed)))
         }
     }
