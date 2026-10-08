@@ -314,52 +314,54 @@ extension Theme {
                         materialIntensity: 0),
                     controls: .standard))
         case .terminal:
-            // Near-black green phosphor with clear data typography. This is a
-            // terminal skin, not a colorful dashboard in terminal clothing.
+            // A clean, modern dark terminal — cool slate stage, a mint-green
+            // prompt, amber highlights, and a cobalt / red spread for the data
+            // series. No CRT scanlines or glow; the identity is the slate, the
+            // mono face, and the mint. JetBrains Mono throughout.
             RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "Amber phosphor",
+                tagline: "Cool slate, mint prompt",
                 symbolName: "terminal.fill",
                 isCustom: true,
                 prefersDarkAppearance: true,
-                primary: Color(red: 1.000, green: 0.737, blue: 0.251), // bright amber
-                secondary: Color(red: 0.788, green: 0.604, blue: 0.322), // muted amber
-                accent: Color(red: 1.000, green: 0.690, blue: 0.000), // P3 phosphor amber
-                highlight: Color(red: 1.000, green: 0.784, blue: 0.341), // directory amber
-                warm: Color(red: 1.000, green: 0.431, blue: 0.290), // hot ember — the one non-amber alert tone
-                tertiary: Color(red: 0.851, green: 0.541, blue: 0.122), // deep amber, for series spread
-                surface: Color(red: 0.086, green: 0.063, blue: 0.039), // warm phosphor black, not cold
-                surfaceAlt: Color(red: 0.141, green: 0.102, blue: 0.055),
-                cardFill: Color(red: 0.133, green: 0.094, blue: 0.067).opacity(0.85),
-                cardStroke: Color(red: 0.878, green: 0.627, blue: 0.188).opacity(0.40),
-                primaryText: Color(red: 1.000, green: 0.914, blue: 0.761), // amber-cream
-                secondaryText: Color(red: 0.788, green: 0.663, blue: 0.471),
+                primary: Color(red: 0.345, green: 0.890, blue: 0.604), // mint prompt
+                secondary: Color(red: 0.498, green: 0.549, blue: 0.600), // slate grey
+                accent: Color(red: 0.184, green: 0.827, blue: 0.478), // solid green — bars and selection
+                highlight: Color(red: 0.949, green: 0.639, blue: 0.227), // amber — links, "on" state
+                warm: Color(red: 1.000, green: 0.373, blue: 0.341), // terminal red — the alert tone
+                tertiary: Color(red: 0.306, green: 0.631, blue: 1.000), // cobalt, for series spread
+                surface: Color(red: 0.043, green: 0.059, blue: 0.078), // cool slate black
+                surfaceAlt: Color(red: 0.071, green: 0.094, blue: 0.125),
+                cardFill: Color(red: 0.071, green: 0.094, blue: 0.125).opacity(0.90),
+                cardStroke: Color(red: 0.149, green: 0.200, blue: 0.251).opacity(0.90),
+                primaryText: Color(red: 0.839, green: 0.867, blue: 0.902), // cool slate text
+                secondaryText: Color(red: 0.722, green: 0.761, blue: 0.800), // lifted so it reads on the hover wash
                 fonts: RunicThemeFonts(body: .mono, numeric: .mono),
-                shape: RunicThemeShape(cornerMultiplier: 0.45, separator: .hairline),
+                shape: RunicThemeShape(cornerMultiplier: 0.85, separator: .hairline),
                 motion: .instant,
                 density: .normal,
                 style: RunicThemeStyle(
                     typography: RunicThemeTypographyStyle(
-                        bodyFamily: RunicFontChoice.geistMono.id,
-                        numericFamily: RunicFontChoice.geistMono.id,
+                        bodyFamily: RunicFontChoice.jetBrainsMono.id,
+                        numericFamily: RunicFontChoice.jetBrainsMono.id,
                         scale: 1.0,
                         tracking: 0,
                         lineSpacing: 1.2,
                         contrast: .strong),
                     chrome: RunicThemeChromeStyle(
-                        borderStyle: .hud,
-                        borderWeight: 0.8,
-                        borderOpacity: 0.46,
+                        borderStyle: .hairline,
+                        borderWeight: 1.0,
+                        borderOpacity: 0.55,
                         cornerStyle: .compact,
                         panelDepth: .low),
                     effects: RunicThemeEffectsStyle(
-                        scanlineOpacity: 0.2,
-                        glowStrength: 0.2,
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
                         materialIntensity: 0),
                     controls: RunicThemeControlStyle(
                         selectedFillStyle: .terminalSolid,
-                        progressStyle: .segmentedHUD,
+                        progressStyle: .flatBar,
                         hoverStyle: .neutral)))
         case .yantra:
             // Instrument panel. White paper, black ink, square-cornered cards
@@ -410,6 +412,61 @@ extension Theme {
                         materialIntensity: 0,
                         texture: .none,
                         textureOpacity: 0),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSolid,
+                        progressStyle: .flatBar,
+                        hoverStyle: .neutral,
+                        chartSeries: .themed)))
+        case .gazette:
+            // A warm editorial broadsheet. Cream newsprint, black ink, ruled
+            // separators; a deep-teal accent for links and "reply wanted",
+            // gold-leaf emphasis, crimson for alerts, editorial blue in the
+            // series. Manrope sets the body, Fraunces the serif headings.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "The daily edition",
+                symbolName: "newspaper.fill",
+                isCustom: true,
+                prefersDarkAppearance: false,
+                primary: Color(red: 0.078, green: 0.078, blue: 0.078), // ink
+                secondary: Color(red: 0.333, green: 0.333, blue: 0.333), // grey rule
+                accent: Color(red: 0.043, green: 0.431, blue: 0.471), // deep teal
+                highlight: Color(red: 0.561, green: 0.337, blue: 0.000), // deep ochre — reads on the hover wash
+                warm: Color(red: 0.784, green: 0.196, blue: 0.369), // crimson — alert
+                tertiary: Color(red: 0.114, green: 0.373, blue: 0.800), // editorial blue
+                surface: Color(red: 0.965, green: 0.945, blue: 0.906), // newsprint cream
+                surfaceAlt: Color(red: 0.937, green: 0.910, blue: 0.855),
+                cardFill: Color(red: 0.984, green: 0.973, blue: 0.945).opacity(0.97),
+                cardStroke: Color(red: 0.078, green: 0.078, blue: 0.078).opacity(0.30),
+                primaryText: Color(red: 0.078, green: 0.078, blue: 0.078),
+                secondaryText: Color(red: 0.333, green: 0.333, blue: 0.333),
+                fonts: RunicThemeFonts(body: .system, numeric: .tabular),
+                shape: RunicThemeShape(cornerMultiplier: 0.6, separator: .rule),
+                motion: .snappy,
+                density: .generous,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: RunicFontChoice.manrope.id,
+                        numericFamily: nil,
+                        displayFamily: RunicFontChoice.fraunces.id,
+                        scale: 1.0,
+                        tracking: 0,
+                        lineSpacing: nil,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hairline,
+                        borderWeight: 1.0,
+                        borderOpacity: 0.9,
+                        cornerStyle: .soft,
+                        panelDepth: .low),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
+                        materialIntensity: 0,
+                        texture: .none,
+                        textureOpacity: 0,
+                        elevation: 0.6),
                     controls: RunicThemeControlStyle(
                         selectedFillStyle: .accentSolid,
                         progressStyle: .flatBar,

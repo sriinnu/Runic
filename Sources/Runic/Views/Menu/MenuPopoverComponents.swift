@@ -109,8 +109,13 @@ struct MenuPopoverBackground: View {
                     endRadius: 320)
             }
             if self.runicTheme.isTerminalHUD {
-                RunicTerminalCodeRainOverlay()
-                RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
+                // CRT flourishes — the hex code-rain gutter and scanlines — only
+                // when the theme asks for them. A clean terminal keeps
+                // scanlineOpacity at 0 and shows neither; the corner frame stays.
+                if self.runicTheme.style.effects.scanlineOpacity > 0 {
+                    RunicTerminalCodeRainOverlay()
+                    RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
+                }
                 RunicTerminalCornerOverlay(
                     inset: 10,
                     length: 16,

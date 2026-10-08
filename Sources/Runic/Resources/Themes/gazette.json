@@ -1,0 +1,32 @@
+{
+  "id": "gazette",
+  "displayName": "Gazette",
+  "tagline": "The daily edition",
+  "symbolName": "newspaper.fill",
+  "isCustom": true,
+  "prefersDarkAppearance": false,
+  "colors": {
+    "primary":       "#141414",
+    "secondary":     "#555555",
+    "accent":        "#0B6E78",
+    "highlight":     "#8F5600",
+    "warm":          "#C8325E",
+    "tertiary":      "#1D5FCC",
+    "surface":       "#F6F1E7",
+    "surfaceAlt":    "#EFE8DA",
+    "cardFill":      "#FBF8F1F7",
+    "cardStroke":    "#1414144D",
+    "primaryText":   "#141414",
+    "secondaryText": "#555555"
+  },
+  "fonts":   { "body": "system", "numeric": "tabular" },
+  "shape":   { "cornerMultiplier": 0.6, "separator": "rule" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "generous" },
+  "style": {
+    "typography": { "bodyFamily": "Manrope", "displayFamily": "Fraunces", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "chrome": { "borderStyle": "hairline", "borderWeight": 1.0, "borderOpacity": 0.9, "cornerStyle": "soft", "panelDepth": "low" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0, "elevation": 0.6 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}

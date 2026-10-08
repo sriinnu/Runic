@@ -202,7 +202,9 @@ struct AppearancePreviewCard: View {
     }
 
     private var previewFamily: String {
-        RunicFontChoice.resolvedThemeFamily(self.theme.palette.style.typography.bodyFamily) ?? self.fontFamily
+        RunicFontChoice.effectiveBodyFamily(
+            selected: self.fontFamily,
+            themeBodyFamily: self.theme.palette.style.typography.bodyFamily)
     }
 
     /// Theme-faithful divider for the preview tile — same branching as
@@ -256,7 +258,9 @@ struct AppearancePreviewCard: View {
     /// Font for value text in the preview, picking up the theme's font design
     /// (Geist Mono for Terminal, selected family elsewhere).
     private func previewValueFont(size: CGFloat, weight: Font.Weight, palette: RunicThemePalette) -> Font {
-        let family = RunicFontChoice.resolvedThemeFamily(palette.style.typography.bodyFamily) ?? self.fontFamily
+        let family = RunicFontChoice.effectiveBodyFamily(
+            selected: self.fontFamily,
+            themeBodyFamily: palette.style.typography.bodyFamily)
         if self.usesVirtualSystemFamily(family), let design = palette.fonts.swiftUIDesignOverride {
             return .system(size: size * palette.style.typography.scale, weight: weight, design: design)
         }
@@ -411,7 +415,9 @@ struct TypographyRulesPreview: View {
     }
 
     private var previewFamily: String {
-        RunicFontChoice.resolvedThemeFamily(self.theme.palette.style.typography.bodyFamily) ?? self.fontFamily
+        RunicFontChoice.effectiveBodyFamily(
+            selected: self.fontFamily,
+            themeBodyFamily: self.theme.palette.style.typography.bodyFamily)
     }
 
     private var tone: RunicBackgroundTone {
