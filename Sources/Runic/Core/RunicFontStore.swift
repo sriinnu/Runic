@@ -17,8 +17,9 @@ import SwiftUI
 @Observable
 final class RunicFontStore: @unchecked Sendable {
     /// Active font family identifier (one of the `RunicFontChoice` ids, or a
-    /// bundled font name).
-    var family: String = RunicFontChoice.defaultFamily
+    /// bundled font name). Defaults to the theme-follow sentinel so an unsynced
+    /// store still adopts each theme's own face.
+    var family: String = RunicFontChoice.themeDefaultID
 
     /// Theme-driven design override (Terminal forces `.monospaced`) when the
     /// active font is one of the virtual system families. Custom bundled

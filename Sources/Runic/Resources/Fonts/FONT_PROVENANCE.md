@@ -12,7 +12,7 @@ Runic only exposes bundled or locally installed families that the app can resolv
 - Nunito: bundled TTF files (Regular, Medium, SemiBold, Bold) for Kirigami body text, license in `OFL-Nunito.txt`.
 - JetBrains Mono: bundled TTF files (Regular, Medium, SemiBold, Bold) for the Terminal theme body, license in `OFL-JetBrainsMono.txt`.
 - Manrope: bundled TTF files (Regular, Medium, SemiBold, Bold) for the Gazette theme body, license in `OFL-Manrope.txt`.
-- Fraunces: bundled variable TTF files (upright + italic) for the Gazette theme serif headings, license in `OFL-Fraunces.txt`.
+- Fraunces: bundled static TTF files (Fraunces 9pt Regular/SemiBold/Bold/Black, SOFT=0 optical) for the Gazette theme's editorial serif, from the googlefonts/fraunces static instances; license in `OFL-Fraunces.txt`. Static rather than variable because variable fonts do not resolve under NSHostingView.
 
 ## Local-Only Commercial Fonts
 

@@ -447,9 +447,9 @@ extension Theme {
                 density: .generous,
                 style: RunicThemeStyle(
                     typography: RunicThemeTypographyStyle(
-                        bodyFamily: RunicFontChoice.manrope.id,
-                        numericFamily: nil,
-                        displayFamily: RunicFontChoice.fraunces.id,
+                        bodyFamily: RunicFontChoice.fraunces.id,
+                        numericFamily: RunicFontChoice.manrope.id,
+                        displayFamily: nil,
                         scale: 1.0,
                         tracking: 0,
                         lineSpacing: nil,
