@@ -3,19 +3,36 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.10.0</title>
+            <pubDate>Thu, 08 Oct 2026 19:07:18 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>152</sparkle:version>
+            <sparkle:shortVersionString>2.10.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.10.0</h2>
+<ul>
+<li>Usage history chart: added <strong>2y</strong> and <strong>All</strong> ranges (alongside 3d/7d/30d/90d/1y), and fixed the flat line. Daily tokens are heavy-tailed — a few cache-heavy days run into the billions and squashed every ordinary day onto the baseline on a linear axis; the chart now uses a square-root scale so quiet and heavy days are both legible without hiding the peaks, and the x-axis starts at the earliest point in range so a sparsely-filled window (or "All") shows no dead leading space.</li>
+<li>Appearance: two new themes and a reworked Terminal, plus <strong>Tāmra</strong> and <strong>Kirigami</strong> retired. <strong>Gazette</strong> is a warm editorial broadsheet — cream newsprint, black ink, ruled separators, a deep-teal accent with gold / crimson / editorial-blue in the data series, Fraunces serif headings over a Manrope body. <strong>Terminal</strong> is now a clean, modern dark terminal — a cool-slate stage, a mint-green prompt and accent, amber highlights and a cobalt / red series, JetBrains Mono throughout, with no CRT scanlines or code-rain and the usage bars muted to the mint accent so the console reads monochrome (provider logos keep their brand colour). <strong>Yantra</strong> is a brutalist instrument panel — white paper, black ink, square-cornered cards behind a hard offset shadow, Geist Mono throughout, one deep-amber accent with magenta / orange / cobalt for the series. <strong>Retro</strong> gets an illuminated-ledger pass: warm sepia ink and strokes, a cinnabar rubrication accent, gold-leaf emphasis, and the old System-7 blue demoted to a thin indigo thread, over ruled separators and a manuscript paper texture. All themes clear the menu contrast audit.</li>
+<li>Fonts: each theme now carries its own typeface and the font picker defaults to <strong>Theme default</strong>, which follows it — so Terminal brings JetBrains Mono, Gazette brings Manrope and Fraunces, and so on — while any family you pick in the picker still overrides it (the old curated themes used to lock the picker). JetBrains Mono, Manrope, and Fraunces are bundled (SIL Open Font License).</li>
+<li>Claude: when Runic's copy of the CLI login ages out (about every eight hours), usage is read through the Claude CLI instead of showing an error until the next manual reload. The CLI process is shut down right after each read. The Claude card offers <strong>Reconnect Claude…</strong> to re-read the login (one Keychain prompt) and get the richer OAuth data back. While the CLI is serving the numbers the card shows a <strong>Via CLI</strong> badge and Settings → Providers lists the source as <code>cli fallback</code>. The fallback also works on the first refresh after launch, when a cold Claude Code start takes longer to show its prompt. Fallback failures are recorded in <code>~/Library/Application Support/Runic/diagnostics/</code>.</li>
+<li>Claude CLI source: works again with Claude Code 2.1, which lays out <code>/usage</code> with cursor moves instead of spaces and needs a moment before accepting the first command. The Fable weekly window is recognised.</li>
+<li>CLI and MCP: <code>runic --version</code> and the MCP server handshake report the app version instead of a fixed 1.0.0. A test and the release script refuse drift from <code>version.env</code>.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic-2.10.0.zip" length="43103005" type="application/octet-stream" sparkle:edSignature="HMWFm4mdS8GD8v6XU744YBlSWqQNhRL+hZEWkLhpkS2SBcqANFkskJoGgxz/tz5AwIXVP5Y4Q6jzjq1CZt+fCg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic152-143.delta" sparkle:deltaFrom="143" length="7187614" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hc2wIo871ZRDjVQsxgou3VooZyacZveURMDIAEfQ7Z22rPMbFpifI7UAx3wbLnQlXMv46Ru8QGQ5Y12uEauUDw=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic152-142.delta" sparkle:deltaFrom="142" length="7150222" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="39N+PRwZl1AahiFWRSbp7VP/s1UNb6bbQZM7NQEvxI9rlQSAoP8sFMSk/KEdNEFoTf7ft9R1c3g7z3rKqFs6Dg=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.9.1</title>
             <pubDate>Sat, 03 Oct 2026 16:56:35 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>143</sparkle:version>
             <sparkle:shortVersionString>2.9.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.9.1</h2>
-<ul>
-<li>Codex: credits reported with usage now appear immediately. Runic only tries a separate credit lookup when the usage response has no balance, and an optional web dashboard failure no longer triggers duplicate refreshes.</li>
-<li>Credits: providers with credit support show the reported balance, or 0 with an unavailable note while a balance cannot be retrieved. Providers without credit support hide the field. Fetch errors no longer replace the balance in the menu.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic-2.9.1.zip" length="40386356" type="application/octet-stream" sparkle:edSignature="hdVhwJlid6qMn8XC0+BTt7hGFc1nLqp+RevTwmnU/V3nt8ADUe20QXT7mm8ghA/c9L1udV9gn1KB6VLyf5pLCA=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-142.delta" sparkle:deltaFrom="142" length="1776286" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Cj68W8f3NF+yVXOGd8p6qpp36u7wQBNvQUUq2duXFpaoO8rZMMClvm1B2Czht2swO+ms8F7ripo69XmvcaNnCg=="/>
@@ -36,19 +53,6 @@
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic142-141.delta" sparkle:deltaFrom="141" length="9048470" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="qrN7NYbOcyn6Me0ADTPchkZDToGISa3y393Ef6HOCOSZYJ5QwittaP4kaF6N+WDb3NOuLY3HSF4lZ6n2gnQ6Ag=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic142-125.delta" sparkle:deltaFrom="125" length="10800946" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="7tCuaR1ClGdJwH2CD4zlZh4/UbS9c29V6xghDXFtX37MlpRYUVNrDAavZN5RvVtNoS4Wry3LCW/7SSg7zdSJCA=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.0/Runic142-121.delta" sparkle:deltaFrom="121" length="10958702" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="oAHg38PTwSmT8HYyOCtAMGVC7jMwD+NkDRUcDkBrzet8fVV5LBh8tf23obMtTDiiNmqnYA4HnhrGHyelnMe8Bw=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.8.1</title>
-            <pubDate>Wed, 23 Sep 2026 22:10:41 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>141</sparkle:version>
-            <sparkle:shortVersionString>2.8.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.1/Runic-2.8.1.zip" length="37427393" type="application/octet-stream" sparkle:edSignature="/wqrpWPEg1FoWq9jhVuiDlZRrTH9mZllsWnpf7VKfcXPwUY0hn6SNk7hvahH+xfuFjE/yZC0+bDUuzDerzhPDw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.1/Runic141-125.delta" sparkle:deltaFrom="125" length="7832634" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="bIsxsV6mF2eOpBm/ID9iFzNpw8VrDRSTVOrCAlSbffW8EU1qKv3maIgZvZPR/+qgVRHbKl4Vw5q38tcpKaYtBw=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.8.1/Runic141-121.delta" sparkle:deltaFrom="121" length="8040062" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="cljeCSWuTvEBDX1BSY8QRjf7c6Qo3qk7cH64OsECkfPHbLaaZ/BEOkriuSPMVuV+7MKtqc43Gn2TcjqOVbCPCA=="/>
             </sparkle:deltas>
         </item>
     </channel>
