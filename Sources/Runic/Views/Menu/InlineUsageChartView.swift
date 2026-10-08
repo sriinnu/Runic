@@ -13,6 +13,8 @@ struct InlineUsageChartView: View {
         case thirtyDays = "30d"
         case quarter = "90d"
         case year = "1y"
+        case twoYears = "2y"
+        case all = "All"
 
         var cutoffInterval: TimeInterval {
             switch self {
@@ -21,6 +23,10 @@ struct InlineUsageChartView: View {
             case .thirtyDays: -2_592_000
             case .quarter: -7_776_000
             case .year: -31_536_000
+            case .twoYears: -63_072_000
+            // "All" reaches back a century so the cutoff never clips real data;
+            // the x-axis clamps to the earliest point so it doesn't show empty years.
+            case .all: -3_153_600_000
             }
         }
 
@@ -110,7 +116,12 @@ struct InlineUsageChartView: View {
                         }
                     }
                     .id(chartStyle.id)
-                    .chartXScale(domain: now.addingTimeInterval(self.selectedRange.cutoffInterval)...now)
+                    .chartXScale(domain: Self.xDomainLower(points: points, now: now)...now)
+                    // Usage is heavy-tailed: a few cache-heavy days run into the
+                    // billions of tokens and, on a linear axis, flatten every
+                    // ordinary day onto the baseline. A square-root scale keeps
+                    // quiet and heavy days both legible without hiding the peaks.
+                    .chartYScale(domain: .automatic(includesZero: true), type: .squareRoot)
                     .chartYAxis {
                         AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
                             AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
@@ -180,5 +191,14 @@ struct InlineUsageChartView: View {
         let cutoff = Date().addingTimeInterval(range.cutoffInterval)
         let filtered = summaries.filter { $0.dayStart >= cutoff }.sorted { $0.dayStart < $1.dayStart }
         return filtered.map { ChartPoint(id: $0.dayKey, date: $0.dayStart, tokens: $0.totals.totalTokens) }
+    }
+
+    /// Start the x-axis at the earliest point in range rather than at the full
+    /// range width, so a sparsely-filled window (or "All", which reaches back a
+    /// century) never renders dead leading space. Kept at least a day wide so the
+    /// domain can't collapse when only today has data. `points` is sorted ascending.
+    private static func xDomainLower(points: [ChartPoint], now: Date) -> Date {
+        let earliest = points.first?.date ?? now.addingTimeInterval(-86400)
+        return min(earliest, now.addingTimeInterval(-86400))
     }
 }

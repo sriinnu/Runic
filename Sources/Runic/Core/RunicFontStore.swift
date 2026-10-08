@@ -135,7 +135,13 @@ final class RunicFontStore: @unchecked Sendable {
     }
 
     var activeFamily: String {
-        self.themeFamilyOverride ?? self.family
+        // The follow sentinel adopts the theme's own body face (or the default
+        // family for a theme that sets none); any real picker selection
+        // overrides the theme, so the user can always change the font.
+        if self.family == RunicFontChoice.themeDefaultID {
+            return self.themeFamilyOverride ?? RunicFontChoice.defaultFamily
+        }
+        return self.family
     }
 
     var activeNumericFamily: String {

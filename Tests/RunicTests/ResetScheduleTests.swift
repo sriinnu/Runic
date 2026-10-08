@@ -207,33 +207,34 @@ struct ThemeMigrationTests {
 
     @MainActor
     @Test
-    func `kirigami carries its paper craft identity`() {
-        let kirigami = Theme.kirigami.palette
-
-        #expect(Theme(rawValue: "kirigami") == .kirigami)
-        #expect(kirigami.isPaperCutout)
-        #expect(kirigami.style.chrome.borderStyle == .cutout)
-        #expect(kirigami.shape.separator == .stitch)
-        #expect(kirigami.style.effects.texture == .hatch)
-        #expect(kirigami.hasSurfaceTexture)
-        #expect(kirigami.style.controls.progressStyle == .pipe)
-        #expect(kirigami.wantsChartPipeLip)
-        #expect(!Theme.sumi.palette.wantsChartPipeLip)
-        #expect(kirigami.style.typography.displayFamily == RunicFontChoice.patrickHand.id)
-        #expect(kirigami.style.typography.numericFamily == RunicFontChoice.geistMono.id)
-        #expect(kirigami.prefersDarkAppearance == false)
-        #expect(kirigami.prefersRetroToggleChrome, "paper pill switches are theme-owned")
-        #expect(!kirigami.isElevated, "cut-out shadows are hard offsets, not the elevation system")
-    }
-
-    @MainActor
-    @Test
-    func `display face resolves for kirigami and stays out of the body picker`() {
+    func `display face resolves from a palette and stays out of the body picker`() throws {
+        // A paper-craft palette (handwriting title, rounded body, mono numerals)
+        // built from JSON — the display-face machinery is theme-agnostic, so it
+        // outlives any one shipping theme that used to carry these faces.
+        let json = """
+        {
+          "id": "faceprobe", "displayName": "Probe", "tagline": "t", "symbolName": "circle",
+          "isCustom": true, "prefersDarkAppearance": false,
+          "colors": {
+            "primary": "#000000", "secondary": "#000000", "accent": "#FF0000", "highlight": "#FFFF00",
+            "warm": "#FF0000", "tertiary": "#333333", "surface": "#FFFFFF", "surfaceAlt": "#EEEEEE",
+            "cardFill": "#FFFFFF", "cardStroke": "#000000", "primaryText": "#000000", "secondaryText": "#333333"
+          },
+          "fonts": { "body": "system", "numeric": "mono" },
+          "shape": { "cornerMultiplier": 1.1, "separator": "stitch" },
+          "motion": { "preset": "snappy" },
+          "density": { "preset": "normal" },
+          "style": {
+            "typography": { "bodyFamily": "Nunito", "numericFamily": "Geist Mono", "displayFamily": "Patrick Hand" }
+          }
+        }
+        """
+        let palette = try JSONDecoder().decode(RunicThemeJSON.self, from: Data(json.utf8)).toPalette()
         let store = RunicFontStore()
-        store.applyTheme(Theme.kirigami.palette)
+        store.applyTheme(palette)
         #expect(store.hasDisplayFace, "Patrick Hand is bundled, so the display face must resolve")
         #expect(store.themeDisplayFamilyOverride == RunicFontChoice.patrickHand.id)
-        #expect(store.themeFamilyOverride == RunicFontChoice.nunito.id, "Kirigami locks its rounded body face")
+        #expect(store.themeFamilyOverride == RunicFontChoice.nunito.id, "the palette locks its rounded body face")
         #expect(RunicFontChoice.availableChoices().contains { $0.id == RunicFontChoice.nunito.id })
         #expect(store.themeNumericFamilyOverride == RunicFontChoice.geistMono.id)
         #expect(!RunicFontChoice.availableChoices().contains { $0.id == RunicFontChoice.patrickHand.id })
@@ -275,6 +276,14 @@ struct ThemeMigrationTests {
         #expect(palette.style.typography.displayFamily == "Patrick Hand")
         #expect(palette.isPaperCutout)
         #expect(Theme.dark.palette.style.typography.displayFamily == nil)
+
+        // Derived paper-craft behaviours ride on these tokens, not on any one
+        // shipping theme (the cut-out/pipe look stays reusable from JSON alone).
+        #expect(palette.hasSurfaceTexture)
+        #expect(palette.wantsChartPipeLip)
+        #expect(!Theme.sumi.palette.wantsChartPipeLip)
+        #expect(palette.prefersRetroToggleChrome, "paper pill switches are theme-owned")
+        #expect(!palette.isElevated, "cut-out shadows are hard offsets, not the elevation system")
     }
 
     @MainActor

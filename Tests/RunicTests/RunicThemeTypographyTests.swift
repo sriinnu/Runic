@@ -40,7 +40,10 @@ extension RunicTests {
             #expect(ids.contains(RunicFontChoice.tx02.id))
         }
         #expect(!ids.contains("Fira Code"))
-        #expect(!ids.contains("JetBrains Mono"))
+        #expect(ids.contains("JetBrains Mono"))
+        #expect(ids.contains("Manrope"))
+        #expect(ids.contains("Fraunces"))
+        #expect(ids.contains(RunicFontChoice.themeDefault.id))
         #expect(!ids.contains(where: { id in
             let normalized = id.lowercased()
             let compact = normalized.replacingOccurrences(of: " ", with: "")
@@ -238,11 +241,11 @@ extension RunicTests {
     @Test
     func `terminal typography keeps readable hud line rhythm`() {
         let palette = Theme.terminal.palette
-        let rules = RunicFontRules.rules(for: RunicFontChoice.geistMono.id)
+        let rules = RunicFontRules.rules(for: RunicFontChoice.jetBrainsMono.id)
             .applying(palette.style.typography)
 
         #expect(rules.lineSpacing == 1.2)
-        #expect(rules.lineSpacing > RunicFontRules.rules(for: RunicFontChoice.geistMono.id).lineSpacing)
+        #expect(rules.lineSpacing > RunicFontRules.rules(for: RunicFontChoice.jetBrainsMono.id).lineSpacing)
     }
 
     @MainActor
@@ -252,7 +255,7 @@ extension RunicTests {
 
         store.applyTheme(Theme.terminal.palette)
 
-        #expect(store.activeNumericFamily == RunicFontChoice.geistMono.id)
+        #expect(store.activeNumericFamily == RunicFontChoice.jetBrainsMono.id)
     }
 
     @MainActor

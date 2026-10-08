@@ -95,7 +95,7 @@ struct SettingsStoreTests {
     }
 
     @Test
-    func `default font is Mona Sans`() throws {
+    func `default font follows the theme`() throws {
         let suite = "SettingsStoreTests-font-default"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
@@ -109,8 +109,10 @@ struct SettingsStoreTests {
             openRouterTokenStore: NoopOpenRouterTokenStore(),
             groqTokenStore: NoopGroqTokenStore())
 
-        #expect(store.selectedFontFamily == RunicFontChoice.defaultFamily)
-        #expect(defaults.string(forKey: "selectedFontFamily") == RunicFontChoice.defaultFamily)
+        // A fresh install follows the active theme's own body face rather than
+        // locking to one family; the user can still override in the picker.
+        #expect(store.selectedFontFamily == RunicFontChoice.themeDefaultID)
+        #expect(defaults.string(forKey: "selectedFontFamily") == RunicFontChoice.themeDefaultID)
     }
 
     @Test
@@ -165,7 +167,7 @@ struct SettingsStoreTests {
             openRouterTokenStore: NoopOpenRouterTokenStore(),
             groqTokenStore: NoopGroqTokenStore())
 
-        store.selectedFontFamily = "JetBrains Mono"
+        store.selectedFontFamily = "Fira Code"
 
         #expect(store.selectedFontFamily == RunicFontChoice.defaultFamily)
         #expect(defaults.string(forKey: "selectedFontFamily") == RunicFontChoice.defaultFamily)

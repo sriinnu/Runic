@@ -181,7 +181,8 @@ struct RunicFontRules: Hashable {
             normalized.contains("berkeley mono") ||
             normalized.contains("operator mono") ||
             normalized == "tx-02" ||
-            normalized.contains("geist mono")
+            normalized.contains("geist mono") ||
+            normalized.contains("jetbrains mono")
         {
             return RunicFontRules(
                 letterSpacing: 0.10,
@@ -205,6 +206,7 @@ struct RunicFontRules: Hashable {
         if normalized == "mona sans" ||
             normalized == "geist" ||
             normalized == "nunito" ||
+            normalized == "manrope" ||
             normalized.hasPrefix("geist ") && !normalized.contains("mono")
         {
             return RunicFontRules(
@@ -223,6 +225,7 @@ struct RunicFontRules: Hashable {
         }
 
         if family == RunicFontChoice.newYork.id ||
+            normalized.contains("fraunces") ||
             normalized.contains("palatino") ||
             normalized.contains("optima") ||
             normalized.contains("hoefler")
@@ -285,6 +288,12 @@ struct RunicFontChoice: Identifiable, Hashable {
 
     static let defaultFamily = "Mona Sans"
 
+    /// Follow-the-theme sentinel: the picker's default. When selected, the
+    /// active family is the theme's `bodyFamily` (or `defaultFamily` for a
+    /// theme that sets none). Picking any real family overrides the theme.
+    static let themeDefaultID = "__theme__"
+    static let themeDefault = RunicFontChoice(id: themeDefaultID, displayName: "Theme default")
+
     /// System fonts — always available, no bundling.
     static let sfPro = RunicFontChoice(id: "__sf_pro__", displayName: "SF Pro")
     static let sfMono = RunicFontChoice(id: "__sf_mono__", displayName: "SF Mono")
@@ -298,6 +307,12 @@ struct RunicFontChoice: Identifiable, Hashable {
     static let nunito = RunicFontChoice(id: "Nunito", displayName: "Nunito")
     static let commitMono = RunicFontChoice(id: "CommitMono", displayName: "Commit Mono")
     static let geistMono = RunicFontChoice(id: "Geist Mono", displayName: "Geist Mono")
+    /// JetBrains Mono — the Terminal theme's body face. Bundled TTF.
+    static let jetBrainsMono = RunicFontChoice(id: "JetBrains Mono", displayName: "JetBrains Mono")
+    /// Manrope — the Gazette theme's body face. Bundled TTF.
+    static let manrope = RunicFontChoice(id: "Manrope", displayName: "Manrope")
+    /// Fraunces — the Gazette theme's serif headings. Bundled variable TTF.
+    static let fraunces = RunicFontChoice(id: "Fraunces", displayName: "Fraunces")
     static let berkeleyMono = RunicFontChoice(id: "Berkeley Mono", displayName: "Berkeley Mono")
     static let operatorMono = RunicFontChoice(id: "Operator Mono", displayName: "Operator Mono")
     /// Licensed commercial mono face; shown only when bundled or installed on the Mac.
@@ -311,7 +326,6 @@ struct RunicFontChoice: Identifiable, Hashable {
         "fira code",
         "firacode",
         "ibm plex mono",
-        "jetbrains mono",
         "space mono",
     ]
 
@@ -327,13 +341,16 @@ struct RunicFontChoice: Identifiable, Hashable {
 
     /// Build the full list: system fonts first, then bundled custom fonts.
     static func availableChoices() -> [RunicFontChoice] {
-        var choices: [RunicFontChoice] = [.monaSans, .sfPro, .sfRounded, .newYork, .sfMono]
+        var choices: [RunicFontChoice] = [.themeDefault, .monaSans, .sfPro, .sfRounded, .newYork, .sfMono]
         let bundledFamilies = Set(RunicTypography.discoverBundledFontFamilies())
         let curatedBundled: [RunicFontChoice] = [
             .geist,
             .nunito,
             .commitMono,
             .geistMono,
+            .jetBrainsMono,
+            .manrope,
+            .fraunces,
             .berkeleyMono,
             .tx02,
             .operatorMono,
@@ -363,7 +380,8 @@ struct RunicFontChoice: Identifiable, Hashable {
 
     static func migratedFamily(_ storedFamily: String?) -> String {
         let trimmed = storedFamily?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !trimmed.isEmpty else { return self.defaultFamily }
+        // No stored choice (a fresh install) follows the theme's own font.
+        guard !trimmed.isEmpty else { return self.themeDefaultID }
         guard !self.isPrunedFamily(trimmed) else { return self.defaultFamily }
         guard !self.hiddenBundledFamilies.contains(trimmed) else { return self.defaultFamily }
         guard self.availableChoices().contains(where: { $0.id == trimmed }) else { return self.defaultFamily }
@@ -378,6 +396,16 @@ struct RunicFontChoice: Identifiable, Hashable {
             return self.defaultFamily
         }
         return family
+    }
+
+    /// The body family that actually renders for a picker selection under a
+    /// theme. The follow sentinel (`themeDefault`) adopts the theme's own
+    /// `bodyFamily`, or `defaultFamily` when the theme sets none; any real
+    /// selection overrides the theme. Mirrors `RunicFontStore.activeFamily`
+    /// so previews match the live menu.
+    static func effectiveBodyFamily(selected: String, themeBodyFamily: String?) -> String {
+        guard selected == self.themeDefaultID else { return selected }
+        return self.resolvedThemeFamily(themeBodyFamily) ?? self.defaultFamily
     }
 
     /// Display faces may be hidden from the picker (VT323, Patrick Hand) and
@@ -495,6 +523,7 @@ enum RunicFont {
 
     static func previewFont(for family: String, size: CGFloat) -> Font {
         switch family {
+        case RunicFontChoice.themeDefault.id: .system(size: size)
         case RunicFontChoice.sfPro.id: .system(size: size)
         case RunicFontChoice.sfMono.id: .system(size: size, design: .monospaced)
         case RunicFontChoice.sfRounded.id: .system(size: size, design: .rounded)

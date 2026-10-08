@@ -1,0 +1,32 @@
+{
+  "id": "yantra",
+  "displayName": "Yantra",
+  "tagline": "The grid, the number.",
+  "symbolName": "square.grid.3x3.fill",
+  "isCustom": true,
+  "prefersDarkAppearance": false,
+  "colors": {
+    "primary":       "#0B0B0C",
+    "secondary":     "#4A4A4C",
+    "accent":        "#9A7410",
+    "highlight":     "#E21E6B",
+    "warm":          "#CC4A0D",
+    "tertiary":      "#2F43FF",
+    "surface":       "#FCFCFB",
+    "surfaceAlt":    "#F2F2F0",
+    "cardFill":      "#FFFFFFFF",
+    "cardStroke":    "#0B0B0CF2",
+    "primaryText":   "#0B0B0C",
+    "secondaryText": "#5C5C5E"
+  },
+  "fonts":   { "body": "mono", "numeric": "mono" },
+  "shape":   { "cornerMultiplier": 0.28, "separator": "rule" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "normal" },
+  "style": {
+    "typography": { "bodyFamily": "Geist Mono", "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.02, "contrast": "strong" },
+    "chrome": { "borderStyle": "block", "borderWeight": 1.6, "borderOpacity": 1.0, "cornerStyle": "sharp", "panelDepth": "flat" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}

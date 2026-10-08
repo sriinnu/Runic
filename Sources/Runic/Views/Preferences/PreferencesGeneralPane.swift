@@ -279,8 +279,9 @@ struct GeneralPane: View {
                         Text("Font")
                             .font(self.preferenceTitleFont)
 
-                        let lockedFamily = RunicFontChoice.resolvedThemeFamily(
+                        let themeFont = RunicFontChoice.resolvedThemeFamily(
                             self.settings.theme.palette.style.typography.bodyFamily)
+                        let followsTheme = self.settings.selectedFontFamily == RunicFontChoice.themeDefaultID
                         Picker("", selection: self.$settings.selectedFontFamily) {
                             ForEach(RunicFontChoice.availableChoices()) { choice in
                                 Text(choice.displayName)
@@ -290,19 +291,15 @@ struct GeneralPane: View {
                         }
                         .pickerStyle(.menu)
                         .frame(maxWidth: 360)
-                        .disabled(lockedFamily != nil)
-                        .opacity(lockedFamily == nil ? 1 : 0.55)
 
-                        Text(lockedFamily == nil
-                            ? "Install extra families with Font Book; Runic shows available local fonts here."
-                            : "This theme uses a curated typography lock.")
+                        Text("\"Theme default\" follows each theme's own face; pick a family to " +
+                            "override it. Install extra families with Font Book and they appear here.")
                             .font(self.preferenceHelpFont)
                             .foregroundStyle(self.preferenceHelpColor)
 
-                        if let lockedFamily {
-                            Text("\(self.settings.theme.label) locks menu typography to " +
-                                "\(RunicFontChoice.displayName(for: lockedFamily)). " +
-                                "The picker applies to unlocked themes.")
+                        if followsTheme, let themeFont {
+                            Text("\(self.settings.theme.label) uses " +
+                                "\(RunicFontChoice.displayName(for: themeFont)).")
                                 .font(self.preferenceHelpFont)
                                 .foregroundStyle(self.preferenceHelpColor)
                         }
