@@ -217,22 +217,27 @@ struct UsageMenuMetricCard: View {
                     .textCase(.none)
             }
         }
-        .padding(MenuCardMetrics.metricCardPadding)
+        .padding(.vertical, self.runicTheme.isGazette ? RunicSpacing.compact : MenuCardMetrics.metricCardPadding)
+        .padding(.horizontal, self.runicTheme.isGazette ? 0 : MenuCardMetrics.metricCardPadding)
         .background(
             RoundedRectangle(
                 cornerRadius: MenuCardMetrics.metricCardCornerRadius,
                 style: .continuous)
-                // Paper: an opaque sheet a shade off the card, so the tile
-                // reads as a second sticker rather than a gray wash.
-                    .fill(self.runicTheme.isPaperCutout
-                        ? self.runicTheme.surfaceAlt
-                        : self.runicTheme.menuSubtleFill.opacity(self.isHighlighted ? 1.0 : 0.82)))
+                // Newsprint: no tile at all — the metric sits bare on the
+                // cream page, like a column item. Paper: an opaque sheet a
+                // shade off the card, so the tile reads as a second sticker.
+                    .fill(self.runicTheme.isGazette
+                        ? AnyShapeStyle(Color.clear)
+                        : self.runicTheme.isPaperCutout
+                        ? AnyShapeStyle(self.runicTheme.surfaceAlt)
+                        : AnyShapeStyle(self.runicTheme.menuSubtleFill.opacity(self.isHighlighted ? 1.0 : 0.82))))
         .overlay(
             RoundedRectangle(
                 cornerRadius: MenuCardMetrics.metricCardCornerRadius,
                 style: .continuous)
                 .strokeBorder(
-                    self.runicTheme.cardStroke.opacity(self.runicTheme.isPaperCutout ? 0 : 0.42),
+                    self.runicTheme.cardStroke.opacity(
+                        self.runicTheme.isPaperCutout || self.runicTheme.isGazette ? 0 : 0.42),
                     lineWidth: 1))
         .runicCutout(radius: MenuCardMetrics.metricCardCornerRadius, lift: 0.5, seed: 29)
         .runicRaised(radius: MenuCardMetrics.metricCardCornerRadius, lift: 0.5)

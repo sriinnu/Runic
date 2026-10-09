@@ -142,11 +142,16 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
         let borderStyle = self.runicTheme.style.chrome.borderStyle
         let elevated = self.runicTheme.isElevated
         let paper = borderStyle == .cutout
+        // Newsprint: the card dissolves into the page. No distinct fill, no
+        // stroke, no lift — the ink rules between sections carry structure.
+        let flat = self.runicTheme.isGazette
         self.content
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(isGlass
+                    .fill(flat
+                        ? AnyShapeStyle(self.runicTheme.surface)
+                        : isGlass
                         ? self.runicTheme.cardBackgroundStyle
                         : AnyShapeStyle(elevated || borderStyle == .cutout
                             ? self.runicTheme.cardFill
@@ -187,7 +192,8 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
             .overlay {
                 // Cut-out chrome draws its own wobbly outline; a second
                 // geometric stroke under it would read as a printing misregister.
-                if borderStyle != .cutout {
+                // Newsprint has no card outline at all — rules do the dividing.
+                if borderStyle != .cutout, !flat {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .stroke(
                             self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity),
