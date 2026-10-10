@@ -35,7 +35,7 @@ func showAbout() {
     credits.append(separator)
     credits.append(makeLink("Website", urlString: "https://www.srinivas.dev"))
     credits.append(separator)
-    credits.append(makeLink("Twitter", urlString: "https://x.com/sriinnu"))
+    credits.append(makeLink("Twitter", urlString: "https://x.com/_sriinnu_"))
     credits.append(separator)
     credits.append(makeLink("Email", urlString: "mailto:5410488+sriinnu@users.noreply.github.com"))
     if let buildTimestamp, let formatted = formattedBuildTimestamp(buildTimestamp) {

@@ -183,6 +183,16 @@ struct UsageMenuCardView: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
+        if self.runicTheme.isGazette {
+            // Newsprint sets the card as a page: masthead, lead story,
+            // columns, ledger, briefs — see GazetteMenuCardViews.swift.
+            GazetteUsageCard(model: self.model, width: self.width)
+        } else {
+            self.standardBody
+        }
+    }
+
+    private var standardBody: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
             UsageMenuCardHeaderView(model: self.model)
 

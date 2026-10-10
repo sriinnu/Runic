@@ -39,6 +39,14 @@ struct RunicThemePalette {
         self.id == "terminal"
     }
 
+    /// Editorial newsprint: a flat solid cream page with no floating cards —
+    /// sections sit directly on the paper, divided by solid ink rules, the
+    /// way a newspaper column is. Chrome (card fills, strokes, elevation) is
+    /// suppressed so the rules carry all the structure. Gazette only.
+    var isGazette: Bool {
+        self.id == "gazette"
+    }
+
     /// Paper-craft chrome: cards are stickers (wobbly marker outline, white
     /// halo, hard offset shadow), bars are pipes, and a strip of paper
     /// scenery runs under the surface. Driven by `chrome.borderStyle`.
@@ -193,7 +201,14 @@ struct RunicThemePalette {
     }
 
     var menuSurfaceGradient: LinearGradient {
-        if self.id == "glass" {
+        if self.isGazette {
+            // Newsprint is one flat, opaque sheet — no gradient, no vibrancy
+            // bleed. The ink rules and type do all the work on top of it.
+            LinearGradient(
+                colors: [self.surface, self.surface],
+                startPoint: .top,
+                endPoint: .bottom)
+        } else if self.id == "glass" {
             LinearGradient(
                 colors: [
                     Color(red: 0.071, green: 0.116, blue: 0.151),
@@ -392,9 +407,10 @@ struct RunicDivider: View {
                 RunicBrushStrokeRule(color: self.runicTheme.primaryText.opacity(0.62 * self.opacity))
                     .frame(height: 3)
             case .rule:
+                // Newsprint rules are one point of full ink.
                 Rectangle()
-                    .fill(self.runicTheme.primaryText.opacity(0.78 * self.opacity))
-                    .frame(height: 1.5)
+                    .fill(self.runicTheme.primaryText.opacity((self.runicTheme.isGazette ? 1.0 : 0.78) * self.opacity))
+                    .frame(height: self.runicTheme.isGazette ? 1 : 1.5)
             case .stitch:
                 // Short pencil dashes — the cut-here line on a craft sheet.
                 Rectangle()

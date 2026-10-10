@@ -17,8 +17,9 @@ import SwiftUI
 @Observable
 final class RunicFontStore: @unchecked Sendable {
     /// Active font family identifier (one of the `RunicFontChoice` ids, or a
-    /// bundled font name).
-    var family: String = RunicFontChoice.defaultFamily
+    /// bundled font name). Defaults to the theme-follow sentinel so an unsynced
+    /// store still adopts each theme's own face.
+    var family: String = RunicFontChoice.themeDefaultID
 
     /// Theme-driven design override (Terminal forces `.monospaced`) when the
     /// active font is one of the virtual system families. Custom bundled
@@ -132,6 +133,17 @@ final class RunicFontStore: @unchecked Sendable {
 
     var systemFallbackDesign: Font.Design {
         self.effectiveDesign ?? Self.systemDesign(for: self.activeFamily)
+    }
+
+    /// Whether the environment should carry a system font design at all.
+    /// Only the virtual SF families want one; a bundled or installed
+    /// family is already a concrete face, and a `.monospaced` design left in
+    /// the environment makes SwiftUI re-resolve every `Font.custom` in the
+    /// tree through that design — which falls back to the environment font
+    /// for any face that has no monospaced variant (the Gazette's Fraunces
+    /// and Manrope went mono for a Berkeley Mono user that way).
+    var prefersSystemDesign: Bool {
+        !self.usesCustomFontFamily
     }
 
     var activeFamily: String {

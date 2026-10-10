@@ -42,7 +42,7 @@ extension RunicTests {
         #expect(!ids.contains("Fira Code"))
         #expect(ids.contains("JetBrains Mono"))
         #expect(ids.contains("Manrope"))
-        #expect(ids.contains("Fraunces"))
+        #expect(ids.contains("Fraunces 9pt"))
         #expect(ids.contains(RunicFontChoice.themeDefault.id))
         #expect(!ids.contains(where: { id in
             let normalized = id.lowercased()

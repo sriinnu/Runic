@@ -442,14 +442,14 @@ extension Theme {
                 primaryText: Color(red: 0.078, green: 0.078, blue: 0.078),
                 secondaryText: Color(red: 0.333, green: 0.333, blue: 0.333),
                 fonts: RunicThemeFonts(body: .system, numeric: .tabular),
-                shape: RunicThemeShape(cornerMultiplier: 0.6, separator: .rule),
+                shape: RunicThemeShape(cornerMultiplier: 0.18, separator: .rule),
                 motion: .snappy,
                 density: .generous,
                 style: RunicThemeStyle(
                     typography: RunicThemeTypographyStyle(
                         bodyFamily: RunicFontChoice.manrope.id,
-                        numericFamily: nil,
-                        displayFamily: RunicFontChoice.fraunces.id,
+                        numericFamily: RunicFontChoice.manrope.id,
+                        displayFamily: nil,
                         scale: 1.0,
                         tracking: 0,
                         lineSpacing: nil,
@@ -466,7 +466,7 @@ extension Theme {
                         materialIntensity: 0,
                         texture: .none,
                         textureOpacity: 0,
-                        elevation: 0.6),
+                        elevation: 0.0),
                     controls: RunicThemeControlStyle(
                         selectedFillStyle: .accentSolid,
                         progressStyle: .flatBar,

@@ -20,13 +20,13 @@
     "secondaryText": "#555555"
   },
   "fonts":   { "body": "system", "numeric": "tabular" },
-  "shape":   { "cornerMultiplier": 0.6, "separator": "rule" },
+  "shape":   { "cornerMultiplier": 0.18, "separator": "rule" },
   "motion":  { "preset": "snappy" },
   "density": { "preset": "generous" },
   "style": {
-    "typography": { "bodyFamily": "Manrope", "displayFamily": "Fraunces", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "typography": { "bodyFamily": "Manrope", "numericFamily": "Manrope", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
     "chrome": { "borderStyle": "hairline", "borderWeight": 1.0, "borderOpacity": 0.9, "cornerStyle": "soft", "panelDepth": "low" },
-    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0, "elevation": 0.6 },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0, "elevation": 0.0 },
     "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
   }
 }
