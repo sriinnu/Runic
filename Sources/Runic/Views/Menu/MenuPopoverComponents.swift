@@ -276,6 +276,7 @@ struct MenuPopoverChip: View {
                     .font(isGazette
                         ? RunicGazette.label(9)
                         : self.fonts.caption.weight(self.isSelected ? .semibold : .medium))
+                    .fontDesign(isGazette ? .default : nil)
                     .textCase(isGazette ? .uppercase : nil)
                     .tracking(isGazette ? RunicGazette.labelTracking : 0)
                     .lineLimit(1)
@@ -411,6 +412,7 @@ struct MenuPopoverActionButton: View {
                 }
                 Text(self.title)
                     .font(self.titleFont)
+                    .fontDesign(isGazette ? .default : nil)
                     .textCase(isGazette ? .uppercase : nil)
                     .tracking(isGazette ? 1 : 0)
                     .lineLimit(1)

@@ -623,6 +623,7 @@ private struct GazetteOverviewBody: View {
                 self.view.activityChart
             }
         }
+        .gazetteFace()
         .foregroundStyle(self.runicTheme.primaryText)
         .padding(.horizontal, 2)
         .padding(.vertical, 4)

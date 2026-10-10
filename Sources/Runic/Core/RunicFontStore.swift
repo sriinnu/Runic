@@ -135,6 +135,17 @@ final class RunicFontStore: @unchecked Sendable {
         self.effectiveDesign ?? Self.systemDesign(for: self.activeFamily)
     }
 
+    /// Whether the environment should carry a system font design at all.
+    /// Only the virtual SF families want one; a bundled or installed
+    /// family is already a concrete face, and a `.monospaced` design left in
+    /// the environment makes SwiftUI re-resolve every `Font.custom` in the
+    /// tree through that design — which falls back to the environment font
+    /// for any face that has no monospaced variant (the Gazette's Fraunces
+    /// and Manrope went mono for a Berkeley Mono user that way).
+    var prefersSystemDesign: Bool {
+        !self.usesCustomFontFamily
+    }
+
     var activeFamily: String {
         // The follow sentinel adopts the theme's own body face (or the default
         // family for a theme that sets none); any real picker selection

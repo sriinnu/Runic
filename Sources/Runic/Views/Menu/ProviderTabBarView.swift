@@ -69,11 +69,15 @@ struct ProviderTabBarView: View {
                             }
                             Text(tab.label)
                                 .font(self.runicTheme.isGazette ? RunicGazette.label(9.5) : self.fonts.caption2)
+                                .fontDesign(self.runicTheme.isGazette ? .default : nil)
                                 .fontWeight(self.runicTheme.isGazette ? nil : (tab.isSelected ? .semibold : .regular))
                                 .textCase(self.runicTheme.isGazette ? .uppercase : nil)
                                 .tracking(self.runicTheme.isGazette ? RunicGazette.labelTracking : 0)
                                 .lineLimit(1)
                         }
+                        // Newsprint chips share one height whether or not
+                        // they carry a brand mark (the selected one drops it).
+                        .frame(height: self.runicTheme.isGazette ? 18 : nil)
                         .padding(.horizontal, self.runicTheme.isPaperCutout ? RunicSpacing.xs : RunicSpacing.compact)
                         .padding(.vertical, RunicSpacing.xxs + 2)
                         .background(self.tabShape

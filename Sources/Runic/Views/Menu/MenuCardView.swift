@@ -224,12 +224,7 @@ struct UsageMenuCardView: View {
                 VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
                     if hasUsage {
                         VStack(alignment: .leading, spacing: MenuCardMetrics.sectionSpacing) {
-                            ForEach(Array(self.model.metrics.enumerated()), id: \.element.id) { index, metric in
-                                // Newsprint: a thin ink rule between columns,
-                                // the way stacked briefs are divided on a page.
-                                if self.runicTheme.isGazette, index > 0 {
-                                    RunicDivider()
-                                }
+                            ForEach(self.model.metrics) { metric in
                                 let displayMode = self.model.usageMetricDisplayMode
                                 UsageMenuMetricCard(
                                     metric: metric,

@@ -134,7 +134,9 @@ struct MenuPopoverView: View {
                     }
                     if palette.isGazette {
                         GazetteFooter(
-                            imprint: "Set by Runic \(RunicVersion.marketing) \u{00B7} \(RunicGazette.edition)",
+                            byline: "By Sriinnu",
+                            bylineURL: URL(string: "https://github.com/sriinnu")!,
+                            imprint: "Runic \(RunicVersion.marketing) \u{00B7} \(RunicGazette.edition)",
                             buttonTitle: "About \u{2192}",
                             action: self.actions.openAbout)
                             .frame(width: self.contentWidth)

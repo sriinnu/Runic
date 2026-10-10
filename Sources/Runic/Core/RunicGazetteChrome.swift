@@ -101,23 +101,29 @@ enum RunicGazette {
     // MARK: Folio
 
     /// "Vol. 2 · No. 154" — the marketing major as the volume, the build as
-    /// the issue number, so every build is its own edition.
-    static var edition: String {
+    /// the issue number, so every build is its own edition. Read once.
+    static let edition: String = {
         let major = RunicVersion.marketing.split(separator: ".").first.map(String.init) ?? RunicVersion.marketing
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         if let build, !build.isEmpty {
             return "Vol. \(major) · No. \(build)"
         }
         return "Vol. \(major)"
-    }
+    }()
 
-    /// "Friday, 10 Oct 2026". Fixed en_GB order so the line reads the same
-    /// in every locale; the folio is typography, not a localised date.
-    static func folioDate(_ date: Date = .init()) -> String {
+    /// Fixed en_GB order so the folio reads the same in every locale; it is
+    /// typography, not a localised date. One formatter for the process —
+    /// `DateFormatter` formatting is thread-safe on current macOS.
+    private nonisolated(unsafe) static let folioFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_GB")
         formatter.dateFormat = "EEEE, d MMM yyyy"
-        return formatter.string(from: date)
+        return formatter
+    }()
+
+    /// "Friday, 10 Oct 2026".
+    static func folioDate(_ date: Date = .init()) -> String {
+        self.folioFormatter.string(from: date)
     }
 
     /// Splits "Connection: connected" into a bold lead and the rest, when
@@ -143,9 +149,21 @@ struct GazetteLabel: View {
     var body: some View {
         Text(self.text.uppercased())
             .font(RunicGazette.label(self.size))
+            .gazetteFace()
             .tracking(self.tracking)
             .foregroundStyle(self.color ?? self.runicTheme.primaryText)
             .lineLimit(1)
+    }
+}
+
+extension View {
+    /// Pins the editorial faces against the environment's font design. A
+    /// user whose body font is SF Mono carries `.fontDesign(.monospaced)`
+    /// through the panel, and SwiftUI would re-resolve `Font.custom` through
+    /// it — Fraunces and Manrope have no monospaced cut and fall back to the
+    /// body font. Every Gazette text sits under one of these.
+    func gazetteFace() -> some View {
+        self.fontDesign(.default)
     }
 }
 
@@ -159,6 +177,7 @@ struct GazettePill: View {
     var body: some View {
         Text(self.text.uppercased())
             .font(RunicGazette.label(self.size))
+            .gazetteFace()
             .tracking(RunicGazette.labelTracking)
             .foregroundStyle(self.runicTheme.surface)
             .lineLimit(1)
@@ -255,6 +274,7 @@ struct GazetteButton: View {
         Button(action: self.action) {
             Text(self.title.uppercased())
                 .font(RunicGazette.label(self.size))
+                .gazetteFace()
                 .tracking(1)
                 .lineLimit(1)
                 .foregroundStyle(inverted ? paper : ink)
@@ -279,6 +299,7 @@ struct GazetteLink: View {
     var body: some View {
         let label = Text(self.text.uppercased())
             .font(RunicGazette.label(9.5))
+            .gazetteFace()
             .tracking(1)
             .foregroundStyle(self.runicTheme.accent)
             .lineLimit(1)
@@ -324,15 +345,20 @@ struct GazetteBullet: View {
                 }
             }
         }
+        .gazetteFace()
     }
 
+    /// Runs of a concatenated `Text` resolve their own design, so the pin
+    /// goes on each run, not just the container.
     private var line: Text {
         let body = Text(self.text)
             .font(RunicGazette.copy())
+            .fontDesign(.default)
             .foregroundStyle(RunicGazette.inkSoft)
         guard let lead = self.lead, !lead.isEmpty else { return body }
         return Text(lead)
             .font(RunicGazette.sans(10.5, .bold))
+            .fontDesign(.default)
             .foregroundStyle(self.runicTheme.primaryText)
             + Text(" ")
             + body
@@ -356,6 +382,7 @@ struct GazetteQuote: View {
                 GazetteLabel(text: "\u{2014} \(attribution)", color: self.runicTheme.secondaryText, tracking: 1)
             }
         }
+        .gazetteFace()
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -380,9 +407,10 @@ struct GazetteBar: View {
                     .fill(self.runicTheme.surface)
                     .overlay(Rectangle().strokeBorder(self.runicTheme.primaryText.opacity(0.35), lineWidth: 1))
                 if clamped > 0 {
+                    // Inside the 1pt stroke on both ends.
                     Rectangle()
                         .fill(self.tint)
-                        .frame(width: max(2, proxy.size.width * clamped / 100))
+                        .frame(width: max(2, (proxy.size.width - 2) * clamped / 100))
                         .padding(1)
                 }
             }
@@ -419,8 +447,12 @@ struct GazetteFolio: View {
     }
 }
 
-/// Page footer: the imprint on the left, an outlined button on the right.
+/// Page footer: the byline as a link, the imprint beside it, an outlined
+/// button on the right.
 struct GazetteFooter: View {
+    /// "By Sriinnu" — opens `bylineURL`.
+    let byline: String
+    let bylineURL: URL
     let imprint: String
     let buttonTitle: String
     let action: () -> Void
@@ -429,12 +461,18 @@ struct GazetteFooter: View {
     var body: some View {
         VStack(spacing: 8) {
             GazetteRule()
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                GazetteLink(text: self.byline) {
+                    NSWorkspace.shared.open(self.bylineURL)
+                }
+                .accessibilityLabel("\(self.byline), opens \(self.bylineURL.host ?? "link")")
+                GazetteLabel(text: "\u{00B7}", color: self.runicTheme.secondaryText)
                 GazetteLabel(text: self.imprint, color: self.runicTheme.secondaryText, tracking: 1.2)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 8)
                 GazetteButton(title: self.buttonTitle, size: 9, action: self.action)
             }
         }
+        .gazetteFace()
     }
 }

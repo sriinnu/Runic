@@ -194,6 +194,7 @@ struct GazetteUsageCard: View {
                     .padding(.vertical, 10)
             }
         }
+        .gazetteFace()
         .padding(.horizontal, 2)
         .padding(.bottom, 2)
         .frame(width: self.width, alignment: .leading)

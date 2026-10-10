@@ -549,7 +549,9 @@ extension View {
     func runicTypography() -> some View {
         self
             .font(RunicFont.body)
-            .fontDesign(RunicFont.systemFallbackDesign)
+            // A design override only for the SF families; see
+            // `RunicFontStore.prefersSystemDesign`.
+            .fontDesign(RunicFontStore.shared.prefersSystemDesign ? RunicFont.systemFallbackDesign : nil)
             .tracking(RunicFont.activeRules.letterSpacing)
             .lineSpacing(RunicFont.activeRules.lineSpacing)
             .dynamicTypeSize(RunicTypography.typeSize)
