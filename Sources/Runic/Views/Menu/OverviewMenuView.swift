@@ -102,6 +102,14 @@ struct OverviewMenuView: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
+        if self.runicTheme.isGazette {
+            GazetteOverviewBody(view: self)
+        } else {
+            self.standardBody
+        }
+    }
+
+    private var standardBody: some View {
         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
             // MARK: - Hero header
 
@@ -194,40 +202,7 @@ struct OverviewMenuView: View {
                     }
                 }
 
-                Chart {
-                    ForEach(self.chartPoints) { point in
-                        BarMark(
-                            x: .value("Date", point.date, unit: .day),
-                            y: .value("Tokens", point.tokens))
-                            .foregroundStyle(by: .value("Provider", point.provider))
-                            .cornerRadius(self.runicTheme.shape.cornerRadius(2))
-                    }
-                }
-                .chartForegroundStyleScale(
-                    domain: self.chartLegendEntries.map(\.name),
-                    range: self.chartLegendEntries.map(\.color))
-                .chartLegend(.hidden)
-                .chartYAxis {
-                    AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
-                            .foregroundStyle(self.runicTheme.chartGridColor)
-                        AxisValueLabel {
-                            if let tokens = value.as(Int.self) {
-                                Text(UsageFormatter.tokenCountString(tokens))
-                                    .font(self.fonts.system(size: 8))
-                                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
-                            }
-                        }
-                    }
-                }
-                .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 7)) { _ in
-                        AxisValueLabel(format: .dateTime.weekday(.narrow))
-                            .font(self.fonts.system(size: 8, weight: .medium))
-                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
-                    }
-                }
-                .frame(height: 80)
+                self.activityChart
             }
         }
         .foregroundStyle(self.runicTheme.primaryText)
@@ -236,13 +211,52 @@ struct OverviewMenuView: View {
         .frame(minWidth: self.width, maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The combined 7-day bar chart, shared by the standard and newsprint
+    /// layouts.
+    var activityChart: some View {
+        Chart {
+            ForEach(self.chartPoints) { point in
+                BarMark(
+                    x: .value("Date", point.date, unit: .day),
+                    y: .value("Tokens", point.tokens))
+                    .foregroundStyle(by: .value("Provider", point.provider))
+                    .cornerRadius(self.runicTheme.shape.cornerRadius(2))
+            }
+        }
+        .chartForegroundStyleScale(
+            domain: self.chartLegendEntries.map(\.name),
+            range: self.chartLegendEntries.map(\.color))
+        .chartLegend(.hidden)
+        .chartYAxis {
+            AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { value in
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3, dash: [3, 3]))
+                    .foregroundStyle(self.runicTheme.chartGridColor)
+                AxisValueLabel {
+                    if let tokens = value.as(Int.self) {
+                        Text(UsageFormatter.tokenCountString(tokens))
+                            .font(self.fonts.system(size: 8))
+                            .foregroundStyle(self.runicTheme.chartAxisLabelColor)
+                    }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 7)) { _ in
+                AxisValueLabel(format: .dateTime.weekday(.narrow))
+                    .font(self.fonts.system(size: 8, weight: .medium))
+                    .foregroundStyle(self.runicTheme.chartAxisLabelColor)
+            }
+        }
+        .frame(height: 80)
+    }
+
     private var averagePercent: Double? {
         Self.averagePercent(self.summaries)
     }
 
     /// Header text for the average; "—" when no provider has a measurable
     /// quota so it never reads as everything-depleted.
-    private var averagePercentText: String {
+    var averagePercentText: String {
         guard let averagePercent = self.averagePercent else { return "—" }
         return "\(Int(averagePercent))% \(self.showsUsed ? "used" : "left") avg"
     }
@@ -517,5 +531,165 @@ private struct InfoPill: View {
             .background(
                 Capsule(style: .continuous)
                     .fill(self.runicTheme.menuSubtleFill))
+    }
+}
+
+// MARK: - Newsprint
+
+/// The overview as the Gazette's front page: folio, "The Runic Gazette"
+/// nameplate, a deck of today's totals, then every provider as a leader
+/// row (name … percent) over a flat gauge, and the week's activity as a
+/// tagged chart. Gazette only.
+private struct GazetteOverviewBody: View {
+    let view: OverviewMenuView
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            GazetteFolio(trailing: "\(self.view.summaries.count) of \(self.view.totalProviders) active")
+
+            HStack {
+                Spacer(minLength: 0)
+                Text("The Runic Gazette")
+                    .font(RunicGazette.nameplate(28))
+                    .tracking(-0.8)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                let todayTokens = UsageFormatter.tokenCountString(
+                    self.view.totalTodayTokens,
+                    style: self.view.numberStyle)
+                GazetteLabel(text: "\(todayTokens) today")
+                GazetteLabel(text: "\u{00B7}", color: self.runicTheme.secondaryText)
+                GazetteLabel(text: self.view.averagePercentText, color: self.runicTheme.secondaryText)
+                Spacer(minLength: 0)
+            }
+            .padding(.bottom, 6)
+
+            GazetteRule(weight: .double)
+
+            if self.view.summaries.isEmpty {
+                Text("No active providers.")
+                    .font(RunicGazette.body())
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, RunicSpacing.md)
+            } else {
+                ForEach(Array(self.view.summaries.enumerated()), id: \.element.id) { index, summary in
+                    if index > 0 {
+                        GazetteRule(weight: .hair)
+                    }
+                    GazetteOverviewRow(
+                        summary: summary,
+                        showsUsed: self.view.showsUsed,
+                        numberStyle: self.view.numberStyle)
+                        .padding(.vertical, 8)
+                }
+                if let onAddRegion = self.view.onAddRegion {
+                    ForEach(OverviewMenuView.brandGroups(self.view.summaries)) { group in
+                        if let missing = group.missingSlot {
+                            GazetteLink(text: "Add \(missing.region.displayName) account \u{2192}") {
+                                onAddRegion(missing)
+                            }
+                            .padding(.bottom, 6)
+                            .accessibilityLabel("Add \(missing.region.displayName) account")
+                        }
+                    }
+                }
+            }
+
+            if !self.view.chartPoints.isEmpty {
+                GazetteRule()
+                HStack(alignment: .center) {
+                    GazettePill(text: "7-day activity", color: self.runicTheme.primaryText)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        ForEach(self.view.chartLegendEntries.prefix(5), id: \.name) { entry in
+                            Rectangle()
+                                .fill(entry.color)
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .accessibilityHidden(true)
+                }
+                .padding(.vertical, 8)
+                self.view.activityChart
+            }
+        }
+        .foregroundStyle(self.runicTheme.primaryText)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 4)
+        .frame(minWidth: self.view.width, maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One provider on the front page: brand mark and name, a dotted leader to
+/// the percentage (and today's tokens), a thin gauge, the window and reset
+/// as a tracked byline.
+private struct GazetteOverviewRow: View {
+    let summary: OverviewMenuView.ProviderSummary
+    let showsUsed: Bool
+    let numberStyle: UsageFormatter.NumberStyle
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if let icon = self.summary.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 13, height: 13)
+                        .accessibilityHidden(true)
+                }
+                Text(self.summary.name)
+                    .font(RunicGazette.headline(14))
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                GazetteLeader()
+                Text(self.summary.hasQuota ? "\(Int(self.summary.usedPercent))%" : "\u{2014}")
+                    .font(RunicGazette.numeral(14))
+                    .foregroundStyle(self.emphasizesPercent ? self.runicTheme.warm : self.runicTheme.primaryText)
+                    .layoutPriority(1)
+                if self.summary.todayTokens > 0 {
+                    Text(UsageFormatter.tokenCountString(self.summary.todayTokens, style: self.numberStyle))
+                        .font(RunicGazette.copy())
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                }
+            }
+            if self.summary.hasQuota {
+                GazetteBar(
+                    percent: self.summary.usedPercent,
+                    tint: self.summary.brandColor,
+                    accessibilityLabel: self.showsUsed ? "Usage used" : "Usage remaining",
+                    height: 4)
+            }
+            let byline = [
+                self.summary.windowLabel,
+                self.summary.resetDescription,
+                self.summary.bankedResetsText,
+                self.summary.topModelContext,
+            ].compactMap(\.self)
+            if !byline.isEmpty {
+                GazetteLabel(
+                    text: byline.joined(separator: " \u{00B7} "),
+                    size: 8.5,
+                    color: self.runicTheme.secondaryText,
+                    tracking: 1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+    }
+
+    private var emphasizesPercent: Bool {
+        guard self.summary.hasQuota else { return false }
+        return self.showsUsed ? self.summary.usedPercent > 80 : self.summary.usedPercent < 20
     }
 }

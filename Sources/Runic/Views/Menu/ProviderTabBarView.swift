@@ -51,7 +51,10 @@ struct ProviderTabBarView: View {
                                     .opacity(tab.isSelected ? 1 : 0)
                                     .frame(width: 9)
                             }
-                            if let nsImage = tab.icon {
+                            // Newsprint: a selected chip is the brand's own
+                            // colour, which would swallow the brand mark —
+                            // the caps carry the name on their own.
+                            if let nsImage = tab.icon, !(self.runicTheme.isGazette && tab.isSelected) {
                                 Image(nsImage: nsImage)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
@@ -65,11 +68,10 @@ struct ProviderTabBarView: View {
                                     width: 18)
                             }
                             Text(tab.label)
-                                .font(self.fonts.caption2)
-                                .fontWeight(self.runicTheme
-                                    .isGazette ? .heavy : (tab.isSelected ? .semibold : .regular))
+                                .font(self.runicTheme.isGazette ? RunicGazette.label(9.5) : self.fonts.caption2)
+                                .fontWeight(self.runicTheme.isGazette ? nil : (tab.isSelected ? .semibold : .regular))
                                 .textCase(self.runicTheme.isGazette ? .uppercase : nil)
-                                .tracking(self.runicTheme.isGazette ? 0.8 : 0)
+                                .tracking(self.runicTheme.isGazette ? RunicGazette.labelTracking : 0)
                                 .lineLimit(1)
                         }
                         .padding(.horizontal, self.runicTheme.isPaperCutout ? RunicSpacing.xs : RunicSpacing.compact)
@@ -101,8 +103,9 @@ struct ProviderTabBarView: View {
                     .buttonStyle(TabButtonStyle())
                 }
             }
-            .padding(.horizontal, MenuCardMetrics.horizontalPadding)
-            .padding(.vertical, RunicSpacing.xs)
+            // Newsprint: the chips share the page margin with the folio below.
+            .padding(.horizontal, self.runicTheme.isGazette ? RunicSpacing.xxxs : MenuCardMetrics.horizontalPadding)
+            .padding(.vertical, self.runicTheme.isGazette ? RunicSpacing.xxs : RunicSpacing.xs)
             .background(
                 GeometryReader { proxy in
                     Color.clear.preference(

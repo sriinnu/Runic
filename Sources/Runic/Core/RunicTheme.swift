@@ -407,9 +407,10 @@ struct RunicDivider: View {
                 RunicBrushStrokeRule(color: self.runicTheme.primaryText.opacity(0.62 * self.opacity))
                     .frame(height: 3)
             case .rule:
+                // Newsprint rules are one point of full ink.
                 Rectangle()
-                    .fill(self.runicTheme.primaryText.opacity(0.78 * self.opacity))
-                    .frame(height: 1.5)
+                    .fill(self.runicTheme.primaryText.opacity((self.runicTheme.isGazette ? 1.0 : 0.78) * self.opacity))
+                    .frame(height: self.runicTheme.isGazette ? 1 : 1.5)
             case .stitch:
                 // Short pencil dashes — the cut-here line on a craft sheet.
                 Rectangle()

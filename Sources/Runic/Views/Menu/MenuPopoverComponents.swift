@@ -145,85 +145,97 @@ struct MenuPopoverSurfaceCard<Content: View>: View {
         // Newsprint: the card dissolves into the page. No distinct fill, no
         // stroke, no lift — the ink rules between sections carry structure.
         let flat = self.runicTheme.isGazette
-        self.content
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(flat
-                        ? AnyShapeStyle(self.runicTheme.surface)
-                        : isGlass
-                        ? self.runicTheme.cardBackgroundStyle
-                        : AnyShapeStyle(elevated || borderStyle == .cutout
-                            ? self.runicTheme.cardFill
-                            : self.runicTheme.menuSubtleFill))
-                    // Poster chrome: a hard, unblurred drop shadow in the text
-                    // color, under an opaque slab so the shadow never bleeds
-                    // through a translucent card fill. `block` style only.
-                    .background {
-                        if borderStyle == .block {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                                    .fill(self.runicTheme.primaryText.opacity(0.85))
-                                    .offset(x: 3, y: 3)
-                                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                                    .fill(self.runicTheme.surface)
-                            }
-                        }
-                    }
-                    .background {
-                        if isGlass {
-                            // A small ambient glow separates the frosted card
-                            // from the dark canvas without neon outlines.
+        Group {
+            if flat {
+                // Each panel opens under an ink rule, the way a page's
+                // sections do, instead of floating in its own box.
+                VStack(alignment: .leading, spacing: 0) {
+                    GazetteRule()
+                    self.content
+                        .padding(.top, RunicSpacing.xs)
+                }
+            } else {
+                self.content
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(flat
+                    ? AnyShapeStyle(self.runicTheme.surface)
+                    : isGlass
+                    ? self.runicTheme.cardBackgroundStyle
+                    : AnyShapeStyle(elevated || borderStyle == .cutout
+                        ? self.runicTheme.cardFill
+                        : self.runicTheme.menuSubtleFill))
+                // Poster chrome: a hard, unblurred drop shadow in the text
+                // color, under an opaque slab so the shadow never bleeds
+                // through a translucent card fill. `block` style only.
+                .background {
+                    if borderStyle == .block {
+                        ZStack {
                             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            self.runicTheme.accent.opacity(0.14),
-                                            self.runicTheme.highlight.opacity(0.08),
-                                            .clear,
-                                        ],
-                                        center: .topLeading,
-                                        startRadius: 12,
-                                        endRadius: 220))
-                                .blur(radius: 18)
+                                .fill(self.runicTheme.primaryText.opacity(0.85))
+                                .offset(x: 3, y: 3)
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .fill(self.runicTheme.surface)
                         }
                     }
-            }
-            .overlay {
-                // Cut-out chrome draws its own wobbly outline; a second
-                // geometric stroke under it would read as a printing misregister.
-                // Newsprint has no card outline at all — rules do the dividing.
-                if borderStyle != .cutout, !flat {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .stroke(
-                            self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity),
-                            lineWidth: strokeIsGlow
-                                ? max(0.8, self.runicTheme.style.chrome.borderWeight)
-                                : self.runicTheme.style.chrome.borderWeight)
-                        .shadow(
-                            color: strokeIsGlow
-                                ? self.runicTheme.accent.opacity(self.runicTheme.style.effects.glowStrength)
-                                : .clear,
-                            radius: 4 + self.runicTheme.style.effects.glowStrength * 5)
                 }
-                // Ink chrome: a second, slightly offset pass of the same
-                // line — the pen went round twice.
-                if borderStyle == .ink {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .stroke(
-                            self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity * 0.45),
-                            lineWidth: max(0.5, self.runicTheme.style.chrome.borderWeight * 0.7))
-                        .offset(x: 0.8, y: 1.1)
+                .background {
+                    if isGlass {
+                        // A small ambient glow separates the frosted card
+                        // from the dark canvas without neon outlines.
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        self.runicTheme.accent.opacity(0.14),
+                                        self.runicTheme.highlight.opacity(0.08),
+                                        .clear,
+                                    ],
+                                    center: .topLeading,
+                                    startRadius: 12,
+                                    endRadius: 220))
+                            .blur(radius: 18)
+                    }
                 }
+        }
+        .overlay {
+            // Cut-out chrome draws its own wobbly outline; a second
+            // geometric stroke under it would read as a printing misregister.
+            // Newsprint has no card outline at all — rules do the dividing.
+            if borderStyle != .cutout, !flat {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(
+                        self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity),
+                        lineWidth: strokeIsGlow
+                            ? max(0.8, self.runicTheme.style.chrome.borderWeight)
+                            : self.runicTheme.style.chrome.borderWeight)
+                    .shadow(
+                        color: strokeIsGlow
+                            ? self.runicTheme.accent.opacity(self.runicTheme.style.effects.glowStrength)
+                            : .clear,
+                        radius: 4 + self.runicTheme.style.effects.glowStrength * 5)
             }
-            .retroBevel(baseRadius: RunicCornerRadius.lg)
-            .runicCutout(radius: radius, lift: paper && self.isHovered ? 1.45 : 1)
-            .runicRaised(radius: radius, lift: self.isHovered ? 1.4 : 1)
-            .offset(y: (elevated || paper) && self.isHovered ? -1 : 0)
-            .animation(elevated || paper ? self.runicTheme.motion.curve : nil, value: self.isHovered)
-            .onHover { hovering in
-                if elevated || paper { self.isHovered = hovering }
+            // Ink chrome: a second, slightly offset pass of the same
+            // line — the pen went round twice.
+            if borderStyle == .ink {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(
+                        self.runicTheme.cardStroke.opacity(self.runicTheme.style.chrome.borderOpacity * 0.45),
+                        lineWidth: max(0.5, self.runicTheme.style.chrome.borderWeight * 0.7))
+                    .offset(x: 0.8, y: 1.1)
             }
+        }
+        .retroBevel(baseRadius: RunicCornerRadius.lg)
+        .runicCutout(radius: radius, lift: paper && self.isHovered ? 1.45 : 1)
+        .runicRaised(radius: radius, lift: self.isHovered ? 1.4 : 1)
+        .offset(y: (elevated || paper) && self.isHovered ? -1 : 0)
+        .animation(elevated || paper ? self.runicTheme.motion.curve : nil, value: self.isHovered)
+        .onHover { hovering in
+            if elevated || paper { self.isHovered = hovering }
+        }
     }
 }
 
@@ -241,17 +253,31 @@ struct MenuPopoverChip: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
+        // Newsprint: hard-cornered chips in tracked caps; the chosen one is
+        // an ink block with the paper knocked out.
+        let isGazette = self.runicTheme.isGazette
+        let radius = isGazette ? 0 : self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm)
         Button(action: self.action) {
             HStack(spacing: RunicSpacing.menuControlSpacing) {
-                RunicThemedSystemIcon(
-                    systemName: self.systemImage,
-                    intent: self.iconIntent,
-                    selected: self.isSelected,
-                    hovered: self.isHovered,
-                    font: self.fonts.caption.weight(.semibold),
-                    width: RunicSpacing.menuIconColumnWidth)
+                if isGazette {
+                    Image(systemName: self.systemImage)
+                        .font(RunicGazette.sans(9.5, .bold))
+                        .frame(width: RunicSpacing.menuIconColumnWidth)
+                } else {
+                    RunicThemedSystemIcon(
+                        systemName: self.systemImage,
+                        intent: self.iconIntent,
+                        selected: self.isSelected,
+                        hovered: self.isHovered,
+                        font: self.fonts.caption.weight(.semibold),
+                        width: RunicSpacing.menuIconColumnWidth)
+                }
                 Text(self.title)
-                    .font(self.fonts.caption.weight(self.isSelected ? .semibold : .medium))
+                    .font(isGazette
+                        ? RunicGazette.label(9)
+                        : self.fonts.caption.weight(self.isSelected ? .semibold : .medium))
+                    .textCase(isGazette ? .uppercase : nil)
+                    .tracking(isGazette ? RunicGazette.labelTracking : 0)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -259,21 +285,19 @@ struct MenuPopoverChip: View {
             .padding(.vertical, RunicSpacing.menuControlVerticalPadding)
             .foregroundStyle(self.foreground)
             .background {
-                RoundedRectangle(
-                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
-                    style: .continuous)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(self.background)
             }
             .overlay {
-                RoundedRectangle(
-                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
-                    style: .continuous)
-                    .stroke(self.border, lineWidth: self.runicTheme.shape.separator == .glow ? 1.2 : 0.7)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(
+                        self.border,
+                        lineWidth: isGazette ? 1 : (self.runicTheme.shape.separator == .glow ? 1.2 : 0.7))
                     .shadow(
                         color: self.glowColor,
                         radius: self.glowRadius)
             }
-            .scaleEffect(self.isHovered ? 1.015 : 1)
+            .scaleEffect(self.isHovered && !isGazette ? 1.015 : 1)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -284,6 +308,9 @@ struct MenuPopoverChip: View {
     }
 
     private var foreground: Color {
+        if self.runicTheme.isGazette {
+            return self.isSelected ? self.runicTheme.surface : self.runicTheme.primaryText
+        }
         // Terminal hover uses a low-opacity phosphor wash; selection still
         // carries the bright accent foreground.
         if self.runicTheme.isTerminalHUD, self.isHovered, !self.isSelected {
@@ -293,6 +320,10 @@ struct MenuPopoverChip: View {
     }
 
     private var background: Color {
+        if self.runicTheme.isGazette {
+            if self.isSelected { return self.runicTheme.primaryText }
+            return self.isHovered ? self.runicTheme.primaryText.opacity(0.08) : .clear
+        }
         if self.isSelected {
             switch self.runicTheme.style.controls.selectedFillStyle {
             case .accentSolid, .terminalSolid:
@@ -318,7 +349,8 @@ struct MenuPopoverChip: View {
     }
 
     private var border: Color {
-        self.isSelected
+        if self.runicTheme.isGazette { return self.runicTheme.primaryText }
+        return self.isSelected
             ? self.runicTheme.accent.opacity(0.64)
             : self.runicTheme.cardStroke.opacity(self.isHovered ? 0.72 : 0.42)
     }
@@ -355,44 +387,52 @@ struct MenuPopoverActionButton: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
+        // Newsprint: rows are tracked caps that invert to an ink block on
+        // hover; compact buttons carry a 1pt ink outline.
+        let isGazette = self.runicTheme.isGazette
+        let radius = isGazette ? 0 : self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm)
         Button(action: self.action) {
             HStack(spacing: self.iconTextSpacing) {
                 if let systemImage {
-                    RunicThemedSystemIcon(
-                        systemName: systemImage,
-                        intent: self.iconIntent,
-                        hovered: self.isHovered,
-                        font: self.iconFont,
-                        width: self.iconColumnWidth)
+                    if isGazette {
+                        Image(systemName: systemImage)
+                            .font(RunicGazette.sans(9.5, .bold))
+                            .frame(width: self.iconColumnWidth)
+                    } else {
+                        RunicThemedSystemIcon(
+                            systemName: systemImage,
+                            intent: self.iconIntent,
+                            hovered: self.isHovered,
+                            font: self.iconFont,
+                            width: self.iconColumnWidth)
+                    }
                 } else {
                     Color.clear.frame(width: self.iconColumnWidth, height: 1)
                 }
                 Text(self.title)
                     .font(self.titleFont)
+                    .textCase(isGazette ? .uppercase : nil)
+                    .tracking(isGazette ? 1 : 0)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer(minLength: RunicSpacing.menuControlSpacing)
             }
-            .padding(.horizontal, self.horizontalPadding)
+            .padding(.horizontal, isGazette ? RunicSpacing.compact : self.horizontalPadding)
             .padding(.vertical, self.verticalPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .foregroundStyle(self.themedForeground)
             .background {
-                RoundedRectangle(
-                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
-                    style: .continuous)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(self.themedHoverFill)
             }
             .overlay {
-                RoundedRectangle(
-                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
-                    style: .continuous)
-                    .stroke(self.themedHoverBorder, lineWidth: self.runicTheme.shape.separator == .glow ? 1.0 : 0.6)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(
+                        self.themedHoverBorder,
+                        lineWidth: isGazette ? 1 : (self.runicTheme.shape.separator == .glow ? 1.0 : 0.6))
                     .shadow(color: self.themedGlow, radius: self.isHovered ? 6 : 0)
             }
-            .contentShape(RoundedRectangle(
-                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
-                style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -404,19 +444,24 @@ struct MenuPopoverActionButton: View {
 
     /// Foreground colour stays readable across selected and hover states.
     private var themedForeground: Color {
-        self.runicTheme.primaryText
+        if self.runicTheme.isGazette, self.isHovered { return self.runicTheme.surface }
+        return self.runicTheme.primaryText
     }
 
     /// Per-theme hover background. Terminal uses a calm phosphor wash; glow
     /// themes get a stronger accent tint, and standard themes stay light.
     private var themedHoverFill: Color {
         guard self.isHovered else { return .clear }
+        if self.runicTheme.isGazette { return self.runicTheme.primaryText }
         if self.runicTheme.isTerminalHUD { return self.runicTheme.accent.opacity(0.16) }
         if self.runicTheme.shape.separator == .glow { return self.runicTheme.accent.opacity(0.22) }
         return self.runicTheme.menuHoverFill
     }
 
     private var themedHoverBorder: Color {
+        if self.runicTheme.isGazette {
+            return self.style == .compact || self.isHovered ? self.runicTheme.primaryText : .clear
+        }
         guard self.isHovered, self.runicTheme.shape.separator == .glow else { return .clear }
         return self.runicTheme.accent.opacity(0.55)
     }
@@ -427,10 +472,11 @@ struct MenuPopoverActionButton: View {
     }
 
     private var titleFont: Font {
+        if self.runicTheme.isGazette { return RunicGazette.label(9.5) }
         // Match the surrounding section text — every other label in the
         // popover sits at footnote / caption. The previous `.body` choice
         // made `Settings...` and `Switch Account…` look oversized.
-        self.style == .compact ? self.fonts.caption.weight(.medium) : self.fonts.footnote.weight(.medium)
+        return self.style == .compact ? self.fonts.caption.weight(.medium) : self.fonts.footnote.weight(.medium)
     }
 
     private var iconFont: Font {

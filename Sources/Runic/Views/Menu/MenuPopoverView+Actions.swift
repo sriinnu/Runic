@@ -51,11 +51,12 @@ extension MenuPopoverView {
         case let .text(text, style):
             HStack(spacing: RunicSpacing.menuActionIconTextSpacing) {
                 Color.clear.frame(width: RunicSpacing.menuActionIconColumnWidth, height: 1)
+                let isGazette = self.settings.theme.palette.isGazette
                 Text(text)
-                    .font(style == .headline
-                        ? self.fonts.caption.weight(.semibold)
-                        : self.fonts.caption)
-                    .foregroundStyle(style == .secondary
+                    .font(isGazette
+                        ? (style == .headline ? RunicGazette.sans(10.5, .bold) : RunicGazette.copy())
+                        : (style == .headline ? self.fonts.caption.weight(.semibold) : self.fonts.caption))
+                    .foregroundStyle(style == .secondary || isGazette
                         ? self.settings.theme.palette.secondaryText
                         : self.settings.theme.palette.primaryText)
                     .lineLimit(2)
