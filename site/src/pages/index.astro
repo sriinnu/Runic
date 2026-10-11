@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import ShaderHero from '../components/ShaderHero.astro';
+import ParticleHero from '../components/ParticleHero.astro';
 const themes = [
   ['theme-gazette.jpg', 'Gazette', 'A printed broadsheet', '#d4a72c'],
   ['theme-sumi.jpg', 'Sumi', 'Ink on washi', '#e0553a'],
@@ -18,7 +18,7 @@ const features = [
 ];
 ---
 <Base path="/" fullBleed>
-  <ShaderHero accent="#3ff0d6" accent2="#2d5bff">
+  <ParticleHero accent="#3ff0d6" accent2="#4a63ff">
     <div class="home-hero">
       <img class="icon" src="/icon.png" width="84" height="84" alt="Runic icon" />
       <p class="eyebrow">macOS menu bar · open source</p>
@@ -29,8 +29,9 @@ const features = [
         <a class="btn ghost" href="/themes-and-skins/">Explore the skins</a>
       </div>
       <pre class="install"><code>brew install --cask sriinnu/tap/runic</code></pre>
+      <p class="stat-line"><span><b>13</b> themes</span><span><b>7</b> skins</span><span>local first</span></p>
     </div>
-  </ShaderHero>
+  </ParticleHero>
 
   <div class="wrap">
     <section class="stats" aria-label="At a glance">
