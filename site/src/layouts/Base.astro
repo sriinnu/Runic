@@ -23,7 +23,8 @@ const canonical = new URL(path, 'https://runic.srinivas.dev').href;
     <title>{full}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <link rel="icon" href="/icon.png" />
+    <link rel="icon" type="image/png" href="/runic-icon.png" />
+    <link rel="apple-touch-icon" href="/runic-icon.png" />
     <meta property="og:title" content={full} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
@@ -33,7 +34,7 @@ const canonical = new URL(path, 'https://runic.srinivas.dev').href;
   </head>
   <body>
     <header class="top">
-      <a class="brand" href="/"><img src="/icon.png" width="28" height="28" alt="" /><span>Runic</span></a>
+      <a class="brand" href="/"><img src="/runic-icon.png" width="28" height="28" alt="" /><span>Runic</span></a>
       <nav aria-label="Main">
         {nav.map(([href, label]) => <a href={href} aria-current={path === href ? 'page' : undefined}>{label}</a>)}
       </nav>
@@ -43,7 +44,7 @@ const canonical = new URL(path, 'https://runic.srinivas.dev').href;
     <footer class="site-foot">
       <div class="foot-grid">
         <div class="foot-brand">
-          <a class="brand" href="/"><img src="/icon.png" width="32" height="32" alt="" /><span>Runic</span></a>
+          <a class="brand" href="/"><img src="/runic-icon.png" width="32" height="32" alt="" /><span>Runic</span></a>
           <p>AI usage, costs and quota resets in your Mac menu bar. Local, private, open source.</p>
         </div>
         <nav aria-label="Docs">
