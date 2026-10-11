@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+const themes = [
+  ['theme-gazette.jpg', 'Gazette', 'A printed broadsheet'],
+  ['theme-sumi.jpg', 'Sumi', 'Ink on washi'],
+  ['theme-drafting.jpg', 'Blueprint', 'An engineering sheet'],
+  ['theme-instrument.jpg', 'Retro', 'A bench instrument'],
+  ['theme-departures.jpg', 'Departures', 'A split-flap board'],
+  ['theme-flightdeck.jpg', 'Flight deck', 'An avionics display'],
+  ['theme-receipt.jpg', 'Receipt', 'Every ping prints one'],
+];
+---
+<Base path="/">
+  <section class="hero">
+    <img src="/icon.png" width="96" height="96" alt="Runic icon" />
+    <h1>AI usage in your menu bar.</h1>
+    <p class="lede">Runic shows quota, reset windows, cost and token history across the AI tools you use, in one glance, on your Mac. Open source, local first.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/sriinnu/Runic/releases/latest">Download for macOS</a>
+      <a class="btn" href="/themes-and-skins/">See the themes</a>
+    </div>
+    <pre class="install"><code>brew install --cask sriinnu/tap/runic</code></pre>
+  </section>
+
+  <section class="grid3">
+    <div><h3>Every provider</h3><p>Codex, Claude, Gemini, Cursor, Copilot, DeepSeek, Kimi and more. Quota windows, banked resets, balances and spend. <a href="/providers/">How each one is read</a>.</p></div>
+    <div><h3>Local first</h3><p>Keys stay in your Keychain. Usage history is built on your Mac from provider logs and an optional OTLP collector. Nothing goes anywhere but the provider's own API.</p></div>
+    <div><h3>In your terminal and your agents</h3><p>The same numbers from a <a href="/cli/">CLI</a>, and an <a href="/mcp/">MCP server</a> so Claude Code or Cursor can ask Runic about your quota.</p></div>
+  </section>
+
+  <section>
+    <h2>Thirteen themes, seven kits</h2>
+    <p class="sub">Not one look with thirteen palettes. Each kit changes what the panel <em>is</em>.</p>
+    <div class="themes">
+      {themes.map(([img, name, line]) => (
+        <figure><img src={`/images/${img}`} alt={`${name} theme`} loading="lazy" /><figcaption><strong>{name}</strong><span>{line}</span></figcaption></figure>
+      ))}
+    </div>
+    <p><a href="/themes-and-skins/">How skins work →</a></p>
+  </section>
+</Base>
