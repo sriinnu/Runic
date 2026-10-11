@@ -536,6 +536,61 @@ extension Theme {
                         progressStyle: .flatBar,
                         hoverStyle: .neutral),
                     skin: ReceiptSkin.skinID))
+        case .flightdeck:
+            // An avionics primary flight display. Near-black stage, a 5pt
+            // inner frame, cyan-green symbology for the live readings, amber
+            // for caution, magenta for exhausted, sky blue and green for the
+            // attitude ball and the trend vector. B612 — the Airbus cockpit
+            // face — for the text, B612 Mono for every readout.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Primary flight display",
+                symbolName: "airplane",
+                isCustom: true,
+                prefersDarkAppearance: true,
+                primary: Color(red: 0.902, green: 0.914, blue: 0.925), // display white
+                secondary: Color(red: 0.184, green: 0.435, blue: 0.749), // sky blue
+                accent: Color(red: 0.310, green: 0.890, blue: 0.757), // cyan-green symbology
+                highlight: Color(red: 1.000, green: 0.722, blue: 0.302), // amber caution
+                warm: Color(red: 1.000, green: 0.361, blue: 0.784), // magenta
+                tertiary: Color(red: 0.482, green: 0.847, blue: 0.561), // green trend
+                surface: Color(red: 0.043, green: 0.055, blue: 0.067), // near-black stage
+                surfaceAlt: Color(red: 0.082, green: 0.098, blue: 0.114), // inner frame
+                cardFill: Color(red: 0.067, green: 0.078, blue: 0.090),
+                cardStroke: Color(red: 0.227, green: 0.247, blue: 0.267),
+                primaryText: Color(red: 0.902, green: 0.914, blue: 0.925),
+                secondaryText: Color(red: 0.604, green: 0.627, blue: 0.651),
+                fonts: RunicThemeFonts(body: .system, numeric: .mono),
+                shape: RunicThemeShape(cornerMultiplier: 0.25, separator: .hairline),
+                motion: .instant,
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: "B612",
+                        numericFamily: "B612 Mono",
+                        scale: 1.0,
+                        tracking: 0.02,
+                        lineSpacing: 1.1,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hairline,
+                        borderWeight: 1.0,
+                        borderOpacity: 0.9,
+                        cornerStyle: .sharp,
+                        panelDepth: .flat),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
+                        materialIntensity: 0,
+                        texture: .none,
+                        textureOpacity: 0),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSolid,
+                        progressStyle: .flatBar,
+                        hoverStyle: .neutral,
+                        chartSeries: .themed),
+                    skin: FlightDeckSkin.skinID))
         }
     }
 

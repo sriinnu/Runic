@@ -151,6 +151,7 @@ enum Theme: String, CaseIterable, Identifiable {
     case yantra
     case gazette
     case receipt
+    case flightdeck
 
     /// The signature look — parchment + navy bevels, System-7 chrome with
     /// modern info architecture. New installs land here.
@@ -191,6 +192,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .yantra: "Yantra"
         case .gazette: "Gazette"
         case .receipt: "Receipt"
+        case .flightdeck: "Flight deck"
         }
     }
 }
