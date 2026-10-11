@@ -1,0 +1,33 @@
+{
+  "id": "departures",
+  "displayName": "Departures",
+  "tagline": "Every reset is a departure",
+  "symbolName": "airplane.departure",
+  "isCustom": true,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#F2F2F2",
+    "secondary":     "#8E8E93",
+    "accent":        "#F2C94C",
+    "highlight":     "#7BD88F",
+    "warm":          "#FF6B57",
+    "tertiary":      "#8AB4F8",
+    "surface":       "#0B0B0C",
+    "surfaceAlt":    "#141416",
+    "cardFill":      "#1C1C1E",
+    "cardStroke":    "#3A3A3C",
+    "primaryText":   "#F2F2F2",
+    "secondaryText": "#A1A1A6"
+  },
+  "fonts":   { "body": "system", "numeric": "tabular" },
+  "shape":   { "cornerMultiplier": 0.3, "separator": "hairline" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "normal" },
+  "style": {
+    "skin": "departures",
+    "typography": { "bodyFamily": "Barlow", "numericFamily": "Barlow Condensed", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "chrome": { "borderStyle": "hairline", "borderWeight": 1.0, "borderOpacity": 0.6, "cornerStyle": "sharp", "panelDepth": "flat" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}
