@@ -50,3 +50,7 @@ Runic is not one look with thirteen palettes. Sumi is ink on washi, Departures i
 ### About
 
 <img src="/images/settings-about.jpg" width="380" alt="About pane with version and update controls">
+
+## License
+
+MPL-2.0. See [LICENSE](https://github.com/sriinnu/Runic/blob/main/LICENSE). Bundled third-party software and fonts keep their own licenses, reproduced in [THIRD-PARTY-NOTICES.md](https://github.com/sriinnu/Runic/blob/main/THIRD-PARTY-NOTICES.md) and shipped inside the app bundle.
