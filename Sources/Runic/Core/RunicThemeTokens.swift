@@ -117,6 +117,9 @@ struct RunicThemeStyle {
     var chrome: RunicThemeChromeStyle = .standard
     var effects: RunicThemeEffectsStyle = .standard
     var controls: RunicThemeControlStyle = .standard
+    /// The kit the panel is composed with (`RunicSkinRegistry`). `nil` is
+    /// the standard kit, so every existing theme file keeps rendering.
+    var skin: String?
 
     static let standard = RunicThemeStyle()
 }
@@ -206,7 +209,7 @@ struct RunicThemeControlStyle: Hashable {
 }
 
 extension RunicThemeStyle: Decodable {
-    private enum CodingKeys: String, CodingKey { case typography, chrome, effects, controls }
+    private enum CodingKeys: String, CodingKey { case typography, chrome, effects, controls, skin }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -214,6 +217,9 @@ extension RunicThemeStyle: Decodable {
         self.chrome = try values.decodeIfPresent(RunicThemeChromeStyle.self, forKey: .chrome) ?? .standard
         self.effects = try values.decodeIfPresent(RunicThemeEffectsStyle.self, forKey: .effects) ?? .standard
         self.controls = try values.decodeIfPresent(RunicThemeControlStyle.self, forKey: .controls) ?? .standard
+        let skin = (try? values.decodeIfPresent(String.self, forKey: .skin))?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        self.skin = (skin?.isEmpty ?? true) ? nil : skin
     }
 }
 

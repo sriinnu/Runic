@@ -100,10 +100,11 @@ struct OverviewMenuView: View {
     /// side unconfigured. Nil hides the offer.
     var onAddRegion: ((UsageProvider) -> Void)?
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.runicSkin) private var skin
 
     var body: some View {
-        if self.runicTheme.isGazette {
-            GazetteOverviewBody(view: self)
+        if let page = self.skin.frontPage(self) {
+            page
         } else {
             self.standardBody
         }
@@ -539,8 +540,8 @@ private struct InfoPill: View {
 /// The overview as the Gazette's front page: folio, "The Runic Gazette"
 /// nameplate, a deck of today's totals, then every provider as a leader
 /// row (name … percent) over a flat gauge, and the week's activity as a
-/// tagged chart. Gazette only.
-private struct GazetteOverviewBody: View {
+/// tagged chart. Mounted by `GazetteSkin`.
+struct GazetteOverviewBody: View {
     let view: OverviewMenuView
     @Environment(\.runicTheme) private var runicTheme
 

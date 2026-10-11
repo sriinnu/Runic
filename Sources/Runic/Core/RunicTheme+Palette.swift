@@ -154,7 +154,13 @@ extension Theme {
                 motion: .slow,
                 density: .normal,
                 style: RunicThemeStyle(
-                    typography: .standard,
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: "Zen Kaku Gothic New",
+                        numericFamily: nil,
+                        scale: 1,
+                        tracking: 0,
+                        lineSpacing: nil,
+                        contrast: .strong),
                     chrome: RunicThemeChromeStyle(
                         borderStyle: .ink,
                         borderWeight: 0.9,
@@ -171,7 +177,8 @@ extension Theme {
                         selectedFillStyle: .accentSolid,
                         progressStyle: .flatBar,
                         hoverStyle: .neutral,
-                        chartSeries: .themed)))
+                        chartSeries: .themed),
+                    skin: SumiSkin.skinID))
         case .blueprint:
             // Drafting table. Cobalt paper ruled with a fine grid, crisp white
             // linework, cyan drafting ink for the accent, Geist Mono numerals

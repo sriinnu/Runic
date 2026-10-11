@@ -49,6 +49,18 @@ extension MenuPopoverView {
                     })
             }
         case let .text(text, style):
+            if let note = self.skin.note(text, style: style) {
+                note
+            } else {
+                self.standardNote(text, style: style)
+            }
+        case .divider:
+            RunicDivider().padding(.vertical, RunicSpacing.xxxs)
+        }
+    }
+
+    private func standardNote(_ text: String, style: MenuDescriptor.TextStyle) -> some View {
+        Group {
             HStack(spacing: RunicSpacing.menuActionIconTextSpacing) {
                 Color.clear.frame(width: RunicSpacing.menuActionIconColumnWidth, height: 1)
                 let isGazette = self.settings.theme.palette.isGazette
@@ -66,8 +78,6 @@ extension MenuPopoverView {
             }
             .padding(.horizontal, 0)
             .padding(.vertical, RunicSpacing.xxxs)
-        case .divider:
-            RunicDivider().padding(.vertical, RunicSpacing.xxxs)
         }
     }
 

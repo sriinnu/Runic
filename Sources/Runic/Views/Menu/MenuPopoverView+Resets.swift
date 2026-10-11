@@ -26,12 +26,21 @@ extension MenuPopoverView {
         let credits = ResetScheduleBuilder.credits(inputs)
         if !entries.isEmpty || !credits.isEmpty {
             MenuPopoverSurfaceCard {
-                ResetScheduleMenuView(
+                if let page = self.skin.resetsPage(RunicSkinResets(
                     entries: entries,
+                    credits: credits,
                     width: self.panelContentWidth,
-                    showsProvider: isOverview,
-                    credits: credits)
-                    .padding(self.panelInset)
+                    showsProvider: isOverview))
+                {
+                    page.padding(self.panelInset)
+                } else {
+                    ResetScheduleMenuView(
+                        entries: entries,
+                        width: self.panelContentWidth,
+                        showsProvider: isOverview,
+                        credits: credits)
+                        .padding(self.panelInset)
+                }
             }
             .frame(width: self.contentWidth, alignment: .leading)
         }

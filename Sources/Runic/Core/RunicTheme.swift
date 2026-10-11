@@ -47,6 +47,13 @@ struct RunicThemePalette {
         self.id == "gazette"
     }
 
+    /// The kit this theme is composed with. A theme names it in
+    /// `style.skin`; the Gazette predates the key and keeps its kit by id.
+    var skinID: String {
+        if let skin = self.style.skin { return skin }
+        return self.isGazette ? "gazette" : "standard"
+    }
+
     /// Paper-craft chrome: cards are stickers (wobbly marker outline, white
     /// halo, hard offset shadow), bars are pipes, and a strip of paper
     /// scenery runs under the surface. Driven by `chrome.borderStyle`.

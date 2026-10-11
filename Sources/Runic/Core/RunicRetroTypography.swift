@@ -62,10 +62,13 @@ struct RetroSectionHeader: View {
     let text: String
     @Environment(\.runicTheme) private var runicTheme
     @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicSkin) private var skin
 
     var body: some View {
         Group {
-            if self.runicTheme.id == "retro" {
+            if let header = self.skin.sectionHeader(self.text) {
+                header
+            } else if self.runicTheme.id == "retro" {
                 Text(self.text.uppercased())
                     .tracking(1.6)
                     .font(.system(size: 10, weight: .semibold))

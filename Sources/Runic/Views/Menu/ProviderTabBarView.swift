@@ -20,10 +20,19 @@ struct ProviderTabBarView: View {
     let width: CGFloat
     let onSelect: (UsageProvider?) -> Void
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.runicSkin) private var skin
     @State private var contentFrame: CGRect = .zero
     @State private var containerWidth: CGFloat = 0
 
     private static let edgeFadeWidth: CGFloat = 20
+
+    var body: some View {
+        if let strip = self.skin.tabs(self.tabs, width: self.width, onSelect: self.onSelect) {
+            strip
+        } else {
+            self.standardBody
+        }
+    }
 
     /// Content extends past the leading edge (user has scrolled right).
     private var hasLeadingOverflow: Bool {
@@ -35,7 +44,7 @@ struct ProviderTabBarView: View {
         self.containerWidth > 0 && self.contentFrame.maxX > self.containerWidth + 1
     }
 
-    var body: some View {
+    private var standardBody: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: self.runicTheme.isPaperCutout ? RunicSpacing.xs : RunicSpacing.xxs) {
                 ForEach(Array(self.tabs.enumerated()), id: \.element.id) { index, tab in
