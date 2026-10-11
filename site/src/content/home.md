@@ -37,19 +37,19 @@ Runic is not one look with thirteen palettes. Sumi is ink on washi, Departures i
 
 | Claude | Codex |
 | --- | --- |
-| <img src="/images/menu-claude.jpg" width="380" alt="Claude card with session, weekly and model quota bars and reset times"> | <img src="/images/menu-codex.jpg" width="380" alt="Codex card with session quota, banked resets and explore shortcuts"> |
+| <img src="/images/menu-claude-2.jpg" width="380" alt="Claude card with session and weekly quota, banked resets and pace"> | <img src="/images/menu-codex-2.jpg" width="380" alt="Codex card with session and weekly quota, credits and insights"> |
 | Session, weekly and per-model quota with reset countdowns. | Exhausted session, banked resets and their expiry dates. |
 
 ### Settings
 
 | General | Analytics |
 | --- | --- |
-| <img src="/images/settings-general.jpg" width="380" alt="General settings: refresh rate, chart style, number and date format"> | <img src="/images/settings-analytics.jpg" width="380" alt="Analytics settings: usage metrics, menu mode and provider switcher layout"> |
+| <img src="/images/settings-general-2.jpg" width="380" alt="General settings: cost summary, OpenAI web access and provider status"> | <img src="/images/settings-analytics-2.jpg" width="380" alt="Analytics settings: usage metrics, menu mode and provider switcher layout"> |
 | Refresh rate, chart style, number and date formats, with a live preview. | Usage metrics, menu mode and provider switcher layout. |
 
 ### About
 
-<img src="/images/settings-about.jpg" width="380" alt="About pane with version and update controls">
+<img src="/images/settings-about-2.jpg" width="380" alt="About pane with the app icon, version, links and update controls">
 
 ## License
 

@@ -178,7 +178,17 @@ enum RunicScreenshotRenderer {
                 selection: selection,
                 to: request.outputURL)
         default:
-            throw RendererError.unsupportedKind(request.kind)
+            // `prefs-<tab>` renders any other Settings pane (about, analytics, sync, performance).
+            guard request.kind.hasPrefix("prefs-"),
+                  let tab = PreferencesTab(rawValue: String(request.kind.dropFirst("prefs-".count)))
+            else { throw RendererError.unsupportedKind(request.kind) }
+            selection.tab = tab
+            try Self.writePreferences(
+                store: store,
+                settings: settings,
+                updater: updater,
+                selection: selection,
+                to: request.outputURL)
         }
     }
 

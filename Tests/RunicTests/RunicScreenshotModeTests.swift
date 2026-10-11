@@ -16,6 +16,6 @@ struct RunicScreenshotModeTests {
         setenv("RUNIC_SCREENSHOT_MODE", "1", 1)
         defer { unsetenv("RUNIC_SCREENSHOT_MODE") }
 
-        #expect(RunicScreenshotMode.sanitize(email: "real-user@example.com") == "demo@runic.app")
+        #expect(RunicScreenshotMode.sanitize(email: "real-user@example.com") == "demo@runic.srinivas.dev")
     }
 }

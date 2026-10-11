@@ -1,7 +1,7 @@
 import Foundation
 
 enum RunicScreenshotMode {
-    static let placeholderEmail = "demo@runic.app"
+    static let placeholderEmail = "demo@runic.srinivas.dev"
 
     static var isEnabled: Bool {
         ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_MODE"] == "1"
