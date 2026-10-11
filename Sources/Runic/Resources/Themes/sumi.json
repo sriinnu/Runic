@@ -24,7 +24,8 @@
   "motion":  { "preset": "slow" },
   "density": { "preset": "normal" },
   "style": {
-    "typography": { "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "skin": "sumi",
+    "typography": { "bodyFamily": "Zen Kaku Gothic New", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
     "chrome": { "borderStyle": "ink", "borderWeight": 0.9, "borderOpacity": 0.55, "cornerStyle": "compact", "panelDepth": "low" },
     "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "paper", "textureOpacity": 0.55 },
     "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }

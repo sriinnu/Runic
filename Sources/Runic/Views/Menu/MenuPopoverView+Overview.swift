@@ -16,8 +16,8 @@ extension MenuPopoverView {
                 style: .continuous))
             .overlay {
                 // Paper: the tabs are stickers on the sky, no tray around them.
-                // Newsprint: the chips sit bare on the page, no tray either.
-                if !self.settings.theme.palette.isPaperCutout, !self.settings.theme.palette.isGazette {
+                // A skin without a tray sets its chips bare on the page.
+                if !self.settings.theme.palette.isPaperCutout, self.skin.showsTabTray {
                     RoundedRectangle(
                         cornerRadius: self.settings.theme.palette.shape.cornerRadius(RunicCornerRadius.lg),
                         style: .continuous)

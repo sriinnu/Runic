@@ -26,7 +26,7 @@ struct ResetScheduleMenuView: View {
                 HStack(alignment: .firstTextBaseline) {
                     RetroSectionHeader(text: "Resets")
                     Spacer(minLength: RunicSpacing.xs)
-                    if let summary = self.headerSummary(now: now) {
+                    if let summary = Self.headerSummary(entries: self.entries, credits: self.credits, now: now) {
                         Text(summary)
                             .font(self.fonts.caption2)
                             .foregroundStyle(self.runicTheme.subduedSecondaryText)
@@ -80,14 +80,18 @@ struct ResetScheduleMenuView: View {
 
     /// "next in 2h 14m" when something is counting down, "1 exhausted" when
     /// a window is spent, or the banked count when that's all there is.
-    private func headerSummary(now: Date) -> String? {
-        let soonest = self.entries.compactMap { $0.secondsUntilReset(now: now) }.min()
+    nonisolated static func headerSummary(
+        entries: [ResetScheduleEntry],
+        credits: [ResetCreditEntry],
+        now: Date) -> String?
+    {
+        let soonest = entries.compactMap { $0.secondsUntilReset(now: now) }.min()
         guard let soonest else {
-            let banked = self.credits.reduce(0) { $0 + $1.availableCount }
+            let banked = credits.reduce(0) { $0 + $1.availableCount }
             return banked > 0 ? (banked == 1 ? "1 banked" : "\(banked) banked") : nil
         }
         if soonest <= 0 { return "resetting now" }
-        let exhausted = self.entries.filter(\.isExhausted).count
+        let exhausted = entries.filter(\.isExhausted).count
         if exhausted > 0 {
             return exhausted == 1 ? "1 exhausted" : "\(exhausted) exhausted"
         }

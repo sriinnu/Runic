@@ -12,6 +12,8 @@ Runic only exposes bundled or locally installed families that the app can resolv
 - Nunito: bundled TTF files (Regular, Medium, SemiBold, Bold) for Kirigami body text, license in `OFL-Nunito.txt`.
 - JetBrains Mono: bundled TTF files (Regular, Medium, SemiBold, Bold) for the Terminal theme body, license in `OFL-JetBrainsMono.txt`.
 - Manrope: bundled TTF files (Regular, Medium, SemiBold, Bold) for the Gazette theme body, license in `OFL-Manrope.txt`.
+- Shippori Mincho: bundled static TTF files (Regular, SemiBold, Bold, ExtraBold) for the Sumi skin's names and numerals, license in `OFL-ShipporiMincho.txt`. Subset with `pyftsubset` to Latin, Latin-1, general punctuation, arrows and the two seal glyphs (印, 注) so the four weights weigh 118 KB each instead of 8.6 MB; the OFL declares no Reserved Font Name, so the subset keeps its names. Addressed by PostScript name in `RunicSumiKit.swift`.
+- Zen Kaku Gothic New: bundled static TTF files (Regular, Medium, Bold) for the Sumi skin's labels and body, license in `OFL-ZenKakuGothicNew.txt`. Same Latin subset as Shippori Mincho (32 KB per weight).
 - Fraunces: bundled static TTF files (Fraunces 9pt Regular/SemiBold/Bold/Black/Italic, SOFT=0 optical) for the Gazette theme's editorial serif — headlines, numerals, the nameplate, and the italic pull quote — from the undercasetype/Fraunces static instances; license in `OFL-Fraunces.txt`. Static rather than variable because variable fonts do not resolve under NSHostingView. The Gazette body face is Manrope; Fraunces is addressed by PostScript name in `RunicGazetteChrome.swift`.
 
 ## Local-Only Commercial Fonts

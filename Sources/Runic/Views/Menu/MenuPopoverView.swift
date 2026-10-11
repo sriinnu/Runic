@@ -64,9 +64,12 @@ struct MenuPopoverView: View {
 
     var body: some View {
         let palette = self.settings.theme.palette
-        // Newsprint: the printed edition's panel — a 10pt corner inside a
-        // 1pt ink border, whatever the theme's corner multiplier says.
-        let popoverRadius: CGFloat = palette.isGazette ? 10 : min(palette.shape.cornerRadius(18), 14)
+        let skin = RunicSkinRegistry.skin(for: palette)
+        let chrome = skin.popoverChrome(for: palette) ?? RunicSkinPopoverChrome(
+            cornerRadius: min(palette.shape.cornerRadius(18), 14),
+            strokeWidth: palette.style.chrome.borderWeight,
+            strokeColor: palette.cardStroke.opacity(palette.style.chrome.borderOpacity))
+        let popoverRadius = chrome.cornerRadius
         let enabledProviders = self.store.menuVisibleProviders()
         let provider = self.effectiveProvider(enabledProviders: enabledProviders)
         let isOverview = provider == nil && enabledProviders.count > 1
@@ -132,15 +135,11 @@ struct MenuPopoverView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, RunicSpacing.xs)
                     }
-                    if palette.isGazette {
-                        GazetteFooter(
-                            byline: "By Sriinnu",
-                            bylineURL: URL(string: "https://github.com/sriinnu")!,
-                            imprint: "Runic \(RunicVersion.marketing) \u{00B7} \(RunicGazette.edition)",
-                            buttonTitle: "About \u{2192}",
-                            action: self.actions.openAbout)
-                            .frame(width: self.contentWidth)
-                            .padding(.top, RunicSpacing.xxs)
+                    if let footer = skin.footer(RunicSkinFooterContext(
+                        width: self.contentWidth,
+                        openAbout: self.actions.openAbout))
+                    {
+                        footer
                     }
                 }
                 .padding(.horizontal, self.outerHorizontalPadding)
@@ -150,6 +149,7 @@ struct MenuPopoverView: View {
         }
         .frame(width: self.width, height: self.height)
         .environment(\.runicTheme, palette)
+        .environment(\.runicSkin, skin)
         .runicColorScheme(palette)
         .runicTypography()
         .foregroundStyle(palette.primaryText)
@@ -157,13 +157,8 @@ struct MenuPopoverView: View {
         .clipShape(RoundedRectangle(cornerRadius: popoverRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: popoverRadius, style: .continuous)
-                .stroke(
-                    style: StrokeStyle(
-                        lineWidth: palette.isGazette ? 1 : palette.style.chrome.borderWeight,
-                        dash: []))
-                .foregroundStyle(palette.isGazette
-                    ? palette.primaryText
-                    : palette.cardStroke.opacity(palette.style.chrome.borderOpacity))
+                .stroke(style: StrokeStyle(lineWidth: chrome.strokeWidth, dash: []))
+                .foregroundStyle(chrome.strokeColor)
         }
         .retroBevel(baseRadius: popoverRadius)
         .shadow(
@@ -196,10 +191,13 @@ struct MenuPopoverView: View {
     }
 
     var panelInset: CGFloat {
-        // Newsprint has no boxes to inset from: panel text shares the page
-        // margin with the rules.
-        if self.settings.theme.palette.isGazette { return RunicSpacing.xxs }
-        return self.settings.theme.palette.density.padding(RunicSpacing.menuPanelInset)
+        let palette = self.settings.theme.palette
+        if let inset = RunicSkinRegistry.skin(for: palette).panelInset(for: palette) { return inset }
+        return palette.density.padding(RunicSpacing.menuPanelInset)
+    }
+
+    var skin: any RunicSkin {
+        RunicSkinRegistry.skin(for: self.settings.theme.palette)
     }
 
     var panelContentWidth: CGFloat {

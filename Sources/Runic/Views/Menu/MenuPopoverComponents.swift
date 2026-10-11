@@ -133,9 +133,18 @@ struct MenuPopoverBackground: View {
 struct MenuPopoverSurfaceCard<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.runicSkin) private var skin
     @State private var isHovered = false
 
     var body: some View {
+        if let panel = self.skin.panel(AnyView(self.content)) {
+            panel
+        } else {
+            self.standardBody
+        }
+    }
+
+    @ViewBuilder private var standardBody: some View {
         let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
         let strokeIsGlow = self.runicTheme.shape.separator == .glow
         let isGlass = self.runicTheme.id == "glass"
@@ -251,8 +260,23 @@ struct MenuPopoverChip: View {
 
     @State private var isHovered = false
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.runicSkin) private var skin
 
     var body: some View {
+        if let chip = self.skin.chip(RunicSkinChip(
+            title: self.title,
+            systemImage: self.systemImage,
+            iconIntent: self.iconIntent,
+            isSelected: self.isSelected,
+            action: self.action))
+        {
+            chip
+        } else {
+            self.standardBody
+        }
+    }
+
+    @ViewBuilder private var standardBody: some View {
         // Newsprint: hard-cornered chips in tracked caps; the chosen one is
         // an ink block with the paper knocked out.
         let isGazette = self.runicTheme.isGazette
@@ -386,8 +410,23 @@ struct MenuPopoverActionButton: View {
 
     @State private var isHovered = false
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.runicSkin) private var skin
 
     var body: some View {
+        if let row = self.skin.actionRow(RunicSkinActionRow(
+            title: self.title,
+            systemImage: self.systemImage,
+            iconIntent: self.iconIntent,
+            isCompact: self.style == .compact,
+            action: self.action))
+        {
+            row
+        } else {
+            self.standardBody
+        }
+    }
+
+    @ViewBuilder private var standardBody: some View {
         // Newsprint: rows are tracked caps that invert to an ink block on
         // hover; compact buttons carry a 1pt ink outline.
         let isGazette = self.runicTheme.isGazette

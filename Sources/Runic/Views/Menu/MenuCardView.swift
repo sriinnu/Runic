@@ -181,12 +181,13 @@ struct UsageMenuCardView: View {
     let width: CGFloat
     @Environment(\.menuItemHighlighted) private var isHighlighted
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.runicSkin) private var skin
 
     var body: some View {
-        if self.runicTheme.isGazette {
-            // Newsprint sets the card as a page: masthead, lead story,
-            // columns, ledger, briefs — see GazetteMenuCardViews.swift.
-            GazetteUsageCard(model: self.model, width: self.width)
+        // A skin with its own page composition (the Gazette's masthead and
+        // columns, Sumi's scroll) replaces the card wholesale.
+        if let page = self.skin.providerPage(self.model, width: self.width) {
+            page
         } else {
             self.standardBody
         }
