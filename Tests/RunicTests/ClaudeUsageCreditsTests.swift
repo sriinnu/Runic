@@ -91,3 +91,69 @@ struct ClaudeUsageCreditsTests {
         #expect(merged.providerCost?.currencyCode == "USD")
     }
 }
+
+/// The monthly API credit Max plans include (none on Pro), and the line it
+/// prints under Usage credits.
+struct ClaudeAPICreditGrantTests {
+    @Test
+    func `max tiers map to their monthly grant, the rest to none`() {
+        #expect(ClaudeAPICreditGrant.monthlyUSD(rateLimitTier: "default_claude_max_20x") == 200)
+        #expect(ClaudeAPICreditGrant.monthlyUSD(rateLimitTier: "default_claude_max_5x") == 100)
+        #expect(ClaudeAPICreditGrant.monthlyUSD(rateLimitTier: "claude_pro") == nil)
+        #expect(ClaudeAPICreditGrant.monthlyUSD(rateLimitTier: "default_claude_team") == nil)
+        #expect(ClaudeAPICreditGrant.monthlyUSD(rateLimitTier: nil) == nil)
+    }
+
+    @Test
+    func `next charge comes from subscription details`() throws {
+        let iso = try #require(ClaudeAPICreditGrant.parseNextChargeDate(Data("""
+        {"next_charge_date": "2026-11-03", "next_charge_at": "2026-11-03T09:12:00Z", "currency": "eur"}
+        """.utf8)))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+        let parts = calendar.dateComponents([.year, .month, .day, .hour], from: iso)
+        #expect(parts.year == 2026 && parts.month == 11 && parts.day == 3 && parts.hour == 9)
+        let dayOnly = try #require(ClaudeAPICreditGrant.parseNextChargeDate(Data("""
+        {"next_charge_date": "2026-11-03"}
+        """.utf8)))
+        #expect(calendar.component(.day, from: dayOnly) == 3)
+        #expect(ClaudeAPICreditGrant.parseNextChargeDate(Data("{}".utf8)) == nil)
+    }
+
+    @Test
+    func `a grant prints its own line and a zero grant prints nothing`() throws {
+        var cost = ProviderCostSnapshot(used: 0, limit: 0, currencyCode: "EUR", period: "Monthly", updatedAt: .init())
+        #expect(UsageMenuCardView.Model.claudeUsageCreditsSection(cost) == nil)
+        cost.includedMonthlyCreditUSD = 200
+        let section = try #require(UsageMenuCardView.Model.claudeUsageCreditsSection(cost))
+        #expect(section.title == "Usage credits")
+        #expect(section.spendLine == "API credits $200.00 a month")
+        #expect(section.percentUsed == nil)
+        cost.isEnabled = false
+        cost.balance = 12.5
+        let withBalance = try #require(UsageMenuCardView.Model.claudeUsageCreditsSection(cost))
+        #expect(withBalance.spendLine.hasPrefix("Off · Balance"))
+        #expect(withBalance.spendLine.hasSuffix("API credits $200.00 a month"))
+    }
+
+    @Test
+    func `the grant rides on the snapshot only for plans that have one`() {
+        let base = ClaudeUsageSnapshot(
+            primary: RateWindow(usedPercent: 10, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+            secondary: nil,
+            opus: nil,
+            updatedAt: .init(),
+            accountEmail: nil,
+            accountOrganization: nil,
+            loginMethod: nil,
+            rawText: nil)
+        #expect(base.with(includedMonthlyCreditUSD: nil).providerCost == nil)
+        let granted = base.with(includedMonthlyCreditUSD: 100)
+        #expect(granted.providerCost?.includedMonthlyCreditUSD == 100)
+        #expect(granted.providerCost?.currencyCode == "USD")
+        let dated = granted.with(includedCreditNextGrantAt: Date(timeIntervalSince1970: 1_793_000_000))
+        #expect(dated.providerCost?.includedCreditNextGrantAt == Date(timeIntervalSince1970: 1_793_000_000))
+        // No grant, no date.
+        #expect(base.with(includedCreditNextGrantAt: .init()).providerCost == nil)
+    }
+}

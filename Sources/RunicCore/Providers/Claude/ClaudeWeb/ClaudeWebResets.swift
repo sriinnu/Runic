@@ -76,6 +76,9 @@ public enum ClaudeWebResets {
             var updated = snapshot
             if updated.resetCredits == nil { updated = updated.with(resetCredits: extras.resetCredits) }
             if let balance = extras.creditBalance { updated = updated.with(creditBalance: balance) }
+            // The next API credit lands with the next charge; only a plan
+            // that carries a grant shows it.
+            updated = updated.with(includedCreditNextGrantAt: extras.nextChargeAt)
             return updated
         } catch {
             self.setLastFailure(error.localizedDescription)
@@ -87,6 +90,9 @@ public enum ClaudeWebResets {
         let resetCredits: UsageResetCredits?
         /// Prepaid usage-credit balance (`prepaid/credits`), with its currency.
         let creditBalance: ClaudeMoney?
+        /// The subscription's next charge (`subscription_details`), when the
+        /// next monthly API credit lands.
+        var nextChargeAt: Date?
     }
 
     /// Resets and the usage-credit balance for the chat org, using the saved
@@ -99,10 +105,26 @@ public enum ClaudeWebResets {
                 orgId: organization.id,
                 sessionKey: sessionKey)
             let balance = await Self.fetchCreditBalance(orgId: organization.id, sessionKey: sessionKey)
-            return Extras(resetCredits: usage.resetCredits, creditBalance: balance)
+            let nextCharge = await Self.fetchNextChargeDate(orgId: organization.id, sessionKey: sessionKey)
+            return Extras(resetCredits: usage.resetCredits, creditBalance: balance, nextChargeAt: nextCharge)
         } catch ClaudeWebAPIFetcher.FetchError.unauthorized {
             throw Failure.sessionExpired
         }
+    }
+
+    /// Best effort: `GET /api/organizations/{org}/subscription_details` →
+    /// `next_charge_at`. Nil on any failure; the grant then shows without a date.
+    static func fetchNextChargeDate(orgId: String, sessionKey: String) async -> Date? {
+        guard let url = URL(string: "https://claude.ai/api/organizations/\(orgId)/subscription_details") else {
+            return nil
+        }
+        var request = URLRequest(url: url)
+        request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return ClaudeAPICreditGrant.parseNextChargeDate(data)
     }
 
     /// Best effort: `GET /api/organizations/{org}/prepaid/credits` →
