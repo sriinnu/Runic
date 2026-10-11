@@ -1,6 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
+import ShaderHero from '../components/ShaderHero.astro';
+const hues: Record<string, [string, string]> = {
+  'themes-and-skins': ['#f2c94c', '#ff5160'], providers: ['#3ff0d6', '#2d5bff'], claude: ['#ff8a65', '#b388ff'],
+  cli: ['#7bd88f', '#3ff0d6'], mcp: ['#b388ff', '#2d5bff'], architecture: ['#6f8cff', '#3ff0d6'],
+  contributing: ['#ff6b81', '#f2c94c'], 'release-and-ops': ['#4fe3c1', '#6f8cff'],
+};
 
 export function getStaticPaths() {
   const mods = import.meta.glob('../content/*.md', { eager: true }) as Record<string, any>;
@@ -14,6 +20,7 @@ const { mod } = Astro.props as { mod: any };
 const { Content, frontmatter } = mod;
 ---
 <Base title={frontmatter.title} path={`/${slug}/`}>
+  <ShaderHero compact accent={(hues[slug!] ?? hues.providers)[0]} accent2={(hues[slug!] ?? hues.providers)[1]} />
   <article class={`prose page-${slug}`}>
     <Hero slug={slug!} />
     <Content />

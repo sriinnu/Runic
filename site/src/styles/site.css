@@ -150,3 +150,51 @@ footer p { margin: 0; }
 .prose { display: flex; flex-direction: column; }
 .prose > h1 { order: -2; }
 .prose > [class^="hero-"] { order: -1; }
+
+/* ── home ───────────────────────────────────────────────────────── */
+main.bleed { max-width: none; padding: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 96px; }
+.home-hero { padding: 40px 0 36px; }
+.home-hero .icon { border-radius: 20px; box-shadow: 0 0 60px rgba(63,240,214,.35); }
+.eyebrow { margin: 18px 0 8px; text-transform: uppercase; letter-spacing: .22em; font-size: 12px; color: #9fb4d0; }
+.home-hero h1 { font-size: clamp(2.4rem, 7vw, 4.6rem); line-height: 1.04; letter-spacing: -.03em; margin: 0 0 18px; color: #fff; }
+.home-hero h1 em { font-style: normal; background: linear-gradient(90deg, #3ff0d6, #7aa2ff 60%, #b388ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.home-hero .lede { color: #c3d0e4; max-width: 620px; margin: 0 auto 28px; font-size: 1.15rem; }
+.btn.ghost { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.22); color: #eef3fb; backdrop-filter: blur(8px); }
+.home-hero .install { background: rgba(5,8,13,.6); border-color: rgba(255,255,255,.16); color: #cfeee9; backdrop-filter: blur(8px); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; margin: -34px 0 56px;
+  background: var(--line); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; position: relative; backdrop-filter: blur(12px); }
+.stats div { background: color-mix(in srgb, var(--panel) 88%, transparent); padding: 22px 20px; text-align: center; }
+.stats b { display: block; font-size: 2.4rem; letter-spacing: -.03em; background: linear-gradient(180deg, var(--text), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stats span { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .14em; }
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.card { position: relative; padding: 24px; border: 1px solid var(--line); border-radius: 18px; text-decoration: none; color: var(--text);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 7%, var(--panel)), var(--panel));
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; overflow: hidden; }
+.card::before { content: ""; position: absolute; inset: -40% -20% auto auto; width: 180px; height: 180px; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 35%, transparent), transparent 70%); opacity: 0; transition: opacity .3s; }
+.card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 18px 50px color-mix(in srgb, var(--accent) 18%, transparent); color: var(--text); }
+.card:hover::before { opacity: 1; }
+.card .n { font: 600 12px ui-monospace, Menlo, monospace; color: var(--accent); letter-spacing: .1em; }
+.card h3 { margin: 10px 0 8px; font-size: 1.2rem; }
+.card p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+.card .more { color: var(--accent); font-size: 14px; font-weight: 600; }
+.gallery { margin-top: 88px; }
+.gallery h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0 0 8px; letter-spacing: -.02em; }
+.deck { display: flex; gap: 18px; overflow-x: auto; padding: 28px 4px 28px; perspective: 1100px; scroll-snap-type: x proximity; }
+.deck figure { flex: 0 0 230px; margin: 0; transform: rotateY(calc(var(--tilt, 0) * 1deg)); transition: transform .35s ease; scroll-snap-align: center; }
+.deck figure:nth-child(odd) { --tilt: 5; } .deck figure:nth-child(even) { --tilt: -5; }
+.deck figure:hover { transform: rotateY(0) translateY(-10px) scale(1.04); }
+.deck img { width: 230px; height: 400px; object-fit: cover; object-position: top; border-radius: 16px; border: 2px solid var(--c);
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--c) 30%, transparent); display: block; }
+.deck figcaption { display: flex; flex-direction: column; padding: 10px 2px; }
+.deck figcaption span { color: var(--muted); font-size: 13px; }
+.closer { margin-top: 72px; text-align: center; padding: 56px 24px; border: 1px solid var(--line); border-radius: 24px;
+  background: radial-gradient(600px 240px at 50% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%); }
+.closer h2 { margin: 0 0 6px; font-size: 2rem; }
+.closer p { color: var(--muted); margin: 0 0 22px; }
+@supports (animation-timeline: view()) {
+  .card, .stats, .gallery h2, .closer { animation: rise both linear; animation-timeline: view(); animation-range: entry 0% entry 35%; }
+  @keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) { .card, .deck figure { transition: none; } .card, .stats, .gallery h2, .closer { animation: none; } }
