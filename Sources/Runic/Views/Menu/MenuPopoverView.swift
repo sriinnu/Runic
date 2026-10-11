@@ -130,21 +130,29 @@ struct MenuPopoverView: View {
 
                     self.actionSections(provider: leadSlot ?? provider, isOverview: isOverview)
 
-                    if palette.id == "retro" {
+                    let footer = skin.footer(RunicSkinFooterContext(
+                        width: self.contentWidth,
+                        openAbout: self.actions.openAbout))
+                    // The pixel tagline is Retro's standard closing line; a
+                    // kit with its own footer carries the imprint itself.
+                    if palette.id == "retro", footer == nil {
                         RetroTaglineFooter()
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, RunicSpacing.xs)
                     }
-                    if let footer = skin.footer(RunicSkinFooterContext(
-                        width: self.contentWidth,
-                        openAbout: self.actions.openAbout))
-                    {
+                    if let footer {
                         footer
                     }
                 }
                 .padding(.horizontal, self.outerHorizontalPadding)
                 .padding(.top, self.outerVerticalPadding)
                 .padding(.bottom, self.outerVerticalPadding)
+            }
+
+            if let stage = skin.stageOverlay() {
+                stage
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
         }
         .frame(width: self.width, height: self.height)

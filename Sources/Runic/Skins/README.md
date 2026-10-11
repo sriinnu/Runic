@@ -55,10 +55,15 @@ view's state.
 
 ## Kits today
 
-- `Standard` — the default; every slot nil. System, Dark, Glass, Blueprint,
-  Retro, Terminal, Relief and Yantra draw with it until they get a kit.
+- `Standard` — the default; every slot nil. System, Dark, Glass, Terminal,
+  Relief and Yantra draw with it until they get a kit.
 - `Gazette` — the printed edition (`RunicGazetteChrome.swift`,
   `GazetteMenuCardViews.swift`). Pages and footer are on the kit; its chip,
   tab and action-row styling still live inside the standard views under
   `isGazette` and move here next.
 - `Sumi` — ink on washi. The reference implementation: read it first.
+- `Drafting` — blueprint as an engineering sheet: dimensioned bars, hatching, callouts, title block.
+- `Instrument` — retro as a bench instrument: VU meters, LCDs, keycaps, lamps, screws. Adds the `stageOverlay` slot.
+- `Departures` — a split-flap board; resets are departures.
+- `FlightDeck` — a primary flight display; pace is the attitude indicator.
+- `Receipt` — thermal paper; every ping prints one.

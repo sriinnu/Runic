@@ -27,6 +27,7 @@ struct RunicSkinRegistryTests {
         #expect(ids.contains(ReceiptSkin.skinID))
         #expect(ids.contains(FlightDeckSkin.skinID))
         #expect(ids.contains(DeparturesSkin.skinID))
+        #expect(ids.contains(InstrumentSkin.skinID))
     }
 
     @MainActor
@@ -38,6 +39,7 @@ struct RunicSkinRegistryTests {
         #expect(Theme.receipt.palette.skinID == ReceiptSkin.skinID)
         #expect(Theme.flightdeck.palette.skinID == FlightDeckSkin.skinID)
         #expect(Theme.departures.palette.skinID == DeparturesSkin.skinID)
+        #expect(Theme.retro.palette.skinID == InstrumentSkin.skinID)
         #expect(Theme.system.palette.skinID == StandardSkin.skinID)
         #expect(Theme.terminal.palette.skinID == StandardSkin.skinID)
     }
