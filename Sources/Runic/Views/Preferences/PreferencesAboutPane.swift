@@ -51,12 +51,14 @@ private struct LiquidLinkButton: View {
             HStack(spacing: RunicSpacing.xs) {
                 Image(systemName: self.icon)
                     .font(.system(size: 12, weight: .medium))
-                    .frame(width: 18)
+                    .frame(width: 16)
                 Text(self.title)
                     .font(.system(size: 12.5, weight: .medium))
+                    .lineLimit(1)
+                    .fixedSize()
             }
             .foregroundStyle(self.hovering ? self.runicTheme.primaryText : self.runicTheme.secondaryText)
-            .padding(.horizontal, RunicSpacing.sm)
+            .padding(.horizontal, RunicSpacing.compact)
             .padding(.vertical, RunicSpacing.compact)
             .background(
                 Capsule(style: .continuous)

@@ -9,7 +9,7 @@
 //   redact_emails.swift <placeholder> <png> [<png> ...]
 //
 // Example:
-//   ./Scripts/redact_emails.swift demo@runic.app assets/screenshots/*.png
+//   ./Scripts/redact_emails.swift demo@runic.srinivas.dev assets/screenshots/*.png
 
 import AppKit
 import CoreImage
