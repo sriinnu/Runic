@@ -1,0 +1,33 @@
+{
+  "id": "flightdeck",
+  "displayName": "Flight deck",
+  "tagline": "Primary flight display",
+  "symbolName": "airplane",
+  "isCustom": true,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#E6E9EC",
+    "secondary":     "#2F6FBF",
+    "accent":        "#4FE3C1",
+    "highlight":     "#FFB84D",
+    "warm":          "#FF5CC8",
+    "tertiary":      "#7BD88F",
+    "surface":       "#0B0E11",
+    "surfaceAlt":    "#15191D",
+    "cardFill":      "#111417",
+    "cardStroke":    "#3A3F44",
+    "primaryText":   "#E6E9EC",
+    "secondaryText": "#9AA0A6"
+  },
+  "fonts":   { "body": "system", "numeric": "mono" },
+  "shape":   { "cornerMultiplier": 0.25, "separator": "hairline" },
+  "motion":  { "preset": "instant" },
+  "density": { "preset": "normal" },
+  "style": {
+    "skin": "flightdeck",
+    "typography": { "bodyFamily": "B612", "numericFamily": "B612 Mono", "scale": 1.0, "tracking": 0.02, "lineSpacing": 1.1, "contrast": "strong" },
+    "chrome": { "borderStyle": "hairline", "borderWeight": 1.0, "borderOpacity": 0.9, "cornerStyle": "sharp", "panelDepth": "flat" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
+  }
+}

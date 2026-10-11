@@ -170,13 +170,14 @@ enum RunicSkinRegistry {
         case SumiSkin.skinID: SumiSkin()
         case DraftingSkin.skinID: DraftingSkin()
         case ReceiptSkin.skinID: ReceiptSkin()
+        case FlightDeckSkin.skinID: FlightDeckSkin()
         default: StandardSkin()
         }
     }
 
     /// Every bundled skin, for completeness tests and the appearance pane.
     static var all: [any RunicSkin] {
-        [StandardSkin(), GazetteSkin(), SumiSkin(), DraftingSkin(), ReceiptSkin()]
+        [StandardSkin(), GazetteSkin(), SumiSkin(), DraftingSkin(), ReceiptSkin(), FlightDeckSkin()]
     }
 }
 
