@@ -1,0 +1,33 @@
+{
+  "id": "receipt",
+  "displayName": "Receipt",
+  "tagline": "Every ping prints one",
+  "symbolName": "printer",
+  "isCustom": true,
+  "prefersDarkAppearance": true,
+  "colors": {
+    "primary":       "#FBFAF4",
+    "secondary":     "#9A9A9A",
+    "accent":        "#FF5160",
+    "highlight":     "#D9A520",
+    "warm":          "#FF6B57",
+    "tertiary":      "#7BD88F",
+    "surface":       "#2B2B2B",
+    "surfaceAlt":    "#222222",
+    "cardFill":      "#353535E6",
+    "cardStroke":    "#5A5A5A",
+    "primaryText":   "#FBFAF4",
+    "secondaryText": "#B8B8B8"
+  },
+  "fonts":   { "body": "mono", "numeric": "mono" },
+  "shape":   { "cornerMultiplier": 0.25, "separator": "rule" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "normal" },
+  "style": {
+    "skin": "receipt",
+    "typography": { "bodyFamily": "Courier Prime", "numericFamily": "Courier Prime", "scale": 1.0, "tracking": 0.0, "lineSpacing": 1.55, "contrast": "strong" },
+    "chrome": { "borderStyle": "hairline", "borderWeight": 1.0, "borderOpacity": 0.6, "cornerStyle": "sharp", "panelDepth": "flat" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0 },
+    "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral" }
+  }
+}

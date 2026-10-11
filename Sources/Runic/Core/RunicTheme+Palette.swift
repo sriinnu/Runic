@@ -480,6 +480,62 @@ extension Theme {
                         progressStyle: .flatBar,
                         hoverStyle: .neutral,
                         chartSeries: .themed)))
+        case .receipt:
+            // A thermal receipt out of a printer. The popover is the dark
+            // printer body; the pages print on paper the kit owns
+            // (`RunicReceipt.paper` / `.ink`), so every palette slot here is
+            // what reads on the body: paper-white text, a lifted stamp red
+            // for the accent (the pure #C8102E stamp sits under 3:1 on the
+            // body and stays a kit constant for the paper), amber, coral,
+            // mint. Courier Prime throughout.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Every ping prints one",
+                symbolName: "printer",
+                isCustom: true,
+                prefersDarkAppearance: true,
+                primary: Color(red: 0.984, green: 0.980, blue: 0.957), // paper
+                secondary: Color(red: 0.604, green: 0.604, blue: 0.604), // body grey
+                accent: Color(red: 1.000, green: 0.318, blue: 0.376), // stamp red, lifted for the body
+                highlight: Color(red: 0.851, green: 0.647, blue: 0.125), // amber
+                warm: Color(red: 1.000, green: 0.420, blue: 0.341), // coral
+                tertiary: Color(red: 0.482, green: 0.847, blue: 0.561), // mint
+                surface: Color(red: 0.169, green: 0.169, blue: 0.169), // printer body
+                surfaceAlt: Color(red: 0.133, green: 0.133, blue: 0.133),
+                cardFill: Color(red: 0.208, green: 0.208, blue: 0.208).opacity(0.90), // lifted body slab
+                cardStroke: Color(red: 0.353, green: 0.353, blue: 0.353),
+                primaryText: Color(red: 0.984, green: 0.980, blue: 0.957), // paper on the body
+                secondaryText: Color(red: 0.722, green: 0.722, blue: 0.722),
+                fonts: RunicThemeFonts(body: .mono, numeric: .mono),
+                shape: RunicThemeShape(cornerMultiplier: 0.25, separator: .rule),
+                motion: .snappy,
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: "Courier Prime",
+                        numericFamily: "Courier Prime",
+                        scale: 1.0,
+                        tracking: 0,
+                        lineSpacing: 1.55,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hairline,
+                        borderWeight: 1.0,
+                        borderOpacity: 0.6,
+                        cornerStyle: .sharp,
+                        panelDepth: .flat),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
+                        materialIntensity: 0,
+                        texture: .none,
+                        textureOpacity: 0),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSolid,
+                        progressStyle: .flatBar,
+                        hoverStyle: .neutral),
+                    skin: ReceiptSkin.skinID))
         }
     }
 
