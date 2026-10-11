@@ -61,6 +61,7 @@ h2 { font-size: 1.7rem; margin: 48px 0 6px; letter-spacing: -.01em; }
 .site-foot nav a:hover { color: var(--text); }
 .foot-base { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; max-width: 1180px; margin: 40px auto 0; padding-top: 18px;
   border-top: 1px solid var(--line); font-size: 13px; }
+.foot-base a { color: var(--muted); text-underline-offset: 3px; } .foot-base a:hover { color: var(--text); }
 @media (max-width: 760px) { .foot-grid { grid-template-columns: 1fr 1fr; } .foot-brand { grid-column: 1 / -1; } }
 
 /* ── per-page identities ───────────────────────────────────────── */
