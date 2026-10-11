@@ -168,13 +168,14 @@ enum RunicSkinRegistry {
         switch palette.skinID {
         case GazetteSkin.skinID: GazetteSkin()
         case SumiSkin.skinID: SumiSkin()
+        case DraftingSkin.skinID: DraftingSkin()
         default: StandardSkin()
         }
     }
 
     /// Every bundled skin, for completeness tests and the appearance pane.
     static var all: [any RunicSkin] {
-        [StandardSkin(), GazetteSkin(), SumiSkin()]
+        [StandardSkin(), GazetteSkin(), SumiSkin(), DraftingSkin()]
     }
 }
 

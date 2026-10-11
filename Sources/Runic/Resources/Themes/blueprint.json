@@ -24,7 +24,8 @@
   "motion":  { "preset": "standard" },
   "density": { "preset": "normal" },
   "style": {
-    "typography": { "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.01, "contrast": "strong" },
+    "skin": "drafting",
+    "typography": { "bodyFamily": "Geist", "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.01, "contrast": "strong" },
     "chrome": { "borderStyle": "hairline", "borderWeight": 1.0, "borderOpacity": 0.7, "cornerStyle": "sharp", "panelDepth": "flat" },
     "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.08, "materialIntensity": 0.0, "texture": "grid", "textureOpacity": 0.6 },
     "controls": { "selectedFillStyle": "accentSolid", "progressStyle": "flatBar", "hoverStyle": "neutral", "chartSeries": "themed" }
