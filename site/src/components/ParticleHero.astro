@@ -3,10 +3,10 @@
 // drawn as a true figure-eight in 3D. Particles on the "used" share of the loop
 // burn bright, the rest stay dim; a hot head marks the current level. The
 // pointer orbits the figure, depth blurs the sprites, scroll breathes the scale.
-interface Props { accent?: string; accent2?: string }
-const { accent = '#3ff0d6', accent2 = '#4a63ff' } = Astro.props;
+interface Props { accent?: string; accent2?: string; compact?: boolean }
+const { accent = '#3ff0d6', accent2 = '#4a63ff', compact = false } = Astro.props;
 ---
-<div class="particles" data-accent={accent} data-accent2={accent2}>
+<div class:list={['particles', { compact }]} data-accent={accent} data-accent2={accent2} data-compact={compact ? '1' : '0'} style={`--a:${accent}`}>
   <canvas aria-hidden="true"></canvas>
   <div class="veil" aria-hidden="true"></div>
   <div class="content"><slot /></div>
@@ -21,6 +21,8 @@ const { accent = '#3ff0d6', accent2 = '#4a63ff' } = Astro.props;
     background: linear-gradient(90deg, rgba(5,8,13,.78) 0%, rgba(5,8,13,.45) 38%, rgba(5,8,13,0) 62%),
                 linear-gradient(180deg, rgba(5,8,13,0) 70%, var(--bg, #070b12)); }
   .content { position: relative; max-width: 1180px; margin: 0 auto; padding: 96px 28px 88px; }
+  .compact { min-height: 300px; background: radial-gradient(700px 360px at 78% 50%, color-mix(in srgb, var(--a) 22%, transparent), transparent 70%), #05080d; }
+  .compact .content { padding: 64px 28px 56px; }
   @media (max-width: 820px) { .veil { background: linear-gradient(180deg, rgba(5,8,13,.55), rgba(5,8,13,.8)); } }
 </style>
 
@@ -89,7 +91,8 @@ void main(){ vec2 d=gl_PointCoord-.5; float r=dot(d,d)*4.; float a=exp(-r*5.2)*v
 
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const small = innerWidth < 820;
-    const N = small ? 5200 : 12000;
+    const compact = root.dataset.compact === '1';
+    const N = compact ? (small ? 2200 : 4800) : (small ? 5200 : 12000);
     let seed = 1337;
     const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
     const seedData = new Float32Array(N * 4), randData = new Float32Array(N * 3);
@@ -137,9 +140,9 @@ void main(){ vec2 d=gl_PointCoord-.5; float r=dot(d,d)*4.; float a=exp(-r*5.2)*v
       const wide = w / h > 1.1;
       gl.uniform1f(uTime, t); gl.uniform1f(uAspect, w / h); gl.uniform1f(uFill, fill);
       gl.uniform1f(uYaw, reduce ? 0.28 : yaw); gl.uniform1f(uPitch, reduce ? -0.2 : pitch - 0.12);
-      gl.uniform1f(uScale, (wide ? 0.60 : 0.62) * (1 - scrollY * 0.18));
-      gl.uniform1f(uPx, 3.1 * dpr * (h / 900) + 0.9);
-      gl.uniform2f(uCenter, wide ? 0.38 : 0.0, wide ? -0.02 : 0.20);
+      gl.uniform1f(uScale, compact ? (wide ? 0.56 : 0.5) : (wide ? 0.60 : 0.62) * (1 - scrollY * 0.18));
+      gl.uniform1f(uPx, 3.1 * dpr * (compact ? 0.78 : h / 900) + 0.9);
+      gl.uniform2f(uCenter, compact ? (wide ? 0.52 : 0.0) : (wide ? 0.38 : 0.0), compact ? 0.0 : (wide ? -0.02 : 0.20));
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.POINTS, 0, N);
       if (!reduce && visible) raf = requestAnimationFrame(frame);
