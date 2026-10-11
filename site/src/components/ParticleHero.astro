@@ -74,7 +74,8 @@ void main(){ vec2 d=gl_PointCoord-.5; float r=dot(d,d)*4.; float a=exp(-r*5.2)*v
     return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
   };
 
-  document.querySelectorAll<HTMLElement>('.particles').forEach((root) => {
+  let teardown: Array<() => void> = [];
+  const boot = () => document.querySelectorAll<HTMLElement>('.particles').forEach((root) => {
     const canvas = root.querySelector('canvas')!;
     const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
     if (!gl) return;
@@ -123,14 +124,15 @@ void main(){ vec2 d=gl_PointCoord-.5; float r=dot(d,d)*4.; float a=exp(-r*5.2)*v
       w = Math.max(2, Math.floor(r.width * dpr)); h = Math.max(2, Math.floor(r.height * dpr));
       canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h);
     };
-    resize(); addEventListener('resize', resize);
+    resize(); addEventListener('resize', resize); teardown.push(() => removeEventListener('resize', resize));
     root.addEventListener('pointermove', (e) => {
       const r = root.getBoundingClientRect();
       tyaw = ((e.clientX - r.left) / r.width - 0.5) * 1.5;
       tpitch = ((e.clientY - r.top) / r.height - 0.5) * 0.7;
     });
     root.addEventListener('pointerleave', () => { tyaw = 0; tpitch = 0; });
-    addEventListener('scroll', () => { scrollY = Math.min(1, scrollY = window.scrollY / 700); }, { passive: true });
+    const onScroll = () => { scrollY = Math.min(1, window.scrollY / 700); };
+    addEventListener('scroll', onScroll, { passive: true }); teardown.push(() => removeEventListener('scroll', onScroll));
 
     const start = performance.now();
     const frame = (now: number) => {
@@ -147,14 +149,22 @@ void main(){ vec2 d=gl_PointCoord-.5; float r=dot(d,d)*4.; float a=exp(-r*5.2)*v
       gl.drawArrays(gl.POINTS, 0, N);
       if (!reduce && visible) raf = requestAnimationFrame(frame);
     };
-    new IntersectionObserver(([en]) => {
+    const io = new IntersectionObserver(([en]) => {
       visible = en.isIntersecting;
       if (visible && !reduce) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
-    }).observe(root);
-    document.addEventListener('visibilitychange', () => {
+    });
+    io.observe(root);
+    const onVis = () => {
       visible = !document.hidden;
       if (visible && !reduce) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
-    });
+    };
+    document.addEventListener('visibilitychange', onVis);
     raf = requestAnimationFrame(frame);
+    teardown.push(() => {
+      cancelAnimationFrame(raf); io.disconnect(); document.removeEventListener('visibilitychange', onVis);
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+    });
   });
+  document.addEventListener('astro:before-swap', () => { teardown.forEach((f) => f()); teardown = []; });
+  document.addEventListener('astro:page-load', boot);
 </script>
