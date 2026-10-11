@@ -1,0 +1,45 @@
+---
+import '../styles/site.css';
+interface Props { title?: string; description?: string; path?: string }
+const { title, description = 'AI usage, costs and quota resets in your Mac menu bar.', path = '/' } = Astro.props;
+const full = title ? `${title} · Runic` : 'Runic — AI usage in your menu bar';
+const nav = [
+  ['/themes-and-skins/', 'Themes'],
+  ['/providers/', 'Providers'],
+  ['/claude/', 'Claude'],
+  ['/cli/', 'CLI'],
+  ['/mcp/', 'MCP'],
+  ['/architecture/', 'Architecture'],
+  ['/contributing/', 'Contribute'],
+];
+const canonical = new URL(path, 'https://runic.srinivas.dev').href;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{full}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/icon.png" />
+    <meta property="og:title" content={full} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta name="color-scheme" content="dark light" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="/"><img src="/icon.png" width="28" height="28" alt="" /><span>Runic</span></a>
+      <nav aria-label="Main">
+        {nav.map(([href, label]) => <a href={href} aria-current={path === href ? 'page' : undefined}>{label}</a>)}
+      </nav>
+      <a class="gh" href="https://github.com/sriinnu/Runic">GitHub</a>
+    </header>
+    <main><slot /></main>
+    <footer>
+      <p>Runic is open source. Built by <a href="https://github.com/sriinnu">Sriinnu</a> · <a href="https://srinivas.dev">srinivas.dev</a> · <a href="https://github.com/sriinnu/Runic/wiki">Wiki</a> · <a href="https://github.com/sriinnu/Runic/releases">Releases</a></p>
+    </footer>
+  </body>
+</html>

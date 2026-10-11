@@ -1,0 +1,22 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+
+export function getStaticPaths() {
+  const mods = import.meta.glob('../content/*.md', { eager: true }) as Record<string, any>;
+  return Object.entries(mods)
+    .map(([file, mod]) => ({ slug: file.split('/').pop()!.replace(/\.md$/, ''), mod }))
+    .filter(({ slug }) => slug !== 'home')
+    .map(({ slug, mod }) => ({ params: { slug }, props: { mod } }));
+}
+const { slug } = Astro.params;
+const { mod } = Astro.props as { mod: any };
+const { Content, frontmatter } = mod;
+---
+<Base title={frontmatter.title} path={`/${slug}/`}>
+  <article class={`prose page-${slug}`}>
+    <Hero slug={slug!} />
+    <Content />
+    <p class="edit"><a href={`https://github.com/sriinnu/Runic/wiki`}>Edit this on the wiki</a></p>
+  </article>
+</Base>
