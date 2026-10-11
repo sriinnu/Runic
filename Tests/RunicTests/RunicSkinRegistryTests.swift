@@ -24,14 +24,16 @@ struct RunicSkinRegistryTests {
         #expect(ids.contains(GazetteSkin.skinID))
         #expect(ids.contains(SumiSkin.skinID))
         #expect(ids.contains(DraftingSkin.skinID))
+        #expect(ids.contains(ReceiptSkin.skinID))
     }
 
     @MainActor
     @Test
-    func `gazette and sumi keep their kits, the rest draw standard`() {
+    func `themes keep the kits they name, the rest draw standard`() {
         #expect(Theme.gazette.palette.skinID == GazetteSkin.skinID)
         #expect(Theme.sumi.palette.skinID == SumiSkin.skinID)
         #expect(Theme.blueprint.palette.skinID == DraftingSkin.skinID)
+        #expect(Theme.receipt.palette.skinID == ReceiptSkin.skinID)
         #expect(Theme.system.palette.skinID == StandardSkin.skinID)
         #expect(Theme.terminal.palette.skinID == StandardSkin.skinID)
     }
