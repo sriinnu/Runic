@@ -591,6 +591,61 @@ extension Theme {
                         hoverStyle: .neutral,
                         chartSeries: .themed),
                     skin: FlightDeckSkin.skinID))
+        case .departures:
+            // A Solari split-flap departures board. Near-black stage with a
+            // charcoal inner frame, dark flap tiles, board yellow for the
+            // accent, OPEN green and OUT red for status, a sky blue thread
+            // for the series. Barlow Condensed sets every cap and numeral,
+            // Barlow the running copy. Drawn by the Departures skin.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Every reset is a departure",
+                symbolName: "airplane.departure",
+                isCustom: true,
+                prefersDarkAppearance: true,
+                primary: Color(red: 0.949, green: 0.949, blue: 0.949), // board white
+                secondary: Color(red: 0.557, green: 0.557, blue: 0.576), // dim grey — column headers
+                accent: Color(red: 0.949, green: 0.788, blue: 0.298), // board yellow
+                highlight: Color(red: 0.482, green: 0.847, blue: 0.561), // OPEN green
+                warm: Color(red: 1.000, green: 0.420, blue: 0.341), // OUT red
+                tertiary: Color(red: 0.541, green: 0.706, blue: 0.973), // sky blue, for series spread
+                surface: Color(red: 0.043, green: 0.043, blue: 0.047), // the stage
+                surfaceAlt: Color(red: 0.078, green: 0.078, blue: 0.086), // the frame
+                cardFill: Color(red: 0.110, green: 0.110, blue: 0.118), // a flap tile
+                cardStroke: Color(red: 0.227, green: 0.227, blue: 0.235),
+                primaryText: Color(red: 0.949, green: 0.949, blue: 0.949),
+                secondaryText: Color(red: 0.631, green: 0.631, blue: 0.651),
+                fonts: RunicThemeFonts(body: .system, numeric: .tabular),
+                shape: RunicThemeShape(cornerMultiplier: 0.3, separator: .hairline),
+                motion: .snappy,
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: "Barlow",
+                        numericFamily: "Barlow Condensed",
+                        scale: 1.0,
+                        tracking: 0,
+                        lineSpacing: nil,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hairline,
+                        borderWeight: 1.0,
+                        borderOpacity: 0.6,
+                        cornerStyle: .sharp,
+                        panelDepth: .flat),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
+                        materialIntensity: 0,
+                        texture: .none,
+                        textureOpacity: 0),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSolid,
+                        progressStyle: .flatBar,
+                        hoverStyle: .neutral,
+                        chartSeries: .themed),
+                    skin: DeparturesSkin.skinID))
         }
     }
 
