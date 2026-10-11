@@ -656,28 +656,47 @@ extension UsageMenuCardView.Model {
     /// (`isEnabled` or `balance` set); the older `extra_usage` path below
     /// keeps its original behavior.
     static func claudeUsageCreditsSection(_ cost: ProviderCostSnapshot) -> ProviderCostSection? {
-        guard cost.isEnabled != nil || cost.balance != nil else { return nil }
+        let grant = Self.apiCreditGrantLine(cost)
+        guard cost.isEnabled != nil || cost.balance != nil || grant != nil else { return nil }
         let money = { (value: Double) in UsageFormatter.currencyString(value, currencyCode: cost.currencyCode) }
         let balance = cost.balance.map { "Balance \(money($0))" }
         if cost.isEnabled == false {
+            let line = (["Off"] + [balance].compactMap(\.self)).joined(separator: " · ")
             return ProviderCostSection(
                 title: "Usage credits",
                 percentUsed: nil,
-                spendLine: (["Off"] + [balance].compactMap(\.self)).joined(separator: " · "))
+                spendLine: [line, grant].compactMap(\.self).joined(separator: "\n"))
         }
         var parts: [String] = []
         var percent: Double?
-        if cost.limit > 0 {
-            parts.append("This month: \(money(cost.used)) / \(money(cost.limit))")
-            percent = Self.clamped(cost.used / cost.limit * 100)
-        } else {
-            parts.append("This month: \(money(cost.used))")
+        if cost.isEnabled != nil || cost.balance != nil {
+            if cost.limit > 0 {
+                parts.append("This month: \(money(cost.used)) / \(money(cost.limit))")
+                percent = Self.clamped(cost.used / cost.limit * 100)
+            } else {
+                parts.append("This month: \(money(cost.used))")
+            }
+            if let balance { parts.append(balance) }
         }
-        if let balance { parts.append(balance) }
+        let spendLine = [parts.isEmpty ? nil : parts.joined(separator: " · "), grant]
+            .compactMap(\.self)
+            .joined(separator: "\n")
         return ProviderCostSection(
             title: "Usage credits",
             percentUsed: percent,
-            spendLine: parts.joined(separator: " · "))
+            spendLine: spendLine)
+    }
+
+    /// "API credits $200 a month · next grant Nov 3" — the plan's included
+    /// API credit, only when there is one. Pro and Free carry none and show
+    /// nothing. The remaining balance is not shown: it lives in the Console.
+    static func apiCreditGrantLine(_ cost: ProviderCostSnapshot) -> String? {
+        guard let amount = cost.includedMonthlyCreditUSD, amount > 0 else { return nil }
+        var line = "API credits \(UsageFormatter.currencyString(amount, currencyCode: "USD")) a month"
+        if let next = cost.includedCreditNextGrantAt {
+            line += " · next grant \(next.formatted(.dateTime.month(.abbreviated).day()))"
+        }
+        return line
     }
 
     private static func clamped(_ value: Double) -> Double {

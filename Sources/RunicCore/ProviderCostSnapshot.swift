@@ -15,6 +15,11 @@ public struct ProviderCostSnapshot: Equatable, Codable, Sendable {
     public var isEnabled: Bool?
     /// Prepaid balance behind the spend, when reported (Claude usage credits).
     public var balance: Double?
+    /// Monthly API credit the plan includes (Claude Max: $100 or $200), in
+    /// USD. Nil when the plan grants none, so nothing is shown.
+    public var includedMonthlyCreditUSD: Double?
+    /// When the next monthly credit lands — the subscription's next charge.
+    public var includedCreditNextGrantAt: Date?
 
     public init(
         used: Double,

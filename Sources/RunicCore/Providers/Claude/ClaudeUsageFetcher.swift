@@ -101,6 +101,45 @@ extension ClaudeUsageSnapshot {
         copy.servedByCLIFallback = self.servedByCLIFallback
         return copy
     }
+
+    /// The plan's monthly API credit, carried on the usage-credits cost. A
+    /// plan without one (nil) leaves the snapshot untouched; a plan with one
+    /// and no spend block yet gets a zero USD cost to hang it on.
+    func with(includedMonthlyCreditUSD amount: Double?) -> ClaudeUsageSnapshot {
+        guard let amount, amount > 0 else { return self }
+        var cost = self.providerCost ?? ProviderCostSnapshot(
+            used: 0,
+            limit: 0,
+            currencyCode: "USD",
+            period: "Monthly",
+            updatedAt: self.updatedAt)
+        cost.includedMonthlyCreditUSD = amount
+        return self.replacingProviderCost(cost)
+    }
+
+    /// When the next monthly API credit lands. Only meaningful on a snapshot
+    /// that carries a grant; otherwise a no-op.
+    func with(includedCreditNextGrantAt date: Date?) -> ClaudeUsageSnapshot {
+        guard let date, var cost = self.providerCost, cost.includedMonthlyCreditUSD != nil else { return self }
+        cost.includedCreditNextGrantAt = date
+        return self.replacingProviderCost(cost)
+    }
+
+    private func replacingProviderCost(_ cost: ProviderCostSnapshot?) -> ClaudeUsageSnapshot {
+        var copy = ClaudeUsageSnapshot(
+            primary: self.primary,
+            secondary: self.secondary,
+            opus: self.opus,
+            providerCost: cost,
+            updatedAt: self.updatedAt,
+            accountEmail: self.accountEmail,
+            accountOrganization: self.accountOrganization,
+            loginMethod: self.loginMethod,
+            rawText: self.rawText,
+            resetCredits: self.resetCredits)
+        copy.servedByCLIFallback = self.servedByCLIFallback
+        return copy
+    }
 }
 
 public enum ClaudeUsageError: LocalizedError, Sendable {
@@ -420,6 +459,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             loginMethod: Self.inferPlan(rateLimitTier: credentials.rateLimitTier),
             rawText: nil,
             resetCredits: usage.cedarEmber?.resetCredits())
+            // Max plans include a monthly API credit; the tier says which.
+                .with(includedMonthlyCreditUSD: ClaudeAPICreditGrant
+                    .monthlyUSD(rateLimitTier: credentials.rateLimitTier))
     }
 
     /// A model-scoped weekly limit from the `limits` list (a promotional
