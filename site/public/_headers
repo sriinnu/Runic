@@ -4,3 +4,7 @@
   X-Frame-Options: DENY
 /images/*
   Cache-Control: public, max-age=31536000, immutable
+/icon.png
+  Cache-Control: no-cache
+/runic-icon.png
+  Cache-Control: public, max-age=86400, must-revalidate
