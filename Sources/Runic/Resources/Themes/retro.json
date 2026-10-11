@@ -24,7 +24,8 @@
   "motion":  { "preset": "mechanical" },
   "density": { "preset": "normal" },
   "style": {
-    "typography": { "numericFamily": "Geist Mono", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
+    "skin": "instrument",
+    "typography": { "bodyFamily": "Archivo Narrow", "numericFamily": "Space Mono", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
     "chrome": { "borderStyle": "bevelSoft", "borderWeight": 0.75, "borderOpacity": 0.52, "cornerStyle": "compact", "panelDepth": "low" },
     "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.04, "materialIntensity": 0.06, "texture": "paper", "textureOpacity": 0.4 },
     "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "accent" }

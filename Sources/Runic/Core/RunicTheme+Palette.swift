@@ -49,8 +49,8 @@ extension Theme {
                 density: .normal,
                 style: RunicThemeStyle(
                     typography: RunicThemeTypographyStyle(
-                        bodyFamily: nil,
-                        numericFamily: RunicFontChoice.geistMono.id,
+                        bodyFamily: "Archivo Narrow",
+                        numericFamily: "Space Mono",
                         scale: 1.0,
                         tracking: 0.0,
                         lineSpacing: nil,
@@ -70,7 +70,8 @@ extension Theme {
                     controls: RunicThemeControlStyle(
                         selectedFillStyle: .accentSoft,
                         progressStyle: .softBar,
-                        hoverStyle: .accent)))
+                        hoverStyle: .accent),
+                    skin: InstrumentSkin.skinID))
         case .system:
             // Auto-adapts to macOS appearance. Uses native colors and standard
             // shape/motion — this is the "Runic dressed in the OS's clothes"

@@ -63,6 +63,11 @@ protocol RunicSkin {
 
     /// Whether the tab strip sits in an outlined tray.
     var showsTabTray: Bool { get }
+
+    /// Decoration laid over the whole popover, above the scrolling content
+    /// and below the frame stroke: an inner bevel, corner screws, a vignette.
+    /// Purely visual — it never takes hits. Standard panels have none.
+    @MainActor func stageOverlay() -> AnyView?
 }
 
 extension RunicSkin {
@@ -121,6 +126,10 @@ extension RunicSkin {
     var showsTabTray: Bool {
         true
     }
+
+    @MainActor func stageOverlay() -> AnyView? {
+        nil
+    }
 }
 
 // MARK: - Slot inputs
@@ -172,13 +181,23 @@ enum RunicSkinRegistry {
         case ReceiptSkin.skinID: ReceiptSkin()
         case FlightDeckSkin.skinID: FlightDeckSkin()
         case DeparturesSkin.skinID: DeparturesSkin()
+        case InstrumentSkin.skinID: InstrumentSkin()
         default: StandardSkin()
         }
     }
 
     /// Every bundled skin, for completeness tests and the appearance pane.
     static var all: [any RunicSkin] {
-        [StandardSkin(), GazetteSkin(), SumiSkin(), DraftingSkin(), ReceiptSkin(), FlightDeckSkin(), DeparturesSkin()]
+        [
+            StandardSkin(),
+            GazetteSkin(),
+            SumiSkin(),
+            DraftingSkin(),
+            ReceiptSkin(),
+            FlightDeckSkin(),
+            DeparturesSkin(),
+            InstrumentSkin(),
+        ]
     }
 }
 
