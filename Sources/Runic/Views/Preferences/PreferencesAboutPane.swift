@@ -220,6 +220,10 @@ struct AboutPane: View {
                     title: "GitHub",
                     url: "https://github.com/sriinnu/Runic")
                 LiquidLinkButton(
+                    icon: "book",
+                    title: "Docs",
+                    url: "https://runic.srinivas.dev")
+                LiquidLinkButton(
                     icon: "globe",
                     title: "Web",
                     url: "https://www.srinivas.dev")

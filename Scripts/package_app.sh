@@ -154,12 +154,9 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 mkdir -p "$APP/Contents/Helpers" "$APP/Contents/PlugIns"
 
-# Convert new .icon bundle to .icns if present (macOS 14+/IconStudio export)
-ICON_SOURCE="$ROOT/Icon.icon"
+# The app icon is the committed Icon.icns. Icon.icon is the Icon Composer source; after editing it,
+# regenerate with Scripts/build_icon.sh (needs Xcode's ictool) and commit the result.
 ICON_TARGET="$ROOT/Icon.icns"
-if [[ -f "$ICON_SOURCE" ]]; then
-  iconutil --convert icns --output "$ICON_TARGET" "$ICON_SOURCE"
-fi
 
 BUNDLE_ID="com.sriinnu.athena.runic"
 FEED_URL_DEFAULT="https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml"

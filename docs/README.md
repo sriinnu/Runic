@@ -6,7 +6,6 @@ Keep:
 - Product architecture and provider behavior docs.
 - Integration behavior docs that describe durable app surfaces.
 - CLI, release, packaging, status, UI, widget, and design-system docs.
-- GitHub Pages assets used by `docs/index.html`.
 
 Do not commit:
 - Generated audits, implementation summaries, quick references, or progress reports.
