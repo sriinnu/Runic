@@ -237,7 +237,21 @@ struct SettingsStoreDefaultsSnapshot {
     }
 
     private static func selectedFontFamily(userDefaults: UserDefaults) -> String {
-        let stored = userDefaults.string(forKey: "selectedFontFamily")
+        var stored = userDefaults.string(forKey: "selectedFontFamily")
+        // One-time move onto the theme-follow default. Before 2.10.1 the bare
+        // default was the literal "Mona Sans", so existing installs never
+        // adopted a theme's own face (Terminal's mono, Gazette's serif). Nudge
+        // that one legacy value to the follow sentinel exactly once; an
+        // explicit Mona Sans pick made afterwards still sticks, because the
+        // flag is already set and the rewrite never runs again.
+        let followMigrationKey = "fontThemeFollowMigrated"
+        if !userDefaults.bool(forKey: followMigrationKey) {
+            userDefaults.set(true, forKey: followMigrationKey)
+            if stored == RunicFontChoice.defaultFamily {
+                stored = RunicFontChoice.themeDefaultID
+                userDefaults.set(stored, forKey: "selectedFontFamily")
+            }
+        }
         let migrated = RunicFontChoice.migratedFamily(stored)
         if (stored ?? "") != migrated {
             userDefaults.set(migrated, forKey: "selectedFontFamily")

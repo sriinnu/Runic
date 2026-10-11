@@ -51,7 +51,10 @@ struct ProviderTabBarView: View {
                                     .opacity(tab.isSelected ? 1 : 0)
                                     .frame(width: 9)
                             }
-                            if let nsImage = tab.icon {
+                            // Newsprint: a selected chip is the brand's own
+                            // colour, which would swallow the brand mark —
+                            // the caps carry the name on their own.
+                            if let nsImage = tab.icon, !(self.runicTheme.isGazette && tab.isSelected) {
                                 Image(nsImage: nsImage)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
@@ -65,10 +68,16 @@ struct ProviderTabBarView: View {
                                     width: 18)
                             }
                             Text(tab.label)
-                                .font(self.fonts.caption2)
-                                .fontWeight(tab.isSelected ? .semibold : .regular)
+                                .font(self.runicTheme.isGazette ? RunicGazette.label(9.5) : self.fonts.caption2)
+                                .fontDesign(self.runicTheme.isGazette ? .default : nil)
+                                .fontWeight(self.runicTheme.isGazette ? nil : (tab.isSelected ? .semibold : .regular))
+                                .textCase(self.runicTheme.isGazette ? .uppercase : nil)
+                                .tracking(self.runicTheme.isGazette ? RunicGazette.labelTracking : 0)
                                 .lineLimit(1)
                         }
+                        // Newsprint chips share one height whether or not
+                        // they carry a brand mark (the selected one drops it).
+                        .frame(height: self.runicTheme.isGazette ? 18 : nil)
                         .padding(.horizontal, self.runicTheme.isPaperCutout ? RunicSpacing.xs : RunicSpacing.compact)
                         .padding(.vertical, RunicSpacing.xxs + 2)
                         .background(self.tabShape
@@ -98,8 +107,9 @@ struct ProviderTabBarView: View {
                     .buttonStyle(TabButtonStyle())
                 }
             }
-            .padding(.horizontal, MenuCardMetrics.horizontalPadding)
-            .padding(.vertical, RunicSpacing.xs)
+            // Newsprint: the chips share the page margin with the folio below.
+            .padding(.horizontal, self.runicTheme.isGazette ? RunicSpacing.xxxs : MenuCardMetrics.horizontalPadding)
+            .padding(.vertical, self.runicTheme.isGazette ? RunicSpacing.xxs : RunicSpacing.xs)
             .background(
                 GeometryReader { proxy in
                     Color.clear.preference(
@@ -178,7 +188,11 @@ struct ProviderTabBarView: View {
     /// Capsules everywhere except paper, where a folder tab is a rounded
     /// rectangle so its wobbly outline has straight runs to wobble on.
     private var tabShape: AnyShape {
-        self.runicTheme.isPaperCutout
+        if self.runicTheme.isGazette {
+            // Newsprint category chips are hard-cornered, not capsules.
+            return AnyShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+        }
+        return self.runicTheme.isPaperCutout
             ? AnyShape(RoundedRectangle(cornerRadius: Self.paperTabRadius, style: .continuous))
             : AnyShape(Capsule(style: .continuous))
     }
@@ -188,6 +202,11 @@ struct ProviderTabBarView: View {
     /// tabs are cream stickers; the selected one takes a pastel by position,
     /// like the coloured tabs on a craft binder.
     private func tabBackgroundFill(selectedColor: Color, isSelected: Bool, index: Int) -> Color {
+        if self.runicTheme.isGazette {
+            // The selected provider is a solid brand chip, white knocked out;
+            // the rest are bare on the page, a thin ink box around them.
+            return isSelected ? selectedColor : .clear
+        }
         if self.runicTheme.isPaperCutout {
             guard isSelected else { return self.runicTheme.cardFill }
             return RunicPaperStage.pastel(index)
@@ -205,12 +224,16 @@ struct ProviderTabBarView: View {
     }
 
     private func tabStrokeWidth(isSelected: Bool) -> CGFloat {
+        if self.runicTheme.isGazette { return isSelected ? 0 : 1 }
         if self.runicTheme.isTerminalHUD { return self.runicTheme.style.chrome.borderWeight }
         if self.runicTheme.shape.separator == .glow { return isSelected ? 1.0 : 0.5 }
         return self.runicTheme.style.chrome.borderWeight
     }
 
     private func tabStrokeColor(selectedColor: Color, isSelected: Bool) -> Color {
+        if self.runicTheme.isGazette {
+            return isSelected ? .clear : self.runicTheme.primaryText.opacity(0.38)
+        }
         // Paper: the cutout chrome draws the marker outline.
         if self.runicTheme.isPaperCutout { return .clear }
         guard isSelected else {
@@ -222,7 +245,7 @@ struct ProviderTabBarView: View {
     }
 
     private func tabGlowColor(selectedColor: Color, isSelected: Bool) -> Color {
-        guard isSelected, !self.runicTheme.isPaperCutout else { return .clear }
+        guard isSelected, !self.runicTheme.isPaperCutout, !self.runicTheme.isGazette else { return .clear }
         if self.runicTheme.isTerminalHUD { return selectedColor.opacity(0.14) }
         if self.runicTheme.shape.separator == .glow {
             return selectedColor.opacity(self.runicTheme.style.effects.glowStrength)
@@ -242,6 +265,10 @@ struct ProviderTabBarView: View {
     }
 
     private func standardForegroundStyle(for tab: TabItem) -> Color {
+        if self.runicTheme.isGazette {
+            // Selected: the paper knocked out of the ink chip. Else full ink.
+            return tab.isSelected ? self.runicTheme.surface : self.runicTheme.primaryText
+        }
         if self.runicTheme.isPaperCutout {
             // Cream stickers on sky: full ink, no fade — a faded label on a
             // sticker looks printed wrong.

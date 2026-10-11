@@ -226,7 +226,7 @@ struct AboutPane: View {
                 LiquidLinkButton(
                     icon: "bird",
                     title: "Twitter",
-                    url: "https://x.com/sriinnu")
+                    url: "https://x.com/_sriinnu_")
                 LiquidLinkButton(
                     icon: "envelope",
                     title: "Email",

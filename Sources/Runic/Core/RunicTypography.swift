@@ -311,8 +311,9 @@ struct RunicFontChoice: Identifiable, Hashable {
     static let jetBrainsMono = RunicFontChoice(id: "JetBrains Mono", displayName: "JetBrains Mono")
     /// Manrope — the Gazette theme's body face. Bundled TTF.
     static let manrope = RunicFontChoice(id: "Manrope", displayName: "Manrope")
-    /// Fraunces — the Gazette theme's serif headings. Bundled variable TTF.
-    static let fraunces = RunicFontChoice(id: "Fraunces", displayName: "Fraunces")
+    /// Fraunces — the Gazette theme's editorial serif. Bundled as static
+    /// Fraunces 9pt weights (variable fonts do not resolve under NSHostingView).
+    static let fraunces = RunicFontChoice(id: "Fraunces 9pt", displayName: "Fraunces")
     static let berkeleyMono = RunicFontChoice(id: "Berkeley Mono", displayName: "Berkeley Mono")
     static let operatorMono = RunicFontChoice(id: "Operator Mono", displayName: "Operator Mono")
     /// Licensed commercial mono face; shown only when bundled or installed on the Mac.
@@ -548,7 +549,9 @@ extension View {
     func runicTypography() -> some View {
         self
             .font(RunicFont.body)
-            .fontDesign(RunicFont.systemFallbackDesign)
+            // A design override only for the SF families; see
+            // `RunicFontStore.prefersSystemDesign`.
+            .fontDesign(RunicFontStore.shared.prefersSystemDesign ? RunicFont.systemFallbackDesign : nil)
             .tracking(RunicFont.activeRules.letterSpacing)
             .lineSpacing(RunicFont.activeRules.lineSpacing)
             .dynamicTypeSize(RunicTypography.typeSize)

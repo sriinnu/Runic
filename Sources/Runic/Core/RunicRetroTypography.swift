@@ -70,6 +70,9 @@ struct RetroSectionHeader: View {
                     .tracking(1.6)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(self.runicTheme.secondaryText.opacity(0.85))
+            } else if self.runicTheme.isGazette {
+                // Newsprint: every section opens with an ink category tag.
+                GazettePill(text: self.text, color: self.runicTheme.primaryText)
             } else if self.runicTheme.isTerminalHUD {
                 HStack(alignment: .top, spacing: 4) {
                     Text("[")

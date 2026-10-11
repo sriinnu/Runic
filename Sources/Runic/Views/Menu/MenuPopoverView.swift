@@ -64,7 +64,9 @@ struct MenuPopoverView: View {
 
     var body: some View {
         let palette = self.settings.theme.palette
-        let popoverRadius = min(palette.shape.cornerRadius(18), 14)
+        // Newsprint: the printed edition's panel — a 10pt corner inside a
+        // 1pt ink border, whatever the theme's corner multiplier says.
+        let popoverRadius: CGFloat = palette.isGazette ? 10 : min(palette.shape.cornerRadius(18), 14)
         let enabledProviders = self.store.menuVisibleProviders()
         let provider = self.effectiveProvider(enabledProviders: enabledProviders)
         let isOverview = provider == nil && enabledProviders.count > 1
@@ -130,6 +132,16 @@ struct MenuPopoverView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, RunicSpacing.xs)
                     }
+                    if palette.isGazette {
+                        GazetteFooter(
+                            byline: "By Sriinnu",
+                            bylineURL: URL(string: "https://github.com/sriinnu")!,
+                            imprint: "Runic \(RunicVersion.marketing) \u{00B7} \(RunicGazette.edition)",
+                            buttonTitle: "About \u{2192}",
+                            action: self.actions.openAbout)
+                            .frame(width: self.contentWidth)
+                            .padding(.top, RunicSpacing.xxs)
+                    }
                 }
                 .padding(.horizontal, self.outerHorizontalPadding)
                 .padding(.top, self.outerVerticalPadding)
@@ -147,9 +159,11 @@ struct MenuPopoverView: View {
             RoundedRectangle(cornerRadius: popoverRadius, style: .continuous)
                 .stroke(
                     style: StrokeStyle(
-                        lineWidth: palette.style.chrome.borderWeight,
+                        lineWidth: palette.isGazette ? 1 : palette.style.chrome.borderWeight,
                         dash: []))
-                .foregroundStyle(palette.cardStroke.opacity(palette.style.chrome.borderOpacity))
+                .foregroundStyle(palette.isGazette
+                    ? palette.primaryText
+                    : palette.cardStroke.opacity(palette.style.chrome.borderOpacity))
         }
         .retroBevel(baseRadius: popoverRadius)
         .shadow(
@@ -182,7 +196,10 @@ struct MenuPopoverView: View {
     }
 
     var panelInset: CGFloat {
-        self.settings.theme.palette.density.padding(RunicSpacing.menuPanelInset)
+        // Newsprint has no boxes to inset from: panel text shares the page
+        // margin with the rules.
+        if self.settings.theme.palette.isGazette { return RunicSpacing.xxs }
+        return self.settings.theme.palette.density.padding(RunicSpacing.menuPanelInset)
     }
 
     var panelContentWidth: CGFloat {

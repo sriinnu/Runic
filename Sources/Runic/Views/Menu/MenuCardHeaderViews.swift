@@ -191,14 +191,17 @@ struct UsageMenuCardHeaderView: View {
         let accentBase = self.runicTheme.isTerminalHUD ? self.runicTheme.tertiary : Color(nsColor: base)
         let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
         let isRetro = self.runicTheme.id == "retro"
+        // Newsprint: the masthead block sits bare on the page — no card, no
+        // brand wash. A bottom ink rule (headerBorder) frames it instead.
+        let isGazette = self.runicTheme.isGazette
         return RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .fill(self.runicTheme.cardBackgroundStyle)
+            .fill(isGazette ? AnyShapeStyle(Color.clear) : self.runicTheme.cardBackgroundStyle)
             .overlay(
                 ZStack {
                     // Brand-tinted gradient overlay washes the card with the
                     // provider's hue. On Retro this clashes with the
                     // parchment palette -- skip it entirely there.
-                    if !isRetro {
+                    if !isRetro, !isGazette {
                         LinearGradient(
                             colors: [
                                 accentTop.opacity(self.runicTheme.isTerminalHUD ? 0.10 : 0.14),
@@ -222,6 +225,14 @@ struct UsageMenuCardHeaderView: View {
             // the whole provider hero. Drawing another inner frame around
             // just the email row produced nested-rectangle ugliness -- skip.
             EmptyView()
+        } else if self.runicTheme.isGazette {
+            // Newsprint: a single heavy ink rule under the masthead block —
+            // the double-rule the printed edition carries under its nameplate.
+            VStack(spacing: 2) {
+                Spacer(minLength: 0)
+                Rectangle().fill(self.runicTheme.primaryText).frame(height: 2)
+                Rectangle().fill(self.runicTheme.primaryText).frame(height: 1)
+            }
         } else {
             // Other themes: brand-colored stroke gives each card its own hue.
             let base = self.runicTheme.isTerminalHUD
