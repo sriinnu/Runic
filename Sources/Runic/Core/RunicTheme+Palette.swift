@@ -209,7 +209,7 @@ extension Theme {
                 density: .normal,
                 style: RunicThemeStyle(
                     typography: RunicThemeTypographyStyle(
-                        bodyFamily: nil,
+                        bodyFamily: RunicFontChoice.geist.id,
                         numericFamily: RunicFontChoice.geistMono.id,
                         scale: 1.0,
                         tracking: 0.01,
@@ -231,7 +231,8 @@ extension Theme {
                         selectedFillStyle: .accentSolid,
                         progressStyle: .flatBar,
                         hoverStyle: .neutral,
-                        chartSeries: .themed)))
+                        chartSeries: .themed),
+                    skin: DraftingSkin.skinID))
         case .relief:
             // Real light. Warm gray desk, cards raised on a wide ambient
             // shadow plus a tight key from the top-left, a rim highlight on
