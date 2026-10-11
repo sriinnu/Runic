@@ -1,7 +1,7 @@
 ---
 import '../styles/site.css';
-interface Props { title?: string; description?: string; path?: string }
-const { title, description = 'AI usage, costs and quota resets in your Mac menu bar.', path = '/' } = Astro.props;
+interface Props { title?: string; description?: string; path?: string; fullBleed?: boolean }
+const { title, description = 'AI usage, costs and quota resets in your Mac menu bar.', path = '/', fullBleed = false } = Astro.props;
 const full = title ? `${title} · Runic` : 'Runic — AI usage in your menu bar';
 const nav = [
   ['/themes-and-skins/', 'Themes'],
@@ -37,7 +37,7 @@ const canonical = new URL(path, 'https://runic.srinivas.dev').href;
       </nav>
       <a class="gh" href="https://github.com/sriinnu/Runic">GitHub</a>
     </header>
-    <main><slot /></main>
+    <main class:list={{ bleed: fullBleed }}><slot /></main>
     <footer>
       <p>Runic is open source. Built by <a href="https://github.com/sriinnu">Sriinnu</a> · <a href="https://srinivas.dev">srinivas.dev</a> · <a href="https://github.com/sriinnu/Runic/wiki">Wiki</a> · <a href="https://github.com/sriinnu/Runic/releases">Releases</a></p>
     </footer>

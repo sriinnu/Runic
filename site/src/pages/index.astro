@@ -1,41 +1,76 @@
 ---
 import Base from '../layouts/Base.astro';
+import ShaderHero from '../components/ShaderHero.astro';
 const themes = [
-  ['theme-gazette.jpg', 'Gazette', 'A printed broadsheet'],
-  ['theme-sumi.jpg', 'Sumi', 'Ink on washi'],
-  ['theme-drafting.jpg', 'Blueprint', 'An engineering sheet'],
-  ['theme-instrument.jpg', 'Retro', 'A bench instrument'],
-  ['theme-departures.jpg', 'Departures', 'A split-flap board'],
-  ['theme-flightdeck.jpg', 'Flight deck', 'An avionics display'],
-  ['theme-receipt.jpg', 'Receipt', 'Every ping prints one'],
+  ['theme-gazette.jpg', 'Gazette', 'A printed broadsheet', '#d4a72c'],
+  ['theme-sumi.jpg', 'Sumi', 'Ink on washi', '#e0553a'],
+  ['theme-drafting.jpg', 'Blueprint', 'An engineering sheet', '#7fd3ff'],
+  ['theme-instrument.jpg', 'Retro', 'A bench instrument', '#d9633f'],
+  ['theme-departures.jpg', 'Departures', 'A split-flap board', '#f2c94c'],
+  ['theme-flightdeck.jpg', 'Flight deck', 'An avionics display', '#4fe3c1'],
+  ['theme-receipt.jpg', 'Receipt', 'Every ping prints one', '#ff5160'],
+];
+const features = [
+  ['01', 'Every provider', 'Codex, Claude, Gemini, Cursor, Copilot, DeepSeek, Kimi and more. Quota windows, banked resets, balances and spend, read the way each provider allows.', '/providers/'],
+  ['02', 'Local first', 'Keys stay in your Keychain. History is built on your Mac from provider logs and an optional OTLP collector. Nothing leaves it except the provider’s own API call.', '/architecture/'],
+  ['03', 'A CLI and an MCP server', 'The same numbers in a terminal or a script, and a read-only MCP server so Claude Code or Cursor can ask Runic about your quota.', '/cli/'],
+  ['04', 'Skins, not palettes', 'Seven kits that change what the panel is: a broadsheet, a flight deck, a split-flap board, a receipt. Each one is a full composition.', '/themes-and-skins/'],
 ];
 ---
-<Base path="/">
-  <section class="hero">
-    <img src="/icon.png" width="96" height="96" alt="Runic icon" />
-    <h1>AI usage in your menu bar.</h1>
-    <p class="lede">Runic shows quota, reset windows, cost and token history across the AI tools you use, in one glance, on your Mac. Open source, local first.</p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/sriinnu/Runic/releases/latest">Download for macOS</a>
-      <a class="btn" href="/themes-and-skins/">See the themes</a>
+<Base path="/" fullBleed>
+  <ShaderHero accent="#3ff0d6" accent2="#2d5bff">
+    <div class="home-hero">
+      <img class="icon" src="/icon.png" width="84" height="84" alt="Runic icon" />
+      <p class="eyebrow">macOS menu bar · open source</p>
+      <h1>See every AI limit<br /><em>before it sees you.</em></h1>
+      <p class="lede">Quota, reset windows, cost and token history across the tools you use, in one glance. Local first, with a skin for every mood.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/sriinnu/Runic/releases/latest">Download for macOS</a>
+        <a class="btn ghost" href="/themes-and-skins/">Explore the skins</a>
+      </div>
+      <pre class="install"><code>brew install --cask sriinnu/tap/runic</code></pre>
     </div>
-    <pre class="install"><code>brew install --cask sriinnu/tap/runic</code></pre>
-  </section>
+  </ShaderHero>
 
-  <section class="grid3">
-    <div><h3>Every provider</h3><p>Codex, Claude, Gemini, Cursor, Copilot, DeepSeek, Kimi and more. Quota windows, banked resets, balances and spend. <a href="/providers/">How each one is read</a>.</p></div>
-    <div><h3>Local first</h3><p>Keys stay in your Keychain. Usage history is built on your Mac from provider logs and an optional OTLP collector. Nothing goes anywhere but the provider's own API.</p></div>
-    <div><h3>In your terminal and your agents</h3><p>The same numbers from a <a href="/cli/">CLI</a>, and an <a href="/mcp/">MCP server</a> so Claude Code or Cursor can ask Runic about your quota.</p></div>
-  </section>
+  <div class="wrap">
+    <section class="stats" aria-label="At a glance">
+      <div><b>13</b><span>themes</span></div>
+      <div><b>7</b><span>full skins</span></div>
+      <div><b>1</b><span>menu bar</span></div>
+      <div><b>0</b><span>servers of ours</span></div>
+    </section>
 
-  <section>
-    <h2>Thirteen themes, seven kits</h2>
-    <p class="sub">Not one look with thirteen palettes. Each kit changes what the panel <em>is</em>.</p>
-    <div class="themes">
-      {themes.map(([img, name, line]) => (
-        <figure><img src={`/images/${img}`} alt={`${name} theme`} loading="lazy" /><figcaption><strong>{name}</strong><span>{line}</span></figcaption></figure>
+    <section class="features">
+      {features.map(([n, t, d, href]) => (
+        <a class="card" href={href}>
+          <span class="n">{n}</span>
+          <h3>{t}</h3>
+          <p>{d}</p>
+          <span class="more">Read more →</span>
+        </a>
       ))}
-    </div>
-    <p><a href="/themes-and-skins/">How skins work →</a></p>
-  </section>
+    </section>
+
+    <section class="gallery">
+      <h2>Seven kits. One panel.</h2>
+      <p class="sub">Not one look with seven palettes. Each skin recomposes every page.</p>
+      <div class="deck">
+        {themes.map(([img, name, line, color], i) => (
+          <figure style={`--c:${color}; --i:${i}`}>
+            <img src={`/images/${img}`} alt={`${name} skin`} loading="lazy" />
+            <figcaption><b>{name}</b><span>{line}</span></figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+
+    <section class="closer">
+      <h2>Free, open, yours.</h2>
+      <p>Runic is MIT-style open source. Read the notes, or just install it.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/sriinnu/Runic/releases/latest">Download</a>
+        <a class="btn ghost" href="https://github.com/sriinnu/Runic">Source on GitHub</a>
+      </div>
+    </section>
+  </div>
 </Base>
