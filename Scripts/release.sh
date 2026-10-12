@@ -85,4 +85,15 @@ check_assets "$TAG" "$ARTIFACT_PREFIX"
 "$ROOT/Scripts/update-homebrew-cask.sh" || \
   echo "WARN: Homebrew cask bump failed; the release IS published. Re-run Scripts/update-homebrew-cask.sh." >&2
 
+# Publish the same version to npm (README, LICENSE, notices, changelog and the
+# CLI installer; see "files" in package.json). Best-effort like the cask: the
+# release is already out, and re-running is safe because a published version is skipped.
+NPM_NAME=$(node -p "require('./package.json').name")
+if [[ "$(npm view "${NPM_NAME}@${MARKETING_VERSION}" version 2>/dev/null)" == "$MARKETING_VERSION" ]]; then
+  echo "npm: ${NPM_NAME}@${MARKETING_VERSION} is already published."
+else
+  npm publish --access public || \
+    echo "WARN: npm publish failed; the release IS published. Run 'npm publish --access public' from main." >&2
+fi
+
 echo "Release assets published. Merge the appcast PR and verify the live update feed to complete ${MARKETING_VERSION}."
