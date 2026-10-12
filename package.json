@@ -1,7 +1,6 @@
 {
   "name": "@sriinnu/runic",
   "version": "2.11.1",
-  "private": true,
   "description": "Local-first AI usage visibility for macOS.",
   "author": "Sriinnu <5410488+sriinnu@users.noreply.github.com>",
   "license": "MPL-2.0",
@@ -33,5 +32,15 @@
     "format": "swiftformat Sources Tests",
     "release": "./Scripts/package_app.sh release",
     "stop": "pkill -x Runic || pkill -f Runic.app || true"
+  },
+  "files": [
+    "README.md",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
+    "CHANGELOG.md",
+    "bin/install-runic-cli.sh"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }
