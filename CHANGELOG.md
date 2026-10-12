@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.11.2 — 2026-10-12
 - System theme: the orange, purple and cyan accents are darker in light appearance, so they keep 3:1 contrast on the light window (they sat near 2.2:1). Dark appearance is unchanged. Theme JSON can now give a color as `"#LIGHT|#DARK"`.
 - Muse Code: when the CLI's usage card reads "Subscription · Currently unavailable", Runic says so straight away instead of waiting out a 45-second timeout on every refresh.
 - Qwen: DashScope answering 404 for the usage endpoint is no longer logged as an error on each refresh; the card still shows ledger data.
