@@ -13,9 +13,16 @@ public enum MuseCodeCLIUsageFetcher {
     public enum Error: Swift.Error, LocalizedError {
         case unavailable
         case noSubscriptionUsage
+        /// The CLI printed its usage card but the subscription block reads
+        /// "Currently unavailable" (no plan on the account, or Muse's usage
+        /// service is down). Waiting longer cannot change that.
+        case subscriptionUnavailable
 
         public var errorDescription: String? {
             switch self {
+            case .subscriptionUnavailable:
+                "Muse Code reports its subscription usage as currently unavailable. " +
+                    "Check the plan in Muse Code (/usage)."
             case .unavailable: "Muse Code CLI was not found. Install Muse Code and sign in to its subscription."
             case .noSubscriptionUsage:
                 "Muse Code did not show subscription usage. Sign in to Muse Code and try /usage there."
@@ -73,6 +80,7 @@ public enum MuseCodeCLIUsageFetcher {
             }
             if sentEnter {
                 let clean = TextParsing.stripANSICodes(String(bytes: context.buffer, encoding: .utf8) ?? "")
+                if self.subscriptionUnavailable(in: clean) { throw Error.subscriptionUnavailable }
                 if self.percent(after: "Current", in: clean) != nil,
                    self.percent(after: "Weekly", in: clean) != nil
                 {
@@ -95,6 +103,15 @@ public enum MuseCodeCLIUsageFetcher {
             "weeklySeen": "\(clean.contains("Weekly"))",
         ])
         throw Error.noSubscriptionUsage
+    }
+
+    /// True when the card's "Subscription" block says the usage is unavailable
+    /// and carries no Current/Weekly numbers.
+    public static func subscriptionUnavailable(in clean: String) -> Bool {
+        guard let sub = clean.range(of: "Subscription", options: .caseInsensitive) else { return false }
+        let tail = clean[sub.upperBound...]
+        guard tail.localizedCaseInsensitiveContains("Currently unavailable") else { return false }
+        return self.percent(after: "Current", in: clean) == nil
     }
 
     public static func parse(text: String, now: Date = Date()) throws -> UsageSnapshot {

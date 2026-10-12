@@ -270,7 +270,13 @@ public struct QwenUsageFetcher: Sendable {
         }
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            Self.log.error("DashScope usage API returned \(httpResponse.statusCode): \(errorMessage)")
+            // 404 is how DashScope answers an account with no usage endpoint; the card
+            // falls back to ledger data, so it is not worth an error line per refresh.
+            if httpResponse.statusCode == 404 {
+                Self.log.debug("DashScope usage API has no usage endpoint (HTTP 404)")
+            } else {
+                Self.log.error("DashScope usage API returned \(httpResponse.statusCode): \(errorMessage)")
+            }
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
                 throw QwenUsageError.invalidCredentials
             }
