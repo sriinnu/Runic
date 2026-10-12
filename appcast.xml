@@ -3,6 +3,23 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.11.1</title>
+            <pubDate>Mon, 12 Oct 2026 21:21:29 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>163</sparkle:version>
+            <sparkle:shortVersionString>2.11.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.11.1</h2>
+<ul>
+<li>The app icon is the current teal one. <code>Icon.icns</code> had not been rebuilt since January, so the app, the Dock and the website still showed the pre-July blue gradient; it is regenerated from <code>Icon.icon</code>.</li>
+<li>About: a Docs button opens runic.srinivas.dev; the link row no longer wraps "GitHub" on the terminal-style themes.</li>
+<li>The screenshot-mode placeholder email is <code>demo@runic.srinivas.dev</code>.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.1/Runic-2.11.1.zip" length="47956879" type="application/octet-stream" sparkle:edSignature="E92BLXnPc8ZJ0Q18n5/V56qxkr/oTEH7Eezhjqxfe1jf4giEWollyREBMSy6f7pAGDndmCs44JoJ86ZyQPL+CQ=="/>
+        </item>
+        <item>
             <title>2.11.0</title>
             <pubDate>Sun, 11 Oct 2026 18:01:36 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -42,21 +59,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic152-143.delta" sparkle:deltaFrom="143" length="7187614" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hc2wIo871ZRDjVQsxgou3VooZyacZveURMDIAEfQ7Z22rPMbFpifI7UAx3wbLnQlXMv46Ru8QGQ5Y12uEauUDw=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic152-142.delta" sparkle:deltaFrom="142" length="7150222" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="39N+PRwZl1AahiFWRSbp7VP/s1UNb6bbQZM7NQEvxI9rlQSAoP8sFMSk/KEdNEFoTf7ft9R1c3g7z3rKqFs6Dg=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.9.1</title>
-            <pubDate>Sat, 03 Oct 2026 16:56:35 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>143</sparkle:version>
-            <sparkle:shortVersionString>2.9.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic-2.9.1.zip" length="40386356" type="application/octet-stream" sparkle:edSignature="hdVhwJlid6qMn8XC0+BTt7hGFc1nLqp+RevTwmnU/V3nt8ADUe20QXT7mm8ghA/c9L1udV9gn1KB6VLyf5pLCA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-142.delta" sparkle:deltaFrom="142" length="1776286" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Cj68W8f3NF+yVXOGd8p6qpp36u7wQBNvQUUq2duXFpaoO8rZMMClvm1B2Czht2swO+ms8F7ripo69XmvcaNnCg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-141.delta" sparkle:deltaFrom="141" length="9064418" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="PuWaMeYjmPFMqQhivwNnkQIQRH6tKS7eiuQp8vIoktevjabvVjn3u/ClvZscvf0KCLfE0DKj8evy7iCZJtW4Dg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-125.delta" sparkle:deltaFrom="125" length="10859458" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="NpYARDSEfHEy3H+bKNNCSta5Xb5Pe1Kvz6dKMmSkK7b47kTKkzSVoydn+hqT/MWJBctEZbvQsMr3EVYiG4y9Dw=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.9.1/Runic143-121.delta" sparkle:deltaFrom="121" length="10982950" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="piqrVVWo9+bhe8YauSktXVXM85vcrSFcN6sXL+5XcuxGXlATdtVRLI5efAGCI3+PGn5sSicUd1UxqIv8OHx/Bg=="/>
             </sparkle:deltas>
         </item>
     </channel>
