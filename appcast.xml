@@ -3,6 +3,23 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.11.2</title>
+            <pubDate>Mon, 12 Oct 2026 22:51:01 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>164</sparkle:version>
+            <sparkle:shortVersionString>2.11.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.11.2</h2>
+<ul>
+<li>System theme: the orange, purple and cyan accents are darker in light appearance, so they keep 3:1 contrast on the light window (they sat near 2.2:1). Dark appearance is unchanged. Theme JSON can now give a color as <code>"#LIGHT|#DARK"</code>.</li>
+<li>Muse Code: when the CLI's usage card reads "Subscription · Currently unavailable", Runic says so straight away instead of waiting out a 45-second timeout on every refresh.</li>
+<li>Qwen: DashScope answering 404 for the usage endpoint is no longer logged as an error on each refresh; the card still shows ledger data.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.2/Runic-2.11.2.zip" length="47969756" type="application/octet-stream" sparkle:edSignature="8E4fVgjUM6PFGjbPs59LRhTfT/Xz2ZIbyLIAk6NqW/ubLB+8cfZAidsnVzWv6CJokEVZ98mTivKz4wrG/6uACg=="/>
+        </item>
+        <item>
             <title>2.11.1</title>
             <pubDate>Mon, 12 Oct 2026 21:21:29 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -46,19 +63,6 @@
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.0/Runic160-152.delta" sparkle:deltaFrom="152" length="9753802" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="mrfXoPrFfgB9I1BESpD1rGKG0ECiyL3jnfZQrtSbe1LWCBDmttWWAP20EpxCefYhdxSFIBY1QBKS9m0Xmu7KAg=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.0/Runic160-143.delta" sparkle:deltaFrom="143" length="11086802" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="nKuvKg+k5rnitGr+w2GgoH3SyyBaSQWpEVCCNrEFr1QQfSb0yJ9YnVxwa9ur+bfD36ZwVJLPZOI87T2LDrtMAQ=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.0/Runic160-142.delta" sparkle:deltaFrom="142" length="11155290" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="5s/K9QtoQ1n93TPo3up+kD98KmBsIYRaWCCxQH9rfoEzyjOjI0lf2kvBbvbdx6IMNqX0KCIUS0IcbuPLO7E7BQ=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.10.0</title>
-            <pubDate>Thu, 08 Oct 2026 19:07:18 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>152</sparkle:version>
-            <sparkle:shortVersionString>2.10.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic-2.10.0.zip" length="43103005" type="application/octet-stream" sparkle:edSignature="HMWFm4mdS8GD8v6XU744YBlSWqQNhRL+hZEWkLhpkS2SBcqANFkskJoGgxz/tz5AwIXVP5Y4Q6jzjq1CZt+fCg=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic152-143.delta" sparkle:deltaFrom="143" length="7187614" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hc2wIo871ZRDjVQsxgou3VooZyacZveURMDIAEfQ7Z22rPMbFpifI7UAx3wbLnQlXMv46Ru8QGQ5Y12uEauUDw=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.10.0/Runic152-142.delta" sparkle:deltaFrom="142" length="7150222" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="39N+PRwZl1AahiFWRSbp7VP/s1UNb6bbQZM7NQEvxI9rlQSAoP8sFMSk/KEdNEFoTf7ft9R1c3g7z3rKqFs6Dg=="/>
             </sparkle:deltas>
         </item>
     </channel>
