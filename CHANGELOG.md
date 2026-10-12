@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 2.11.1 — 2026-10-12
 - The app icon is the current teal one. `Icon.icns` had not been rebuilt since January, so the app, the Dock and the website still showed the pre-July blue gradient; it is regenerated from `Icon.icon`.
-- About: a Docs button opens runic.srinivas.dev.
+- About: a Docs button opens runic.srinivas.dev; the link row no longer wraps "GitHub" on the terminal-style themes.
+- The screenshot-mode placeholder email is `demo@runic.srinivas.dev`.
 
 ## 2.11.0 — 2026-10-11
 - Skins: themes are now built on a **skin kit** instead of per-theme branches scattered through the views. A skin composes the panel's pages (provider card, overview, resets) and supplies the chrome slots the shared surfaces ask for (panel, tabs, chips, action rows, section headers, notes, footer, the popover frame); any slot a skin leaves alone renders the standard way, and a theme picks its kit with `"skin"` in its JSON. Gazette moved onto the kit unchanged. **Sumi** is the first theme built on it end to end: ink on washi — the provider's name in Shippori Mincho under a vermilion hanko cut with the brand mark, each window as a vertical-labelled stanza with a thin Mincho numeral and a brush-stroke gauge over a dry line, the account as a key-value list, the forecast as a note under a small indigo seal; the overview sets the day's average inside an ensō with a one-line read beside it and every provider under its seal; resets are Mincho countdowns with banked resets on a seal; sections open under dry-brush rules, nothing is boxed, the chosen tab is a vermilion stamp, and the page closes with the edition and the author's seal. Shippori Mincho and Zen Kaku Gothic New are bundled as Latin subsets (SIL Open Font License).
