@@ -33,13 +33,8 @@ struct ThemeContrastAuditTests {
         }
         // System follows the OS, so pin each appearance instead of inheriting
         // whichever one the machine running the tests happens to be in.
-        NSAppearance(named: .darkAqua)?.performAsCurrentDrawingAppearance {
-            self.expectEmphasisTonesRead(.system)
-        }
-        // Light mode is a real gap: System's fixed highlight, warm and tertiary
-        // hexes sit under 3:1 on the light window background.
-        withKnownIssue("System theme emphasis tones miss 3:1 in light appearance") {
-            NSAppearance(named: .aqua)?.performAsCurrentDrawingAppearance {
+        for name in [NSAppearance.Name.darkAqua, .aqua] {
+            NSAppearance(named: name)?.performAsCurrentDrawingAppearance {
                 self.expectEmphasisTonesRead(.system)
             }
         }

@@ -86,9 +86,16 @@ extension Theme {
                 primary: Color(nsColor: .controlAccentColor),
                 secondary: Color(red: 0.26, green: 0.55, blue: 0.96),
                 accent: Color(nsColor: .controlAccentColor),
-                highlight: Color(red: 0.94, green: 0.53, blue: 0.18),
-                warm: Color(red: 0.80, green: 0.45, blue: 0.92),
-                tertiary: Color(red: 0.26, green: 0.78, blue: 0.86),
+                // Darker on a light window so each stays above 3:1.
+                highlight: Color.appearanceColor(
+                    light: Color(red: 0.72, green: 0.35, blue: 0.0),
+                    dark: Color(red: 0.94, green: 0.53, blue: 0.18)),
+                warm: Color.appearanceColor(
+                    light: Color(red: 0.61, green: 0.23, blue: 0.77),
+                    dark: Color(red: 0.80, green: 0.45, blue: 0.92)),
+                tertiary: Color.appearanceColor(
+                    light: Color(red: 0.06, green: 0.50, blue: 0.59),
+                    dark: Color(red: 0.26, green: 0.78, blue: 0.86)),
                 surface: Color(nsColor: .windowBackgroundColor),
                 surfaceAlt: Color(nsColor: .controlBackgroundColor),
                 cardFill: Color(nsColor: .controlBackgroundColor).opacity(0.34),

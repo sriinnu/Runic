@@ -72,11 +72,21 @@ extension Color {
     /// - `"$systemColorName"` — dynamic NSColor that adapts to system
     ///   appearance (e.g. `"$controlAccentColor"`, `"$windowBackgroundColor"`)
     /// - `"$systemColorName@0.34"` — same, with an opacity multiplier
+    /// - `"#LIGHT|#DARK"` — two fixed hexes that follow the appearance, for
+    ///   tones that must be darker on a light surface to keep their contrast
     ///
     /// Returns nil on bad input. Authoring tip: if you see fuchsia in the
     /// UI, the parse failed for that field.
     init?(colorToken token: String) {
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pair = trimmed.split(separator: "|", omittingEmptySubsequences: false)
+        if pair.count == 2,
+           let light = Self.hexColor(String(pair[0])),
+           let dark = Self.hexColor(String(pair[1]))
+        {
+            self = Self.appearanceColor(light: light, dark: dark)
+            return
+        }
         if trimmed.hasPrefix("$") {
             if let color = Self.systemColorToken(trimmed) {
                 self = color
@@ -89,6 +99,14 @@ extension Color {
             return
         }
         return nil
+    }
+
+    /// A color that resolves to `light` or `dark` with the drawing appearance.
+    static func appearanceColor(light: Color, dark: Color) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return NSColor(isDark ? dark : light)
+        })
     }
 
     private static func hexColor(_ token: String) -> Color? {

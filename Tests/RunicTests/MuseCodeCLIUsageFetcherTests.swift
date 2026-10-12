@@ -39,4 +39,22 @@ struct MuseCodeCLIUsageFetcherTests {
         #expect(snapshot.primary.resetDescription == "Resets at 7:39 PM")
         #expect(snapshot.secondary?.resetDescription == "Resets Oct 5 at 2:00 AM")
     }
+
+    @Test
+    func `recognises a subscription block that reads currently unavailable`() {
+        let unavailable = """
+        Session usage  Input 0  Total 0
+        Subscription · Muse Code High Usage
+          Currently unavailable
+        """
+        #expect(MuseCodeCLIUsageFetcher.subscriptionUnavailable(in: unavailable))
+
+        let healthy = """
+        Subscription · Muse Code High Usage
+        Current 24% used · Resets at 7:39 PM
+        Weekly 8% used · Resets Oct 5 at 2:00 AM
+        """
+        #expect(!MuseCodeCLIUsageFetcher.subscriptionUnavailable(in: healthy))
+        #expect(!MuseCodeCLIUsageFetcher.subscriptionUnavailable(in: "Muse Code ready; /usage"))
+    }
 }
