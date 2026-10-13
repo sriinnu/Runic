@@ -1,0 +1,75 @@
+---
+// The seven kits, one at a time. A tab list on the left (a scrolling strip on
+// phones), the app's own render of that skin on the right, and the section's
+// light takes the skin's accent. Renders are the demo seed, not real accounts.
+const skins = [
+  ['gazette', 'Gazette', 'Gazette', 'A printed broadsheet: masthead, lead story, columns, pull quote, dotted leaders.', 'Fraunces · Manrope', '#d4a72c'],
+  ['sumi', 'Sumi', 'Sumi', 'Ink on washi: hanko seals, brush-stroke gauges, an ensō for the day’s average.', 'Shippori Mincho · Zen Kaku Gothic New', '#e0553a'],
+  ['drafting', 'Blueprint', 'Drafting', 'An engineering sheet: dimensioned bars, 45° hatching, callouts, a title block.', 'Geist · Geist Mono', '#7fd3ff'],
+  ['instrument', 'Retro', 'Instrument', 'A 1970s bench instrument: VU meters, LCDs, keycaps that press in, corner screws.', 'Archivo Narrow · Space Mono', '#d9633f'],
+  ['departures', 'Departures', 'Departures', 'A split-flap board. Every reset is a departure with a gate, a time and a status.', 'Barlow · Barlow Condensed', '#f2c94c'],
+  ['flightdeck', 'Flight deck', 'FlightDeck', 'An avionics primary flight display. Usage is a tape; pace is the attitude indicator.', 'B612 · B612 Mono', '#4fe3c1'],
+  ['receipt', 'Receipt', 'Receipt', 'Thermal paper. Every ping prints a receipt with line items, a stamp and a barcode.', 'Courier Prime', '#ff5160'],
+];
+---
+<div class="skins" data-skins style={`--c:${skins[0][5]}`}>
+  <div class="skins-tabs" role="tablist" aria-label="Skins" aria-orientation="vertical">
+    {skins.map(([id, theme, , idea, , color], i) => (
+      <button type="button" role="tab" id={`skin-t-${id}`} aria-controls={`skin-p-${id}`} aria-selected={i === 0 ? 'true' : 'false'}
+        tabindex={i === 0 ? 0 : -1} data-c={color} style={`--dot:${color}`}>
+        <b>{theme}</b><span>{idea.split(':')[0].split('.')[0]}</span>
+      </button>
+    ))}
+  </div>
+  {skins.map(([id, theme, skin, idea, faces], i) => (
+    <div class="skins-panel" role="tabpanel" id={`skin-p-${id}`} aria-labelledby={`skin-t-${id}`} hidden={i !== 0}>
+      <div class="skins-shot">
+        <img src={`/images/theme-${id}.jpg`} alt={`The Runic panel in the ${theme} theme, drawn by the ${skin} skin, showing demo data`}
+          width="560" height="1000" loading="lazy" decoding="async" />
+      </div>
+      <div class="skins-copy">
+        <p class="kicker">{skin === theme ? `${skin} skin` : `${theme} theme · ${skin} skin`}</p>
+        <h3>{theme}</h3>
+        <p>{idea}</p>
+        <dl>
+          <div><dt>Faces</dt><dd>{faces}</dd></div>
+          <div><dt>Render</dt><dd>The app’s own views, demo data</dd></div>
+        </dl>
+      </div>
+    </div>
+  ))}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-skins]').forEach((box) => {
+    const tabs = [...box.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    const select = (tab: HTMLButtonElement, focus = false) => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const panel = document.getElementById(t.getAttribute('aria-controls')!)!;
+        panel.hidden = !on;
+        if (on) { panel.classList.remove('fade'); void panel.offsetWidth; panel.classList.add('fade'); }
+      });
+      box.style.setProperty('--c', tab.dataset.c!);
+      if (focus) tab.focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(t));
+      t.addEventListener('keydown', (e) => {
+        const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+        const to = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : step ? (i + step + tabs.length) % tabs.length : -1;
+        if (to < 0) return;
+        e.preventDefault();
+        select(tabs[to], true);
+      });
+    });
+    // Warm the other renders once the section is close, so switching never flashes empty.
+    new IntersectionObserver(([e], io) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      box.querySelectorAll('img').forEach((img) => { img.loading = 'eager'; });
+    }, { rootMargin: '300px' }).observe(box);
+  });
+</script>

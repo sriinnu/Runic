@@ -1,77 +1,144 @@
 ---
 import Base from '../layouts/Base.astro';
-import ParticleHero from '../components/ParticleHero.astro';
-const themes = [
-  ['theme-gazette.jpg', 'Gazette', 'A printed broadsheet', '#d4a72c'],
-  ['theme-sumi.jpg', 'Sumi', 'Ink on washi', '#e0553a'],
-  ['theme-drafting.jpg', 'Blueprint', 'An engineering sheet', '#7fd3ff'],
-  ['theme-instrument.jpg', 'Retro', 'A bench instrument', '#d9633f'],
-  ['theme-departures.jpg', 'Departures', 'A split-flap board', '#f2c94c'],
-  ['theme-flightdeck.jpg', 'Flight deck', 'An avionics display', '#4fe3c1'],
-  ['theme-receipt.jpg', 'Receipt', 'Every ping prints one', '#ff5160'],
-];
-const features = [
-  ['01', 'Every provider', 'Codex, Claude, Gemini, Cursor, Copilot, DeepSeek, Kimi and more. Quota windows, banked resets, balances and spend, read the way each provider allows.', '/providers/'],
-  ['02', 'Local first', 'Keys stay in your Keychain. History is built on your Mac from provider logs and an optional OTLP collector. Nothing leaves it except the provider’s own API call.', '/architecture/'],
-  ['03', 'A CLI and an MCP server', 'The same numbers in a terminal or a script, and a read-only MCP server so Claude Code or Cursor can ask Runic about your quota.', '/cli/'],
-  ['04', 'Skins, not palettes', 'Seven kits that change what the panel is: a broadsheet, a flight deck, a split-flap board, a receipt. Each one is a full composition.', '/themes-and-skins/'],
+import QuotaHero from '../components/QuotaHero.astro';
+import InstallTabs from '../components/InstallTabs.astro';
+import ResetBoard from '../components/ResetBoard.astro';
+import SkinShowcase from '../components/SkinShowcase.astro';
+import { version, themeCount, skinCount, providerCount, providerNames as providers } from '../lib/facts';
+
+const surfaces = [
+  ['/themes-and-skins/', 'macOS', 'Menu bar', 'Every window, reset and balance in one glance, with pace and a run-out estimate. Drawn by whichever skin you pick.'],
+  ['/architecture/', 'Desktop', 'Widgets', 'Session and weekly usage with credits and costs, a provider switcher, and a history view.'],
+  ['/cli/', 'Terminal', 'CLI', 'The same numbers in a script or CI: <code>runic --provider all --format json</code>. A Linux build ships with each release.'],
+  ['/mcp/', 'Agents', 'MCP server', 'Two read-only tools, <code>runic_limits</code> and <code>runic_health</code>, so Claude Code or Cursor can ask before a long run.'],
+  ['/cli/', 'Your apps', 'OTLP collector', '<code>runic otel-collect</code> takes GenAI telemetry from your own apps and keeps the token counts, never the prompts.'],
+  ['/claude/', 'Claude', 'Credits and grants', 'Usage credits, banked resets and the monthly API credit on Max, each shown only when your plan has one.'],
 ];
 ---
-<Base path="/" fullBleed>
-  <ParticleHero accent="#3ff0d6" accent2="#4a63ff">
-    <div class="home-hero">
-      <img class="icon" src="/runic-icon.png" width="84" height="84" alt="Runic icon" />
-      <p class="eyebrow">macOS menu bar · open source</p>
+<Base path="/">
+  <QuotaHero>
+    <div class="hero">
+      <p class="eyebrow">macOS menu bar · open source <span class="ver">v{version}</span></p>
       <h1>See every AI limit<br /><em>before it sees you.</em></h1>
-      <p class="lede">Quota, reset windows, cost and token history across the tools you use, in one glance. Local first, with a skin for every mood.</p>
+      <p class="lede">Quota windows, resets, credits and cost across the AI tools you pay for, in one glance from the menu bar. Local first, with a skin for every mood.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/sriinnu/Runic/releases/latest">Download for macOS</a>
         <a class="btn ghost" href="/themes-and-skins/">Explore the skins</a>
       </div>
-      <pre class="install"><code>brew install --cask sriinnu/tap/runic</code></pre>
-      <p class="stat-line"><span><b>13</b> themes</span><span><b>7</b> skins</span><span>local first</span></p>
+      <InstallTabs />
+      <p class="stat-line"><span><b>{providerCount}</b> providers</span><span><b>{themeCount}</b> themes</span><span><b>{skinCount}</b> skins</span><span><b>0</b> servers of ours</span></p>
     </div>
-  </ParticleHero>
+  </QuotaHero>
+
+  <div class="ribbon" aria-label="Supported providers">
+    <p>{providerCount} providers, read the way each one allows</p>
+    <div class="marquee" aria-hidden="true">
+      {[...providers, ...providers].map((p, i) => <span class:list={{ dup: i >= providers.length }}>{p}</span>)}
+    </div>
+    <ul class="sr-only">{providers.map((p) => <li>{p}</li>)}</ul>
+  </div>
 
   <div class="wrap">
-    <section class="stats" aria-label="At a glance">
-      <div><b>13</b><span>themes</span></div>
-      <div><b>7</b><span>full skins</span></div>
-      <div><b>1</b><span>menu bar</span></div>
-      <div><b>0</b><span>servers of ours</span></div>
+    <section class="block reveal">
+      <p class="kicker">Limits and resets</p>
+      <h2>Every limit is a window. Every window resets.</h2>
+      <p class="sub">A five-hour session, a weekly cap, a credit balance, a banked reset. Runic reads each one, tells you how fast you're burning it, and counts down to the moment it refills.</p>
+      <ol class="steps">
+        <li>
+          <h3>Read</h3>
+          <p>Each provider is asked the way it allows, in order, and the first source to answer wins. Unknown stays blank; Runic never invents a number.</p>
+          <p class="chain" aria-label="Source order"><span>OAuth</span><i>→</i><span>Web</span><i>→</i><span>CLI</span><i>→</i><span>Logs</span></p>
+        </li>
+        <li>
+          <h3>Pace</h3>
+          <p>Used against elapsed: are you ahead of the window or behind it, and when does it run out at this rate?</p>
+          <pre class="art" aria-label="A sample window"><b>Weekly</b>
+<span class="dim">Resets in 5d · Fri 22:36</span>
+<span class="bar"><i></i></span><b>48% used</b>
+Pace: <span class="hot">Ahead (+19%)</span> · Runs out in 2d 4h</pre>
+        </li>
+        <li>
+          <h3>Reset</h3>
+          <p>Countdowns for every window, banked resets with their expiry, and a notification when a session runs dry and again when it refills.</p>
+          <pre class="art" aria-label="Sample CLI output"><span class="p">$</span> runic --provider codex
+<b>Codex 0.6.0 (codex-cli)</b>
+Session: <span class="ok">72% left</span>
+Resets today at 2:15 PM
+Weekly: <span class="ok">41% left</span>
+Resets Fri at 9:00 AM</pre>
+        </li>
+      </ol>
+      <p class="note">Sample data. The window card follows the app's own wording; the CLI lines follow <code>runic</code>'s text output.</p>
     </section>
 
-    <section class="features">
-      {features.map(([n, t, d, href]) => (
-        <a class="card" href={href}>
-          <span class="n">{n}</span>
-          <h3>{t}</h3>
-          <p>{d}</p>
-          <span class="more">Read more →</span>
-        </a>
-      ))}
+    <section class="block reveal">
+      <div class="split">
+        <div>
+          <p class="kicker">The board</p>
+          <h2>Every reset is a departure.</h2>
+          <p class="sub">Which window opens next, which one is out, and which resets you've banked for later. This one runs on a sample, and its spent session is about to leave.</p>
+          <a class="btn ghost" href="/claude/">How banked resets work</a>
+        </div>
+        <ResetBoard />
+      </div>
     </section>
 
-    <section class="gallery">
-      <h2>Seven kits. One panel.</h2>
-      <p class="sub">Not one look with seven palettes. Each skin recomposes every page.</p>
-      <div class="deck">
-        {themes.map(([img, name, line, color], i) => (
-          <figure style={`--c:${color}; --i:${i}`}>
-            <img src={`/images/${img}`} alt={`${name} skin`} loading="lazy" />
-            <figcaption><b>{name}</b><span>{line}</span></figcaption>
-          </figure>
+    <section class="block reveal showcase">
+      <p class="kicker">Skins, not palettes</p>
+      <h2>{skinCount} kits. One panel.</h2>
+      <p class="sub">{themeCount} themes, drawn by {skinCount} kits. A skin isn't a colour swap: it recomposes every page, so a reset becomes a departure, a stamp or a needle.</p>
+      <SkinShowcase />
+    </section>
+
+    <section class="block reveal">
+      <p class="kicker">Surfaces</p>
+      <h2>One read, everywhere you look.</h2>
+      <p class="sub">The menu bar, the widgets, your terminal and your agents all see the same numbers.</p>
+      <div class="surfaces">
+        {surfaces.map(([href, tag, title, text]) => (
+          <a href={href}><span class="tag">{tag}</span><h3>{title}</h3><p set:html={text} /></a>
         ))}
       </div>
     </section>
 
-    <section class="closer">
-      <h2>Open, local, yours.</h2>
-      <p>Runic is open source under the MPL-2.0. Read the notes, or just install it.</p>
+    <section class="block reveal">
+      <p class="kicker">Local first</p>
+      <h2>Your usage stays on your Mac.</h2>
+      <div class="trust">
+        <div>
+          <h3>No account, no server</h3>
+          <p>Usage data stays on the Mac unless you export it, copy diagnostics, turn on a webhook, or use a provider feature that needs a provider request.</p>
+        </div>
+        <div>
+          <h3>Keys in your Keychain</h3>
+          <p>Logins and API keys live in the macOS Keychain. The calls out are the providers' own, plus the update check.</p>
+        </div>
+        <div>
+          <h3>Blank beats wrong</h3>
+          <p>A missing value means Runic has no verified one. It shows nothing rather than a guess, and the MCP tools follow the same rule.</p>
+        </div>
+        <div>
+          <h3>Metrics, not prompts</h3>
+          <p>The local collector keeps provider, model, timestamps, token counts and costs. Prompt and response content is never stored.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block closer reveal">
+      <h2>Know before the limit does.</h2>
+      <p class="sub">Free and open source under the MPL-2.0. Needs macOS 14 or later.</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/sriinnu/Runic/releases/latest">Download</a>
+        <a class="btn primary" href="https://github.com/sriinnu/Runic/releases/latest">Download for macOS</a>
         <a class="btn ghost" href="https://github.com/sriinnu/Runic">Source on GitHub</a>
       </div>
     </section>
   </div>
 </Base>
+
+<script>
+  // Fade sections in as they scroll into view (only once JS has marked the page).
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { rootMargin: '0px 0px -8% 0px' });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+</script>

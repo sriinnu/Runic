@@ -76,33 +76,29 @@ const me = meta[slug] ?? { group: 'Docs', label: frontmatter.title, summary: '' 
 </Base>
 
 <script>
-  // Scroll-spy for "On this page", and a copy button on every code block.
-  // Runs on every client-side navigation, not just the first load.
-  let spy: IntersectionObserver | null = null;
-  document.addEventListener('astro:before-swap', () => { spy?.disconnect(); spy = null; });
-  document.addEventListener('astro:page-load', () => {
-    const links = [...document.querySelectorAll<HTMLAnchorElement>('.toc a')];
-    const map = new Map(links.map((a) => [a.getAttribute('href')!.slice(1), a]));
-    spy = new IntersectionObserver((entries) => {
-      entries.forEach((en) => {
-        if (en.isIntersecting) {
-          links.forEach((l) => l.classList.remove('on'));
-          map.get(en.target.id)?.classList.add('on');
-        }
-      });
-    }, { rootMargin: '-72px 0px -70% 0px' });
-    document.querySelectorAll('.prose h2[id]').forEach((h) => spy!.observe(h));
-
-    document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
-      if (pre.querySelector('.copy')) return;
-      const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
-      btn.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(pre.innerText.replace(/\nCopy$/, '')); btn.textContent = 'Copied'; }
-        catch { btn.textContent = 'Press ⌘C'; }
-        setTimeout(() => (btn.textContent = 'Copy'), 1400);
-      });
-      pre.appendChild(btn);
+  // Scroll-spy for "On this page", and a Copy button on every code block.
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('.toc a')];
+  const map = new Map(links.map((a) => [a.getAttribute('href')!.slice(1), a]));
+  const spy = new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (en.isIntersecting) {
+        links.forEach((l) => l.classList.remove('on'));
+        map.get(en.target.id)?.classList.add('on');
+      }
     });
+  }, { rootMargin: '-72px 0px -70% 0px' });
+  document.querySelectorAll('.prose h2[id]').forEach((h) => spy.observe(h));
+
+  document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
+    const code = pre.querySelector('code');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code');
+    btn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText((code ?? pre).textContent ?? ''); btn.textContent = 'Copied'; }
+      catch { btn.textContent = 'Press ⌘C'; }
+      setTimeout(() => (btn.textContent = 'Copy'), 1400);
+    });
+    pre.appendChild(btn);
   });
 </script>
