@@ -1,8 +1,7 @@
 ---
 import '../styles/site.css';
-import { ClientRouter } from 'astro:transitions';
-interface Props { title?: string; description?: string; path?: string; fullBleed?: boolean }
-const { title, description = 'AI usage, costs and quota resets in your Mac menu bar.', path = '/', fullBleed = false } = Astro.props;
+interface Props { title?: string; description?: string; path?: string }
+const { title, description = 'AI usage, costs and quota resets in your Mac menu bar.', path = '/' } = Astro.props;
 const full = title ? `${title} · Runic` : 'Runic — AI usage in your menu bar';
 const nav = [
   ['/themes-and-skins/', 'Themes'],
@@ -29,10 +28,13 @@ const canonical = new URL(path, 'https://runic.srinivas.dev').href;
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
+    <meta property="og:image" content="https://runic.srinivas.dev/images/theme-departures.jpg" />
+    <meta name="theme-color" content="#05080d" />
     <meta name="color-scheme" content="dark light" />
-    <ClientRouter />
+    <script is:inline>document.documentElement.classList.add('js');</script>
   </head>
   <body>
+    <a class="skip" href="#main">Skip to content</a>
     <header class="top">
       <a class="brand" href="/"><img src="/runic-icon.png" width="28" height="28" alt="" /><span>Runic</span></a>
       <nav aria-label="Main">
@@ -40,7 +42,7 @@ const canonical = new URL(path, 'https://runic.srinivas.dev').href;
       </nav>
       <a class="gh" href="https://github.com/sriinnu/Runic">GitHub</a>
     </header>
-    <main class:list={{ bleed: fullBleed }}><slot /></main>
+    <main id="main"><slot /></main>
     <footer class="site-foot">
       <div class="foot-grid">
         <div class="foot-brand">
