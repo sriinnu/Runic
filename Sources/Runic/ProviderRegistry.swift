@@ -4,7 +4,10 @@ import RunicCore
 struct ProviderSpec {
     let style: IconStyle
     let isEnabled: @MainActor () -> Bool
-    let fetch: () async -> ProviderFetchOutcome
+    /// Fetch one account of the kind. The default account runs with the
+    /// process environment; an added account's credential overrides the
+    /// vendor's location variables (CLAUDE_CONFIG_DIR, CODEX_HOME, …).
+    let fetch: (AccountID, CredentialRef?) async -> ProviderFetchOutcome
 }
 
 struct ProviderRegistry {
@@ -32,7 +35,7 @@ struct ProviderRegistry {
             let spec = ProviderSpec(
                 style: descriptor.branding.iconStyle,
                 isEnabled: { settings.isProviderEnabled(provider: provider, metadata: meta) },
-                fetch: {
+                fetch: { account, credential in
                     let snapshot = await MainActor.run {
                         let cleanedCopilotToken = settings.copilotAPIToken.trimmingCharacters(
                             in: .whitespacesAndNewlines)
@@ -103,10 +106,13 @@ struct ProviderRegistry {
                         webTimeout: 60,
                         webDebugDumpHTML: false,
                         verbose: false,
-                        env: ProcessInfo.processInfo.environment,
+                        env: ProcessInfo.processInfo.environment.merging(
+                            credential?.environmentOverrides(for: provider) ?? [:]) { _, override in override },
                         settings: snapshot,
                         fetcher: codexFetcher,
-                        claudeFetcher: claudeFetcher)
+                        claudeFetcher: claudeFetcher,
+                        account: account,
+                        credential: credential)
                     return await descriptor.fetchOutcome(context: context)
                 })
             specs[provider] = spec

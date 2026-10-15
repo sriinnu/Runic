@@ -78,6 +78,91 @@ public enum CredentialRef: Hashable, Codable, Sendable {
     case env(String)
     /// A browser-cookie store key.
     case cookies(String)
+
+    /// The environment a fetch for `kind` runs with so the vendor's own
+    /// credential and log locations follow this account: the CLIs and Runic's
+    /// readers both key on these variables.
+    public func environmentOverrides(for kind: UsageProvider) -> [String: String] {
+        guard case let .oauthDir(path) = self else { return [:] }
+        switch kind {
+        case .claude: return ["CLAUDE_CONFIG_DIR": path]
+        case .codex: return ["CODEX_HOME": path]
+        case .kimi, .kimiCN: return ["KIMI_CODE_HOME": path]
+        default: return [:]
+        }
+    }
+}
+
+/// One login of a kind, as the user configured it. Default accounts are not
+/// stored: an absent registry means "one default account per enabled kind".
+public struct ProviderAccount: Codable, Sendable, Identifiable, Hashable {
+    public let id: AccountID
+    /// Short, user-renamable: the login email's local part by default.
+    public var displayName: String
+    public var region: ProviderRegion?
+    public var credential: CredentialRef?
+    public var isEnabled: Bool
+
+    public init(
+        id: AccountID,
+        displayName: String,
+        region: ProviderRegion? = nil,
+        credential: CredentialRef? = nil,
+        isEnabled: Bool = true)
+    {
+        self.id = id
+        self.displayName = displayName
+        self.region = region
+        self.credential = credential
+        self.isEnabled = isEnabled
+    }
+
+    public static func `default`(for kind: UsageProvider) -> ProviderAccount {
+        ProviderAccount(id: kind.defaultAccount, displayName: AccountID.defaultSlug)
+    }
+}
+
+/// `accounts.json` in Runic's support directory: only added accounts are
+/// written, so a downgrade sees nothing new and a missing file is the
+/// one-login world every install starts in.
+public enum AccountRegistry {
+    private static let log = RunicLog.logger("account-registry")
+
+    struct File: Codable {
+        var version: Int = 1
+        var accounts: [ProviderAccount] = []
+    }
+
+    public static var defaultURL: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return appSupport.appendingPathComponent("Runic", isDirectory: true).appendingPathComponent("accounts.json")
+    }
+
+    /// Added accounts on disk; never the defaults.
+    public static func load(url: URL = AccountRegistry.defaultURL) -> [ProviderAccount] {
+        guard let data = try? Data(contentsOf: url) else { return [] }
+        do {
+            return try JSONDecoder().decode(File.self, from: data).accounts.filter { !$0.id.isDefault }
+        } catch {
+            self.log.error("accounts.json unreadable, ignoring it: \(error.localizedDescription)")
+            return []
+        }
+    }
+
+    public static func save(_ accounts: [ProviderAccount], url: URL = AccountRegistry.defaultURL) throws {
+        let file = File(accounts: accounts.filter { !$0.id.isDefault })
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try encoder.encode(file).write(to: url, options: .atomic)
+    }
+
+    /// Every account of `kind` a refresh should visit: the default first, then
+    /// the enabled added ones in registry order.
+    public static func accounts(for kind: UsageProvider, added: [ProviderAccount]) -> [ProviderAccount] {
+        [.default(for: kind)] + added.filter { $0.id.kind == kind && $0.isEnabled && !$0.id.isDefault }
+    }
 }
 
 /// Account-keyed state stays addressable by kind: `snapshots[.codex]` is the

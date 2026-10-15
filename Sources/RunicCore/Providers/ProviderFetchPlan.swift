@@ -30,6 +30,9 @@ public struct ProviderFetchContext: Sendable {
     public let claudeFetcher: any ClaudeUsageFetching
     /// The account this fetch is for; nil means the kind's default account.
     public let account: AccountID?
+    /// Where that account's credential lives; nil means the kind's historical
+    /// path (keychain item, environment, vendor default directories).
+    public let credential: CredentialRef?
 
     public init(
         runtime: ProviderRuntime,
@@ -42,7 +45,8 @@ public struct ProviderFetchContext: Sendable {
         settings: ProviderSettingsSnapshot?,
         fetcher: UsageFetcher,
         claudeFetcher: any ClaudeUsageFetching,
-        account: AccountID? = nil)
+        account: AccountID? = nil,
+        credential: CredentialRef? = nil)
     {
         self.runtime = runtime
         self.sourceMode = sourceMode
@@ -55,6 +59,7 @@ public struct ProviderFetchContext: Sendable {
         self.fetcher = fetcher
         self.claudeFetcher = claudeFetcher
         self.account = account
+        self.credential = credential
     }
 
     /// The API credential for this fetch's account of `kind`: the account's own

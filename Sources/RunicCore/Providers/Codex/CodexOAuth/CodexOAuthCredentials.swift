@@ -46,19 +46,23 @@ public enum CodexOAuthCredentialsError: LocalizedError, Sendable {
 }
 
 public enum CodexOAuthCredentialsStore {
-    private static var authFilePath: URL {
+    /// `$CODEX_HOME/auth.json`, else `~/.codex/auth.json`. The environment is a
+    /// parameter so one account's fetch can point at its own Codex home.
+    public static func authFilePath(environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        if let codexHome = ProcessInfo.processInfo.environment["CODEX_HOME"]?.trimmingCharacters(
-            in: .whitespacesAndNewlines),
-            !codexHome.isEmpty
+        if let codexHome = environment["CODEX_HOME"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !codexHome.isEmpty
         {
-            return URL(fileURLWithPath: codexHome).appendingPathComponent("auth.json")
+            return URL(fileURLWithPath: (codexHome as NSString).expandingTildeInPath)
+                .appendingPathComponent("auth.json")
         }
         return home.appendingPathComponent(".codex").appendingPathComponent("auth.json")
     }
 
-    public static func load() throws -> CodexOAuthCredentials {
-        let url = self.authFilePath
+    public static func load(
+        environment: [String: String] = ProcessInfo.processInfo.environment) throws -> CodexOAuthCredentials
+    {
+        let url = self.authFilePath(environment: environment)
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw CodexOAuthCredentialsError.notFound
         }
@@ -105,8 +109,11 @@ public enum CodexOAuthCredentialsStore {
             lastRefresh: lastRefresh)
     }
 
-    public static func save(_ credentials: CodexOAuthCredentials) throws {
-        let url = self.authFilePath
+    public static func save(
+        _ credentials: CodexOAuthCredentials,
+        environment: [String: String] = ProcessInfo.processInfo.environment) throws
+    {
+        let url = self.authFilePath(environment: environment)
 
         var json: [String: Any] = [:]
         if let data = try? Data(contentsOf: url),

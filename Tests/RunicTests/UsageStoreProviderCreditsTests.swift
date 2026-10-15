@@ -25,7 +25,7 @@ struct UsageStoreProviderCreditsTests {
         store.providerSpecs[.deepseek] = ProviderSpec(
             style: .codex,
             isEnabled: { true },
-            fetch: {
+            fetch: { _, _ in
                 ProviderFetchOutcome(
                     result: .success(ProviderFetchResult(
                         usage: usage,
@@ -47,6 +47,60 @@ struct UsageStoreProviderCreditsTests {
     }
 
     @Test
+    func `a kind with an added account fetches once per account into its own slot`() async {
+        let store = self.makeStore(suiteName: "UsageStoreProviderCreditsTests-accounts")
+        let work = ProviderAccount(
+            id: AccountID(kind: .deepseek, slug: "work"),
+            displayName: "work",
+            credential: .keychainItem("deepseek-api-token.work"))
+        let off = ProviderAccount(id: AccountID(kind: .deepseek, slug: "off"), displayName: "off", isEnabled: false)
+        store.addedAccounts = [work, off]
+
+        let fetched = FetchLog()
+        store.providerSpecs[.deepseek] = ProviderSpec(
+            style: .codex,
+            isEnabled: { true },
+            fetch: { account, credential in
+                await fetched.record(account, credential)
+                let usage = UsageSnapshot(
+                    primary: RateWindow(
+                        usedPercent: account.isDefault ? 10 : 20,
+                        windowMinutes: 300,
+                        resetsAt: nil,
+                        resetDescription: nil),
+                    secondary: nil,
+                    updatedAt: Date())
+                return ProviderFetchOutcome(
+                    result: .success(ProviderFetchResult(
+                        usage: usage,
+                        credits: nil,
+                        dashboard: nil,
+                        sourceLabel: "test",
+                        strategyID: "test.api",
+                        strategyKind: .apiToken)),
+                    attempts: [])
+            })
+
+        await store.refreshProvider(.deepseek, trigger: .manual)
+
+        let calls = await fetched.calls
+        #expect(calls.map(\.0.rawValue) == ["deepseek", "deepseek~work"])
+        #expect(calls.map(\.1) == [nil, .keychainItem("deepseek-api-token.work")])
+        #expect(store.snapshots[.deepseek]?.primary.usedPercent == 10)
+        #expect(store.snapshots[work.id]?.primary.usedPercent == 20)
+        #expect(store.snapshots[off.id] == nil)
+        #expect(store.errors[work.id] == nil)
+        #expect(store.lastSourceLabels[work.id] == "test")
+    }
+
+    private actor FetchLog {
+        var calls: [(AccountID, CredentialRef?)] = []
+        func record(_ account: AccountID, _ credential: CredentialRef?) {
+            self.calls.append((account, credential))
+        }
+    }
+
+    @Test
     func `codex fetch credits never land in the per-provider map`() async {
         // `credits(for: .codex)` reads the dedicated `credits` slot, so a
         // `providerCredits[.codex]` entry would be a dead write that anything
@@ -65,7 +119,7 @@ struct UsageStoreProviderCreditsTests {
         store.providerSpecs[.codex] = ProviderSpec(
             style: .codex,
             isEnabled: { true },
-            fetch: {
+            fetch: { _, _ in
                 ProviderFetchOutcome(
                     result: .success(ProviderFetchResult(
                         usage: usage,
@@ -103,7 +157,7 @@ struct UsageStoreProviderCreditsTests {
         store.providerSpecs[.deepseek] = ProviderSpec(
             style: .codex,
             isEnabled: { false },
-            fetch: {
+            fetch: { _, _ in
                 ProviderFetchOutcome(
                     result: .failure(ProviderFetchError.missingCredentials),
                     attempts: [])

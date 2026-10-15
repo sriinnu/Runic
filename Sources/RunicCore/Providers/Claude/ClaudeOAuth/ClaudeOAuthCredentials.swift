@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 #if os(macOS)
 import LocalAuthentication
@@ -105,10 +106,61 @@ public enum ClaudeOAuthCredentialsError: LocalizedError, Sendable {
     }
 }
 
-public enum ClaudeOAuthCredentialsStore {
-    private static let credentialsPath = ".claude/.credentials.json"
-    private static let keychainService = "Claude Code-credentials"
+/// Where Claude Code keeps one login: `~/.claude` and the `Claude Code-credentials`
+/// Keychain item by default, or, with `CLAUDE_CONFIG_DIR` set, that directory and a
+/// Keychain item whose service name carries a hash of the directory path, so two
+/// config dirs are two logins. Runic's cached copy follows the same split.
+public struct ClaudeCredentialLocation: Hashable, Sendable {
+    public static let defaultKeychainService = "Claude Code-credentials"
+    public static let defaultCacheAccount = "claude-oauth-cache"
 
+    public let configDir: String?
+
+    public init(configDir: String?) {
+        let trimmed = configDir?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        self.configDir = trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// The first directory of `CLAUDE_CONFIG_DIR` (the CLI accepts a comma list
+    /// for log scanning; a login lives in one directory).
+    public init(environment: [String: String]) {
+        let raw = environment["CLAUDE_CONFIG_DIR"] ?? ""
+        self.init(configDir: raw.split(separator: ",").first.map(String.init))
+    }
+
+    public static let `default` = ClaudeCredentialLocation(configDir: nil)
+
+    /// Eight hex characters of SHA-256 over the expanded directory path, the
+    /// way Claude Code 2.1 suffixes its Keychain service for a custom config dir.
+    public var directorySuffix: String? {
+        guard let configDir else { return nil }
+        let expanded = (configDir as NSString).expandingTildeInPath
+        let digest = SHA256.hash(data: Data(expanded.utf8)).map { String(format: "%02x", $0) }.joined()
+        return String(digest.prefix(8))
+    }
+
+    public var keychainService: String {
+        guard let suffix = self.directorySuffix else { return Self.defaultKeychainService }
+        return "\(Self.defaultKeychainService)-\(suffix)"
+    }
+
+    public var credentialsFileURL: URL {
+        if let configDir {
+            return URL(fileURLWithPath: (configDir as NSString).expandingTildeInPath)
+                .appendingPathComponent(".credentials.json")
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude").appendingPathComponent(".credentials.json")
+    }
+
+    /// Runic's own cached-copy item for this login.
+    public var cacheAccount: String {
+        guard let suffix = self.directorySuffix else { return Self.defaultCacheAccount }
+        return "\(Self.defaultCacheAccount).\(suffix)"
+    }
+}
+
+public enum ClaudeOAuthCredentialsStore {
     /// Background refreshes must never raise a Keychain dialog: the CLI's item
     /// is ACL-bound to the CLI, so reading it from the app prompts, and the CLI
     /// rewrites the item on every token refresh, which drops any grant the user
@@ -117,11 +169,15 @@ public enum ClaudeOAuthCredentialsStore {
     ///
     /// `loadAllowingInteraction()` is the explicit escape hatch for a button the
     /// user pressed — it may prompt once, and re-fills the cache when it works.
-    public static func load() throws -> ClaudeOAuthCredentials {
-        if let cached = ClaudeOAuthCredentialCache.load() {
+    public static func load(location: ClaudeCredentialLocation = .default) throws -> ClaudeOAuthCredentials {
+        if let cached = ClaudeOAuthCredentialCache.load(account: location.cacheAccount) {
             return cached
         }
-        return try self.loadFromSources(allowUserInteraction: false)
+        return try self.loadFromSources(allowUserInteraction: false, location: location)
+    }
+
+    public static func load(environment: [String: String]) throws -> ClaudeOAuthCredentials {
+        try self.load(location: ClaudeCredentialLocation(environment: environment))
     }
 
     /// True when the Claude CLI is signed in on this Mac, even if Runic's copy
@@ -129,13 +185,15 @@ public enum ClaudeOAuthCredentialsStore {
     /// item is present (attributes only — never prompts). The OAuth strategy
     /// uses this to stay in the plan so its CLI fallback can run, instead of
     /// reporting "no credentials" the moment the copy ages out.
-    public static func hasLoginOnThisMac() -> Bool {
-        if ClaudeOAuthCredentialCache.cachedAt() != nil { return true }
-        return self.keychainItemModifiedAt() != nil
+    public static func hasLoginOnThisMac(location: ClaudeCredentialLocation = .default) -> Bool {
+        if ClaudeOAuthCredentialCache.cachedAt(account: location.cacheAccount) != nil { return true }
+        return self.keychainItemModifiedAt(location: location) != nil
     }
 
-    public static func loadAllowingInteraction() throws -> ClaudeOAuthCredentials {
-        try self.loadFromSources(allowUserInteraction: true)
+    public static func loadAllowingInteraction(
+        location: ClaudeCredentialLocation = .default) throws -> ClaudeOAuthCredentials
+    {
+        try self.loadFromSources(allowUserInteraction: true, location: location)
     }
 
     /// User-initiated reload (the provider reload button). Re-reads the CLI's
@@ -143,23 +201,24 @@ public enum ClaudeOAuthCredentialsStore {
     /// or older than the item, e.g. after a `/login` in the terminal. When the
     /// copy is current this is a no-op and never prompts.
     @discardableResult
-    public static func reloadIfSourceChanged() -> Bool {
-        let cachedAt = ClaudeOAuthCredentialCache.cachedAt()
-        let cacheUsable = ClaudeOAuthCredentialCache.load() != nil
+    public static func reloadIfSourceChanged(location: ClaudeCredentialLocation = .default) -> Bool {
+        let cachedAt = ClaudeOAuthCredentialCache.cachedAt(account: location.cacheAccount)
+        let cacheUsable = ClaudeOAuthCredentialCache.load(account: location.cacheAccount) != nil
         if cacheUsable, let cachedAt {
-            guard let modified = self.keychainItemModifiedAt(), modified > cachedAt else { return false }
+            guard let modified = self.keychainItemModifiedAt(location: location), modified > cachedAt
+            else { return false }
         }
-        guard (try? self.loadAllowingInteraction()) != nil else { return false }
+        guard (try? self.loadAllowingInteraction(location: location)) != nil else { return false }
         return true
     }
 
     /// Modification date of the CLI's Keychain item. Attributes only — no
     /// secret is decrypted, so this never raises the ACL dialog.
-    public static func keychainItemModifiedAt() -> Date? {
+    public static func keychainItemModifiedAt(location: ClaudeCredentialLocation = .default) -> Date? {
         #if os(macOS)
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.keychainService,
+            kSecAttrService as String: location.keychainService,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnAttributes as String: true,
         ]
@@ -175,16 +234,19 @@ public enum ClaudeOAuthCredentialsStore {
         #endif
     }
 
-    private static func loadFromSources(allowUserInteraction: Bool) throws -> ClaudeOAuthCredentials {
+    private static func loadFromSources(
+        allowUserInteraction: Bool,
+        location: ClaudeCredentialLocation) throws -> ClaudeOAuthCredentials
+    {
         // Prefer Keychain (CLI writes there on macOS), but fall back to the JSON file when missing.
         var lastError: Error?
         let keychainData = allowUserInteraction
-            ? try? self.loadFromKeychain()
-            : ClaudeKeychainInteraction.withoutUserInteraction { try? self.loadFromKeychain() }
+            ? try? self.loadFromKeychain(location: location)
+            : ClaudeKeychainInteraction.withoutUserInteraction { try? self.loadFromKeychain(location: location) }
         if let keychainData {
             do {
                 let credentials = try ClaudeOAuthCredentials.parse(data: keychainData)
-                ClaudeOAuthCredentialCache.store(credentials)
+                ClaudeOAuthCredentialCache.store(credentials, account: location.cacheAccount)
                 return credentials
             } catch {
                 // Keep the Keychain parse error so we can surface it if the file is also invalid.
@@ -192,9 +254,9 @@ public enum ClaudeOAuthCredentialsStore {
             }
         }
         do {
-            let fileData = try self.loadFromFile()
+            let fileData = try self.loadFromFile(location: location)
             let credentials = try ClaudeOAuthCredentials.parse(data: fileData)
-            ClaudeOAuthCredentialCache.store(credentials)
+            ClaudeOAuthCredentialCache.store(credentials, account: location.cacheAccount)
             return credentials
         } catch {
             if let lastError { throw lastError }
@@ -202,9 +264,8 @@ public enum ClaudeOAuthCredentialsStore {
         }
     }
 
-    public static func loadFromFile() throws -> Data {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let url = home.appendingPathComponent(self.credentialsPath)
+    public static func loadFromFile(location: ClaudeCredentialLocation = .default) throws -> Data {
+        let url = location.credentialsFileURL
         do {
             return try Data(contentsOf: url)
         } catch {
@@ -215,11 +276,11 @@ public enum ClaudeOAuthCredentialsStore {
         }
     }
 
-    public static func loadFromKeychain() throws -> Data {
+    public static func loadFromKeychain(location: ClaudeCredentialLocation = .default) throws -> Data {
         #if os(macOS)
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: self.keychainService,
+            kSecAttrService as String: location.keychainService,
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecReturnData as String: true,
         ]

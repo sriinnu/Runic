@@ -141,16 +141,16 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
     let id: String = "codex.oauth"
     let kind: ProviderFetchKind = .oauth
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
-        (try? CodexOAuthCredentialsStore.load()) != nil
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        (try? CodexOAuthCredentialsStore.load(environment: context.env)) != nil
     }
 
-    func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
-        var credentials = try CodexOAuthCredentialsStore.load()
+    func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
+        var credentials = try CodexOAuthCredentialsStore.load(environment: context.env)
 
         if credentials.needsRefresh, !credentials.refreshToken.isEmpty {
             credentials = try await CodexTokenRefresher.refresh(credentials)
-            try CodexOAuthCredentialsStore.save(credentials)
+            try CodexOAuthCredentialsStore.save(credentials, environment: context.env)
         }
 
         let usage = try await CodexOAuthUsageFetcher.fetchUsage(
