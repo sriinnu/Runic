@@ -200,8 +200,17 @@ public struct ProviderFetchPipeline: Sendable {
         self.strategyTimeout = strategyTimeout
     }
 
+    /// Strategy kinds an added account may use. CLI, PTY, web-cookie and local
+    /// probes read the machine's default login, not the account's, and a CLI
+    /// pointed at a fresh home sits in onboarding until the timeout; an added
+    /// account therefore uses only what its own credential can serve.
+    public static let addedAccountKinds: Set<ProviderFetchKind> = [.oauth, .apiToken, .api]
+
     public func fetch(context: ProviderFetchContext, provider: UsageProvider) async -> ProviderFetchOutcome {
-        let strategies = await self.resolveStrategies(context)
+        var strategies = await self.resolveStrategies(context)
+        if let account = context.account, !account.isDefault {
+            strategies = strategies.filter { Self.addedAccountKinds.contains($0.kind) }
+        }
         var attempts: [ProviderFetchAttempt] = []
         attempts.reserveCapacity(strategies.count)
 
