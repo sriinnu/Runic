@@ -114,28 +114,44 @@ public struct ClaudeCredentialLocation: Hashable, Sendable {
     public static let defaultKeychainService = "Claude Code-credentials"
     public static let defaultCacheAccount = "claude-oauth-cache"
 
+    /// `CLAUDE_CONFIG_DIR` as the CLI sees it: the raw value, which is also
+    /// what it hashes for the Keychain service name.
     public let configDir: String?
+    /// `CLAUDE_SECURESTORAGE_CONFIG_DIR`, when set: the string the CLI hashes
+    /// instead of the config dir (an empty value means "no suffix").
+    public let secureStorageDir: String?
 
-    public init(configDir: String?) {
+    public init(configDir: String?, secureStorageDir: String? = nil) {
         let trimmed = configDir?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         self.configDir = trimmed.isEmpty ? nil : trimmed
+        self.secureStorageDir = secureStorageDir
     }
 
-    /// The first directory of `CLAUDE_CONFIG_DIR` (the CLI accepts a comma list
-    /// for log scanning; a login lives in one directory).
     public init(environment: [String: String]) {
-        let raw = environment["CLAUDE_CONFIG_DIR"] ?? ""
-        self.init(configDir: raw.split(separator: ",").first.map(String.init))
+        self.init(
+            configDir: environment["CLAUDE_CONFIG_DIR"],
+            secureStorageDir: environment["CLAUDE_SECURESTORAGE_CONFIG_DIR"])
     }
 
     public static let `default` = ClaudeCredentialLocation(configDir: nil)
 
-    /// Eight hex characters of SHA-256 over the expanded directory path, the
-    /// way Claude Code 2.1 suffixes its Keychain service for a custom config dir.
+    /// Eight hex characters of SHA-256 over the directory string, NFC-normalised
+    /// and otherwise as given (no tilde expansion), which is what Claude Code
+    /// 2.1 appends to its Keychain service for a custom config dir:
+    /// `` `Claude Code${OAUTH_FILE_SUFFIX}-credentials${"-" + sha256(dir).hex.substring(0, 8)}` ``.
+    /// With `CLAUDE_SECURESTORAGE_CONFIG_DIR` set, that value is hashed instead,
+    /// and an empty value means the unsuffixed item.
     public var directorySuffix: String? {
-        guard let configDir else { return nil }
-        let expanded = (configDir as NSString).expandingTildeInPath
-        let digest = SHA256.hash(data: Data(expanded.utf8)).map { String(format: "%02x", $0) }.joined()
+        let source: String
+        if let secureStorageDir {
+            guard !secureStorageDir.isEmpty else { return nil }
+            source = secureStorageDir
+        } else {
+            guard let configDir else { return nil }
+            source = configDir
+        }
+        let normalized = source.precomposedStringWithCanonicalMapping
+        let digest = SHA256.hash(data: Data(normalized.utf8)).map { String(format: "%02x", $0) }.joined()
         return String(digest.prefix(8))
     }
 

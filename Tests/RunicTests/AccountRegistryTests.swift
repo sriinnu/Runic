@@ -1,8 +1,13 @@
+import CryptoKit
 import Foundation
 import RunicCore
 import Testing
 
 struct AccountRegistryTests {
+    private static func sha256Hex(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
     @Test
     func `registry stores added accounts only and lists the default first`() throws {
         let url = FileManager.default.temporaryDirectory
@@ -49,11 +54,20 @@ struct AccountRegistryTests {
         #expect(ClaudeCredentialLocation(environment: [:]) == base)
         #expect(ClaudeCredentialLocation(environment: ["CLAUDE_CONFIG_DIR": "  "]) == base)
 
-        let custom = ClaudeCredentialLocation(environment: ["CLAUDE_CONFIG_DIR": "/tmp/claude-work,/tmp/other"])
+        let custom = ClaudeCredentialLocation(environment: ["CLAUDE_CONFIG_DIR": "/tmp/claude-work"])
         #expect(custom.configDir == "/tmp/claude-work")
         let suffix = custom.directorySuffix
+        // sha256("/tmp/claude-work") = 6e2f9c…; the CLI hashes the raw string.
+        #expect(suffix == String(Self.sha256Hex("/tmp/claude-work").prefix(8)))
         #expect(suffix?.count == 8)
         #expect(suffix?.allSatisfy(\.isHexDigit) == true)
+        // Secure-storage override replaces the hash source; empty means no suffix.
+        #expect(ClaudeCredentialLocation(
+            environment: ["CLAUDE_CONFIG_DIR": "/tmp/claude-work", "CLAUDE_SECURESTORAGE_CONFIG_DIR": "/elsewhere"])
+            .directorySuffix == String(Self.sha256Hex("/elsewhere").prefix(8)))
+        #expect(ClaudeCredentialLocation(
+            environment: ["CLAUDE_CONFIG_DIR": "/tmp/claude-work", "CLAUDE_SECURESTORAGE_CONFIG_DIR": ""])
+            .directorySuffix == nil)
         #expect(custom.keychainService == "Claude Code-credentials-\(suffix ?? "")")
         #expect(custom.cacheAccount == "claude-oauth-cache.\(suffix ?? "")")
         #expect(custom.credentialsFileURL.path == "/tmp/claude-work/.credentials.json")
