@@ -214,7 +214,7 @@ public enum ResetCommand {
 
         // Primary window
         windows.append(self.buildWindowInfo(
-            windowName: metadata.sessionLabel,
+            windowName: metadata.primaryWindowTitle(for: snapshot.primary),
             window: snapshot.primary))
 
         // Secondary window

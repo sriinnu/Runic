@@ -17,7 +17,8 @@ extension RunicCLI {
         }
 
         let meta = ProviderDescriptorRegistry.descriptor(for: provider).metadata
-        lines.append(Self.rateLine(title: meta.sessionLabel, window: snapshot.primary, useColor: useColor))
+        lines.append(Self.rateLine(
+            title: meta.primaryWindowTitle(for: snapshot.primary), window: snapshot.primary, useColor: useColor))
         if snapshot.primary.hasKnownLimit != false, let reset = snapshot.primary.resetDescription {
             lines.append(Self.resetLine(reset))
         }

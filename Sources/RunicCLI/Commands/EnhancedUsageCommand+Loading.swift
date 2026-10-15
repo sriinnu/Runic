@@ -62,7 +62,7 @@ extension EnhancedUsageCommand {
         var windows: [WindowData] = []
 
         windows.append(WindowData(
-            name: metadata.sessionLabel,
+            name: metadata.primaryWindowTitle(for: snapshot.primary),
             used: nil,
             limit: nil,
             usedPercent: snapshot.primary.usedPercent,

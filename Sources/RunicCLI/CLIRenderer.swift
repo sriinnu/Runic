@@ -12,7 +12,10 @@ enum CLIRenderer {
         var lines: [String] = []
         lines.append(self.headerLine(context.header, useColor: context.useColor))
 
-        lines.append(self.rateLine(title: meta.sessionLabel, window: snapshot.primary, useColor: context.useColor))
+        lines.append(self.rateLine(
+            title: meta.primaryWindowTitle(for: snapshot.primary),
+            window: snapshot.primary,
+            useColor: context.useColor))
         if let reset = snapshot.primary.resetDescription {
             lines.append(self.resetLine(reset))
         }
