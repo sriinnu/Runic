@@ -3,6 +3,24 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.12.0</title>
+            <pubDate>Thu, 15 Oct 2026 17:24:44 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>173</sparkle:version>
+            <sparkle:shortVersionString>2.12.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.12.0</h2>
+<ul>
+<li><strong>Several logins per provider: the groundwork.</strong> Runic now has accounts: a provider is the *kind*, and each login of it is an account with its own credential, fetched on every refresh and kept in its own slot. The default account is the one you already have and nothing about it changed on disk or in the keychain. A second Claude or Codex login can be registered today by hand in <code>~/Library/Application Support/Runic/accounts.json</code>, pointing at its own <code>CLAUDE_CONFIG_DIR</code> / <code>CODEX_HOME</code> directory: Runic reads the Keychain item Claude Code keys to that directory (<code>Claude Code-credentials-<hash></code>) or the <code>auth.json</code> in that Codex home, and writes one row per account to <code>diagnostics/accounts.json</code> after each refresh. The menu, widget and CLI still show the default account; the account tabs, the Add-account sheet and token refresh for Runic-owned directories come next. Walkthrough: <code>docs/design/accounts-hands-on.md</code>.</li>
+<li>An added account uses token-based sources only. Without a token it reports "no available strategy" at once instead of running the vendor CLI against a fresh home and timing out after 45 seconds.</li>
+<li>CLI: <code>runic usage</code>, <code>runic reset</code> and the usage JSON title a weekly-only window <strong>Weekly</strong>, matching the app (Codex Pro reports only its weekly cap).</li>
+<li>Design: <code>docs/design/accounts-and-windows.md</code> is the reviewed plan for accounts and for replacing the three fixed usage slots with a self-describing list of windows.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.12.0/Runic-2.12.0.zip" length="48240625" type="application/octet-stream" sparkle:edSignature="ZJCH0G2CeYDrO8w0TyqTdqSMfFFcLNeyhXn/0mrDsIeJHvZ0IsAWTQeH0pZ4+ckawOuAuIOci08bAfmR2/2LBA=="/>
+        </item>
+        <item>
             <title>2.11.3</title>
             <pubDate>Thu, 15 Oct 2026 14:18:03 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -35,23 +53,6 @@
 <p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
 ]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.2/Runic-2.11.2.zip" length="47969756" type="application/octet-stream" sparkle:edSignature="8E4fVgjUM6PFGjbPs59LRhTfT/Xz2ZIbyLIAk6NqW/ubLB+8cfZAidsnVzWv6CJokEVZ98mTivKz4wrG/6uACg=="/>
-        </item>
-        <item>
-            <title>2.11.1</title>
-            <pubDate>Mon, 12 Oct 2026 21:21:29 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>163</sparkle:version>
-            <sparkle:shortVersionString>2.11.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.11.1</h2>
-<ul>
-<li>The app icon is the current teal one. <code>Icon.icns</code> had not been rebuilt since January, so the app, the Dock and the website still showed the pre-July blue gradient; it is regenerated from <code>Icon.icon</code>.</li>
-<li>About: a Docs button opens runic.srinivas.dev; the link row no longer wraps "GitHub" on the terminal-style themes.</li>
-<li>The screenshot-mode placeholder email is <code>demo@runic.srinivas.dev</code>.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.1/Runic-2.11.1.zip" length="47956879" type="application/octet-stream" sparkle:edSignature="E92BLXnPc8ZJ0Q18n5/V56qxkr/oTEH7Eezhjqxfe1jf4giEWollyREBMSy6f7pAGDndmCs44JoJ86ZyQPL+CQ=="/>
         </item>
     </channel>
 </rss>
