@@ -25,6 +25,9 @@ struct AccountRegistryTests {
         let cn = ProviderAccount(id: AccountID(kind: .kimi, slug: "cn"), displayName: "cn", region: .china)
         try AccountRegistry.save([.default(for: .claude), work, off, cn], url: url)
 
+        let onDisk = try String(bytes: Data(contentsOf: url), encoding: .utf8) ?? ""
+        #expect(onDisk.contains(#""type" : "oauthDir""#))
+        #expect(onDisk.contains(#""id" : "claude~a1b2""#))
         let loaded = AccountRegistry.load(url: url)
         #expect(loaded.map(\.id.rawValue) == ["claude~a1b2", "claude~c3d4", "kimi~cn"])
         #expect(loaded.first?.credential == .oauthDir("/Users/me/Library/Application Support/Runic/accounts/a1b2"))

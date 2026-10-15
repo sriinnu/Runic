@@ -69,6 +69,9 @@ extension UsageProvider {
 }
 
 /// Where an account's credential lives.
+///
+/// Encoded as `{"type": "oauthDir", "value": "/path"}` so accounts.json can be
+/// written by hand while the Add-account sheet does not exist yet.
 public enum CredentialRef: Hashable, Codable, Sendable {
     /// A secret in Runic's provider-credentials keychain service under this account name.
     case keychainItem(String)
@@ -78,6 +81,35 @@ public enum CredentialRef: Hashable, Codable, Sendable {
     case env(String)
     /// A browser-cookie store key.
     case cookies(String)
+
+    private enum CodingKeys: String, CodingKey { case type, value }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        let value = try container.decode(String.self, forKey: .value)
+        switch type {
+        case "keychainItem": self = .keychainItem(value)
+        case "oauthDir": self = .oauthDir(value)
+        case "env": self = .env(value)
+        case "cookies": self = .cookies(value)
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .type, in: container, debugDescription: "Unknown credential type \(type)")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        let (type, value): (String, String) = switch self {
+        case let .keychainItem(name): ("keychainItem", name)
+        case let .oauthDir(path): ("oauthDir", path)
+        case let .env(name): ("env", name)
+        case let .cookies(key): ("cookies", key)
+        }
+        try container.encode(type, forKey: .type)
+        try container.encode(value, forKey: .value)
+    }
 
     /// The environment a fetch for `kind` runs with so the vendor's own
     /// credential and log locations follow this account: the CLIs and Runic's
