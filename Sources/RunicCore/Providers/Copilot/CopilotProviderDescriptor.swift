@@ -77,7 +77,7 @@ struct CopilotAPIFetchStrategy: ProviderFetchStrategy {
         {
             return CopilotTokenSelection(token: token, sourceLabel: "settings")
         }
-        guard let resolution = ProviderTokenResolver.copilotResolution(environment: context.env) else { return nil }
+        guard let resolution = context.credential(for: .copilot) else { return nil }
         let sourceLabel = self.sourceLabel(from: resolution.source, sourceKey: resolution.sourceKey)
         return CopilotTokenSelection(token: resolution.token, sourceLabel: sourceLabel)
     }

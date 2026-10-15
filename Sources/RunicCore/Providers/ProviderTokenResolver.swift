@@ -699,6 +699,60 @@ public enum ProviderTokenResolver {
         .qwenCN: { ProviderTokenResolver.qwenCNResolution(environment: $0) },
     ]
 
+    /// Resolve the API credential for one account. The default account takes the
+    /// kind's historical path (its keychain item, then its environment variables);
+    /// an added account reads only its own keychain item, `<base>.<slug>`, under
+    /// the same service, so a second Kimi never inherits the first one's key or
+    /// a shell export. Nil for kinds that do not authenticate with an API key.
+    public static func credentialResolution(
+        for account: AccountID,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        allowKeychain: Bool = true) -> ProviderTokenResolution?
+    {
+        if account.isDefault {
+            return self.credentialResolution(for: account.kind, environment: environment, allowKeychain: allowKeychain)
+        }
+        guard allowKeychain, let base = self.keychainAccounts[account.kind] else { return nil }
+        guard let token = self.keychainToken(
+            service: self.keychainService,
+            account: account.keychainAccount(base: base))
+        else { return nil }
+        return ProviderTokenResolution(token: token, source: .keychain)
+    }
+
+    /// The keychain account name each key-based kind stores its default secret under.
+    static let keychainAccounts: [UsageProvider: String] = [
+        .zai: "zai-api-token",
+        .copilot: "copilot-api-token",
+        .minimax: "minimax-api-token",
+        .openrouter: "openrouter-api-token",
+        .vercelai: "vercelai-api-token",
+        .groq: "groq-api-token",
+        .deepseek: "deepseek-api-token",
+        .fireworks: "fireworks-api-token",
+        .mistral: "mistral-api-token",
+        .perplexity: "perplexity-api-token",
+        .kimi: "kimi-api-token",
+        .kimiCN: "kimi-cn-api-token",
+        .zaiCN: "zai-cn-api-token",
+        .minimaxCN: "minimax-cn-api-token",
+        .stepfun: "stepfun-api-token",
+        .stepfunCN: "stepfun-cn-api-token",
+        .auggie: "auggie-api-token",
+        .together: "together-api-token",
+        .cohere: "cohere-api-token",
+        .xai: "xai-api-token",
+        .cerebras: "cerebras-api-token",
+        .sambanova: "sambanova-api-token",
+        .typesafe: "typesafe-api-token",
+        .cline: "cline-api-token",
+        .muse: "muse-api-token",
+        .ollamacloud: "ollama-cloud-api-token",
+        .azure: "azure-openai-api-token",
+        .qwen: "qwen-api-token",
+        .qwenCN: "qwen-cn-api-token",
+    ]
+
     /// Whether the given provider currently resolves a credential (keychain or env).
     /// Used to hide unconfigured China variants from the menu *synchronously* — in
     /// manual-refresh mode there is no async refresh to reveal an empty provider, so

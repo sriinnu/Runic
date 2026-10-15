@@ -81,7 +81,7 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
         if let token = cleaned(context.settings?.azure?.apiToken) {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
-        return ProviderTokenResolver.azureOpenAIResolution(environment: context.env)
+        return context.credential(for: .azure)
     }
 
     private static func resolveEndpoint(context: ProviderFetchContext) -> String? {

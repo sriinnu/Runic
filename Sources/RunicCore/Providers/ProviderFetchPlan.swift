@@ -28,6 +28,8 @@ public struct ProviderFetchContext: Sendable {
     public let settings: ProviderSettingsSnapshot?
     public let fetcher: UsageFetcher
     public let claudeFetcher: any ClaudeUsageFetching
+    /// The account this fetch is for; nil means the kind's default account.
+    public let account: AccountID?
 
     public init(
         runtime: ProviderRuntime,
@@ -39,7 +41,8 @@ public struct ProviderFetchContext: Sendable {
         env: [String: String],
         settings: ProviderSettingsSnapshot?,
         fetcher: UsageFetcher,
-        claudeFetcher: any ClaudeUsageFetching)
+        claudeFetcher: any ClaudeUsageFetching,
+        account: AccountID? = nil)
     {
         self.runtime = runtime
         self.sourceMode = sourceMode
@@ -51,6 +54,15 @@ public struct ProviderFetchContext: Sendable {
         self.settings = settings
         self.fetcher = fetcher
         self.claudeFetcher = claudeFetcher
+        self.account = account
+    }
+
+    /// The API credential for this fetch's account of `kind`: the account's own
+    /// keychain item, or for the default account the kind's historical keychain
+    /// item and environment variables.
+    public func credential(for kind: UsageProvider) -> ProviderTokenResolution? {
+        ProviderTokenResolver.credentialResolution(
+            for: self.account ?? kind.defaultAccount, environment: self.env)
     }
 }
 

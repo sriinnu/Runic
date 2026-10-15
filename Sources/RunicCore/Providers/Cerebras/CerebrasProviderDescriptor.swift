@@ -49,11 +49,11 @@ struct CerebrasAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveTokenResolution(environment: context.env) != nil
+        context.credential(for: .cerebras) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = Self.resolveTokenResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .cerebras) else {
             throw CerebrasSettingsError.missingToken
         }
         let usage = try await CerebrasUsageFetcher.fetchModels(apiKey: tokenRes.token)
@@ -64,10 +64,6 @@ struct CerebrasAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveTokenResolution(environment: [String: String]) -> ProviderTokenResolution? {
-        ProviderTokenResolver.cerebrasResolution(environment: environment)
     }
 }
 

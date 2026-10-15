@@ -58,11 +58,11 @@ struct MiniMaxCNAPIFetchStrategy: ProviderFetchStrategy {
     private static let quotaAPIURL = "https://www.minimaxi.com/v1/token_plan/remains"
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        ProviderTokenResolver.minimaxCNResolution(environment: context.env) != nil
+        context.credential(for: .minimaxCN) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = ProviderTokenResolver.minimaxCNResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .minimaxCN) else {
             throw ProviderFetchError.missingCredentials
         }
         let snapshot = try await MiniMaxUsageFetcher.fetchUsage(
