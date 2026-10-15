@@ -128,12 +128,20 @@ struct MenuDescriptor {
         entries.append(.text(headlineText, .headline))
 
         if let snap = store.snapshot(for: provider) {
-            Self.appendRateWindow(entries: &entries, title: meta.sessionLabel, window: snap.primary)
+            Self.appendRateWindow(
+                entries: &entries,
+                title: meta.primaryWindowTitle(for: snap.primary),
+                window: snap.primary)
             if let weekly = snap.secondary {
                 Self.appendRateWindow(entries: &entries, title: meta.weeklyLabel, window: weekly)
                 if let paceText = UsagePaceText.weekly(provider: provider, window: weekly) {
                     entries.append(.text(paceText, .secondary))
                 }
+            } else if snap.primary.isWeeklyLength,
+                      let paceText = UsagePaceText.weekly(provider: provider, window: snap.primary)
+            {
+                // The weekly cap is the only window (Codex Pro): pace it here.
+                entries.append(.text(paceText, .secondary))
             } else if provider == .claude {
                 supplementalEntries.append(.text("Weekly usage unavailable for this account.", .secondary))
             }

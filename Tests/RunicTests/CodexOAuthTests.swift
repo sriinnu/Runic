@@ -98,6 +98,51 @@ struct CodexOAuthTests {
         #expect(snapshot.secondary?.resetsAt != nil)
     }
 
+    /// Live 2026-10 Pro shape: the API reports only the weekly cap, and puts
+    /// it in `primary_window` with `secondary_window: null`. The window keeps
+    /// its weekly length so the UI can title it "Weekly" rather than "Session".
+    @Test
+    func `weekly-only primary window keeps its weekly length and title`() throws {
+        let json = """
+        {
+          "plan_type": "pro",
+          "rate_limit": {
+            "allowed": true,
+            "limit_reached": false,
+            "primary_window": {
+              "used_percent": 35,
+              "limit_window_seconds": 604800,
+              "reset_after_seconds": 596533,
+              "reset_at": 1792654725
+            },
+            "secondary_window": null
+          }
+        }
+        """
+        let creds = CodexOAuthCredentials(
+            accessToken: "access",
+            refreshToken: "refresh",
+            idToken: nil,
+            accountId: nil,
+            lastRefresh: Date())
+        let snapshot = try CodexOAuthFetchStrategy._mapUsageForTesting(Data(json.utf8), credentials: creds)
+        #expect(snapshot.primary.usedPercent == 35)
+        #expect(snapshot.primary.windowMinutes == 10080)
+        #expect(snapshot.primary.isWeeklyLength)
+        #expect(snapshot.secondary == nil)
+
+        let metadata = ProviderDescriptorRegistry.descriptor(for: .codex).metadata
+        #expect(metadata.primaryWindowTitle(for: snapshot.primary) == "Weekly")
+        let fiveHour = RateWindow(usedPercent: 10, windowMinutes: 300, resetsAt: nil, resetDescription: nil)
+        #expect(metadata.primaryWindowTitle(for: fiveHour) == "Session")
+        #expect(metadata.primaryWindowTitle(for: nil) == "Session")
+        // A 30-day pool is not a weekly cap (Ollama Cloud puts one in primary).
+        let monthly = RateWindow(usedPercent: 10, windowMinutes: 43200, resetsAt: nil, resetDescription: nil)
+        #expect(!monthly.isWeeklyLength)
+        let ollamaMeta = ProviderDescriptorRegistry.descriptor(for: .ollamacloud).metadata
+        #expect(ollamaMeta.primaryWindowTitle(for: monthly) == ollamaMeta.sessionLabel)
+    }
+
     @Test
     func `resolves chat GPT usage URL from config`() {
         let config = "chatgpt_base_url = \"https://chatgpt.com/backend-api/\"\n"

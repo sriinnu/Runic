@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Kimi: a Kimi Code plan key no longer shows `Kimi API returned status code 404 … resource_not_found_error`. When the base URL points at the plan platform (`api.kimi.ai` or `api.kimi.com`), Runic reads plan usage from `/coding/v1/usages` on that host instead of asking it for a Moonshot balance it does not serve; a 404 from a Moonshot host now also falls through to plan usage, like 401/403 did. The monthly pool is read from `limit_month_code` when `limit_month_total` is absent, and the base-URL hint in Settings says which host is which.
+- Codex: Pro accounts now get only a weekly cap from the usage API, and it arrives in the session slot with no 5h window at all. Runic showed it as **Session** with a week-away reset and an empty Weekly row, so the number looked stuck. The window is titled **Weekly** now (menu card, menu text, resets, burn chart, widget) with its weekly pace line, and the 5h row stays away until the API sends one — the same way codex's own `/status` names limits by duration.
+- Settings → Providers: the per-provider reload (↻) no longer switches the provider off. The button sat inside the card's click-to-toggle area, so a click (and any click on the greyed-out ↻ during a fetch) reached the toggle too; it now sits outside that area.
+
 ## 2.11.2 — 2026-10-12
 - System theme: the orange, purple and cyan accents are darker in light appearance, so they keep 3:1 contrast on the light window (they sat near 2.2:1). Dark appearance is unchanged. Theme JSON can now give a color as `"#LIGHT|#DARK"`.
 - Muse Code: when the CLI's usage card reads "Subscription · Currently unavailable", Runic says so straight away instead of waiting out a 45-second timeout on every refresh.
