@@ -184,6 +184,7 @@ extension UsageStore {
         }
         self.scheduleLedgerRefresh(force: true, inactiveProviders: [])
         self.persistWidgetSnapshot(reason: "refresh")
+        self.persistAccountDiagnostics()
     }
 
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
@@ -236,6 +237,7 @@ extension UsageStore {
 
         await self.refreshCustomProviders()
         self.persistWidgetSnapshot(reason: "refresh")
+        self.persistAccountDiagnostics()
         if trigger == .menuOpen {
             self.menuOpenRefreshCount += 1
             self.lastMenuOpenRefreshAt = now
