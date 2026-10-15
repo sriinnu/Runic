@@ -28,6 +28,9 @@ The OAuth API is the default app source when credentials are available; web acce
 - Reads OAuth tokens from `~/.codex/auth.json` (or `$CODEX_HOME/auth.json`).
 - Refreshes access tokens when `last_refresh` is older than 8 days.
 - Calls `GET https://chatgpt.com/backend-api/wham/usage` (default) with `Authorization: Bearer <token>`.
+- Pro accounts can report only the weekly cap (seen 2026-10): `primary_window` is the 7-day window and
+  `secondary_window` is `null`. Runic keeps the window's 7-day length and titles it **Weekly** instead of
+  Session, with no 5h row — the same way codex's own `/status` names limits by duration.
 
 ### OpenAI web dashboard (optional)
 - Preferences → Usage → "Access OpenAI via web".

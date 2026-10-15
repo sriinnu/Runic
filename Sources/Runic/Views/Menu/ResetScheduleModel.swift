@@ -176,7 +176,8 @@ enum ResetScheduleBuilder {
         if let snapshot = input.snapshot {
             // Some providers ship an empty metadata label for a window they
             // don't normally have; never let a row go untitled.
-            let sessionTitle = input.metadata.sessionLabel.isEmpty ? "Session" : input.metadata.sessionLabel
+            let primaryTitle = input.metadata.primaryWindowTitle(for: snapshot.primary)
+            let sessionTitle = primaryTitle.isEmpty ? "Session" : primaryTitle
             let weeklyTitle = input.metadata.weeklyLabel.isEmpty ? "Weekly" : input.metadata.weeklyLabel
             append(snapshot.primary, slot: "primary", defaultTitle: sessionTitle)
             append(snapshot.secondary, slot: "secondary", defaultTitle: weeklyTitle)

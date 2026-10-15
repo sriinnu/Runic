@@ -188,8 +188,9 @@ extension MenuPopoverView {
             let samples = store.samples(provider: provider, slot: slot, since: now.addingTimeInterval(-8 * 86400))
             guard let series = QuotaBurnSeries.make(samples: samples, window: window, now: now) else { continue }
             let label = window.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let primaryTitle = metadata.primaryWindowTitle(for: window)
             let title: String = switch slot {
-            case .primary: label.isEmpty ? (metadata.sessionLabel.isEmpty ? "Session" : metadata.sessionLabel) : label
+            case .primary: label.isEmpty ? (primaryTitle.isEmpty ? "Session" : primaryTitle) : label
             case .secondary: label.isEmpty ? (metadata.weeklyLabel.isEmpty ? "Weekly" : metadata.weeklyLabel) : label
             case .tertiary: label.isEmpty ? (metadata.opusLabel ?? "Model") : label
             }

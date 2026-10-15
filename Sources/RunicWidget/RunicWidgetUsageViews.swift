@@ -7,14 +7,7 @@ struct SmallUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HeaderView(provider: self.entry.provider, updatedAt: self.entry.updatedAt)
-            WindowUsageRow(
-                title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                window: self.entry.primary,
-                color: WidgetColors.color(for: self.entry.provider))
-            WindowUsageRow(
-                title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                window: self.entry.secondary,
-                color: WidgetColors.color(for: self.entry.provider))
+            QuotaRows(entry: self.entry)
             if let codeReview = entry.codeReviewRemainingPercent {
                 UsageBarRow(
                     title: "Code review",
@@ -32,14 +25,7 @@ struct MediumUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HeaderView(provider: self.entry.provider, updatedAt: self.entry.updatedAt)
-            WindowUsageRow(
-                title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                window: self.entry.primary,
-                color: WidgetColors.color(for: self.entry.provider))
-            WindowUsageRow(
-                title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                window: self.entry.secondary,
-                color: WidgetColors.color(for: self.entry.provider))
+            QuotaRows(entry: self.entry)
             if let credits = entry.creditsRemaining {
                 ValueLine(title: "Credits", value: WidgetFormat.credits(credits))
             }
@@ -59,14 +45,7 @@ struct LargeUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HeaderView(provider: self.entry.provider, updatedAt: self.entry.updatedAt)
-            WindowUsageRow(
-                title: ProviderDefaults.metadata[self.entry.provider]?.sessionLabel ?? "Session",
-                window: self.entry.primary,
-                color: WidgetColors.color(for: self.entry.provider))
-            WindowUsageRow(
-                title: ProviderDefaults.metadata[self.entry.provider]?.weeklyLabel ?? "Weekly",
-                window: self.entry.secondary,
-                color: WidgetColors.color(for: self.entry.provider))
+            QuotaRows(entry: self.entry)
             if let codeReview = entry.codeReviewRemainingPercent {
                 UsageBarRow(
                     title: "Code review",
@@ -130,6 +109,25 @@ struct HeaderView: View {
             Text(WidgetFormat.relativeDate(self.updatedAt))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// The quota rows for an entry: session and weekly, or just the weekly cap
+/// when that is the only window the provider reports (Codex Pro since
+/// 2026-10 puts it in the primary slot) so the widget never shows an empty
+/// "Weekly" bar under a "Weekly" bar.
+struct QuotaRows: View {
+    let entry: WidgetSnapshot.ProviderEntry
+
+    var body: some View {
+        let metadata = ProviderDefaults.metadata[self.entry.provider]
+        let color = WidgetColors.color(for: self.entry.provider)
+        let primaryTitle = metadata?.primaryWindowTitle(for: self.entry.primary) ?? "Session"
+        let weeklyTitle = metadata?.weeklyLabel ?? "Weekly"
+        WindowUsageRow(title: primaryTitle, window: self.entry.primary, color: color)
+        if self.entry.secondary != nil || primaryTitle != weeklyTitle {
+            WindowUsageRow(title: weeklyTitle, window: self.entry.secondary, color: color)
         }
     }
 }

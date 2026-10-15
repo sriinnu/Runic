@@ -46,7 +46,6 @@ struct ProviderListProviderRowView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: RunicSpacing.xs)
-                        ProviderReloadButton(provider: self.provider, store: self.store, isEnabled: self.isEnabled)
                     }
 
                     HStack(alignment: .center, spacing: RunicSpacing.xs) {
@@ -87,6 +86,11 @@ struct ProviderListProviderRowView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Outside the header's tap-to-toggle region: a click on ↻ (or on
+            // the greyed-out ↻ while a fetch is running, which SwiftUI passes
+            // through a disabled button) must never flip the provider off.
+            ProviderReloadButton(provider: self.provider, store: self.store, isEnabled: self.isEnabled)
         }
         .padding(ProviderListMetrics.providerCardPadding)
         .background(self.cardBackground)

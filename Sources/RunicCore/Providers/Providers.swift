@@ -210,3 +210,33 @@ public enum ProviderBrowserCookieDefaults {
         #endif
     }
 }
+
+extension RateWindow {
+    /// A window that spans about a week (six to eight days): a weekly cap,
+    /// whichever slot it landed in. Longer spans are monthly pools (Ollama
+    /// Cloud's 30-day credits also sit in the primary slot) and stay out.
+    public var isWeeklyLength: Bool {
+        let minutes = self.windowMinutes ?? 0
+        return minutes >= 6 * 24 * 60 && minutes <= 8 * 24 * 60
+    }
+}
+
+extension ProviderMetadata {
+    /// Title for the session slot.
+    ///
+    /// Codex's usage API (Pro, since 2026-10) reports only a weekly cap and
+    /// puts it in `primary_window` with no 5h window at all, so a week-long
+    /// window in the session slot is titled "Weekly" instead of "Session" —
+    /// the way codex's own `/status` names limits by duration. Only providers
+    /// whose second slot is literally the weekly cap qualify: a "Plan" /
+    /// "Cycle" or "Pro" / "Flash" pair says nothing about duration, so those
+    /// keep their session label whatever the window spans.
+    public func primaryWindowTitle(for window: RateWindow?) -> String {
+        if let window, window.isWeeklyLength,
+           self.weeklyLabel.caseInsensitiveCompare("Weekly") == .orderedSame
+        {
+            return self.weeklyLabel
+        }
+        return self.sessionLabel
+    }
+}

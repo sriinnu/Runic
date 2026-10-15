@@ -122,6 +122,27 @@ struct ResetScheduleTests {
         #expect(entries[2].elapsedFraction(now: self.now).map { abs($0 - (4.0 / 7.0)) < 0.001 } == true)
     }
 
+    /// Codex Pro (2026-10) reports only its weekly cap, in the primary slot:
+    /// the resets board must call that row Weekly, not Session.
+    @MainActor
+    @Test
+    func `schedule builder titles a weekly-only primary window Weekly`() {
+        let codexMeta = ProviderDescriptorRegistry.descriptor(for: .codex).metadata
+        let codex = UsageSnapshot(
+            primary: RateWindow(
+                usedPercent: 35,
+                windowMinutes: 10080,
+                resetsAt: self.now.addingTimeInterval(6 * 86400),
+                resetDescription: nil),
+            secondary: nil,
+            updatedAt: self.now)
+        let entries = ResetScheduleBuilder.entries(
+            [.init(provider: .codex, metadata: codexMeta, snapshot: codex)], now: self.now)
+        #expect(entries.map(\.id) == ["codex-primary"])
+        #expect(entries.first?.windowTitle == codexMeta.weeklyLabel)
+        #expect(entries.first?.windowTitle == "Weekly")
+    }
+
     @MainActor
     @Test
     func `schedule builder uses window labels and parses phrases`() {

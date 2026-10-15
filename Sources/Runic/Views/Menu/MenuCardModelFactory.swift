@@ -321,7 +321,7 @@ extension UsageMenuCardView.Model {
         } else {
             metrics.append(Metric(
                 id: "primary",
-                title: title(snapshot.primary, fallback: input.metadata.sessionLabel),
+                title: title(snapshot.primary, fallback: input.metadata.primaryWindowTitle(for: snapshot.primary)),
                 percent: Self.metricPercent(for: snapshot.primary, showUsed: input.usageBarsShowUsed),
                 percentStyle: percentStyle,
                 resetText: Self.resetText(for: snapshot.primary, prefersCountdown: true),
