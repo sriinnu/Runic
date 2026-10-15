@@ -43,10 +43,13 @@ import RunicCore
 @MainActor
 @Observable
 final class UsageStore {
-    var snapshots: [UsageProvider: UsageSnapshot] = [:]
-    var errors: [UsageProvider: String] = [:]
-    var lastSourceLabels: [UsageProvider: String] = [:]
-    var lastFetchAttempts: [UsageProvider: [ProviderFetchAttempt]] = [:]
+    // Live per-login state is keyed by account; `snapshots[.codex]` still reads
+    // the kind's default account (see AccountID). Ledger, token and spec state
+    // below stays per kind until the ledger splits per account.
+    var snapshots: [AccountID: UsageSnapshot] = [:]
+    var errors: [AccountID: String] = [:]
+    var lastSourceLabels: [AccountID: String] = [:]
+    var lastFetchAttempts: [AccountID: [ProviderFetchAttempt]] = [:]
     var tokenSnapshots: [UsageProvider: CostUsageTokenSnapshot] = [:]
     // Custom provider snapshots
     var customProviderSnapshots: [String: CustomProviderSnapshot] = [:]
@@ -79,7 +82,7 @@ final class UsageStore {
     var lastCreditsError: String?
     /// Live credits per provider, populated from fetch results whose
     /// strategies attach a `CreditsSnapshot` (DeepSeek, OpenRouter, Vercel AI, ...).
-    var providerCredits: [UsageProvider: CreditsSnapshot] = [:]
+    var providerCredits: [AccountID: CreditsSnapshot] = [:]
     var openAIDashboard: OpenAIDashboardSnapshot?
     var lastOpenAIDashboardError: String?
     var openAIDashboardRequiresLogin: Bool = false
@@ -92,11 +95,11 @@ final class UsageStore {
     var antigravityVersion: String?
     var cursorVersion: String?
     var isRefreshing = false
-    var refreshingProviders: Set<UsageProvider> = []
+    var refreshingProviders: Set<AccountID> = []
     var debugForceAnimation = false
     var pathDebugInfo: PathDebugSnapshot = .empty
-    var statuses: [UsageProvider: ProviderStatus] = [:]
-    var probeLogs: [UsageProvider: String] = [:]
+    var statuses: [AccountID: ProviderStatus] = [:]
+    var probeLogs: [AccountID: String] = [:]
     @ObservationIgnored var lastCreditsSnapshot: CreditsSnapshot?
     @ObservationIgnored var creditsFailureStreak: Int = 0
     @ObservationIgnored var lastOpenAIDashboardSnapshot: OpenAIDashboardSnapshot?
@@ -114,7 +117,7 @@ final class UsageStore {
     @ObservationIgnored var menuOpenRefreshCount: Int = 0
     @ObservationIgnored var lastMenuOpenRefreshAt: Date?
     @ObservationIgnored var suppressNextSettingsRefresh: Bool = false
-    @ObservationIgnored var lastUsageDeltaAt: [UsageProvider: Date] = [:]
+    @ObservationIgnored var lastUsageDeltaAt: [AccountID: Date] = [:]
     @ObservationIgnored var lastLedgerActivityAt: [UsageProvider: Date] = [:]
     @ObservationIgnored var lastRefreshFrequency: RefreshFrequency = .manual
     @ObservationIgnored var lastAutoRefreshWarningEnabled: Bool = true
@@ -131,7 +134,7 @@ final class UsageStore {
     @ObservationIgnored let openAIWebLogger = RunicLog.logger("openai-web")
     @ObservationIgnored let tokenCostLogger = RunicLog.logger("token-cost")
     @ObservationIgnored var openAIWebDebugLines: [String] = []
-    @ObservationIgnored var failureGates: [UsageProvider: ConsecutiveFailureGate] = [:]
+    @ObservationIgnored var failureGates: [AccountID: ConsecutiveFailureGate] = [:]
     @ObservationIgnored var tokenFailureGates: [UsageProvider: ConsecutiveFailureGate] = [:]
     @ObservationIgnored var providerSpecs: [UsageProvider: ProviderSpec] = [:]
     @ObservationIgnored let providerMetadata: [UsageProvider: ProviderMetadata]
@@ -148,7 +151,7 @@ final class UsageStore {
         UsageProvider: [String: ProviderHistoryMonthCacheEntry]
     ] =
         [:]
-    @ObservationIgnored var lastKnownSessionRemaining: [UsageProvider: Double] = [:]
+    @ObservationIgnored var lastKnownSessionRemaining: [AccountID: Double] = [:]
     @ObservationIgnored var lastTokenFetchAt: [UsageProvider: Date] = [:]
     @ObservationIgnored let tokenFetchTTL: TimeInterval = 60 * 60
     @ObservationIgnored let tokenFetchTimeout: TimeInterval = 10 * 60
@@ -180,9 +183,8 @@ final class UsageStore {
         self.performanceStorage = PerformanceStorageImpl()
         self.lastAutoRefreshWarningEnabled = settings.autoRefreshWarningEnabled
         self.lastAutoRefreshWarningThreshold = settings.autoRefreshWarningThreshold
-        self
-            .failureGates = Dictionary(uniqueKeysWithValues: UsageProvider.allCases
-                .map { ($0, ConsecutiveFailureGate()) })
+        self.failureGates = Dictionary(uniqueKeysWithValues: UsageProvider.allCases
+            .map { ($0.defaultAccount, ConsecutiveFailureGate()) })
         self.tokenFailureGates = Dictionary(uniqueKeysWithValues: UsageProvider.allCases
             .map { ($0, ConsecutiveFailureGate()) })
         self.providerSpecs = registry.specs(
