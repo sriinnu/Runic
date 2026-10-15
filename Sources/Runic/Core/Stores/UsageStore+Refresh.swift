@@ -273,27 +273,30 @@ extension UsageStore {
         return true
     }
 
-    func refreshProvider(_ provider: UsageProvider, trigger _: RefreshTrigger) async {
+    /// The accounts a refresh of `provider` visits: its default account, then
+    /// the enabled added logins of that kind.
+    func accounts(for provider: UsageProvider) -> [ProviderAccount] {
+        AccountRegistry.accounts(for: provider, added: self.addedAccounts)
+    }
+
+    /// Refresh every account of a kind. The kind-level toggle and the
+    /// history-only check apply once; each account then fetches with its own
+    /// credential and lands in its own slot of the account-keyed state.
+    func refreshProvider(_ provider: UsageProvider, trigger: RefreshTrigger) async {
         guard let spec = self.providerSpecs[provider] else { return }
 
         if !spec.isEnabled() {
-            self.refreshingProviders.remove(provider)
+            for account in self.accounts(for: provider) {
+                self.refreshingProviders.remove(account.id)
+                await MainActor.run { self.clearAccountState(account) }
+            }
             await MainActor.run {
-                self.snapshots.removeValue(forKey: provider.defaultAccount)
-                self.errors[provider] = nil
-                self.lastSourceLabels.removeValue(forKey: provider.defaultAccount)
-                self.lastFetchAttempts.removeValue(forKey: provider.defaultAccount)
                 self.tokenSnapshots.removeValue(forKey: provider)
                 self.tokenErrors[provider] = nil
-                self.failureGates[provider]?.reset()
                 self.tokenFailureGates[provider]?.reset()
-                self.statuses.removeValue(forKey: provider.defaultAccount)
-                self.lastKnownSessionRemaining.removeValue(forKey: provider.defaultAccount)
                 self.lastTokenFetchAt.removeValue(forKey: provider)
-                self.lastUsageDeltaAt.removeValue(forKey: provider.defaultAccount)
                 self.lastLedgerActivityAt.removeValue(forKey: provider)
                 self.ledgerCompactions.removeValue(forKey: provider)
-                self.providerCredits.removeValue(forKey: provider.defaultAccount)
             }
             return
         }
@@ -310,51 +313,91 @@ extension UsageStore {
             return
         }
 
-        self.refreshingProviders.insert(provider)
-        defer { self.refreshingProviders.remove(provider) }
+        // Kinds refresh concurrently (the caller's task group); a kind's
+        // accounts run one after another, which also keeps a vendor's
+        // per-login rate limits and token refreshes from racing each other.
+        for account in self.accounts(for: provider) {
+            await self.refreshAccount(account, credential: account.credential, spec: spec, trigger: trigger)
+        }
+    }
 
-        let previousSnapshot = self.snapshots[provider]
-        let outcome = await spec.fetch()
+    private func clearAccountState(_ account: ProviderAccount) {
+        self.snapshots.removeValue(forKey: account.id)
+        self.errors[account.id] = nil
+        self.lastSourceLabels.removeValue(forKey: account.id)
+        self.lastFetchAttempts.removeValue(forKey: account.id)
+        self.failureGates[account.id]?.reset()
+        self.statuses.removeValue(forKey: account.id)
+        self.lastKnownSessionRemaining.removeValue(forKey: account.id)
+        self.lastUsageDeltaAt.removeValue(forKey: account.id)
+        self.providerCredits.removeValue(forKey: account.id)
+    }
+
+    /// One account's fetch. Session-quota notifications, burn samples and
+    /// balance readings are still recorded for the default account only; the
+    /// per-account versions land with the alerts and resets work.
+    private func refreshAccount(
+        _ account: ProviderAccount,
+        credential: CredentialRef?,
+        spec: ProviderSpec,
+        trigger _: RefreshTrigger) async
+    {
+        let provider = account.id.kind
+        let accountID = account.id
+        self.refreshingProviders.insert(accountID)
+        defer { self.refreshingProviders.remove(accountID) }
+
+        let previousSnapshot = self.snapshots[accountID]
+        let outcome = await spec.fetch(accountID, credential)
         await MainActor.run {
-            self.lastFetchAttempts[provider] = outcome.attempts
+            self.lastFetchAttempts[accountID] = outcome.attempts
         }
 
         switch outcome.result {
         case let .success(result):
             let scoped = result.usage.scoped(to: provider)
             await MainActor.run {
-                self.handleSessionQuotaTransition(provider: provider, snapshot: scoped)
-                self.snapshots[provider] = scoped
-                // Keep the reading: the Burn panel draws the cycle from these.
-                QuotaSampleStore.shared.record(provider: provider, snapshot: scoped)
-                // Balance APIs return a snapshot only; the readings are what
-                // spend today / this month / runway are derived from.
-                if let balance = scoped.balance {
-                    BalanceSampleStore.shared.record(provider: provider, balance: balance, at: scoped.updatedAt)
+                if accountID.isDefault {
+                    self.handleSessionQuotaTransition(provider: provider, snapshot: scoped)
                 }
-                // Keep credits returned with usage. Codex reads a dedicated
-                // slot; other providers use the per-provider map.
+                self.snapshots[accountID] = scoped
+                if accountID.isDefault {
+                    // Keep the reading: the Burn panel draws the cycle from these.
+                    QuotaSampleStore.shared.record(provider: provider, snapshot: scoped)
+                    // Balance APIs return a snapshot only; the readings are what
+                    // spend today / this month / runway are derived from.
+                    if let balance = scoped.balance {
+                        BalanceSampleStore.shared.record(provider: provider, balance: balance, at: scoped.updatedAt)
+                    }
+                }
+                // Keep credits returned with usage. Codex's default account
+                // reads a dedicated slot; everything else uses the account map.
                 if let credits = result.credits {
-                    if provider == .codex {
+                    if provider == .codex, accountID.isDefault {
                         self.credits = credits
                         self.lastCreditsSnapshot = credits
                         self.lastCreditsError = nil
                         self.creditsFailureStreak = 0
                     } else {
-                        self.providerCredits[provider] = credits
+                        self.providerCredits[accountID] = credits
                     }
                 }
-                self.lastSourceLabels[provider] = result.sourceLabel
-                self.errors[provider] = nil
-                self.failureGates[provider]?.recordSuccess()
-                self.recordUsageActivity(
-                    provider: provider,
-                    previous: previousSnapshot,
-                    current: scoped)
+                self.lastSourceLabels[accountID] = result.sourceLabel
+                self.errors[accountID] = nil
+                if self.failureGates[accountID] == nil {
+                    self.failureGates[accountID] = ConsecutiveFailureGate()
+                }
+                self.failureGates[accountID]?.recordSuccess()
+                if accountID.isDefault {
+                    self.recordUsageActivity(
+                        provider: provider,
+                        previous: previousSnapshot,
+                        current: scoped)
+                }
             }
         case let .failure(error):
             await MainActor.run {
-                self.recordProviderFetchFailure(provider, message: error.localizedDescription)
+                self.recordProviderFetchFailure(accountID, message: error.localizedDescription)
             }
         }
     }
@@ -366,10 +409,17 @@ extension UsageStore {
     /// failure gate lets it through. Wiping the snapshot here used to flip the
     /// card from usage bars to error-text-only on the first surfaced failure.
     func recordProviderFetchFailure(_ provider: UsageProvider, message: String) {
-        let hadPriorData = self.snapshots[provider] != nil
-        let shouldSurface = self.failureGates[provider]?
+        self.recordProviderFetchFailure(provider.defaultAccount, message: message)
+    }
+
+    func recordProviderFetchFailure(_ account: AccountID, message: String) {
+        let hadPriorData = self.snapshots[account] != nil
+        if self.failureGates[account] == nil {
+            self.failureGates[account] = ConsecutiveFailureGate()
+        }
+        let shouldSurface = self.failureGates[account]?
             .shouldSurfaceError(onFailureWithPriorData: hadPriorData) ?? true
-        self.errors[provider] = shouldSurface ? message : nil
+        self.errors[account] = shouldSurface ? message : nil
     }
 
     private func handleSessionQuotaTransition(provider: UsageProvider, snapshot: UsageSnapshot) {

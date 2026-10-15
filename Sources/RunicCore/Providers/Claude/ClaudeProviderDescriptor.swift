@@ -65,9 +65,10 @@ public enum ClaudeProviderDescriptor {
             // A loadable copy must carry the scope; an unloadable one (expired)
             // still counts when the CLI is signed in, so the fetcher can fall
             // back to it instead of the plan reporting no credentials.
-            let oauthCreds = try? ClaudeOAuthCredentialsStore.load()
+            let location = ClaudeCredentialLocation(environment: context.env)
+            let oauthCreds = try? ClaudeOAuthCredentialsStore.load(location: location)
             let hasOAuthCredentials = oauthCreds.map { $0.scopes.contains("user:profile") }
-                ?? ClaudeOAuthCredentialsStore.hasLoginOnThisMac()
+                ?? ClaudeOAuthCredentialsStore.hasLoginOnThisMac(location: location)
             let settings = context.settings
             let debugMenuEnabled = settings?.debugMenuEnabled ?? false
             let claudeSettings = settings?.claude
@@ -131,16 +132,17 @@ struct ClaudeOAuthFetchStrategy: ProviderFetchStrategy {
     let id: String = "claude.oauth"
     let kind: ProviderFetchKind = .oauth
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
-        guard let creds = try? ClaudeOAuthCredentialsStore.load() else {
-            return ClaudeOAuthCredentialsStore.hasLoginOnThisMac()
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        let location = ClaudeCredentialLocation(environment: context.env)
+        guard let creds = try? ClaudeOAuthCredentialsStore.load(location: location) else {
+            return ClaudeOAuthCredentialsStore.hasLoginOnThisMac(location: location)
         }
         // Usage endpoint requires user:profile scope.
         return creds.scopes.contains("user:profile")
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        let fetcher = ClaudeUsageFetcher(dataSource: .oauth, useWebExtras: false)
+        let fetcher = ClaudeUsageFetcher(environment: context.env, dataSource: .oauth, useWebExtras: false)
         let usage = try await fetcher.loadLatestUsage(model: "sonnet")
         return self.makeResult(
             usage: Self.snapshot(from: usage),

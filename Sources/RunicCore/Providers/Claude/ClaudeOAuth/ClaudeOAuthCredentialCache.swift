@@ -17,7 +17,7 @@ import Security
 public enum ClaudeOAuthCredentialCache {
     private static let log = RunicLog.logger("claude-oauth-cache")
     private static let service = RunicKeychainService.providerCredentials
-    private static let account = "claude-oauth-cache"
+    public static let defaultAccount = ClaudeCredentialLocation.defaultCacheAccount
 
     private struct Payload: Codable {
         let accessToken: String
@@ -29,9 +29,9 @@ public enum ClaudeOAuthCredentialCache {
     }
 
     /// Cached credentials, or nil when absent, unreadable, or past expiry.
-    public static func load() -> ClaudeOAuthCredentials? {
+    public static func load(account: String = ClaudeOAuthCredentialCache.defaultAccount) -> ClaudeOAuthCredentials? {
         #if os(macOS)
-        guard let data = self.read() else { return nil }
+        guard let data = self.read(account: account) else { return nil }
         guard let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
             return nil
         }
@@ -50,9 +50,9 @@ public enum ClaudeOAuthCredentialCache {
     /// When the current cache entry was written, or nil when there is none or
     /// it predates the timestamp. Read even past expiry — the reload button
     /// compares it against the CLI item's modification date.
-    public static func cachedAt() -> Date? {
+    public static func cachedAt(account: String = ClaudeOAuthCredentialCache.defaultAccount) -> Date? {
         #if os(macOS)
-        guard let data = self.read(),
+        guard let data = self.read(account: account),
               let payload = try? JSONDecoder().decode(Payload.self, from: data)
         else { return nil }
         return payload.cachedAt
@@ -61,7 +61,10 @@ public enum ClaudeOAuthCredentialCache {
         #endif
     }
 
-    public static func store(_ credentials: ClaudeOAuthCredentials) {
+    public static func store(
+        _ credentials: ClaudeOAuthCredentials,
+        account: String = ClaudeOAuthCredentialCache.defaultAccount)
+    {
         #if os(macOS)
         let payload = Payload(
             accessToken: credentials.accessToken,
@@ -72,11 +75,11 @@ public enum ClaudeOAuthCredentialCache {
         guard let data = try? JSONEncoder().encode(payload) else { return }
 
         // Delete-then-add: SecItemUpdate leaves a stale ACL behind.
-        var deleteQuery = self.baseQuery()
+        var deleteQuery = self.baseQuery(account: account)
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &deleteQuery)
         _ = RunicKeychainGate.delete(deleteQuery as CFDictionary)
 
-        var addQuery = self.baseQuery()
+        var addQuery = self.baseQuery(account: account)
         addQuery[kSecValueData as String] = data
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
         let status = RunicKeychainGate.add(addQuery as CFDictionary)
@@ -86,17 +89,17 @@ public enum ClaudeOAuthCredentialCache {
         #endif
     }
 
-    public static func clear() {
+    public static func clear(account: String = ClaudeOAuthCredentialCache.defaultAccount) {
         #if os(macOS)
-        var query = self.baseQuery()
+        var query = self.baseQuery(account: account)
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
         _ = RunicKeychainGate.delete(query as CFDictionary)
         #endif
     }
 
     #if os(macOS)
-    private static func read() -> Data? {
-        var query = self.baseQuery()
+    private static func read(account: String) -> Data? {
+        var query = self.baseQuery(account: account)
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         query[kSecReturnData as String] = true
         RunicCoreKeychainQueryPolicy.disallowAuthenticationUI(in: &query)
@@ -109,11 +112,11 @@ public enum ClaudeOAuthCredentialCache {
         return data
     }
 
-    private static func baseQuery() -> [String: Any] {
+    private static func baseQuery(account: String) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: self.service,
-            kSecAttrAccount as String: self.account,
+            kSecAttrAccount as String: account,
         ]
     }
     #endif

@@ -43,6 +43,8 @@ import RunicCore
 @MainActor
 @Observable
 final class UsageStore {
+    /// Added logins from accounts.json; every kind also has its default account.
+    var addedAccounts: [ProviderAccount] = AccountRegistry.load()
     // Live per-login state is keyed by account; `snapshots[.codex]` still reads
     // the kind's default account (see AccountID). Ledger, token and spec state
     // below stays per kind until the ledger splits per account.

@@ -348,7 +348,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     private func loadViaOAuth() async throws -> ClaudeUsageSnapshot {
         let creds: ClaudeOAuthCredentials
         do {
-            creds = try ClaudeOAuthCredentialsStore.load()
+            creds = try ClaudeOAuthCredentialsStore.load(environment: self.environment)
         } catch {
             throw OAuthCredentialGap(underlying: .oauthFailed(error.localizedDescription))
         }

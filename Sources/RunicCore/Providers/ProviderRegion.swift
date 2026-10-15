@@ -5,7 +5,7 @@ import Foundation
 /// separate accounts, keys, and hosts — so Runic models each as its own
 /// `UsageProvider` slot and pairs them here. Every surface (preferences,
 /// menu switcher, overview, widget, ordering) reads this one table.
-public enum ProviderRegion: String, Sendable, CaseIterable, Identifiable {
+public enum ProviderRegion: String, Sendable, CaseIterable, Identifiable, Codable {
     case international
     case china
 
