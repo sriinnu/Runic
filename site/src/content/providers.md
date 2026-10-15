@@ -12,7 +12,7 @@ Runic tries a provider's strategies **in order** and uses the first that answers
 
 | Provider | Strategies, in order | Notes |
 | --- | --- | --- |
-| Codex | Web dashboard → CLI RPC → CLI PTY `/status` | Today's cost comes from `~/.codex/sessions`; older days from the relay. |
+| Codex | OAuth (`~/.codex/auth.json`) → web dashboard → CLI RPC → CLI PTY `/status` | Today's cost comes from `~/.codex/sessions`; older days from the relay. Pro plans report only a weekly cap since October 2026: the card titles it **Weekly** and shows no 5h row, like codex's own `/status`. |
 | Claude | OAuth API → web API → CLI PTY | See [Claude](/claude/). |
 | Gemini | OAuth via the Gemini CLI's credentials | |
 | Cursor | Browser cookies → stored WebKit session | On-demand spend shown without a gauge when the plan is unlimited. |
@@ -26,7 +26,8 @@ Runic tries a provider's strategies **in order** and uses the first that answers
 
 | Provider | Source | What you see |
 | --- | --- | --- |
-| DeepSeek, Kimi, StepFun, OpenRouter, Vercel AI | API key → balance API | Balance, plus spend derived from readings taken every 20 minutes; a "From logs" estimate where the provider can be routed through a coding tool. |
+| DeepSeek, Kimi (Open Platform key), StepFun, OpenRouter, Vercel AI | API key → balance API | Balance, plus spend derived from readings taken every 20 minutes; a "From logs" estimate where the provider can be routed through a coding tool. |
+| Kimi Code (plan key) | API key → `api.kimi.ai/coding/v1/usages` — set the base URL to `https://api.kimi.ai/coding` (or `api.kimi.com`) | 5h, weekly and monthly windows. A plan key on a Moonshot host falls through to plan usage on its own. |
 | z.ai, MiniMax, Qwen | API key or web session → quota API | Quota windows. Qwen token and coding plans report usage from local coding-tool logs. |
 | Cline | API key → `api.cline.bot` | Credit balance and exact spend today and this month. |
 | Ollama Cloud | API key → `ollama.com/api/usage` | Monthly credits, or session and weekly limits. Undocumented, parsed defensively. |
