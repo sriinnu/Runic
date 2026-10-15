@@ -18,7 +18,7 @@ public enum KimiCNProviderDescriptor {
                 opusLabel: nil,
                 supportsOpus: false,
                 supportsCredits: false,
-                creditsHint: "Shows api.moonshot.cn account balance, or 5h and weekly plan usage for a Kimi Code key.",
+                creditsHint: "Shows api.moonshot.cn account balance, or 5h and monthly plan usage for a Kimi Code key.",
                 toggleTitle: "Show Kimi (China) usage",
                 cliName: "kimi-cn",
                 defaultEnabled: false,

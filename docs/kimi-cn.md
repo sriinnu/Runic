@@ -9,7 +9,7 @@ read_when:
 
 Sibling of the [Kimi provider](kimi.md). Moonshot issues separate accounts and API keys for `api.moonshot.cn` (China) vs `api.moonshot.ai` (international) -- these cannot share one key, so this is a distinct `UsageProvider` case (`kimiCN`) rather than a base-URL override.
 
-Reuses `KimiUsageFetcher.fetchBalance(apiKey:baseURL:)` with `baseURL` hardcoded to `https://api.moonshot.cn`. Same response shape as the international provider.
+Reuses `KimiUsageFetcher.fetchSnapshot(apiKey:baseURL:environment:)` with `baseURL` hardcoded to `https://api.moonshot.cn`: balance first, then Kimi Code plan usage when `.cn` answers 401/403/404 (see [kimi.md](kimi.md), endpoint selection). Same response shapes as the international provider.
 
 ## Credentials
 Token resolution order:

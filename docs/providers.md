@@ -24,7 +24,7 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, `openT
 | z.ai | API token (Keychain/env) → quota API (`api`). |
 | Copilot | API token (device flow/env) → copilot_internal API (`api`). |
 | Vercel AI | API token (Keychain/env) → AI Gateway credits API (`api`). |
-| Kimi / Kimi (China) | API key (Keychain/env) → Moonshot balance API on `api.moonshot.ai` / `api.moonshot.cn` (`api`); optional custom gateway on the international slot. |
+| Kimi / Kimi (China) | API key (Keychain/env) → Moonshot balance API on `api.moonshot.ai` / `api.moonshot.cn` (`api`), or Kimi Code plan usage (`/coding/v1/usages` on `api.kimi.ai` / `api.kimi.com`) when the international slot's base URL is a plan host or the balance route rejects the key; optional custom gateway on the international slot. |
 | z.ai (China) | API key (Keychain/env) → `open.bigmodel.cn` monitor API mirrored from z.ai (`api`). |
 | MiniMax (China) | API key (Keychain/env) → `minimaxi.com` token-plan API (`api`); no web fallback on the China slot. |
 | Qwen / Qwen (China) | API key (Keychain/env) → DashScope usage API (`api`, plan-dependent: token/coding plans 404 and usage comes from coding-tool logs); optional base URL per slot. |

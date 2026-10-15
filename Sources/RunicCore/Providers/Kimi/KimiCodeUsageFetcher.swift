@@ -19,12 +19,66 @@ import Foundation
 /// ```
 ///
 /// Numbers arrive as strings or numbers; `usages` is newer and may appear
-/// instead of, or alongside, `usage`/`limits`. Parsing is defensive.
+/// instead of, or alongside, `usage`/`limits`. Since 2026-10 the monthly pool
+/// also comes as `limit_month_code` (same ratio as `limit_month_total`), and
+/// new plans carry no weekly `usage` block at all. Parsing is defensive.
+///
+/// Kimi runs two hosts for the plan API: `api.kimi.com` (China-side) and
+/// `api.kimi.ai` (overseas). Both serve `/coding/v1/usages` for the same key.
 enum KimiCodeUsageFetcher {
     static let defaultBaseURL = "https://api.kimi.com/coding/v1"
     private static let requestTimeout: TimeInterval = 20
 
-    static func usagesURL(environment: [String: String]) -> URL? {
+    /// True when the configured Kimi base URL points at the Kimi Code plan
+    /// platform (`api.kimi.com`, `api.kimi.ai`) rather than the Moonshot Open
+    /// Platform (`api.moonshot.ai` / `.cn`). The plan platform serves no
+    /// balance route — `/v1/users/me/balance` 404s there — so a caller should
+    /// go straight to plan usage. Exact API hosts only: `www.kimi.com` is the
+    /// web app and a pasted console URL must not be sent a key.
+    static func isKimiCodeHost(_ baseURL: String?) -> Bool {
+        guard let host = components(baseURL)?.host?.lowercased() else { return false }
+        return host == "api.kimi.com" || host == "api.kimi.ai"
+    }
+
+    /// True for any host Kimi itself runs (Moonshot Open Platform or Kimi Code).
+    /// A key may be retried on the plan platform after such a host rejects it;
+    /// a third-party gateway's rejection stays where it is.
+    static func isKimiOperatedHost(_ baseURL: String?) -> Bool {
+        guard let host = components(baseURL)?.host?.lowercased() else { return false }
+        for domain in ["kimi.com", "kimi.ai", "moonshot.ai", "moonshot.cn"]
+            where host == domain || host.hasSuffix("." + domain)
+        {
+            return true
+        }
+        return false
+    }
+
+    /// Scheme (https if missing), host and port of a user-typed base URL; the
+    /// path, query and fragment are irrelevant to a Kimi Code host and dropped
+    /// so a pasted full endpoint (`…/coding/v1/usages`) cannot double up.
+    private static func components(_ raw: String?) -> URLComponents? {
+        var base = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !base.isEmpty else { return nil }
+        if !base.contains("://") {
+            base = "https://\(base)"
+        }
+        guard var components = URLComponents(string: base), components.host?.isEmpty == false else {
+            return nil
+        }
+        components.path = ""
+        components.query = nil
+        components.fragment = nil
+        return components
+    }
+
+    /// Resolution: a Kimi Code host from the provider's base-URL setting wins
+    /// (so a user on `api.kimi.ai` stays on `api.kimi.ai`), then kimi-cli's
+    /// `KIMI_CODE_BASE_URL` (any proxy), then the default host.
+    static func usagesURL(baseURL: String? = nil, environment: [String: String]) -> URL? {
+        if self.isKimiCodeHost(baseURL), var components = components(baseURL) {
+            components.path = "/coding/v1/usages"
+            return components.url
+        }
         var base = environment["KIMI_CODE_BASE_URL"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if base.isEmpty { base = Self.defaultBaseURL }
         while base.hasSuffix("/") {
@@ -33,8 +87,12 @@ enum KimiCodeUsageFetcher {
         return URL(string: "\(base)/usages")
     }
 
-    static func fetchUsage(apiKey: String, environment: [String: String]) async throws -> UsageSnapshot {
-        guard let url = self.usagesURL(environment: environment) else {
+    static func fetchUsage(
+        apiKey: String,
+        baseURL: String? = nil,
+        environment: [String: String]) async throws -> UsageSnapshot
+    {
+        guard let url = self.usagesURL(baseURL: baseURL, environment: environment) else {
             throw KimiAPIError.invalidResponse
         }
         var request = URLRequest(url: url)
@@ -90,10 +148,14 @@ enum KimiCodeUsageFetcher {
             {
                 windows.insert(window, at: 0)
             }
-            if let pool = pools["limit_month_total"] as? [String: Any],
-               let window = Self.ratioWindow(pool, windowMinutes: nil, label: "Monthly")
-            {
-                windows.append(window)
+            // `limit_month_total` first, `limit_month_code` when the total is
+            // absent, null, or carries no ratio.
+            let monthly = ["limit_month_total", "limit_month_code"].lazy
+                .compactMap { pools[$0] as? [String: Any] }
+                .compactMap { Self.ratioWindow($0, windowMinutes: nil, label: "Monthly") }
+                .first
+            if let monthly {
+                windows.append(monthly)
             }
         }
 
@@ -204,22 +266,35 @@ enum KimiCodeUsageError: LocalizedError {
 }
 
 extension KimiUsageFetcher {
-    /// Usage for a Kimi key on the given Open Platform host.
+    /// Usage for a Kimi key on the given host.
     ///
-    /// Tries the Open Platform balance first (pay-as-you-go keys). When the host
-    /// rejects the key (401/403), it may be a Kimi Code subscription key instead,
-    /// so plan usage is tried next. If that is rejected too, the original balance
-    /// error surfaces; any other plan error surfaces as-is (it's the likelier story).
+    /// A Kimi Code host (`api.kimi.com` / `api.kimi.ai`) serves plan usage only —
+    /// the Moonshot balance route 404s there — so it goes straight to plan usage
+    /// on that same host. Otherwise the Open Platform balance is tried first
+    /// (pay-as-you-go keys). When the host rejects the key (401/403), or a
+    /// Kimi-operated host has no such route (404), it may be a Kimi Code
+    /// subscription key instead, so plan usage is tried next. If that is
+    /// rejected too, the original balance error surfaces; any other plan error
+    /// surfaces as-is (it's the likelier story). A 404 from a third-party
+    /// gateway surfaces as-is: the key is not retried on a host the user did
+    /// not configure.
     static func fetchSnapshot(
         apiKey: String,
         baseURL: String?,
         environment: [String: String]) async throws -> UsageSnapshot
     {
+        if KimiCodeUsageFetcher.isKimiCodeHost(baseURL) {
+            return try await KimiCodeUsageFetcher.fetchUsage(
+                apiKey: apiKey, baseURL: baseURL, environment: environment)
+        }
         do {
             let currency = KimiBalanceResponse.currency(forBalanceURL: self.balanceURL(baseURL: baseURL))
             return try await self.fetchBalance(apiKey: apiKey, baseURL: baseURL)
                 .toUsageSnapshot(currency: currency)
-        } catch let KimiAPIError.httpError(statusCode, body) where statusCode == 401 || statusCode == 403 {
+        } catch let KimiAPIError.httpError(statusCode, body)
+            where statusCode == 401 || statusCode == 403
+            || (statusCode == 404 && KimiCodeUsageFetcher.isKimiOperatedHost(baseURL ?? Self.defaultBaseURL))
+        {
             do {
                 return try await KimiCodeUsageFetcher.fetchUsage(apiKey: apiKey, environment: environment)
             } catch let KimiAPIError.httpError(planStatus, _) where planStatus == 401 || planStatus == 403 {
