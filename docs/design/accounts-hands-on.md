@@ -26,6 +26,7 @@ Interactive version: `accounts-flow.html` (follows light/dark). Design: `account
 - Nobody refreshes a Claude token in a Runic-owned dir. Claude Code refreshes its token when *it* runs; in a dir where no CLI runs, the access token expires in hours and the account goes dark until you run `claude` there again. The scheduled probe is the next PR.
 - Session-quota notifications, burn samples and balance readings are recorded for the default account only.
 - The Claude CLI fallback (PTY `/usage`) does not take the config dir yet; an added Claude account must have a usable OAuth token.
+- An added account uses token-based strategies only (OAuth, API key). CLI, web-cookie and local probes read the machine's default login, and a CLI pointed at a fresh home hangs in onboarding, so they are skipped: a missing token fails fast with `No available strategy` instead of a 45-second timeout.
 
 ## Add a second Claude login by hand
 

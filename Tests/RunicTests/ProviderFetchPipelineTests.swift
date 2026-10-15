@@ -74,7 +74,26 @@ struct ProviderFetchPipelineTests {
         }
     }
 
-    private func makeContext() -> ProviderFetchContext {
+    private struct CLIStrategy: ProviderFetchStrategy {
+        let id: String = "provider.fetchPipeline.cli"
+        let kind: ProviderFetchKind = .cli
+
+        func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+            true
+        }
+
+        func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
+            throw FailingError()
+        }
+
+        func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
+            true
+        }
+    }
+
+    private struct FailingError: Error {}
+
+    private func makeContext(account: AccountID? = nil) -> ProviderFetchContext {
         ProviderFetchContext(
             runtime: .app,
             sourceMode: .auto,
@@ -85,7 +104,48 @@ struct ProviderFetchPipelineTests {
             env: [:],
             settings: nil,
             fetcher: UsageFetcher(environment: [:]),
-            claudeFetcher: DummyClaudeFetcher())
+            claudeFetcher: DummyClaudeFetcher(),
+            account: account)
+    }
+
+    /// An added account never reaches CLI, web or probe strategies: those read
+    /// the machine's default login, and a CLI on a fresh home hangs in
+    /// onboarding until the timeout (seen live with a dummy Codex account).
+    @Test
+    func `an added account uses token strategies only and fails fast without one`() async {
+        let success = ProviderFetchResult(
+            usage: UsageSnapshot(
+                primary: RateWindow(usedPercent: 1, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
+                secondary: nil,
+                updatedAt: Date()),
+            credits: nil,
+            dashboard: nil,
+            sourceLabel: "api",
+            strategyID: "provider.fetchPipeline.success",
+            strategyKind: .api)
+        let pipeline = ProviderFetchPipeline(
+            resolveStrategies: { _ in [CLIStrategy(), FastSuccessStrategy(result: success)] },
+            strategyTimeout: 1)
+        let added = AccountID(kind: .codex, slug: "x")
+
+        let addedOutcome = await pipeline.fetch(context: self.makeContext(account: added), provider: .codex)
+        #expect(addedOutcome.attempts.map(\.strategyID) == ["provider.fetchPipeline.success"])
+        #expect((try? addedOutcome.result.get())?.sourceLabel == "api")
+
+        let defaultOutcome = await pipeline.fetch(context: self.makeContext(), provider: .codex)
+        #expect(defaultOutcome.attempts.map(\.strategyID) == [
+            "provider.fetchPipeline.cli",
+            "provider.fetchPipeline.success",
+        ])
+
+        let onlyCLI = ProviderFetchPipeline(resolveStrategies: { _ in [CLIStrategy()] }, strategyTimeout: 1)
+        let starved = await onlyCLI.fetch(context: self.makeContext(account: added), provider: .codex)
+        #expect(starved.attempts.isEmpty)
+        if case let .failure(error) = starved.result {
+            #expect(error is ProviderFetchError)
+        } else {
+            Issue.record("an added account with no token strategy must fail, not fall through to the CLI")
+        }
     }
 
     @Test
