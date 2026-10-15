@@ -79,3 +79,43 @@ public enum CredentialRef: Hashable, Codable, Sendable {
     /// A browser-cookie store key.
     case cookies(String)
 }
+
+/// Account-keyed state stays addressable by kind: `snapshots[.codex]` is the
+/// kind's default account. Added accounts are addressed by their `AccountID`.
+extension Dictionary where Key == AccountID {
+    public subscript(_ kind: UsageProvider) -> Value? {
+        get { self[kind.defaultAccount] }
+        set { self[kind.defaultAccount] = newValue }
+    }
+
+    @discardableResult
+    public mutating func removeValue(forKey kind: UsageProvider) -> Value? {
+        self.removeValue(forKey: kind.defaultAccount)
+    }
+
+    /// The default account's entry for each kind, for consumers that still
+    /// think per kind.
+    public var byKind: [UsageProvider: Value] {
+        var result: [UsageProvider: Value] = [:]
+        for (account, value) in self where account.isDefault {
+            result[account.kind] = value
+        }
+        return result
+    }
+}
+
+extension Set<AccountID> {
+    public func contains(_ kind: UsageProvider) -> Bool {
+        self.contains(kind.defaultAccount)
+    }
+
+    @discardableResult
+    public mutating func insert(_ kind: UsageProvider) -> (inserted: Bool, memberAfterInsert: AccountID) {
+        self.insert(kind.defaultAccount)
+    }
+
+    @discardableResult
+    public mutating func remove(_ kind: UsageProvider) -> AccountID? {
+        self.remove(kind.defaultAccount)
+    }
+}

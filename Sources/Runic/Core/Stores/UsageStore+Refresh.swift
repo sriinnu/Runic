@@ -279,21 +279,21 @@ extension UsageStore {
         if !spec.isEnabled() {
             self.refreshingProviders.remove(provider)
             await MainActor.run {
-                self.snapshots.removeValue(forKey: provider)
+                self.snapshots.removeValue(forKey: provider.defaultAccount)
                 self.errors[provider] = nil
-                self.lastSourceLabels.removeValue(forKey: provider)
-                self.lastFetchAttempts.removeValue(forKey: provider)
+                self.lastSourceLabels.removeValue(forKey: provider.defaultAccount)
+                self.lastFetchAttempts.removeValue(forKey: provider.defaultAccount)
                 self.tokenSnapshots.removeValue(forKey: provider)
                 self.tokenErrors[provider] = nil
                 self.failureGates[provider]?.reset()
                 self.tokenFailureGates[provider]?.reset()
-                self.statuses.removeValue(forKey: provider)
-                self.lastKnownSessionRemaining.removeValue(forKey: provider)
+                self.statuses.removeValue(forKey: provider.defaultAccount)
+                self.lastKnownSessionRemaining.removeValue(forKey: provider.defaultAccount)
                 self.lastTokenFetchAt.removeValue(forKey: provider)
-                self.lastUsageDeltaAt.removeValue(forKey: provider)
+                self.lastUsageDeltaAt.removeValue(forKey: provider.defaultAccount)
                 self.lastLedgerActivityAt.removeValue(forKey: provider)
                 self.ledgerCompactions.removeValue(forKey: provider)
-                self.providerCredits.removeValue(forKey: provider)
+                self.providerCredits.removeValue(forKey: provider.defaultAccount)
             }
             return
         }
@@ -305,7 +305,7 @@ extension UsageStore {
         if !self.metadata(for: provider).providesLiveSnapshot {
             await MainActor.run {
                 self.errors[provider] = nil
-                self.snapshots.removeValue(forKey: provider)
+                self.snapshots.removeValue(forKey: provider.defaultAccount)
             }
             return
         }
