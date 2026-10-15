@@ -51,11 +51,11 @@ struct StepFunAPIFetchStrategy: ProviderFetchStrategy {
     private static let baseURL = "https://api.stepfun.ai"
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        ProviderTokenResolver.stepfunResolution(environment: context.env) != nil
+        context.credential(for: .stepfun) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = ProviderTokenResolver.stepfunResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .stepfun) else {
             throw StepFunSettingsError.missingToken
         }
         let snapshot = try await StepFunUsageFetcher.fetchAccount(apiKey: tokenRes.token, baseURL: Self.baseURL)

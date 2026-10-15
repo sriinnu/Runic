@@ -54,11 +54,11 @@ struct KimiCNAPIFetchStrategy: ProviderFetchStrategy {
     private static let baseURL = "https://api.moonshot.cn"
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        ProviderTokenResolver.kimiCNResolution(environment: context.env) != nil
+        context.credential(for: .kimiCN) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = ProviderTokenResolver.kimiCNResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .kimiCN) else {
             throw KimiSettingsError.missingToken
         }
         let usage = try await KimiUsageFetcher.fetchSnapshot(

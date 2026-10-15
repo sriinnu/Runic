@@ -49,11 +49,11 @@ struct CohereAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveTokenResolution(environment: context.env) != nil
+        context.credential(for: .cohere) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = Self.resolveTokenResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .cohere) else {
             throw CohereSettingsError.missingToken
         }
         let usage = try await CohereUsageFetcher.fetchModels(apiKey: tokenRes.token)
@@ -64,10 +64,6 @@ struct CohereAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveTokenResolution(environment: [String: String]) -> ProviderTokenResolution? {
-        ProviderTokenResolver.cohereResolution(environment: environment)
     }
 }
 

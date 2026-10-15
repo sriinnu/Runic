@@ -49,11 +49,11 @@ struct PerplexityAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveTokenResolution(environment: context.env) != nil
+        context.credential(for: .perplexity) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = Self.resolveTokenResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .perplexity) else {
             throw PerplexitySettingsError.missingToken
         }
         let usage = try await PerplexityUsageFetcher.fetchModels(apiKey: tokenRes.token)
@@ -64,10 +64,6 @@ struct PerplexityAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveTokenResolution(environment: [String: String]) -> ProviderTokenResolution? {
-        ProviderTokenResolver.perplexityResolution(environment: environment)
     }
 }
 

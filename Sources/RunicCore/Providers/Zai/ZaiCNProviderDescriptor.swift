@@ -62,11 +62,11 @@ struct ZaiCNAPIFetchStrategy: ProviderFetchStrategy {
     private static let baseURL = "https://open.bigmodel.cn/api/monitor/usage"
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        ProviderTokenResolver.zaiCNResolution(environment: context.env) != nil
+        context.credential(for: .zaiCN) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = ProviderTokenResolver.zaiCNResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .zaiCN) else {
             throw ZaiSettingsError.missingToken
         }
         let usage = try await ZaiUsageFetcher.fetchUsage(apiKey: tokenRes.token, baseURL: Self.baseURL)

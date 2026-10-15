@@ -49,11 +49,11 @@ struct KimiAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveTokenResolution(environment: context.env) != nil
+        context.credential(for: .kimi) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = Self.resolveTokenResolution(environment: context.env) else {
+        guard let tokenRes = context.credential(for: .kimi) else {
             throw KimiSettingsError.missingToken
         }
         let baseURL = Self.resolveBaseURL(context: context)
@@ -66,10 +66,6 @@ struct KimiAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveTokenResolution(environment: [String: String]) -> ProviderTokenResolution? {
-        ProviderTokenResolver.kimiResolution(environment: environment)
     }
 
     /// Resolve the API base URL: explicit setting first, then environment overrides, else default.
