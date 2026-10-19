@@ -9,6 +9,8 @@
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000?logo=apple)
 ![Swift 6.2](https://img.shields.io/badge/Swift-6.2-F05138?logo=swift&logoColor=white)
 ![License MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/sriinnu)
+[![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/sriinnu)
 
 </div>
 
@@ -118,6 +120,9 @@ Do not commit keys, tokens, browser session dumps, local account screenshots, ac
 ## Support
 
 Runic is open source. Sponsorship is optional and should fund maintenance, signing, CI, docs, and privacy-first usage features without changing the core promise: honest local usage visibility should stay open.
+
+- [GitHub Sponsors](https://github.com/sponsors/sriinnu)
+- [Buy Me a Coffee](https://buymeacoffee.com/sriinnu)
 
 ## Acknowledgements
 
