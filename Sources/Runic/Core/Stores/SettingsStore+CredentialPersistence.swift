@@ -186,6 +186,18 @@ extension SettingsStore {
         }
     }
 
+    func schedulePersistSiliconFlowAPIToken() {
+        self.credentialPersistTasks.siliconFlow?.cancel()
+        let tokenStore = self.credentialStores.siliconFlow
+        self.credentialPersistTasks.siliconFlow = self.makeCredentialPersistTask(
+            value: self.siliconFlowAPIToken,
+            loggerName: "siliconflow-token-store",
+            failureMessage: "Failed to persist SiliconFlow token")
+        { token in
+            try tokenStore.storeToken(token)
+        }
+    }
+
     func schedulePersistFireworksAPIToken() {
         self.credentialPersistTasks.fireworks?.cancel()
         let tokenStore = self.credentialStores.fireworks

@@ -30,6 +30,7 @@ Source labels (CLI/header): `openai-web`, `web`, `oauth`, `api`, `local`, `openT
 | Qwen / Qwen (China) | API key (Keychain/env) → DashScope usage API (`api`, plan-dependent: token/coding plans 404 and usage comes from coding-tool logs); optional base URL per slot. |
 | StepFun / StepFun (China) | API key (Keychain/env) → `/v1/accounts` balance on `api.stepfun.ai` / `api.stepfun.com` (`api`; response parsed defensively). |
 | DeepSeek | API key (Keychain/env) → balance API (`api`). |
+| SiliconFlow | API key (Keychain/env `SILICONFLOW_API_KEY`) → `/v1/user/info` balance (`api`). |
 | TypeSafe | API key (Keychain/env `TYPESAFE_API_KEY` or `JEV_API_KEY`) → `GET /v1/models` (`api`). The published OpenAPI spec has exactly two endpoints and neither reports spend, so this is key health and model inventory only; account totals exist solely in the web console. |
 | Cline | API key (Keychain/env `CLINE_API_KEY`) → `GET /api/v1/users/me`, `/users/{id}/balance`, `/users/{id}/usages` on `api.cline.bot` (`api`). Balance in USD plus today/month spend summed from usage records. |
 | Muse Code (Meta) | Signed-in local `muse` CLI → `/usage` subscription windows (`cli`, preferred in Auto). An explicit API mode uses a separate pay-as-you-go key (Keychain/env `MUSE_API_KEY`, `META_MODEL_API_KEY` or `MODEL_API_KEY`) → `GET /v1/models`; its per-minute headers are API limits, not subscription usage. Meta's consumer Muse agent and Meta AI web assistant are separate products; Runic has no verified quota source for either. |

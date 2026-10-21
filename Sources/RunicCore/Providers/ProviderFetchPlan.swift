@@ -143,6 +143,14 @@ public enum ProviderFetchError: LocalizedError, Sendable {
                     "If you signed in again with `claude /login`, press the reload button (↻) on Claude " +
                     "in Settings → Providers so Runic can re-read the new token (one Keychain prompt)."
             }
+            if provider == .ollamacloud {
+                return "Ollama Cloud API key not found. Add it in Settings → Providers → Ollama Cloud " +
+                    "(or export OLLAMA_API_KEY)."
+            }
+            if provider == .siliconflow {
+                return "SiliconFlow API key not found. Add it in Settings → Providers → SiliconFlow " +
+                    "(or export SILICONFLOW_API_KEY)."
+            }
             return "No available fetch strategy for \(provider.rawValue)."
         case .missingCredentials:
             return "Missing or invalid credentials."

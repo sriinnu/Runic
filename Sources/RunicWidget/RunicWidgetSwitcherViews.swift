@@ -81,6 +81,7 @@ struct ProviderSwitchChip: View {
         case .muse: "Muse"
         case .ollamacloud: "Ollama"
         case .deepseek: "DeepSeek"
+        case .siliconflow: "SiliconFlow"
         case .fireworks: "Fireworks"
         case .mistral: "Mistral"
         case .perplexity: "PPLX"
