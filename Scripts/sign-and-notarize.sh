@@ -80,12 +80,30 @@ codesign --force --timestamp --options runtime --sign "$APP_IDENTITY" \
 DITTO_BIN=${DITTO_BIN:-/usr/bin/ditto}
 "$DITTO_BIN" --norsrc -c -k --keepParent "$APP_BUNDLE" "$NOTARIZE_ZIP"
 
+notary_submit() {
+  xcrun notarytool submit "$NOTARIZE_ZIP" \
+    --key "$API_KEY_FILE" \
+    --key-id "$APP_STORE_CONNECT_KEY_ID" \
+    --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
+    --wait "$@"
+}
+
 echo "Submitting for notarization"
-xcrun notarytool submit "$NOTARIZE_ZIP" \
-  --key "$API_KEY_FILE" \
-  --key-id "$APP_STORE_CONNECT_KEY_ID" \
-  --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
-  --wait
+# The default upload goes through S3 Transfer Acceleration, which can stall to
+# `abortedUpload … deadlineExceeded` on some networks (2.13.2 failed twice that
+# way). Only an aborted upload is retried, once, straight to S3; a rejected
+# build is never resubmitted.
+NOTARY_LOG=$(mktemp)
+if ! notary_submit 2>&1 | tee "$NOTARY_LOG"; then
+  if grep -q "abortedUpload" "$NOTARY_LOG"; then
+    echo "Notary upload aborted; retrying without S3 acceleration"
+    notary_submit --no-s3-acceleration
+  else
+    rm -f "$NOTARY_LOG"
+    exit 1
+  fi
+fi
+rm -f "$NOTARY_LOG"
 
 echo "Stapling ticket"
 xcrun stapler staple "$APP_BUNDLE"
