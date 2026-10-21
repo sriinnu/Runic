@@ -16,7 +16,9 @@ struct ProviderListView: View {
     let errorDisplay: (UsageProvider) -> ProviderErrorDisplay?
     let isErrorExpanded: (UsageProvider) -> Binding<Bool>
     let onCopyError: (String) -> Void
-    let moveProviders: (IndexSet, Int) -> Void
+    /// Nil while the list is filtered: offsets into a filtered list would move
+    /// the wrong providers in the full order.
+    let moveProviders: ((IndexSet, Int) -> Void)?
     @State private var expandedAddAccount: Set<UsageProvider> = []
 
     var body: some View {
@@ -95,9 +97,7 @@ struct ProviderListView: View {
                         isLastProvider: isLastProvider)
                 }
             }
-            .onMove { fromOffsets, toOffset in
-                self.moveProviders(fromOffsets, toOffset)
-            }
+            .onMove(perform: self.moveProviders)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .listStyle(.plain)

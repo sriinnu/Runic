@@ -13,6 +13,8 @@ struct ProvidersPane: View {
     @State private var activeConfirmation: ProviderSettingsConfirmationState?
     @State private var sidebarSelection: UsageProvider?
     @State private var sidebarRegion: ProviderRegion = .international
+    @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
     /// Provider to focus on first appearance (sidebar layout). See `PreferencesSelection.provider`.
     var initialProvider: UsageProvider?
     @Environment(\.runicTheme) private var runicTheme
@@ -23,6 +25,26 @@ struct ProvidersPane: View {
     /// behind a region switch in the sidebar detail.
     private var providers: [UsageProvider] {
         self.settings.orderedBrandProviders()
+    }
+
+    private var isSearching: Bool {
+        !self.searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// `providers` narrowed by the search field (`UsageProvider.matchesSearch`).
+    private var visibleProviders: [UsageProvider] {
+        guard self.isSearching else { return self.providers }
+        return self.providers.filter { $0.matchesSearch(self.searchText) }
+    }
+
+    private var noSearchResults: some View {
+        RunicEmptyStateView(
+            mood: .searching,
+            title: "No provider matches “\(self.searchText.trimmingCharacters(in: .whitespaces))”",
+            hint: "Try a provider name, CLI name, or “cn” for China accounts.",
+            actionTitle: "Clear search",
+            action: { self.searchText = "" })
+            .padding(.horizontal, ProviderListMetrics.contentInset + ProviderListMetrics.listIntrinsicInset)
     }
 
     var body: some View {
@@ -69,8 +91,12 @@ struct ProvidersPane: View {
                     self.credentialMigrationNoticeCard(notice)
                 }
 
+                if self.visibleProviders.isEmpty {
+                    self.noSearchResults
+                    Spacer(minLength: 0)
+                }
                 ProviderListView(
-                    providers: self.providers,
+                    providers: self.visibleProviders,
                     store: self.store,
                     isEnabled: { provider in self.binding(for: provider) },
                     subtitle: { provider in self.providerSubtitle(provider) },
@@ -82,7 +108,7 @@ struct ProvidersPane: View {
                     errorDisplay: { provider in self.providerErrorDisplay(provider) },
                     isErrorExpanded: { provider in self.expandedBinding(for: provider) },
                     onCopyError: { text in self.copyToPasteboard(text) },
-                    moveProviders: { fromOffsets, toOffset in
+                    moveProviders: self.isSearching ? nil : { fromOffsets, toOffset in
                         self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
                     })
             }
@@ -105,7 +131,10 @@ struct ProvidersPane: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: RunicSpacing.sm)
+
+            ProviderSearchField(text: self.$searchText, isFocused: self.$isSearchFocused)
+                .frame(width: 200)
         }
         .padding(ProviderListMetrics.listHeaderPadding)
         .background(
@@ -160,7 +189,7 @@ struct ProvidersPane: View {
     private var sidebarLayout: some View {
         NavigationSplitView {
             List(selection: self.$sidebarSelection) {
-                ForEach(self.providers, id: \.self) { provider in
+                ForEach(self.visibleProviders, id: \.self) { provider in
                     ProviderSidebarRow(
                         provider: provider,
                         store: self.store,
@@ -168,8 +197,25 @@ struct ProvidersPane: View {
                         isSelected: self.sidebarSelection == provider)
                         .tag(provider)
                 }
-                .onMove { fromOffsets, toOffset in
+                .onMove(perform: self.isSearching ? nil : { fromOffsets, toOffset in
                     self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
+                })
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                ProviderSearchField(text: self.$searchText, isFocused: self.$isSearchFocused)
+                    .padding(.horizontal, RunicSpacing.xs)
+                    .padding(.top, RunicSpacing.xs)
+                    .padding(.bottom, RunicSpacing.xxs)
+            }
+            .overlay {
+                if self.visibleProviders.isEmpty {
+                    RunicEmptyStateView(
+                        mood: .searching,
+                        title: "No matches",
+                        actionTitle: "Clear",
+                        action: { self.searchText = "" },
+                        layout: .prominent)
+                        .padding(RunicSpacing.xs)
                 }
             }
             .listStyle(.sidebar)
@@ -187,7 +233,7 @@ struct ProvidersPane: View {
             .onAppear {
                 self.normalizeSidebarSelection()
             }
-            .onChange(of: self.providers) { _, _ in
+            .onChange(of: self.visibleProviders) { _, _ in
                 self.normalizeSidebarSelection()
             }
             .onChange(of: self.sidebarSelection) { _, selected in
@@ -224,22 +270,25 @@ struct ProvidersPane: View {
         }
     }
 
+    /// Keeps the selection inside the visible (possibly filtered) list. A search
+    /// with no matches leaves the current detail up rather than blanking it.
     private func normalizeSidebarSelection() {
-        guard !self.providers.isEmpty else {
-            self.sidebarSelection = nil
+        let visible = self.visibleProviders
+        guard !visible.isEmpty else {
+            if !self.isSearching { self.sidebarSelection = nil }
             return
         }
 
-        if let selected = self.sidebarSelection, self.providers.contains(selected) {
+        if let selected = self.sidebarSelection, visible.contains(selected) {
             return
         }
 
-        if let initial = self.initialProvider, self.providers.contains(initial.brandRoot) {
+        if !self.isSearching, let initial = self.initialProvider, visible.contains(initial.brandRoot) {
             self.sidebarSelection = initial.brandRoot
             self.sidebarRegion = initial.region
             return
         }
-        self.sidebarSelection = self.providers.first
+        self.sidebarSelection = visible.first
     }
 
     private func binding(for provider: UsageProvider) -> Binding<Bool> {
