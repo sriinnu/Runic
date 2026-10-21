@@ -3,20 +3,31 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.13.2</title>
+            <pubDate>Wed, 21 Oct 2026 17:31:57 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>184</sparkle:version>
+            <sparkle:shortVersionString>2.13.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.13.2</h2>
+<ul>
+<li>SiliconFlow and Ollama Cloud: the browser sign-in never actually worked in 2.13.0/2.13.1. A background refresh is not allowed to show the "Chrome Safe Storage" Keychain dialog, so reading the browser's login failed silently every time and SiliconFlow fell back to "Key active". Both now have a switch in Settings → Providers ("Balance from browser sign-in" for SiliconFlow and SiliconFlow (China), "Usage from browser sign-in" for Ollama Cloud): turning it on reads your sign-in from the browser once (macOS may ask for your password), checks it works, and keeps a copy in Runic's own Keychain item, so refreshes never prompt. When the balance can't be read, the SiliconFlow key tile now says why ("No balance: …") instead of hiding it, and <code>diagnostics/siliconflow-console.json</code> records what was tried (never cookie values).</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.2/Runic-2.13.2.zip" length="48779355" type="application/octet-stream" sparkle:edSignature="+oz/TZQRcbQQK93KwQCbp3Vq1OODPk03RSRyy9VFknozTENzN96lvW/E98HcankORrrKt9T6hiEqLYX/fdlSDA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.2/Runic184-182.delta" sparkle:deltaFrom="182" length="5623326" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="HFAW3/4jYQZSmtpsjBrg+wa/9MfOr8KBlbixlr7qC7dpQvMxzmgaGMaZRK54hdGj9kcTktbsXaep2ysktTRwCA=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.2/Runic184-177.delta" sparkle:deltaFrom="177" length="6906366" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UREbk6Du4lwsGpzDsHei2H34eqBJynLisHO6PwhPjr2CZG6SdrwLk4T4MbpT/G2BJG+0JWtcjKq9BLhgX67CAQ=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.13.1</title>
             <pubDate>Wed, 21 Oct 2026 14:02:18 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>182</sparkle:version>
             <sparkle:shortVersionString>2.13.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.13.1</h2>
-<ul>
-<li>Settings → Providers has a search field: at the top of the sidebar in the sidebar layout, and in the Built-in providers header in the list layout. It matches the display name, CLI name and aliases (<code>sf</code>, <code>ollama-cloud</code>), ignores case and punctuation (<code>zai</code> finds z.ai), and <code>cn</code> / <code>china</code> finds the brands with a China account. ⌘F focuses it, Esc clears it; reordering is paused while a filter is on, so a drag never moves the wrong provider.</li>
-<li>opencode showed "not fetched yet / No usage yet": since early 2026 opencode writes messages to <code>~/.local/share/opencode/opencode.db</code> (SQLite) and the per-message JSON files Runic read stopped updating on January 1. Runic now reads the <code>message</code> table read-only (live WAL rows included) and still reads the old files for earlier history, counting a message present in both once.</li>
-<li>SiliconFlow (both regions): the tile showed <code>410 … This endpoint is deprecated and is no longer available</code>. SiliconFlow retired <code>/v1/user/info</code>, the public balance endpoint, on 2026-08-14. The balance is back: Runic now reads it the way the SiliconFlow console does, from <code>cloud.siliconflow.com</code> (or <code>.cn</code>) with your browser's SiliconFlow sign-in, in USD or CNY. With only an API key the tile is a key check (<code>Key active · N models</code>). If the console asks for your user ID, the tile says so and <code>SILICONFLOW_SUBJECT_ID</code> / <code>SILICONFLOW_CN_SUBJECT_ID</code> supplies it.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.1/Runic-2.13.1.zip" length="48648673" type="application/octet-stream" sparkle:edSignature="P0nRTPjnJM4uxEr9mcWmFan2TwhV8cEwzw+kNQcqxvmus/T/TX9KhKUu7Mt/+CyeXeLHLH5cy9N8nXreo3sxDw=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.1/Runic182-177.delta" sparkle:deltaFrom="177" length="6091010" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BjygqCKZ0ZXN+7JE60gcrJnUlpYpFmCgXB9pPHb0UPcZCMbSBI+HfO5g37Ev68LN/XiATrjVGD6Sy70pnfXRAg=="/>
@@ -30,24 +41,6 @@
             <sparkle:shortVersionString>2.13.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.0/Runic-2.13.0.zip" length="48457829" type="application/octet-stream" sparkle:edSignature="oArIrcyLyB4ti1jMn7NIEO/ZrnvEr4Ud2mv0FA7qat0NJtRsyQK3WiWmhhEq/g9fUHPyL3WfimEmRlKKzIDMCw=="/>
-        </item>
-        <item>
-            <title>2.12.0</title>
-            <pubDate>Thu, 15 Oct 2026 17:24:44 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>173</sparkle:version>
-            <sparkle:shortVersionString>2.12.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.12.0</h2>
-<ul>
-<li><strong>Several logins per provider: the groundwork.</strong> Runic now has accounts: a provider is the *kind*, and each login of it is an account with its own credential, fetched on every refresh and kept in its own slot. The default account is the one you already have and nothing about it changed on disk or in the keychain. A second Claude or Codex login can be registered today by hand in <code>~/Library/Application Support/Runic/accounts.json</code>, pointing at its own <code>CLAUDE_CONFIG_DIR</code> / <code>CODEX_HOME</code> directory: Runic reads the Keychain item Claude Code keys to that directory (<code>Claude Code-credentials-<hash></code>) or the <code>auth.json</code> in that Codex home, and writes one row per account to <code>diagnostics/accounts.json</code> after each refresh. The menu, widget and CLI still show the default account; the account tabs, the Add-account sheet and token refresh for Runic-owned directories come next. Walkthrough: <code>docs/design/accounts-hands-on.md</code>.</li>
-<li>An added account uses token-based sources only. Without a token it reports "no available strategy" at once instead of running the vendor CLI against a fresh home and timing out after 45 seconds.</li>
-<li>CLI: <code>runic usage</code>, <code>runic reset</code> and the usage JSON title a weekly-only window <strong>Weekly</strong>, matching the app (Codex Pro reports only its weekly cap).</li>
-<li>Design: <code>docs/design/accounts-and-windows.md</code> is the reviewed plan for accounts and for replacing the three fixed usage slots with a self-describing list of windows.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.12.0/Runic-2.12.0.zip" length="48240625" type="application/octet-stream" sparkle:edSignature="ZJCH0G2CeYDrO8w0TyqTdqSMfFFcLNeyhXn/0mrDsIeJHvZ0IsAWTQeH0pZ4+ckawOuAuIOci08bAfmR2/2LBA=="/>
         </item>
     </channel>
 </rss>
