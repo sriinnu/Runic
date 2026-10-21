@@ -1,5 +1,5 @@
 ---
-summary: "Ollama Cloud provider data sources: API key in Keychain/env, undocumented /api/usage reply, plan mapping, errors, shape diagnostics."
+summary: "Ollama Cloud provider data sources: browser sign-in (settings page) or API key, undocumented /api/usage reply, plan mapping, errors, shape diagnostics."
 read_when:
   - Debugging Ollama Cloud key auth or usage display
   - The /api/usage reply changes shape (check the diagnostics file first)
@@ -15,7 +15,20 @@ This is separate from the **Local LLM** provider, which probes a local Ollama
 runtime and owns the `ollama` CLI alias. Ollama Cloud's CLI name is
 `ollama-cloud` (alias `ollamacloud`). Defaults to disabled.
 
-## Endpoint
+## Sources (in order)
+
+1) **API key** (`ollamacloud.api`) — only when a key exists (Keychain/env). Below.
+2) **Browser sign-in** (`ollamacloud.web`) — Pro/Max accounts sign in on the
+   website and have no key. Runic imports the `ollama.com` cookies from the
+   browser (default import order), `GET https://ollama.com/settings`, and reads
+   the "Session usage" / "Weekly usage" blocks: percent from `NN% used`, reset
+   time from `data-time="<ISO8601>"`. Each browser profile with ollama.com
+   cookies is tried until one is signed in; none → "Not signed in to ollama.com".
+   The parser is label-driven (`OllamaCloudWebParser`) because the real page
+   markup has not been captured; if usage shows 0/blank, save the page text and
+   adjust the labels there.
+
+## API endpoint
 
 `GET https://ollama.com/api/usage` with `Authorization: Bearer <key>`.
 The endpoint is **undocumented**, so the reply is read through

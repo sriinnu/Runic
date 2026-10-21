@@ -21,6 +21,7 @@ public enum OllamaCloudProviderDescriptor {
                 defaultEnabled: false,
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
+                browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 // GET https://ollama.com/api/usage is undocumented; the
                 // settings page is the authoritative view.
                 dashboardURL: "https://ollama.com/settings/usage",
@@ -38,12 +39,43 @@ public enum OllamaCloudProviderDescriptor {
                 noDataMessage: { "Ollama Cloud cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [OllamaCloudAPIFetchStrategy()] })),
+                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [
+                    OllamaCloudAPIFetchStrategy(),
+                    OllamaCloudWebFetchStrategy(),
+                ] })),
             cli: ProviderCLIConfig(
                 name: "ollama-cloud",
                 // Not "ollama": that alias belongs to the Local LLM provider.
                 aliases: ["ollamacloud"],
                 versionDetector: nil))
+    }
+}
+
+/// Pro/Max accounts sign in on the website and have no API key: read the
+/// usage off `ollama.com/settings` with the browser's session cookies.
+struct OllamaCloudWebFetchStrategy: ProviderFetchStrategy {
+    let id: String = "ollamacloud.web"
+    let kind: ProviderFetchKind = .web
+
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
+    }
+
+    func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
+        #if os(macOS)
+        let usage = try await OllamaCloudWebUsageFetcher.fetchUsage()
+        return self.makeResult(usage: usage.toUsageSnapshot(), sourceLabel: "web")
+        #else
+        throw OllamaCloudAPIError.notSignedIn
+        #endif
+    }
+
+    func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
+        false
     }
 }
 
