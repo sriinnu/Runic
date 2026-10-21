@@ -805,8 +805,13 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool
     {
         switch provider {
-        case .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN, .siliconflowCN:
+        case .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN:
             self.credentialResolution(for: provider, environment: environment) != nil
+        case .siliconflowCN:
+            // A connected console sign-in is a credential too: the balance comes
+            // from it, and it is Runic's own Keychain item (no prompt to check).
+            self.credentialResolution(for: provider, environment: environment) != nil
+                || SavedBrowserSession.siliconFlowCN.isConnected
         default:
             true
         }

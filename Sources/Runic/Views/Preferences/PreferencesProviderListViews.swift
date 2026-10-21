@@ -132,6 +132,10 @@ struct ProviderListView: View {
     {
         let siblingEnabled = self.isEnabled(sibling).wrappedValue
         let siblingFields = self.settingsFields(sibling)
+        // The China slot's switches (e.g. SiliconFlow China's browser sign-in)
+        // render after its fields, so the divider closes on the last row of either.
+        let siblingToggles = siblingEnabled ? self.settingsToggles(sibling) : []
+        let lastRowID = siblingToggles.last?.id ?? siblingFields.last?.id
 
         if siblingEnabled {
             ProviderListProviderRowView(
@@ -149,9 +153,8 @@ struct ProviderListView: View {
                 .listRowInsets(self.rowInsets(withDivider: false, addTopPadding: false, addBottomPadding: false))
                 .listRowSeparator(.hidden)
 
-            let lastFieldID = siblingFields.last?.id
             ForEach(siblingFields) { field in
-                let isLastField = field.id == lastFieldID
+                let isLastField = field.id == lastRowID
                 let showDivider = shouldShowDivider && isLastField
                 let addsBottomPadding = isLastProvider && isLastField
 
@@ -163,6 +166,21 @@ struct ProviderListView: View {
                         withDivider: showDivider,
                         addTopPadding: false,
                         addBottomPadding: addsBottomPadding))
+                    .listRowSeparator(.hidden)
+                    .providerSectionDivider(isVisible: showDivider)
+            }
+            ForEach(siblingToggles) { toggle in
+                let isLastToggle = toggle.id == lastRowID
+                let showDivider = shouldShowDivider && isLastToggle
+
+                ProviderListToggleRowView(provider: sibling, toggle: toggle)
+                    .id(self.rowID(provider: sibling, suffix: toggle.id))
+                    .padding(.leading, ProviderListMetrics.regionalSiblingIndent)
+                    .padding(.bottom, showDivider ? ProviderListMetrics.dividerBottomInset : 0)
+                    .listRowInsets(self.rowInsets(
+                        withDivider: showDivider,
+                        addTopPadding: false,
+                        addBottomPadding: isLastProvider && isLastToggle))
                     .listRowSeparator(.hidden)
                     .providerSectionDivider(isVisible: showDivider)
             }
