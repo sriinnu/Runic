@@ -61,6 +61,14 @@ struct BrandGroupingTests {
     }
 
     @Test
+    func `siliconflow offers its china slot`() {
+        let groups = OverviewMenuView.brandGroups([self.summary(.siliconflow, name: "SiliconFlow")])
+        #expect(groups.count == 1)
+        #expect(groups[0].missingSlot == .siliconflowCN)
+        #expect(UsageProvider.siliconflowCN.regionalParent == .siliconflow)
+    }
+
+    @Test
     func `region and brand root follow the slot`() {
         #expect(UsageProvider.zaiCN.brandRoot == .zai)
         #expect(UsageProvider.zaiCN.region == .china)

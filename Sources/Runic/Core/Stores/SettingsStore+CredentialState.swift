@@ -11,6 +11,7 @@ struct SettingsStoreCredentialStores {
     let groq: any GroqTokenStoring
     let deepSeek: any DeepSeekTokenStoring
     let siliconFlow: any SiliconFlowTokenStoring
+    let siliconFlowCN: any SiliconFlowCNTokenStoring
     let fireworks: any FireworksTokenStoring
     let mistral: any MistralTokenStoring
     let perplexity: any PerplexityTokenStoring
@@ -48,6 +49,7 @@ extension SettingsStore {
         groqTokenStore: any GroqTokenStoring = KeychainGroqTokenStore(),
         deepSeekTokenStore: any DeepSeekTokenStoring = KeychainDeepSeekTokenStore(),
         siliconFlowTokenStore: any SiliconFlowTokenStoring = KeychainSiliconFlowTokenStore(),
+        siliconFlowCNTokenStore: any SiliconFlowCNTokenStoring = KeychainSiliconFlowCNTokenStore(),
         fireworksTokenStore: any FireworksTokenStoring = KeychainFireworksTokenStore(),
         mistralTokenStore: any MistralTokenStoring = KeychainMistralTokenStore(),
         perplexityTokenStore: any PerplexityTokenStoring = KeychainPerplexityTokenStore(),
@@ -84,6 +86,7 @@ extension SettingsStore {
                 groq: groqTokenStore,
                 deepSeek: deepSeekTokenStore,
                 siliconFlow: siliconFlowTokenStore,
+                siliconFlowCN: siliconFlowCNTokenStore,
                 fireworks: fireworksTokenStore,
                 mistral: mistralTokenStore,
                 perplexity: perplexityTokenStore,
@@ -124,6 +127,7 @@ struct SettingsStoreCredentialPersistTasks {
     var ollamaCloud: Task<Void, Never>?
     var deepSeek: Task<Void, Never>?
     var siliconFlow: Task<Void, Never>?
+    var siliconFlowCN: Task<Void, Never>?
     var fireworks: Task<Void, Never>?
     var mistral: Task<Void, Never>?
     var perplexity: Task<Void, Never>?

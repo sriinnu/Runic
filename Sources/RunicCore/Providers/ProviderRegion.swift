@@ -29,6 +29,7 @@ extension UsageProvider {
         .minimax: .minimaxCN,
         .stepfun: .stepfunCN,
         .qwen: .qwenCN,
+        .siliconflow: .siliconflowCN,
     ]
 
     private static let parentByChinaSibling: [UsageProvider: UsageProvider] = Dictionary(

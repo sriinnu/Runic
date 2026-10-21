@@ -43,7 +43,7 @@ Fallback order: Keychain first, then environment.
 - `data.totalBalance` — remaining balance (granted + topped-up); falls back to `balance + chargeBalance`.
 - `data.balance` — granted/bonus, `data.chargeBalance` — topped-up (paid). Strings or numbers.
 - `data.status == "normal"` feeds `apiCallsAllowed`.
-- Currency is USD on the international (`.com`) platform. The China platform (`siliconflow.cn`, CNY) is not wired yet.
+- Currency is USD on the international (`.com`) platform. The China platform is a separate provider slot, `siliconflowCN` (see `siliconflow-cn.md`).
 
 ### Snapshot mapping
 - Primary: limit-less `RateWindow` (`hasKnownLimit: false`) with "Balance: X.XX USD"; also a `CreditsSnapshot`.

@@ -67,6 +67,7 @@ enum RunicDiagnosticsReport {
         .ollamacloud: (\.ollamaCloudAPIToken, "API key"),
         .deepseek: (\.deepSeekAPIToken, "API key"),
         .siliconflow: (\.siliconFlowAPIToken, "API key"),
+        .siliconflowCN: (\.siliconFlowCNAPIToken, "API key"),
         .fireworks: (\.fireworksAPIToken, "API key"),
         .mistral: (\.mistralAPIToken, "API key"),
         .perplexity: (\.perplexityAPIToken, "API key"),

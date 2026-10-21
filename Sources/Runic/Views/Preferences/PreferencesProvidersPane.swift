@@ -282,6 +282,7 @@ struct ProvidersPane: View {
             .ollamacloud,
             .deepseek,
             .siliconflow,
+            .siliconflowCN,
             .fireworks,
             .mistral,
             .perplexity,

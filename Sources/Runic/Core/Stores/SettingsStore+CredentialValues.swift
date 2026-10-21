@@ -15,6 +15,7 @@ struct SettingsStoreCredentialValues {
     var ollamaCloudAPIToken = ""
     var deepSeekAPIToken = ""
     var siliconFlowAPIToken = ""
+    var siliconFlowCNAPIToken = ""
     var fireworksAPIToken = ""
     var mistralAPIToken = ""
     var perplexityAPIToken = ""
@@ -172,6 +173,16 @@ extension SettingsStore {
             self.credentialValues.siliconFlowAPIToken = newValue
             self.schedulePersistSiliconFlowAPIToken()
             self.autoEnableProviderIfCredentialPresent(newValue, cliName: "siliconflow")
+        }
+    }
+
+    /// SiliconFlow China API key (stored in Keychain).
+    var siliconFlowCNAPIToken: String {
+        get { self.credentialValues.siliconFlowCNAPIToken }
+        set {
+            self.credentialValues.siliconFlowCNAPIToken = newValue
+            self.schedulePersistSiliconFlowCNAPIToken()
+            self.autoEnableProviderIfCredentialPresent(newValue, cliName: "siliconflow-cn")
         }
     }
 

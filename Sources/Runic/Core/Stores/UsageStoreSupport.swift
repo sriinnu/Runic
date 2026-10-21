@@ -256,6 +256,10 @@ enum UsageDebugCredentialCatalog {
         .siliconflow: [
             .init(label: "siliconflow", resolution: { ProviderTokenResolver.siliconFlowResolution() }),
         ],
+
+        .siliconflowCN: [
+            .init(label: "siliconflow-cn", resolution: { ProviderTokenResolver.siliconFlowCNResolution() }),
+        ],
         .fireworks: [
             .init(label: "fireworks", resolution: { ProviderTokenResolver.fireworksResolution() }),
         ],

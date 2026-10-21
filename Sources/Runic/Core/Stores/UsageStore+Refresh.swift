@@ -43,7 +43,7 @@ extension UsageStore {
     /// CN providers that mirror an intl sibling; hidden from the menu when they have
     /// no credential of their own (see `providerHasMenuPresence`).
     private static let chinaMenuVariants: Set<UsageProvider> = [
-        .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN,
+        .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN, .siliconflowCN,
     ]
 
     /// Enabled providers that currently have something to show in the menu.

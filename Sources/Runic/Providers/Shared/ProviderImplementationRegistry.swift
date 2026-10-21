@@ -29,6 +29,7 @@ enum ProviderImplementationRegistry {
         _ = ProviderImplementationRegistry.register(OllamaCloudProviderImplementation())
         _ = ProviderImplementationRegistry.register(DeepSeekProviderImplementation())
         _ = ProviderImplementationRegistry.register(SiliconFlowProviderImplementation())
+        _ = ProviderImplementationRegistry.register(SiliconFlowCNProviderImplementation())
         _ = ProviderImplementationRegistry.register(FireworksProviderImplementation())
         _ = ProviderImplementationRegistry.register(MistralProviderImplementation())
         _ = ProviderImplementationRegistry.register(PerplexityProviderImplementation())

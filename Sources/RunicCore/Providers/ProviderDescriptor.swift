@@ -69,6 +69,7 @@ public enum ProviderDescriptorRegistry {
         _ = ProviderDescriptorRegistry.register(GroqProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(DeepSeekProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(SiliconFlowProviderDescriptor.descriptor)
+        _ = ProviderDescriptorRegistry.register(SiliconFlowCNProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(FireworksProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(MistralProviderDescriptor.descriptor)
         _ = ProviderDescriptorRegistry.register(PerplexityProviderDescriptor.descriptor)
