@@ -1,12 +1,14 @@
 import Foundation
+import SQLite3
 
-/// Ledger source for the opencode CLI. Unlike Codex/Claude (day-partitioned
-/// session dirs), opencode stores one JSON file per message at
-/// `~/.local/share/opencode/storage/message/<sessionID>/<messageID>.json`, each
-/// assistant message carrying `time.created`, `modelID`, `path.cwd`, an advertised
-/// `cost`, and a `tokens` block. We discover files by modification time (like the
-/// Claude source) and reuse the shared relay machinery (catch-up, self-heal,
-/// additive today-clear, busy-file tolerance) verbatim.
+/// Ledger source for the opencode CLI. opencode used to store one JSON file per
+/// message at `~/.local/share/opencode/storage/message/<sessionID>/<messageID>.json`;
+/// since early 2026 it writes the same message JSON into the `message` table of
+/// `~/.local/share/opencode/opencode.db` instead (the files stop updating). Each
+/// assistant message carries `time.created`, `modelID`, `path.cwd`, an advertised
+/// `cost`, and a `tokens` block. Both stores are read (database first, files for
+/// older history, deduped by message ID) and the shared relay machinery
+/// (catch-up, self-heal, additive today-clear, busy-file tolerance) is reused verbatim.
 public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     public enum OpencodeUsageLogError: LocalizedError, Sendable {
         case noStorageDirectory
@@ -25,6 +27,7 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     private let environment: [String: String]
     private let fileManager: FileManager
     private let storageRoot: URL?
+    private let databaseURL: URL?
     private let now: Date
     private let log: RunicLogger
     private let cache: LedgerCache
@@ -35,6 +38,7 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         fileManager: FileManager = .default,
         storageRoot: URL? = nil,
+        databaseURL: URL? = nil,
         maxAgeDays: Int? = 3,
         now: Date = Date(),
         log: RunicLogger = RunicLog.logger("opencode-usage-ledger"),
@@ -44,6 +48,7 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         self.environment = environment
         self.fileManager = fileManager
         self.storageRoot = storageRoot
+        self.databaseURL = databaseURL
         self.now = now
         self.log = log
         self.cache = cache
@@ -52,7 +57,7 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
     }
 
     public func loadEntries() async throws -> [UsageLedgerEntry] {
-        let root = try self.resolveMessagesRoot()
+        let stores = try self.resolveStores()
         let todayKey = LedgerCache.dayKey(for: self.now)
         let healing = await self.cache.needsCatchUpHeal(provider: "opencode")
         let scanMode = await self.resolvedScanMode(healing: healing)
@@ -67,9 +72,25 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         // mtime on a message whose `created` is within the window, and rebuild is
         // the repair path that must still find it. refreshToday keeps the mtime
         // prune for speed.
-        let files = self.listMessageFiles(root: root, minDate: isRebuild ? nil : window.minDate)
+        let files = stores.messagesRoot.map {
+            self.listMessageFiles(root: $0, minDate: isRebuild ? nil : window.minDate)
+        } ?? []
+        var rows: [OpencodeDatabaseRow] = []
+        if let database = stores.database {
+            do {
+                rows = try OpencodeDatabaseReader.assistantMessages(at: database, since: window.minDate)
+            } catch {
+                // A locked or mid-migration database must not wipe today's
+                // aggregate: with nothing else to read, fail the scan instead.
+                self.log.warning("opencode database read failed", metadata: [
+                    "file": database.path,
+                    "error": error.localizedDescription,
+                ])
+                if files.isEmpty { throw OpencodeUsageLogError.readFailed(error.localizedDescription) }
+            }
+        }
 
-        if files.isEmpty {
+        if files.isEmpty, rows.isEmpty {
             await cache.mergeEntries(
                 provider: "opencode",
                 entries: [],
@@ -84,6 +105,20 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         var entries: [UsageLedgerEntry] = []
         var seenKeys = Set<String>()
         var readFailures: [String] = []
+
+        // Database first: it is the live store, the files only hold older history.
+        for row in rows {
+            if let entry = self.parseMessage(
+                row.data,
+                id: row.id,
+                sessionID: row.sessionID,
+                fallbackKey: row.id,
+                minDate: window.minDate,
+                seenKeys: &seenKeys)
+            {
+                entries.append(entry)
+            }
+        }
 
         for file in files {
             do {
@@ -209,20 +244,44 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
     // MARK: - File discovery & parsing
 
-    private func resolveMessagesRoot() throws -> URL {
-        if let storageRoot, self.fileManager.opencodeDirectoryExists(at: storageRoot) {
-            return storageRoot.standardizedFileURL
+    private struct Stores {
+        let messagesRoot: URL?
+        let database: URL?
+    }
+
+    /// An injected `storageRoot` / `databaseURL` (tests) is used alone; otherwise
+    /// the data dir is `$OPENCODE_DATA` or `~/.local/share/opencode`, holding
+    /// `opencode.db` and/or the legacy `storage/message` tree.
+    private func resolveStores() throws -> Stores {
+        if self.storageRoot != nil || self.databaseURL != nil {
+            let root = self.storageRoot.flatMap {
+                self.fileManager.opencodeDirectoryExists(at: $0) ? $0.standardizedFileURL : nil
+            }
+            let database = self.databaseURL.flatMap {
+                self.fileManager.fileExists(atPath: $0.path) ? $0.standardizedFileURL : nil
+            }
+            guard root != nil || database != nil else { throw OpencodeUsageLogError.noStorageDirectory }
+            return Stores(messagesRoot: root, database: database)
         }
-        let env = self.environment["OPENCODE_DATA"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let env, !env.isEmpty {
-            let url = URL(fileURLWithPath: env, isDirectory: true)
-                .appendingPathComponent("storage/message", isDirectory: true)
-            if self.fileManager.opencodeDirectoryExists(at: url) { return url.standardizedFileURL }
+        var dataDirs: [URL] = []
+        if let env = self.environment["OPENCODE_DATA"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !env.isEmpty
+        {
+            dataDirs.append(URL(fileURLWithPath: env, isDirectory: true))
         }
-        let home = self.fileManager.homeDirectoryForCurrentUser
-        let url = home
-            .appendingPathComponent(".local/share/opencode/storage/message", isDirectory: true)
-        if self.fileManager.opencodeDirectoryExists(at: url) { return url.standardizedFileURL }
+        dataDirs.append(self.fileManager.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/share/opencode", isDirectory: true))
+        for dir in dataDirs {
+            let root = dir.appendingPathComponent("storage/message", isDirectory: true)
+            let database = dir.appendingPathComponent("opencode.db", isDirectory: false)
+            let hasRoot = self.fileManager.opencodeDirectoryExists(at: root)
+            let hasDatabase = self.fileManager.fileExists(atPath: database.path)
+            if hasRoot || hasDatabase {
+                return Stores(
+                    messagesRoot: hasRoot ? root.standardizedFileURL : nil,
+                    database: hasDatabase ? database.standardizedFileURL : nil)
+            }
+        }
         throw OpencodeUsageLogError.noStorageDirectory
     }
 
@@ -263,14 +322,30 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
 
     private func parseMessage(_ file: URL, minDate: Date?, seenKeys: inout Set<String>) throws -> UsageLedgerEntry? {
         let data = try Data(contentsOf: file)
-        let message: OpencodeMessage
-        do {
-            message = try JSONDecoder().decode(OpencodeMessage.self, from: data)
-        } catch {
-            // A non-message JSON (or a half-written file) is not a read failure —
-            // just skip it.
-            return nil
-        }
+        return self.parseMessage(
+            data,
+            id: nil,
+            sessionID: nil,
+            fallbackKey: file.lastPathComponent,
+            minDate: minDate,
+            seenKeys: &seenKeys)
+    }
+
+    // `id` / `sessionID` come from the database columns: the JSON stored in
+    // `message.data` no longer repeats them, while the legacy files do.
+    // swiftlint:disable:next function_parameter_count
+    private func parseMessage(
+        _ data: Data,
+        id: String?,
+        sessionID: String?,
+        fallbackKey: String,
+        minDate: Date?,
+        seenKeys: inout Set<String>) -> UsageLedgerEntry?
+    {
+        // A non-message JSON (or a half-written file) is not a read failure —
+        // just skip it.
+        guard let decoded = try? JSONDecoder().decode(OpencodeMessage.self, from: data) else { return nil }
+        let message = decoded.with(id: id, sessionID: sessionID)
         guard message.role == "assistant", let tokens = message.tokens, let created = message.time?.created else {
             return nil
         }
@@ -290,7 +365,7 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let cacheWrite = max(0, tokens.cache?.write ?? 0)
         guard input + output + cacheRead + cacheWrite > 0 else { return nil }
 
-        let key = message.id ?? "\(file.lastPathComponent)"
+        let key = message.id ?? fallbackKey
         guard seenKeys.insert(key).inserted else { return nil }
 
         let projectName = message.path?.cwd
@@ -346,6 +421,78 @@ private struct OpencodeMessage: Decodable {
     let cost: Double?
     let path: Path?
     let tokens: Tokens?
+
+    /// Fills `id` / `sessionID` from outside the JSON when the JSON lacks them.
+    func with(id: String?, sessionID: String?) -> OpencodeMessage {
+        OpencodeMessage(
+            id: self.id ?? id,
+            sessionID: self.sessionID ?? sessionID,
+            role: self.role,
+            time: self.time,
+            modelID: self.modelID,
+            cost: self.cost,
+            path: self.path,
+            tokens: self.tokens)
+    }
+}
+
+struct OpencodeDatabaseRow {
+    let id: String
+    let sessionID: String?
+    let data: Data
+}
+
+/// Read-only access to opencode's `message` table. The database is in WAL mode
+/// and opencode keeps writing while we read, so the connection is read-only with
+/// a short busy timeout; rows still in the WAL are visible to it.
+enum OpencodeDatabaseReader {
+    enum ReadError: LocalizedError {
+        case open(String)
+        case query(String)
+
+        var errorDescription: String? {
+            switch self {
+            case let .open(message): "Could not open opencode.db: \(message)"
+            case let .query(message): "Could not read opencode.db: \(message)"
+            }
+        }
+    }
+
+    static func assistantMessages(at url: URL, since minDate: Date) throws -> [OpencodeDatabaseRow] {
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+            let message = db.flatMap { sqlite3_errmsg($0) }.map { String(cString: $0) } ?? "unknown error"
+            sqlite3_close(db)
+            throw ReadError.open(message)
+        }
+        defer { sqlite3_close(db) }
+        sqlite3_busy_timeout(db, 500)
+
+        let sql = """
+        SELECT id, session_id, data FROM message
+        WHERE time_created >= ?1 AND json_extract(data, '$.role') = 'assistant'
+        ORDER BY time_created
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw ReadError.query(String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int64(stmt, 1, Int64(minDate.timeIntervalSince1970 * 1000))
+
+        var rows: [OpencodeDatabaseRow] = []
+        while true {
+            let step = sqlite3_step(stmt)
+            if step == SQLITE_DONE { break }
+            guard step == SQLITE_ROW else { throw ReadError.query(String(cString: sqlite3_errmsg(db))) }
+            guard let idText = sqlite3_column_text(stmt, 0),
+                  let dataBytes = sqlite3_column_blob(stmt, 2) else { continue }
+            let session = sqlite3_column_text(stmt, 1).map { String(cString: $0) }
+            let data = Data(bytes: dataBytes, count: Int(sqlite3_column_bytes(stmt, 2)))
+            rows.append(OpencodeDatabaseRow(id: String(cString: idText), sessionID: session, data: data))
+        }
+        return rows
+    }
 }
 
 extension FileManager {

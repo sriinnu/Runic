@@ -7,13 +7,14 @@ read_when:
 
 # opencode provider
 
-opencode is BYOK (bring your own key) and history-only. There is no subscription API, no live usage gauge, and no login flow. All usage comes from parsing local JSON message files written by the opencode CLI.
+opencode is BYOK (bring your own key) and history-only. There is no subscription API, no live usage gauge, and no login flow. All usage comes from the opencode CLI's local message store.
 
 ## Data sources + fallback order
 
-1. **Local message log files** — the only data source. No API endpoints, no cookies, no tokens.
-   - Root directory: `$OPENCODE_DATA/storage/message/` or `~/.local/share/opencode/storage/message/`
-   - File layout: `message/<sessionID>/<messageID>.json` (one JSON file per message)
+1. **Local message store** — the only data source. No API endpoints, no cookies, no tokens.
+   - Data dir: `$OPENCODE_DATA` or `~/.local/share/opencode`.
+   - **`opencode.db`** (SQLite, WAL; opencode ≥ early 2026): table `message(id, session_id, time_created, data)`, `data` is the message JSON without `id`/`sessionID`. Opened read-only; rows with `time_created` (ms) in the scan window and `role = assistant` are read. This is the live store — the JSON files stopped updating on 2026-01-01.
+   - **Legacy files**: `storage/message/<sessionID>/<messageID>.json`, still read for older history. A message in both stores counts once (deduped by message ID).
    - Only `"role": "assistant"` messages with a `tokens` block and `time.created` are parsed.
    - Messages without tokens, or with zero total tokens (input + output + reasoning + cache), are skipped.
 

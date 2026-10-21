@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- opencode showed "not fetched yet / No usage yet": since early 2026 opencode writes messages to `~/.local/share/opencode/opencode.db` (SQLite) and the per-message JSON files Runic read stopped updating on January 1. Runic now reads the `message` table read-only (live WAL rows included) and still reads the old files for earlier history, counting a message present in both once.
 - SiliconFlow (both regions): the tile showed `410 … This endpoint is deprecated and is no longer available`. SiliconFlow retired `/v1/user/info`, its only balance endpoint, on 2026-08-14 and has not announced a replacement, so the balance cannot be read. The tile is now a key-health tile (`Key active · N models`) from `/v1/models`, and a bad key still shows its real error.
 
 ## 2.13.0 — 2026-10-21
