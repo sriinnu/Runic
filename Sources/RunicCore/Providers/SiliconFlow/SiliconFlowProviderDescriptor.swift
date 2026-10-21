@@ -10,17 +10,18 @@ public enum SiliconFlowProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .siliconflow,
                 displayName: "SiliconFlow",
-                sessionLabel: "Models",
+                sessionLabel: "Balance",
                 weeklyLabel: "",
                 opusLabel: nil,
                 supportsOpus: false,
-                supportsCredits: false,
-                creditsHint: "",
+                supportsCredits: true,
+                creditsHint: "Balance from the cloud.siliconflow.com console (browser sign-in); an API key alone only checks the key.",
                 toggleTitle: "Show SiliconFlow usage",
                 cliName: "siliconflow",
                 defaultEnabled: false,
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
+                browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 dashboardURL: "https://cloud.siliconflow.com/me/expensebill",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
@@ -36,11 +37,50 @@ public enum SiliconFlowProviderDescriptor {
                 noDataMessage: { "SiliconFlow cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [SiliconFlowAPIFetchStrategy()] })),
+                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [
+                    SiliconFlowConsoleFetchStrategy(china: false),
+                    SiliconFlowAPIFetchStrategy(),
+                ] })),
             cli: ProviderCLIConfig(
                 name: "siliconflow",
                 aliases: ["sf"],
                 versionDetector: nil))
+    }
+}
+
+/// Balance from the console with the browser's SiliconFlow sign-in (the public
+/// balance API is retired). Falls back to the API-key check only when a key
+/// exists; otherwise its own error ("not signed in", "needs your user ID") shows.
+struct SiliconFlowConsoleFetchStrategy: ProviderFetchStrategy {
+    let china: Bool
+    let kind: ProviderFetchKind = .web
+
+    var id: String {
+        self.china ? "siliconflowcn.web" : "siliconflow.web"
+    }
+
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
+    }
+
+    func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
+        #if os(macOS)
+        let response = try await SiliconFlowConsoleFetcher.fetchBalance(china: self.china, environment: context.env)
+        return self.makeResult(
+            usage: response.toUsageSnapshot(currency: self.china ? "CNY" : "USD"),
+            credits: response.toCreditsSnapshot(),
+            sourceLabel: "web")
+        #else
+        throw SiliconFlowConsoleError.notSignedIn(china: self.china)
+        #endif
+    }
+
+    func shouldFallback(on _: Error, context: ProviderFetchContext) -> Bool {
+        context.credential(for: self.china ? .siliconflowCN : .siliconflow) != nil
     }
 }
 
