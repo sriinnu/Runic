@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.13.1 — 2026-10-21
 - Settings → Providers has a search field: at the top of the sidebar in the sidebar layout, and in the Built-in providers header in the list layout. It matches the display name, CLI name and aliases (`sf`, `ollama-cloud`), ignores case and punctuation (`zai` finds z.ai), and `cn` / `china` finds the brands with a China account. ⌘F focuses it, Esc clears it; reordering is paused while a filter is on, so a drag never moves the wrong provider.
 - opencode showed "not fetched yet / No usage yet": since early 2026 opencode writes messages to `~/.local/share/opencode/opencode.db` (SQLite) and the per-message JSON files Runic read stopped updating on January 1. Runic now reads the `message` table read-only (live WAL rows included) and still reads the old files for earlier history, counting a message present in both once.
 - SiliconFlow (both regions): the tile showed `410 … This endpoint is deprecated and is no longer available`. SiliconFlow retired `/v1/user/info`, the public balance endpoint, on 2026-08-14. The balance is back: Runic now reads it the way the SiliconFlow console does, from `cloud.siliconflow.com` (or `.cn`) with your browser's SiliconFlow sign-in, in USD or CNY. With only an API key the tile is a key check (`Key active · N models`). If the console asks for your user ID, the tile says so and `SILICONFLOW_SUBJECT_ID` / `SILICONFLOW_CN_SUBJECT_ID` supplies it.
