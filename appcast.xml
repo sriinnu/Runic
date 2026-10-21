@@ -3,6 +3,24 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.13.0</title>
+            <pubDate>Wed, 21 Oct 2026 12:50:37 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>177</sparkle:version>
+            <sparkle:shortVersionString>2.13.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.13.0</h2>
+<ul>
+<li><strong>SiliconFlow</strong> is a new provider: it shows your prepaid balance (paid and bonus) from <code>api.siliconflow.com</code>, in USD. Paste a key in Settings → Providers → SiliconFlow or export <code>SILICONFLOW_API_KEY</code>; it is off until you add one.</li>
+<li><strong>SiliconFlow (China)</strong> is its own slot for <code>siliconflow.cn</code> accounts, in CNY, with its own key (<code>SILICONFLOW_CN_API_KEY</code>). Like the other China slots it stays out of the menu until it has a key, and pairs under the SiliconFlow brand when you have both. Both balance readers follow SiliconFlow's documented <code>/v1/user/info</code> reply and have not been checked against a live key.</li>
+<li><strong>Ollama Cloud works with a Pro login.</strong> Pro and Max accounts sign in on the website and have no API key, so Runic now reads your session and weekly usage (with reset times) from the <code>ollama.com</code> settings page using your browser's signed-in session. An API key still works and is tried first. The page parser matches on the "Session usage" and "Weekly usage" labels because the real markup has not been captured yet; if the tile comes up empty, that is the first place to look.</li>
+<li>A missing Ollama Cloud or SiliconFlow key now says so ("API key not found, add it in Settings → Providers…") instead of "No available fetch strategy".</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.0/Runic-2.13.0.zip" length="48457829" type="application/octet-stream" sparkle:edSignature="oArIrcyLyB4ti1jMn7NIEO/ZrnvEr4Ud2mv0FA7qat0NJtRsyQK3WiWmhhEq/g9fUHPyL3WfimEmRlKKzIDMCw=="/>
+        </item>
+        <item>
             <title>2.12.0</title>
             <pubDate>Thu, 15 Oct 2026 17:24:44 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -36,23 +54,6 @@
 <p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
 ]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.3/Runic-2.11.3.zip" length="47978884" type="application/octet-stream" sparkle:edSignature="8WsXse2ekMyKp4vnKTkbQFl9VGUfYuJHCkYv1w0fNKP2hj6ZkLlcHQgfDNNnZvOqrSVpM9+/pjysqOl5EYRJAA=="/>
-        </item>
-        <item>
-            <title>2.11.2</title>
-            <pubDate>Mon, 12 Oct 2026 22:51:01 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>164</sparkle:version>
-            <sparkle:shortVersionString>2.11.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.11.2</h2>
-<ul>
-<li>System theme: the orange, purple and cyan accents are darker in light appearance, so they keep 3:1 contrast on the light window (they sat near 2.2:1). Dark appearance is unchanged. Theme JSON can now give a color as <code>"#LIGHT|#DARK"</code>.</li>
-<li>Muse Code: when the CLI's usage card reads "Subscription · Currently unavailable", Runic says so straight away instead of waiting out a 45-second timeout on every refresh.</li>
-<li>Qwen: DashScope answering 404 for the usage endpoint is no longer logged as an error on each refresh; the card still shows ledger data.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.11.2/Runic-2.11.2.zip" length="47969756" type="application/octet-stream" sparkle:edSignature="8E4fVgjUM6PFGjbPs59LRhTfT/Xz2ZIbyLIAk6NqW/ubLB+8cfZAidsnVzWv6CJokEVZ98mTivKz4wrG/6uACg=="/>
         </item>
     </channel>
 </rss>
