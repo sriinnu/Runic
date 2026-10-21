@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.13.2 — 2026-10-21
 - SiliconFlow and Ollama Cloud: the browser sign-in never actually worked in 2.13.0/2.13.1. A background refresh is not allowed to show the "Chrome Safe Storage" Keychain dialog, so reading the browser's login failed silently every time and SiliconFlow fell back to "Key active". Both now have a switch in Settings → Providers ("Balance from browser sign-in" for SiliconFlow and SiliconFlow (China), "Usage from browser sign-in" for Ollama Cloud): turning it on reads your sign-in from the browser once (macOS may ask for your password), checks it works, and keeps a copy in Runic's own Keychain item, so refreshes never prompt. When the balance can't be read, the SiliconFlow key tile now says why ("No balance: …") instead of hiding it, and `diagnostics/siliconflow-console.json` records what was tried (never cookie values).
 
 ## 2.13.1 — 2026-10-21
