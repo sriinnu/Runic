@@ -147,6 +147,10 @@ public enum ProviderFetchError: LocalizedError, Sendable {
                 return "Ollama Cloud API key not found. Add it in Settings → Providers → Ollama Cloud " +
                     "(or export OLLAMA_API_KEY)."
             }
+            if provider == .siliconflowCN {
+                return "SiliconFlow China API key not found. Add it in Settings → Providers → SiliconFlow " +
+                    "(China) (or export SILICONFLOW_CN_API_KEY)."
+            }
             if provider == .siliconflow {
                 return "SiliconFlow API key not found. Add it in Settings → Providers → SiliconFlow " +
                     "(or export SILICONFLOW_API_KEY)."

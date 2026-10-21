@@ -20,6 +20,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case groq
     case deepseek
     case siliconflow
+    case siliconflowCN
     case fireworks
     case mistral
     case perplexity

@@ -34,6 +34,7 @@ public enum ProviderTokenResolver {
     private static let groqAccount = "groq-api-token"
     private static let deepSeekAccount = "deepseek-api-token"
     private static let siliconFlowAccount = "siliconflow-api-token"
+    private static let siliconFlowCNAccount = "siliconflow-cn-api-token"
     private static let fireworksAccount = "fireworks-api-token"
     private static let mistralAccount = "mistral-api-token"
     private static let perplexityAccount = "perplexity-api-token"
@@ -138,6 +139,12 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
         self.siliconFlowResolution(environment: environment)?.token
+    }
+
+    public static func siliconFlowCNToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.siliconFlowCNResolution(environment: environment)?.token
     }
 
     public static func fireworksToken(
@@ -432,6 +439,18 @@ public enum ProviderTokenResolver {
         return nil
     }
 
+    public static func siliconFlowCNResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.siliconFlowCNAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["SILICONFLOW_CN_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
     public static func fireworksResolution(
         environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
     {
@@ -701,6 +720,7 @@ public enum ProviderTokenResolver {
         .ollamacloud: { ProviderTokenResolver.ollamaCloudResolution(environment: $0) },
         .deepseek: { ProviderTokenResolver.deepSeekResolution(environment: $0) },
         .siliconflow: { ProviderTokenResolver.siliconFlowResolution(environment: $0) },
+        .siliconflowCN: { ProviderTokenResolver.siliconFlowCNResolution(environment: $0) },
         .fireworks: { ProviderTokenResolver.fireworksResolution(environment: $0) },
         .mistral: { ProviderTokenResolver.mistralResolution(environment: $0) },
         .perplexity: { ProviderTokenResolver.perplexityResolution(environment: $0) },
@@ -750,6 +770,7 @@ public enum ProviderTokenResolver {
         .groq: "groq-api-token",
         .deepseek: "deepseek-api-token",
         .siliconflow: "siliconflow-api-token",
+        .siliconflowCN: "siliconflow-cn-api-token",
         .fireworks: "fireworks-api-token",
         .mistral: "mistral-api-token",
         .perplexity: "perplexity-api-token",
@@ -784,7 +805,7 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool
     {
         switch provider {
-        case .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN:
+        case .kimiCN, .zaiCN, .minimaxCN, .stepfunCN, .qwenCN, .siliconflowCN:
             self.credentialResolution(for: provider, environment: environment) != nil
         default:
             true

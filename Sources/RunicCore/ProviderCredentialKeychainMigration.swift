@@ -25,6 +25,7 @@ public enum ProviderCredentialKeychainMigration {
         "groq-api-token",
         "deepseek-api-token",
         "siliconflow-api-token",
+        "siliconflow-cn-api-token",
         "fireworks-api-token",
         "mistral-api-token",
         "perplexity-api-token",

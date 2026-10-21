@@ -32,10 +32,12 @@ struct SiliconFlowBalanceResponse: Decodable {
 }
 
 enum SiliconFlowUsageFetcher {
+    /// Separate platforms: `.com` bills in USD, `.cn` in CNY, and keys do not cross over.
     static let apiURL = URL(string: "https://api.siliconflow.com/v1/user/info")!
+    static let apiURLChina = URL(string: "https://api.siliconflow.cn/v1/user/info")!
 
-    static func fetchBalance(apiKey: String) async throws -> SiliconFlowBalanceResponse {
-        var request = URLRequest(url: apiURL)
+    static func fetchBalance(apiKey: String, china: Bool = false) async throws -> SiliconFlowBalanceResponse {
+        var request = URLRequest(url: china ? self.apiURLChina : self.apiURL)
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -66,20 +68,20 @@ extension SiliconFlowBalanceResponse {
         return info.totalBalance ?? ((info.balance ?? 0) + (info.chargeBalance ?? 0))
     }
 
-    func toUsageSnapshot() -> UsageSnapshot {
+    func toUsageSnapshot(currency: String = "USD") -> UsageSnapshot {
         // No limit is exposed, so mark the window limit-less (see DeepSeek).
         UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: "Balance: \(String(format: "%.2f", self.remainingBalance)) USD",
+                resetDescription: "Balance: \(String(format: "%.2f", self.remainingBalance)) \(currency)",
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
             balance: ProviderBalance(
                 available: self.remainingBalance,
-                currency: "USD",
+                currency: currency,
                 components: [
                     self.data?.chargeBalance.map { .init(label: "Paid", amount: $0) },
                     self.data?.balance.map { .init(label: "Bonus", amount: $0) },

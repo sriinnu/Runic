@@ -14,6 +14,7 @@
   "groq": { "model": "Llama 3.3 70B", "contextK": 128 },
   "deepseek": { "model": "DeepSeek Chat", "contextK": 64 },
   "siliconflow": { "model": "SiliconFlow model", "label": "ctx varies" },
+  "siliconflowCN": { "model": "SiliconFlow CN model", "label": "ctx varies" },
   "fireworks": { "model": "Llama 3.1 70B", "contextK": 128 },
   "mistral": { "model": "Mistral Large", "contextK": 128 },
   "perplexity": { "model": "Sonar", "contextK": 128 },

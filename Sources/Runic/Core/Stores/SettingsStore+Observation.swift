@@ -89,6 +89,7 @@ extension SettingsStore {
         _ = self.ollamaCloudAPIToken
         _ = self.deepSeekAPIToken
         _ = self.siliconFlowAPIToken
+        _ = self.siliconFlowCNAPIToken
         _ = self.fireworksAPIToken
         _ = self.mistralAPIToken
         _ = self.perplexityAPIToken
