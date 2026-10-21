@@ -10,12 +10,12 @@ public enum SiliconFlowProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .siliconflow,
                 displayName: "SiliconFlow",
-                sessionLabel: "Balance",
+                sessionLabel: "Models",
                 weeklyLabel: "",
                 opusLabel: nil,
                 supportsOpus: false,
-                supportsCredits: true,
-                creditsHint: "Shows remaining balance from SiliconFlow account",
+                supportsCredits: false,
+                creditsHint: "",
                 toggleTitle: "Show SiliconFlow usage",
                 cliName: "siliconflow",
                 defaultEnabled: false,
@@ -24,7 +24,7 @@ public enum SiliconFlowProviderDescriptor {
                 dashboardURL: "https://cloud.siliconflow.com/me/expensebill",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
-                    supportsModelBreakdown: false,
+                    supportsModelBreakdown: true,
                     supportsTokenMetrics: false,
                     supportsProjectAttribution: false)),
             branding: ProviderBranding(
@@ -56,10 +56,9 @@ struct SiliconFlowAPIFetchStrategy: ProviderFetchStrategy {
         guard let tokenRes = context.credential(for: .siliconflow) else {
             throw SiliconFlowSettingsError.missingToken
         }
-        let usage = try await SiliconFlowUsageFetcher.fetchBalance(apiKey: tokenRes.token)
+        let usage = try await SiliconFlowUsageFetcher.fetchModels(apiKey: tokenRes.token)
         return self.makeResult(
             usage: usage.toUsageSnapshot(),
-            credits: usage.toCreditsSnapshot(),
             sourceLabel: tokenRes.source.rawValue)
     }
 

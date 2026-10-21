@@ -280,7 +280,7 @@ enum RunicScreenshotRenderer {
         }
         // Prepaid-balance providers get a balance card with spend history.
         for provider in providers where Self.demoBalanceProviders.contains(provider) {
-            let currency = provider == .kimiCN || provider == .stepfunCN || provider == .siliconflowCN ? "CNY" : "USD"
+            let currency = provider == .kimiCN || provider == .stepfunCN ? "CNY" : "USD"
             let balance = ProviderBalance(
                 available: 110.04,
                 currency: currency,
@@ -313,8 +313,6 @@ enum RunicScreenshotRenderer {
         .deepseek,
         .stepfun,
         .stepfunCN,
-        .siliconflow,
-        .siliconflowCN,
     ]
 
     /// A believable cycle for the Burn panel: quiet, a burst, quiet again,

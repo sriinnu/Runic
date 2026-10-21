@@ -12,12 +12,12 @@ public enum SiliconFlowCNProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .siliconflowCN,
                 displayName: "SiliconFlow (China)",
-                sessionLabel: "Balance",
+                sessionLabel: "Models",
                 weeklyLabel: "",
                 opusLabel: nil,
                 supportsOpus: false,
-                supportsCredits: true,
-                creditsHint: "Shows remaining balance from the SiliconFlow China (siliconflow.cn) account",
+                supportsCredits: false,
+                creditsHint: "",
                 toggleTitle: "Show SiliconFlow (China) usage",
                 cliName: "siliconflow-cn",
                 defaultEnabled: false,
@@ -26,7 +26,7 @@ public enum SiliconFlowCNProviderDescriptor {
                 dashboardURL: "https://cloud.siliconflow.cn/me/expensebill",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
-                    supportsModelBreakdown: false,
+                    supportsModelBreakdown: true,
                     supportsTokenMetrics: false,
                     supportsProjectAttribution: false)),
             branding: ProviderBranding(
@@ -58,10 +58,9 @@ struct SiliconFlowCNAPIFetchStrategy: ProviderFetchStrategy {
         guard let tokenRes = context.credential(for: .siliconflowCN) else {
             throw SiliconFlowCNSettingsError.missingToken
         }
-        let usage = try await SiliconFlowUsageFetcher.fetchBalance(apiKey: tokenRes.token, china: true)
+        let usage = try await SiliconFlowUsageFetcher.fetchModels(apiKey: tokenRes.token, china: true)
         return self.makeResult(
-            usage: usage.toUsageSnapshot(currency: "CNY"),
-            credits: usage.toCreditsSnapshot(),
+            usage: usage.toUsageSnapshot(),
             sourceLabel: tokenRes.source.rawValue)
     }
 
