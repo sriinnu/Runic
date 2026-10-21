@@ -357,19 +357,26 @@ if [[ "$SIGNING_MODE" == "adhoc" ]]; then
   # ACLs, forcing a repeat password prompt to access previously-stored items.
   # Signing with a stable local cert keeps the designated requirement pinned
   # to the certificate instead, so Keychain access stays trusted across
-  # rebuilds. Falls back to true ad-hoc if the dev cert isn't installed.
+  # rebuilds. Every build carries a real identity, so a missing dev cert is
+  # an error, never a silent fall back to true ad-hoc.
   # Self-signed dev certs never pass the "codesigning" trust-policy check
   # (no trusted chain to a root), so find_codesign_identity (which filters
   # on that policy) won't see it — look it up by presence instead. codesign
   # itself resolves "-s <name>" by preferred-name match, not policy validity.
-  if security find-certificate -c "Runic Dev" >/dev/null 2>&1; then
-    CODESIGN_ID="Runic Dev"
-  else
-    CODESIGN_ID="-"
+  if ! security find-certificate -c "Runic Dev" >/dev/null 2>&1; then
+    echo "ERROR: RUNIC_SIGNING=adhoc needs the \"Runic Dev\" signing cert; unsigned/ad-hoc builds are not allowed." >&2
+    exit 1
   fi
+  CODESIGN_ID="Runic Dev"
   CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
 elif [[ "$ALLOW_LLDB" == "1" ]]; then
-  CODESIGN_ID="-"
+  # lldb needs get-task-allow and no hardened runtime, not an ad-hoc signature:
+  # the stable dev cert keeps the debug build signed and attachable.
+  if ! security find-certificate -c "Runic Dev" >/dev/null 2>&1; then
+    echo "ERROR: RUNIC_ALLOW_LLDB=1 needs the \"Runic Dev\" signing cert; unsigned/ad-hoc builds are not allowed." >&2
+    exit 1
+  fi
+  CODESIGN_ID="Runic Dev"
   CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
 else
   CODESIGN_ID="${APP_IDENTITY:-$(find_codesign_identity "Developer ID Application")}"
@@ -476,6 +483,13 @@ fi
 codesign "${CODESIGN_ARGS[@]}" \
   --entitlements "$APP_ENTITLEMENTS" \
   "$APP"
+
+# Every build ships signed by a real identity: refuse a broken or ad-hoc seal.
+codesign --verify --deep --strict "$APP"
+if codesign -dvv "$APP" 2>&1 | grep -q "^Signature=adhoc"; then
+  echo "ERROR: $APP is ad-hoc signed; every build must carry a signing identity." >&2
+  exit 1
+fi
 
 LATEST_LINK="$ROOT/builds/latest"
 ln -sfn "$BUILD_DIR" "$LATEST_LINK"

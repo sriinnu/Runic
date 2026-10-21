@@ -444,12 +444,10 @@ sign_app() {
     identity=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -n 1 | awk -F'"' '{print $2}')
 
     if [[ -z "$identity" ]]; then
-        log_warning "No Developer ID Application certificate found"
-        log_info "Skipping code signing"
-        log_info "For distribution, you need to:"
-        log_info "  1. Create a Developer ID Application certificate"
-        log_info "  2. Run: codesign --deep --force --sign \"Developer ID Application: Your Name\" $app_bundle"
-        return 0
+        # Unsigned builds are not allowed: stop instead of shipping one.
+        log_error "No Developer ID Application certificate found; refusing to leave the build unsigned"
+        log_info "Install a Developer ID Application certificate and run again"
+        return 1
     fi
 
     log_info "Found signing identity: $identity"
