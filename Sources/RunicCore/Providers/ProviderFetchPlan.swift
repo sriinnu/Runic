@@ -148,12 +148,12 @@ public enum ProviderFetchError: LocalizedError, Sendable {
                     "(or export OLLAMA_API_KEY)."
             }
             if provider == .siliconflowCN {
-                return "SiliconFlow China API key not found. Add it in Settings → Providers → SiliconFlow " +
-                    "(China) (or export SILICONFLOW_CN_API_KEY)."
+                return "Not signed in to cloud.siliconflow.cn and no API key. Sign in there in your browser " +
+                    "for the balance, or add a key in Settings → Providers → SiliconFlow (China)."
             }
             if provider == .siliconflow {
-                return "SiliconFlow API key not found. Add it in Settings → Providers → SiliconFlow " +
-                    "(or export SILICONFLOW_API_KEY)."
+                return "Not signed in to cloud.siliconflow.com and no API key. Sign in there in your browser " +
+                    "for the balance, or add a key in Settings → Providers → SiliconFlow."
             }
             return "No available fetch strategy for \(provider.rawValue)."
         case .missingCredentials:

@@ -12,17 +12,18 @@ public enum SiliconFlowCNProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .siliconflowCN,
                 displayName: "SiliconFlow (China)",
-                sessionLabel: "Models",
+                sessionLabel: "Balance",
                 weeklyLabel: "",
                 opusLabel: nil,
                 supportsOpus: false,
-                supportsCredits: false,
-                creditsHint: "",
+                supportsCredits: true,
+                creditsHint: "Balance from the cloud.siliconflow.cn console (browser sign-in); an API key alone only checks the key.",
                 toggleTitle: "Show SiliconFlow (China) usage",
                 cliName: "siliconflow-cn",
                 defaultEnabled: false,
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
+                browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
                 dashboardURL: "https://cloud.siliconflow.cn/me/expensebill",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
@@ -38,7 +39,10 @@ public enum SiliconFlowCNProviderDescriptor {
                 noDataMessage: { "SiliconFlow China cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [SiliconFlowCNAPIFetchStrategy()] })),
+                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [
+                    SiliconFlowConsoleFetchStrategy(china: true),
+                    SiliconFlowCNAPIFetchStrategy(),
+                ] })),
             cli: ProviderCLIConfig(
                 name: "siliconflow-cn",
                 aliases: ["sfcn"],

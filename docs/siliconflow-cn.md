@@ -1,5 +1,5 @@
 ---
-summary: "SiliconFlow provider data sources: API key in Keychain/env and the /v1/models key-health probe (balance API retired)."
+summary: "SiliconFlow data sources: console balance via browser sign-in (public balance API retired), API-key health via /v1/models."
 read_when:
   - Debugging SiliconFlow key or 410 errors
   - Updating SiliconFlow API endpoints
@@ -7,17 +7,25 @@ read_when:
 
 # SiliconFlow (China) provider
 
-SiliconFlow is API-token based. No browser cookies.
+SiliconFlow reads the balance from the console with the browser sign-in, and checks an API key when one is set.
 
 ## Data sources + fallback order
 
-1) **Models API** (sole source) — `GET https://api.siliconflow.cn/v1/models`
-   - SiliconFlow retired its only balance endpoint, `GET /v1/user/info`, on 2026-08-14:
-     it now answers `410 {"code":20092,"message":"This endpoint is deprecated and is no longer available."}`.
-     No replacement has been announced, so there is no balance, usage or limit to show.
-   - The tile is a key-health tile like Groq's: "Key active · N models (…)", `hasKnownLimit: false`.
-     A bad key surfaces as the HTTP status and body.
-   - If SiliconFlow ships an account-level balance API, add it here and restore `supportsCredits`.
+1) **Console balance (browser sign-in)** — `siliconflowcn.web`, tried first.
+   - SiliconFlow retired the public balance endpoint `GET /v1/user/info` on 2026-08-14
+     (`410 {"code":20092}`), but its console still reads the balance from
+     `GET https://cloud.siliconflow.cn/biz-server/api/v1/user/info`.
+   - Auth: the browser's `siliconflow.cn` cookies (must include `__SF_auth.session-token`),
+     imported in the default browser order, one session per profile.
+   - `X-Subject-ID`: tried from `SILICONFLOW_CN_SUBJECT_ID`, then any subject-looking cookie, then without it.
+   - Reply: `{code:20000, status:true, data:{balance, chargeBalance, totalBalance, status}}`, money as strings.
+     Shown as a limit-less balance in CNY (Paid = `chargeBalance`, Bonus = `balance`) plus a credits snapshot.
+   - A redirect to `account.siliconflow.*` or 401/403 = signed out; a 200 with a non-20000 code on every
+     subject candidate = "needs your user ID" (export `SILICONFLOW_CN_SUBJECT_ID`).
+   - Falls back to the API key only when one exists; otherwise its own error shows.
+
+2) **Models API (API key)** — `GET https://api.siliconflow.cn/v1/models`: key health only
+   ("Key active · N models"), since no public balance API exists any more.
 
 ## Credentials
 
