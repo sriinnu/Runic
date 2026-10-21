@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import Testing
 @testable import RunicCore
 
@@ -378,5 +379,59 @@ struct OpencodeUsageLogSourceTests {
         #expect(entries.map(\.inputTokens) == [222]) // missed gap day backfilled
         let dailies = await cache.loadCachedDailies(provider: "opencode")?.dailies ?? []
         #expect(dailies.contains { $0.dayKey == LedgerCache.dayKey(for: twoDaysAgo) })
+    }
+
+    /// opencode ≥ early 2026 keeps messages in `opencode.db`; `message.data` holds
+    /// the same JSON minus `id` / `sessionID`, which live in the columns.
+    @Test
+    func `opencode reads assistant messages from the sqlite database and dedupes legacy files`() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-opencode-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let messages = root.appendingPathComponent("storage/message", isDirectory: true)
+        try fm.createDirectory(at: messages, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+
+        let dbURL = root.appendingPathComponent("opencode.db")
+        var db: OpaquePointer?
+        #expect(sqlite3_open(dbURL.path, &db) == SQLITE_OK)
+        func exec(_ sql: String) {
+            #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
+        }
+        exec("CREATE TABLE message (id text PRIMARY KEY, session_id text NOT NULL, " +
+            "time_created integer NOT NULL, time_updated integer NOT NULL, data text NOT NULL)")
+        func insert(id: String, role: String, created: Int64, input: Int) {
+            let data = "{\"role\":\"\(role)\",\"time\":{\"created\":\(created)},\"modelID\":\"kimi-k2\"," +
+                "\"path\":{\"cwd\":\"/Users/me/app\"},\"cost\":0.5," +
+                "\"tokens\":{\"input\":\(input),\"output\":2,\"reasoning\":0,\"cache\":{\"read\":0,\"write\":0}}}"
+            exec("INSERT INTO message VALUES ('\(id)', 'ses9', \(created), \(created), '\(data)')")
+        }
+        insert(id: "d1", role: "assistant", created: Self.ms(now), input: 40)
+        insert(id: "d2", role: "user", created: Self.ms(now), input: 999)
+        insert(id: "m1", role: "assistant", created: Self.ms(now), input: 7)
+        sqlite3_close(db)
+        // The same message also present as a legacy file must count once.
+        try Self.writeMessage(
+            root: messages,
+            session: "ses9",
+            id: "m1",
+            created: Self.ms(now),
+            input: 7,
+            modifiedAt: now,
+            fileManager: fm)
+
+        let source = OpencodeUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            storageRoot: messages,
+            databaseURL: dbURL,
+            maxAgeDays: 30,
+            now: now,
+            cache: LedgerCache(cacheDir: root.appendingPathComponent("cache", isDirectory: true)))
+        let entries = try await source.loadEntries()
+        #expect(entries.map(\.inputTokens).sorted() == [7, 40])
+        #expect(entries.contains { $0.messageID == "d1" && $0.sessionID == "ses9" && $0.projectName == "app" })
     }
 }
