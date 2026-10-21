@@ -20,7 +20,9 @@ runtime and owns the `ollama` CLI alias. Ollama Cloud's CLI name is
 1) **API key** (`ollamacloud.api`) — only when a key exists (Keychain/env). Below.
 2) **Browser sign-in** (`ollamacloud.web`) — Pro/Max accounts sign in on the
    website and have no key. Runic imports the `ollama.com` cookies from the
-   browser (default import order), `GET https://ollama.com/settings`, and reads
+   browser once — when “Usage from browser sign-in” is turned on in Settings (the one read allowed to
+   show the “Chrome Safe Storage” Keychain dialog) — keeps that `Cookie:` header in Runic's own Keychain
+   item (`ollama-cloud-web-session`), and on every refresh does `GET https://ollama.com/settings` with it, reading
    the "Session usage" / "Weekly usage" blocks: percent from `NN% used`, reset
    time from `data-time="<ISO8601>"`. Each browser profile with ollama.com
    cookies is tried until one is signed in; none → "Not signed in to ollama.com".

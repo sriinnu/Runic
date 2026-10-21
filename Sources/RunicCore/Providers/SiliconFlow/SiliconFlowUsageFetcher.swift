@@ -41,12 +41,18 @@ enum SiliconFlowUsageFetcher {
 }
 
 extension SiliconFlowModelsResponse {
-    func toUsageSnapshot() -> UsageSnapshot {
+    /// `balanceIssue`: why the console balance was not read this refresh. It
+    /// replaces the model preview, so the fallback never hides its reason.
+    func toUsageSnapshot(balanceIssue: String? = nil) -> UsageSnapshot {
         let models = (self.data ?? []).compactMap(\.id)
         var summary = "Key active · \(models.count) models"
-        let preview = models.prefix(3).joined(separator: ", ")
-        if !preview.isEmpty {
-            summary += " (\(preview))"
+        if let balanceIssue {
+            summary += " · No balance: \(balanceIssue)"
+        } else {
+            let preview = models.prefix(3).joined(separator: ", ")
+            if !preview.isEmpty {
+                summary += " (\(preview))"
+            }
         }
         return UsageSnapshot(
             primary: RateWindow(
