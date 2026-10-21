@@ -252,6 +252,10 @@ enum UsageDebugCredentialCatalog {
         .deepseek: [
             .init(label: "deepseek", resolution: { ProviderTokenResolver.deepSeekResolution() }),
         ],
+
+        .siliconflow: [
+            .init(label: "siliconflow", resolution: { ProviderTokenResolver.siliconFlowResolution() }),
+        ],
         .fireworks: [
             .init(label: "fireworks", resolution: { ProviderTokenResolver.fireworksResolution() }),
         ],

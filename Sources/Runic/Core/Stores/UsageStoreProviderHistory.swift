@@ -54,6 +54,7 @@ struct UsageStoreProviderHistorySupport {
              .vercelai,
              .groq,
              .deepseek,
+             .siliconflow,
              .fireworks,
              .mistral,
              .perplexity,

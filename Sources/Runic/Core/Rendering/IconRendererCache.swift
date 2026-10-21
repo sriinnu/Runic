@@ -93,6 +93,7 @@ extension IconRenderer {
         .cline: 29,
         .muse: 30,
         .ollamacloud: 31,
+        .siliconflow: 32,
         .combined: 99,
     ]
 

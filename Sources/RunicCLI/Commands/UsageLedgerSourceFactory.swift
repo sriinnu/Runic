@@ -25,6 +25,7 @@ enum UsageLedgerSourceFactory {
              .vercelai,
              .groq,
              .deepseek,
+             .siliconflow,
              .fireworks,
              .mistral,
              .perplexity,

@@ -33,6 +33,7 @@ public enum ProviderTokenResolver {
     private static let vercelAIAccount = "vercelai-api-token"
     private static let groqAccount = "groq-api-token"
     private static let deepSeekAccount = "deepseek-api-token"
+    private static let siliconFlowAccount = "siliconflow-api-token"
     private static let fireworksAccount = "fireworks-api-token"
     private static let mistralAccount = "mistral-api-token"
     private static let perplexityAccount = "perplexity-api-token"
@@ -131,6 +132,12 @@ public enum ProviderTokenResolver {
         environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
     {
         self.deepSeekResolution(environment: environment)?.token
+    }
+
+    public static func siliconFlowToken(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        self.siliconFlowResolution(environment: environment)?.token
     }
 
     public static func fireworksToken(
@@ -413,6 +420,18 @@ public enum ProviderTokenResolver {
         return nil
     }
 
+    public static func siliconFlowResolution(
+        environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
+    {
+        if let token = self.keychainToken(service: self.keychainService, account: self.siliconFlowAccount) {
+            return ProviderTokenResolution(token: token, source: .keychain)
+        }
+        if let token = self.cleaned(environment["SILICONFLOW_API_KEY"]) {
+            return ProviderTokenResolution(token: token, source: .environment)
+        }
+        return nil
+    }
+
     public static func fireworksResolution(
         environment: [String: String] = ProcessInfo.processInfo.environment) -> ProviderTokenResolution?
     {
@@ -681,6 +700,7 @@ public enum ProviderTokenResolver {
         .muse: { ProviderTokenResolver.museResolution(environment: $0) },
         .ollamacloud: { ProviderTokenResolver.ollamaCloudResolution(environment: $0) },
         .deepseek: { ProviderTokenResolver.deepSeekResolution(environment: $0) },
+        .siliconflow: { ProviderTokenResolver.siliconFlowResolution(environment: $0) },
         .fireworks: { ProviderTokenResolver.fireworksResolution(environment: $0) },
         .mistral: { ProviderTokenResolver.mistralResolution(environment: $0) },
         .perplexity: { ProviderTokenResolver.perplexityResolution(environment: $0) },
@@ -729,6 +749,7 @@ public enum ProviderTokenResolver {
         .vercelai: "vercelai-api-token",
         .groq: "groq-api-token",
         .deepseek: "deepseek-api-token",
+        .siliconflow: "siliconflow-api-token",
         .fireworks: "fireworks-api-token",
         .mistral: "mistral-api-token",
         .perplexity: "perplexity-api-token",

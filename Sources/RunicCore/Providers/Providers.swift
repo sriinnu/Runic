@@ -19,6 +19,7 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case vercelai
     case groq
     case deepseek
+    case siliconflow
     case fireworks
     case mistral
     case perplexity
@@ -61,6 +62,7 @@ public enum IconStyle: Sendable, Hashable {
     case vercelai
     case groq
     case deepseek
+    case siliconflow
     case fireworks
     case mistral
     case perplexity
