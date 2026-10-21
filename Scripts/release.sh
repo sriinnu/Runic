@@ -48,7 +48,10 @@ if git ls-remote --tags origin "$TAG" | grep -q "refs/tags/$TAG$"; then
   err "Tag already exists on origin: $TAG"
 fi
 
-git tag --annotate "$TAG" --message "${APP_NAME} ${MARKETING_VERSION}"
+# Release tags are always signed, whatever tag.gpgSign says, and verified
+# before they leave the machine.
+git tag --sign "$TAG" --message "${APP_NAME} ${MARKETING_VERSION}"
+git tag --verify "$TAG" >/dev/null 2>&1 || err "Tag $TAG has no valid signature"
 git push origin "$TAG"
 
 gh release create "$TAG" ${APP_NAME}-${MARKETING_VERSION}.zip ${APP_NAME}-${MARKETING_VERSION}.dSYM.zip \
