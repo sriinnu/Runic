@@ -24,6 +24,9 @@ struct OllamaCloudUsage: Equatable {
     let models: [ModelRequests]
     /// `activity.cost`, in dollars.
     let cost: Double?
+    /// Only the web settings page reports when a window resets.
+    var sessionResetsAt: Date?
+    var weeklyResetsAt: Date?
 
     static func parse(_ data: Data) throws -> OllamaCloudUsage {
         guard let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
@@ -112,10 +115,20 @@ extension OllamaCloudUsage {
     func toUsageSnapshot(now: Date = Date()) -> UsageSnapshot {
         let topModels = self.topModelsText
         let session = self.sessionUsage.map {
-            Self.window(fraction: $0, minutes: Self.sessionWindowMinutes, label: "Session", description: nil)
+            Self.window(
+                fraction: $0,
+                minutes: Self.sessionWindowMinutes,
+                label: "Session",
+                description: nil,
+                resetsAt: self.sessionResetsAt)
         }
         let weekly = self.weeklyUsage.map {
-            Self.window(fraction: $0, minutes: Self.weeklyWindowMinutes, label: "Weekly", description: nil)
+            Self.window(
+                fraction: $0,
+                minutes: Self.weeklyWindowMinutes,
+                label: "Weekly",
+                description: nil,
+                resetsAt: self.weeklyResetsAt)
         }
 
         var primary: RateWindow
@@ -166,11 +179,17 @@ extension OllamaCloudUsage {
         value > 1 ? value : value * 100
     }
 
-    private static func window(fraction: Double, minutes: Int, label: String, description: String?) -> RateWindow {
+    private static func window(
+        fraction: Double,
+        minutes: Int,
+        label: String,
+        description: String?,
+        resetsAt: Date? = nil) -> RateWindow
+    {
         RateWindow(
             usedPercent: min(100, max(0, self.percent(fromUsage: fraction))),
             windowMinutes: minutes,
-            resetsAt: nil,
+            resetsAt: resetsAt,
             resetDescription: description,
             label: label,
             hasKnownLimit: true)
@@ -264,6 +283,7 @@ enum OllamaCloudAPIError: LocalizedError, Equatable {
     case rateLimited
     case httpError(statusCode: Int)
     case decodingError
+    case notSignedIn
 
     /// Maps a non-2xx status to an error; nil for success.
     static func from(statusCode: Int) -> OllamaCloudAPIError? {
@@ -290,6 +310,9 @@ enum OllamaCloudAPIError: LocalizedError, Equatable {
             "Ollama Cloud usage request failed (HTTP \(statusCode))."
         case .decodingError:
             "Ollama Cloud usage response could not be decoded."
+        case .notSignedIn:
+            "Not signed in to ollama.com. Sign in with your browser (Safari, Chrome, …), " +
+                "or add an API key in Settings → Providers → Ollama Cloud."
         }
     }
 }

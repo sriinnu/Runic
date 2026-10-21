@@ -13,7 +13,7 @@ struct OllamaCloudProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "ollama-cloud-api-token",
                 title: "API key",
-                subtitle: "Saved automatically to Keychain (encrypted).",
+                subtitle: "Optional — Pro accounts just stay signed in to ollama.com in a browser.",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.ollamaCloudAPIToken),
