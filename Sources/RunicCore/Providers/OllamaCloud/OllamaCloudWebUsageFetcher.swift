@@ -113,16 +113,41 @@ enum OllamaCloudCookieImporter {
     }
 }
 
-enum OllamaCloudWebUsageFetcher {
+public enum OllamaCloudWebUsageFetcher {
     static let settingsURL = URL(string: "https://ollama.com/settings")!
 
-    static func fetchUsage(logger: ((String) -> Void)? = nil) async throws -> OllamaCloudUsage {
-        let sessions = OllamaCloudCookieImporter.importSessions(logger: logger)
-        for session in sessions {
-            if let usage = try await self.fetch(cookieHeader: session.cookieHeader) { return usage }
-            logger?("[ollama-cookie] \(session.sourceLabel) is not signed in")
+    /// Settings action: read the ollama.com login from the browser (the one
+    /// read allowed to show the "Chrome Safe Storage" Keychain dialog), check
+    /// the settings page opens signed in, and keep Runic's own copy.
+    public static func connect() async throws -> String {
+        let sessions = BrowserCookieAccess.$allowsKeychainPrompt.withValue(true) {
+            OllamaCloudCookieImporter.importSessions()
         }
-        throw OllamaCloudAPIError.notSignedIn
+        for session in sessions {
+            guard try await self.fetch(cookieHeader: session.cookieHeader) != nil else { continue }
+            SavedBrowserSession.ollamaCloud.store(session.cookieHeader)
+            return session.sourceLabel
+        }
+        throw OllamaCloudAPIError.noBrowserSession
+    }
+
+    public static func disconnect() {
+        SavedBrowserSession.ollamaCloud.clear()
+    }
+
+    public static var isConnected: Bool {
+        SavedBrowserSession.ollamaCloud.isConnected
+    }
+
+    /// Refresh path: the saved sign-in only, never the browser, never a prompt.
+    static func fetchUsage() async throws -> OllamaCloudUsage {
+        guard let cookieHeader = SavedBrowserSession.ollamaCloud.load() else {
+            throw OllamaCloudAPIError.notSignedIn
+        }
+        guard let usage = try await self.fetch(cookieHeader: cookieHeader) else {
+            throw OllamaCloudAPIError.sessionExpired
+        }
+        return usage
     }
 
     /// Nil when this cookie jar is signed out (redirect to sign-in or 401/403).

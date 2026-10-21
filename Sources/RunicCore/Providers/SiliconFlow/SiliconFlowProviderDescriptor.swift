@@ -98,7 +98,7 @@ struct SiliconFlowAPIFetchStrategy: ProviderFetchStrategy {
         }
         let usage = try await SiliconFlowUsageFetcher.fetchModels(apiKey: tokenRes.token)
         return self.makeResult(
-            usage: usage.toUsageSnapshot(),
+            usage: usage.toUsageSnapshot(balanceIssue: SiliconFlowConsoleTrace.lastFailure(china: false)),
             sourceLabel: tokenRes.source.rawValue)
     }
 

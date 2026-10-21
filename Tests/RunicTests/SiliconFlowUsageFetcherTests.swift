@@ -63,4 +63,12 @@ struct SiliconFlowUsageFetcherTests {
         #expect(SiliconFlowConsole.subjectCandidates(environment: nil, cookie: "7") == ["7", nil])
         #expect(SiliconFlowConsole.subjectCandidates(environment: "", cookie: nil) == [nil])
     }
+
+    @Test
+    func `cookie header values are read by name`() {
+        let header = "a=1; __SF_auth.session-token=tok=en; SF_subject_id = 99 "
+        #expect(SiliconFlowConsole.cookieValue(in: header) { $0.contains("session-token") } == "tok=en")
+        #expect(SiliconFlowConsole.cookieValue(in: header) { $0.lowercased().contains("subject") } == "99")
+        #expect(SiliconFlowConsole.cookieValue(in: header) { $0 == "missing" } == nil)
+    }
 }

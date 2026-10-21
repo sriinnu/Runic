@@ -15,6 +15,11 @@ SiliconFlow reads the balance from the console with the browser sign-in, and che
    - SiliconFlow retired the public balance endpoint `GET /v1/user/info` on 2026-08-14
      (`410 {"code":20092}`), but its console still reads the balance from
      `GET https://cloud.siliconflow.cn/biz-server/api/v1/user/info`.
+   - **Connect once in Settings** (“Balance from browser sign-in”): that is the only read of the
+     browser, the one allowed to raise the “Chrome Safe Storage” Keychain dialog. The validated
+     `Cookie:` header is kept in Runic's own Keychain item (`siliconflow[-cn]-web-session`); every
+     refresh uses that copy and never touches the browser (background reads cannot prompt, which is why
+     reading the browser on each refresh silently failed in 2.13.1).
    - Auth: the browser's `siliconflow.cn` cookies (must include `__SF_auth.session-token`),
      imported in the default browser order, one session per profile.
    - `X-Subject-ID`: tried from `SILICONFLOW_CN_SUBJECT_ID`, then any subject-looking cookie, then without it.
@@ -22,7 +27,10 @@ SiliconFlow reads the balance from the console with the browser sign-in, and che
      Shown as a limit-less balance in CNY (Paid = `chargeBalance`, Bonus = `balance`) plus a credits snapshot.
    - A redirect to `account.siliconflow.*` or 401/403 = signed out; a 200 with a non-20000 code on every
      subject candidate = "needs your user ID" (export `SILICONFLOW_CN_SUBJECT_ID`).
-   - Falls back to the API key only when one exists; otherwise its own error shows.
+   - Falls back to the API key only when one exists; otherwise its own error shows. The fallback tile
+     reads "Key active · N models · No balance: <reason>".
+   - Diagnostics: `diagnostics/siliconflow-console[-cn].json` lists the browsers checked (cookie names, never
+     values), each request's HTTP status, final host and reply code/message, and the failure.
 
 2) **Models API (API key)** — `GET https://api.siliconflow.cn/v1/models`: key health only
    ("Key active · N models"), since no public balance API exists any more.

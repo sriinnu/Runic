@@ -284,6 +284,8 @@ enum OllamaCloudAPIError: LocalizedError, Equatable {
     case httpError(statusCode: Int)
     case decodingError
     case notSignedIn
+    case noBrowserSession
+    case sessionExpired
 
     /// Maps a non-2xx status to an error; nil for success.
     static func from(statusCode: Int) -> OllamaCloudAPIError? {
@@ -311,8 +313,14 @@ enum OllamaCloudAPIError: LocalizedError, Equatable {
         case .decodingError:
             "Ollama Cloud usage response could not be decoded."
         case .notSignedIn:
-            "Not signed in to ollama.com. Sign in with your browser (Safari, Chrome, …), " +
-                "or add an API key in Settings → Providers → Ollama Cloud."
+            "Pro usage needs your ollama.com sign-in: turn on “Usage from browser sign-in” in " +
+                "Settings → Providers → Ollama Cloud, or add an API key there."
+        case .noBrowserSession:
+            "No signed-in ollama.com found in Safari, Chrome, Edge, Brave or Arc. Sign in there, " +
+                "then try again (allow the Keychain prompt)."
+        case .sessionExpired:
+            "The saved ollama.com sign-in expired. Sign in again in your browser, then turn " +
+                "“Usage from browser sign-in” off and on."
         }
     }
 }
