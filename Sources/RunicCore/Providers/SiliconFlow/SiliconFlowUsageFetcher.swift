@@ -1,42 +1,23 @@
 import Foundation
 
-/// `GET /v1/user/info` — account profile with the prepaid balance.
-/// Money fields arrive as strings ("88.88"), but tolerate bare numbers too.
-struct SiliconFlowBalanceResponse: Decodable {
-    let data: Info?
+/// SiliconFlow retired `GET /v1/user/info` (the only balance endpoint) on
+/// 2026-08-14 — it now answers 410 `{"code":20092}` — and has named no
+/// replacement. `GET /v1/models` is what is left, so the tile reports key health
+/// and the model count, like Groq's.
+struct SiliconFlowModelsResponse: Decodable {
+    let data: [Model]?
 
-    struct Info: Decodable {
-        let balance: Double?
-        let chargeBalance: Double?
-        let totalBalance: Double?
-        let status: String?
-
-        private enum CodingKeys: String, CodingKey {
-            case balance, chargeBalance, totalBalance, status
-        }
-
-        init(from decoder: Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            self.balance = Self.amount(c, .balance)
-            self.chargeBalance = Self.amount(c, .chargeBalance)
-            self.totalBalance = Self.amount(c, .totalBalance)
-            self.status = try? c.decodeIfPresent(String.self, forKey: .status)
-        }
-
-        private static func amount(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys) -> Double? {
-            if let number = try? c.decodeIfPresent(Double.self, forKey: key) { return number }
-            guard let raw = try? c.decodeIfPresent(String.self, forKey: key) else { return nil }
-            return Double(raw.trimmingCharacters(in: .whitespacesAndNewlines))
-        }
+    struct Model: Decodable {
+        let id: String?
     }
 }
 
 enum SiliconFlowUsageFetcher {
-    /// Separate platforms: `.com` bills in USD, `.cn` in CNY, and keys do not cross over.
-    static let apiURL = URL(string: "https://api.siliconflow.com/v1/user/info")!
-    static let apiURLChina = URL(string: "https://api.siliconflow.cn/v1/user/info")!
+    /// Separate platforms: keys do not cross over between `.com` and `.cn`.
+    static let apiURL = URL(string: "https://api.siliconflow.com/v1/models")!
+    static let apiURLChina = URL(string: "https://api.siliconflow.cn/v1/models")!
 
-    static func fetchBalance(apiKey: String, china: Bool = false) async throws -> SiliconFlowBalanceResponse {
+    static func fetchModels(apiKey: String, china: Bool = false) async throws -> SiliconFlowModelsResponse {
         var request = URLRequest(url: china ? self.apiURLChina : self.apiURL)
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -52,47 +33,32 @@ enum SiliconFlowUsageFetcher {
                 statusCode: httpResponse.statusCode,
                 body: body?.isEmpty == false ? body : nil)
         }
-        guard let decoded = try? JSONDecoder().decode(SiliconFlowBalanceResponse.self, from: data),
-              decoded.data != nil
-        else {
+        guard let decoded = try? JSONDecoder().decode(SiliconFlowModelsResponse.self, from: data) else {
             throw SiliconFlowAPIError.invalidResponse
         }
         return decoded
     }
 }
 
-extension SiliconFlowBalanceResponse {
-    /// `totalBalance` = granted + topped-up; fall back to the parts if absent.
-    private var remainingBalance: Double {
-        guard let info = self.data else { return 0 }
-        return info.totalBalance ?? ((info.balance ?? 0) + (info.chargeBalance ?? 0))
-    }
-
-    func toUsageSnapshot(currency: String = "USD") -> UsageSnapshot {
-        // No limit is exposed, so mark the window limit-less (see DeepSeek).
-        UsageSnapshot(
+extension SiliconFlowModelsResponse {
+    func toUsageSnapshot() -> UsageSnapshot {
+        let models = (self.data ?? []).compactMap(\.id)
+        var summary = "Key active · \(models.count) models"
+        let preview = models.prefix(3).joined(separator: ", ")
+        if !preview.isEmpty {
+            summary += " (\(preview))"
+        }
+        return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: "Balance: \(String(format: "%.2f", self.remainingBalance)) \(currency)",
+                resetDescription: summary,
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
-            balance: ProviderBalance(
-                available: self.remainingBalance,
-                currency: currency,
-                components: [
-                    self.data?.chargeBalance.map { .init(label: "Paid", amount: $0) },
-                    self.data?.balance.map { .init(label: "Bonus", amount: $0) },
-                ].compactMap(\.self),
-                apiCallsAllowed: self.data?.status.map { $0.lowercased() == "normal" }),
             updatedAt: Date(),
             identity: nil)
-    }
-
-    func toCreditsSnapshot() -> CreditsSnapshot {
-        CreditsSnapshot(remaining: self.remainingBalance, events: [], updatedAt: Date())
     }
 }
 

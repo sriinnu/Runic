@@ -3,64 +3,25 @@ import Testing
 @testable import RunicCore
 
 struct SiliconFlowUsageFetcherTests {
-    private static func decode(_ json: String) throws -> SiliconFlowBalanceResponse {
-        try JSONDecoder().decode(SiliconFlowBalanceResponse.self, from: Data(json.utf8))
-    }
-
     @Test
-    func `decodes string money fields`() throws {
-        let response = try Self.decode(#"""
-        {"code":20000,"data":{"balance":"1.50","chargeBalance":"10.25","totalBalance":"11.75","status":"normal"}}
-        """#)
-        let info = try #require(response.data)
-        #expect(info.balance == 1.50)
-        #expect(info.chargeBalance == 10.25)
-        #expect(info.totalBalance == 11.75)
-        #expect(info.status == "normal")
-    }
-
-    @Test
-    func `decodes numeric money fields`() throws {
-        let response = try Self.decode(#"""
-        {"data":{"balance":2,"chargeBalance":3.5,"totalBalance":5.5,"status":"normal"}}
-        """#)
-        let info = try #require(response.data)
-        #expect(info.balance == 2)
-        #expect(info.chargeBalance == 3.5)
-        #expect(info.totalBalance == 5.5)
-    }
-
-    @Test
-    func `total balance falls back to parts`() throws {
-        let response = try Self.decode(#"""
-        {"data":{"balance":"1.00","chargeBalance":"4.00","status":"normal"}}
-        """#)
+    func `models reply becomes a key health tile`() throws {
+        let json = #"{"object":"list","data":[{"id":"Qwen/Qwen3-8B"},{"id":"deepseek-ai/DeepSeek-V3"}]}"#
+        let response = try JSONDecoder().decode(SiliconFlowModelsResponse.self, from: Data(json.utf8))
         let snapshot = response.toUsageSnapshot()
-        #expect(snapshot.balance?.available == 5.0)
-        #expect(snapshot.balance?.currency == "USD")
-        #expect(response.toCreditsSnapshot().remaining == 5.0)
+        #expect(snapshot.primary.hasKnownLimit == false)
+        #expect(snapshot.primary.resetDescription?.hasPrefix("Key active · 2 models") == true)
+        #expect(snapshot.balance == nil)
     }
 
     @Test
-    func `cny snapshot carries currency and description`() throws {
-        let response = try Self.decode(#"""
-        {"data":{"balance":"0","chargeBalance":"88.88","totalBalance":"88.88","status":"normal"}}
-        """#)
-        let snapshot = response.toUsageSnapshot(currency: "CNY")
-        #expect(snapshot.balance?.currency == "CNY")
-        #expect(snapshot.balance?.available == 88.88)
-        #expect(snapshot.primary.resetDescription == "Balance: 88.88 CNY")
+    func `an empty model list still reports an active key`() throws {
+        let response = try JSONDecoder().decode(SiliconFlowModelsResponse.self, from: Data(#"{"data":[]}"#.utf8))
+        #expect(response.toUsageSnapshot().primary.resetDescription == "Key active · 0 models")
     }
 
     @Test
-    func `api calls allowed reflects status`() throws {
-        let normal = try Self.decode(#"{"data":{"totalBalance":"1","status":"normal"}}"#)
-        #expect(normal.toUsageSnapshot().balance?.apiCallsAllowed == true)
-        let upper = try Self.decode(#"{"data":{"totalBalance":"1","status":"NORMAL"}}"#)
-        #expect(upper.toUsageSnapshot().balance?.apiCallsAllowed == true)
-        let frozen = try Self.decode(#"{"data":{"totalBalance":"1","status":"frozen"}}"#)
-        #expect(frozen.toUsageSnapshot().balance?.apiCallsAllowed == false)
-        let missing = try Self.decode(#"{"data":{"totalBalance":"1"}}"#)
-        #expect(missing.toUsageSnapshot().balance?.apiCallsAllowed == nil)
+    func `the two regions use separate hosts`() {
+        #expect(SiliconFlowUsageFetcher.apiURL.host == "api.siliconflow.com")
+        #expect(SiliconFlowUsageFetcher.apiURLChina.host == "api.siliconflow.cn")
     }
 }

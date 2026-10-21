@@ -13,7 +13,6 @@ extension UsageStore {
     /// Seeds the loop before any snapshot exists (fresh launch in Manual mode).
     static let knownBalanceProviders: Set<UsageProvider> = [
         .deepseek, .kimi, .kimiCN, .stepfun, .stepfunCN, .openrouter, .vercelai, .cline,
-        .siliconflow, .siliconflowCN, .kimi, .kimiCN, .stepfun, .stepfunCN, .openrouter, .vercelai, .cline,
     ]
 
     func startBalanceSampler() {

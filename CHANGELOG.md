@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- SiliconFlow (both regions): the tile showed `410 … This endpoint is deprecated and is no longer available`. SiliconFlow retired `/v1/user/info`, its only balance endpoint, on 2026-08-14 and has not announced a replacement, so the balance cannot be read. The tile is now a key-health tile (`Key active · N models`) from `/v1/models`, and a bad key still shows its real error.
+
 ## 2.13.0 — 2026-10-21
 - **SiliconFlow** is a new provider: it shows your prepaid balance (paid and bonus) from `api.siliconflow.com`, in USD. Paste a key in Settings → Providers → SiliconFlow or export `SILICONFLOW_API_KEY`; it is off until you add one.
 - **SiliconFlow (China)** is its own slot for `siliconflow.cn` accounts, in CNY, with its own key (`SILICONFLOW_CN_API_KEY`). Like the other China slots it stays out of the menu until it has a key, and pairs under the SiliconFlow brand when you have both. Both balance readers follow SiliconFlow's documented `/v1/user/info` reply and have not been checked against a live key.
