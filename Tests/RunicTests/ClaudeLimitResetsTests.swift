@@ -45,7 +45,12 @@ struct ClaudeLimitResetsTests {
 
     @Test
     func `web payload carries the same resets`() throws {
-        let parsed = try ClaudeWebAPIFetcher._parseUsageResponseForTesting(Self.payload(grants: Self.launchGrant))
+        // The web parser checks expiry against the real clock, so the grant must
+        // outlive today; the launch grant's own window closed 2026-10-22.
+        let open = Self.launchGrant.replacingOccurrences(
+            of: "2026-10-22T16:00:00+00:00",
+            with: "2099-01-01T00:00:00+00:00")
+        let parsed = try ClaudeWebAPIFetcher._parseUsageResponseForTesting(Self.payload(grants: open))
         #expect(parsed.resetCredits?.availableCount == 1)
     }
 
