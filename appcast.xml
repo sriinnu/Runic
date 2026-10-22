@@ -3,6 +3,22 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.13.3</title>
+            <pubDate>Thu, 22 Oct 2026 22:41:55 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>186</sparkle:version>
+            <sparkle:shortVersionString>2.13.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.13.3</h2>
+<ul>
+<li>Release: every build and every release tag is signed. <code>release.sh</code> signs the tag explicitly (<code>git tag --sign</code>) and verifies it before pushing, instead of relying on the global <code>tag.gpgSign</code> setting. Local packaging no longer falls back to ad-hoc or unsigned: <code>RUNIC_SIGNING=adhoc</code> and the lldb debug build sign with the "Runic Dev" cert, <code>build-macos.sh</code> and the screenshot script stop when no identity is found, and <code>package_app.sh</code> checks the finished bundle and rejects an ad-hoc seal.</li>
+<li>SiliconFlow (China): its "Balance from browser sign-in" switch never showed in the list layout of Settings → Providers, because the China account rows only rendered their key field. China-slot switches now render under the key field (Kimi, z.ai, MiniMax, Qwen and StepFun China gain any switches they define too). A China slot connected through the browser sign-in also counts as configured, so SiliconFlow (China) shows in the menu without a <code>.cn</code> API key.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.3/Runic-2.13.3.zip" length="48783410" type="application/octet-stream" sparkle:edSignature="92Jyg+7H9TbUFyg3Qt/J+0H3fxTRdkKEaVX9D2BIx/iuvsXTCDGIPFrUlSYUoaNmhiEa3UsM0UvaXp8Msjt4Ag=="/>
+        </item>
+        <item>
             <title>2.13.2</title>
             <pubDate>Wed, 21 Oct 2026 17:31:57 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -32,15 +48,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.1/Runic182-177.delta" sparkle:deltaFrom="177" length="6091010" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BjygqCKZ0ZXN+7JE60gcrJnUlpYpFmCgXB9pPHb0UPcZCMbSBI+HfO5g37Ev68LN/XiATrjVGD6Sy70pnfXRAg=="/>
             </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.13.0</title>
-            <pubDate>Wed, 21 Oct 2026 12:50:37 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>177</sparkle:version>
-            <sparkle:shortVersionString>2.13.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.0/Runic-2.13.0.zip" length="48457829" type="application/octet-stream" sparkle:edSignature="oArIrcyLyB4ti1jMn7NIEO/ZrnvEr4Ud2mv0FA7qat0NJtRsyQK3WiWmhhEq/g9fUHPyL3WfimEmRlKKzIDMCw=="/>
         </item>
     </channel>
 </rss>
