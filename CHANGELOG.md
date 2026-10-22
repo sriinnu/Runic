@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.13.3 — 2026-10-22
 - Release: every build and every release tag is signed. `release.sh` signs the tag explicitly (`git tag --sign`) and verifies it before pushing, instead of relying on the global `tag.gpgSign` setting. Local packaging no longer falls back to ad-hoc or unsigned: `RUNIC_SIGNING=adhoc` and the lldb debug build sign with the "Runic Dev" cert, `build-macos.sh` and the screenshot script stop when no identity is found, and `package_app.sh` checks the finished bundle and rejects an ad-hoc seal.
 - SiliconFlow (China): its "Balance from browser sign-in" switch never showed in the list layout of Settings → Providers, because the China account rows only rendered their key field. China-slot switches now render under the key field (Kimi, z.ai, MiniMax, Qwen and StepFun China gain any switches they define too). A China slot connected through the browser sign-in also counts as configured, so SiliconFlow (China) shows in the menu without a `.cn` API key.
 
