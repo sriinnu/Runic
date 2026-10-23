@@ -11,9 +11,10 @@ How a Runic release ships. It is one script, `Scripts/release.sh`, run from a cl
 1. **Preflight**: working tree clean, the changelog has a dated section for the version, the appcast build number is strictly higher than the last release, `package.json`, `version.env` and `RunicVersion.swift` agree.
 2. **Gates**: `swiftformat --lint`, `swiftlint --strict` and the full test suite. Any failure aborts before anything is built for publishing.
 3. **Build, sign, notarize**: a universal release build, Developer ID signing, Apple notarization. The script refuses to package a binary older than its sources, and fails if the dSYM and binary UUIDs differ.
-4. **Tag and publish**: a signed annotated tag `vX.Y.Z`, then a GitHub release with `Runic-X.Y.Z.zip`, the dSYM and the delta updates.
+4. **Tag and publish**: a signed annotated tag `vX.Y.Z`, then a draft GitHub release that gets `Runic-X.Y.Z.zip`, the dSYM and the delta updates before it is published. Published releases are immutable: their tag and files can't change afterwards.
 5. **Appcast**: Sparkle's appcast is regenerated and signed. Because `main` requires pull requests, the script opens a PR from `sriinnu/appcast-X.Y.Z`; merging it makes the update live.
 6. **Homebrew**: the cask in `sriinnu/homebrew-tap` is bumped with the zip's sha256 and merged.
+7. **npm**: publishing the release stages `@sriinnu/runic` from GitHub Actions through npm trusted publishing, with provenance. It goes live once the maintainer approves it with a security key.
 
 ## After a release
 

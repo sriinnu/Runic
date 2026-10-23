@@ -68,10 +68,12 @@ The appcast feed is the committed `appcast.xml` on `main`; the GitHub release ca
 
 ## Tag & release
 ```
-git tag v<version>
+git tag --sign v<version> --message "Runic <version>"
 ./Scripts/make_appcast.sh ...
-# upload zip + dSYM zip to Releases
-# commit and push appcast.xml to main
+# create the release as a draft with the zip, dSYM zip and deltas, then publish it
+# (published releases are immutable)
+# open a PR with appcast.xml; it lands on main after CI passes
+# approve the staged npm version (publishing the release stages it)
 ```
 
 ## Homebrew (Cask)
