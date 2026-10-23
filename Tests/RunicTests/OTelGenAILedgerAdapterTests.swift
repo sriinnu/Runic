@@ -281,6 +281,8 @@ struct OTelGenAILedgerAdapterTests {
         #expect(stored.contains("secret prompt") == false)
         #expect(stored.contains("secret response") == false)
         #expect(stored.contains("input_tokens"))
+        let permissions = try FileManager.default.attributesOfItem(atPath: output.path)[.posixPermissions] as? Int
+        #expect(permissions == 0o600)
 
         let source = OTelGenAIFileLedgerSource(
             files: [output],
@@ -371,6 +373,49 @@ struct OTelGenAILedgerAdapterTests {
         #expect(text.contains(#""accepted":1"#))
         #expect(FileManager.default.fileExists(atPath: output.path))
     }
+
+    @Test
+    func `http ingest rejects requests without json content type`() async {
+        let output = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-http-otel-\(UUID().uuidString).jsonl")
+        let sink = OTelGenAIIngestionSink(configuration: OTelGenAICollectorConfiguration(outputFile: output))
+        let body = #"{"attributes":{"gen_ai.system":"openai","gen_ai.usage.input_tokens":1}}"#
+        let request = "POST /v1/traces HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: \(body.utf8.count)\r\n\r\n\(body)"
+
+        let response = await OTelGenAIHTTPIngestHandler.handle(Data(request.utf8), sink: sink)
+
+        #expect(String(bytes: response, encoding: .utf8)?.contains("415 Unsupported Media Type") == true)
+        #expect(!FileManager.default.fileExists(atPath: output.path))
+    }
+
+    #if canImport(Network)
+    @Test
+    func `local collector rejects foreign hosts and browser origins`() {
+        func request(_ headers: String) -> Data {
+            Data("GET /events HTTP/1.1\r\n\(headers)\r\n\r\n".utf8)
+        }
+
+        let token = String(repeating: "a", count: 64)
+        let authorized = "Authorization: Bearer \(token)"
+        func permits(_ headers: String) -> Bool {
+            OTelGenAIHTTPCollectorRequestPolicy.permits(
+                request(headers),
+                boundHost: "127.0.0.1",
+                port: 4318,
+                authorizationToken: token)
+        }
+
+        #expect(permits("Host: 127.0.0.1:4318\r\n\(authorized)"))
+        #expect(!permits("Host: attacker.example\r\n\(authorized)"))
+        #expect(!permits("Host: 127.0.0.1:4318\r\nOrigin: https://attacker.example\r\n\(authorized)"))
+        #expect(!permits("Host: 127.0.0.1\r\nHost: attacker.example\r\n\(authorized)"))
+        #expect(!permits("Host: 127.0.0.1:4318"))
+        #expect(!permits("Host: 127.0.0.1:4318\r\nAuthorization: Bearer wrong"))
+        #expect(!permits("Host: 127.0.0.1:4318\r\n\(authorized)\r\n\(authorized)"))
+        #expect(!OTelGenAIHTTPCollectorRequestPolicy.isLoopbackHost("0.0.0.0"))
+        #expect(!OTelGenAIHTTPCollectorRequestPolicy.isLoopbackHost("192.168.1.1"))
+    }
+    #endif
 
     @Test
     func `http ingest publishes one multiplexed local event`() async {

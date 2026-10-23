@@ -21,7 +21,11 @@ extension GenericProviderFetcher {
             throw FetchError.invalidURL(urlString)
         }
 
-        guard url.scheme?.lowercased() == "https" else {
+        guard url.scheme?.lowercased() == "https",
+              url.host != nil,
+              components.user == nil,
+              components.password == nil
+        else {
             throw FetchError.insecureURL(urlString)
         }
 

@@ -15,7 +15,7 @@ extension GenericProviderFetcher {
 
         try await self.addAuthHeaders(to: &request)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await self.session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FetchError.invalidResponse
@@ -46,7 +46,7 @@ extension GenericProviderFetcher {
 
         try await self.addAuthHeaders(to: &request)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await self.session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FetchError.invalidResponse

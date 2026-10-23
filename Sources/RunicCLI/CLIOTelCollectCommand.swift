@@ -40,6 +40,7 @@ extension RunicCLI {
             let collector = try OTelGenAIHTTPCollector(configuration: configuration)
             collector.start()
             print("Runic OTLP JSON collector listening on http://\(host):\(port)/v1/traces")
+            print("Authorization: Bearer \(collector.authorizationToken)")
             print("Writing sanitized metric JSONL to \(output.path)")
             print("Press Ctrl-C to stop.")
             while !Task.isCancelled {

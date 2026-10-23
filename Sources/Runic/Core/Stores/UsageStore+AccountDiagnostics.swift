@@ -5,8 +5,8 @@ extension UsageStore {
     /// `~/Library/Application Support/Runic/diagnostics/accounts.json`: one row
     /// per account the last refresh visited, written after every refresh
     /// cycle. Until the menu shows accounts, this is where a second login is
-    /// seen to land (or fail). No tokens, no emails — percentages, resets,
-    /// source label and the error text only.
+    /// seen to land (or fail). No tokens; display names may contain email
+    /// addresses. Also includes percentages, resets, source labels, and errors.
     func persistAccountDiagnostics() {
         var rows: [[String: Any]] = []
         let formatter = ISO8601DateFormatter()
@@ -41,8 +41,16 @@ extension UsageStore {
             .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),
             let json = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
         else { return }
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? json.write(to: directory.appendingPathComponent("accounts.json"), options: .atomic)
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700])
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+            let file = directory.appendingPathComponent("accounts.json")
+            try json.write(to: file, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        } catch {}
     }
 
     private static func describe(_ credential: CredentialRef?) -> String {
