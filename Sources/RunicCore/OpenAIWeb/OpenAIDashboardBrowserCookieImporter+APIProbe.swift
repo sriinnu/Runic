@@ -27,7 +27,7 @@ extension OpenAIDashboardBrowserCookieImporter {
             request.setValue("application/json", forHTTPHeaderField: "Accept")
 
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await ProviderRequestSession.data(for: request)
                 let status = (response as? HTTPURLResponse)?.statusCode ?? -1
                 logger("API \(url.host ?? "chatgpt.com") \(url.path) status=\(status)")
                 guard status >= 200, status < 300 else { continue }

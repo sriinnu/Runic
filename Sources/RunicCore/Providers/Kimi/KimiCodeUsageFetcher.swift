@@ -93,7 +93,7 @@ enum KimiCodeUsageFetcher {
         request.timeoutInterval = Self.requestTimeout
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw KimiAPIError.invalidResponse
         }

@@ -49,7 +49,7 @@ public struct ZaiUsageFetcher: Sendable {
         quotaAPIURL: String) async throws -> (ZaiLimitEntry?, ZaiLimitEntry?, String?)
     {
         let request = try self.makeRequest(url: quotaAPIURL, apiKey: apiKey)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ZaiUsageError.networkError("Invalid response")
@@ -110,7 +110,7 @@ public struct ZaiUsageFetcher: Sendable {
         let (startTime, endTime) = self.rolling24hWindow()
         let urlString = "\(modelUsageAPIURL)?startTime=\(startTime)&endTime=\(endTime)"
         let request = try self.makeRequest(url: urlString, apiKey: apiKey)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw ZaiUsageError.apiError("model-usage endpoint returned non-200")
@@ -173,7 +173,7 @@ public struct ZaiUsageFetcher: Sendable {
         let (startTime, endTime) = self.rolling24hWindow()
         let urlString = "\(toolUsageAPIURL)?startTime=\(startTime)&endTime=\(endTime)"
         let request = try self.makeRequest(url: urlString, apiKey: apiKey)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw ZaiUsageError.apiError("tool-usage endpoint returned non-200")

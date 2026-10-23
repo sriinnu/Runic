@@ -156,7 +156,7 @@ public enum OllamaCloudWebUsageFetcher {
         request.addValue(cookieHeader, forHTTPHeaderField: "Cookie")
         request.addValue("text/html", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 15
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw OllamaCloudAPIError.invalidResponse }
         if http.statusCode == 401 || http.statusCode == 403 { return nil }
         if let error = OllamaCloudAPIError.from(statusCode: http.statusCode) { throw error }

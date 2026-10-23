@@ -263,7 +263,7 @@ public struct QwenUsageFetcher: Sendable {
         }
 
         let request = self.makeRequest(url: url, apiKey: apiKey)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw QwenUsageError.networkError("Invalid response")

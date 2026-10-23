@@ -89,7 +89,7 @@ enum VercelAIUsageFetcher {
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw VercelAIAPIError.invalidResponse
         }
@@ -108,7 +108,7 @@ enum VercelAIUsageFetcher {
         request.timeoutInterval = Self.requestTimeout
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw VercelAIAPIError.invalidResponse
         }

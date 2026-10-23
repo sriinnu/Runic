@@ -20,7 +20,7 @@ extension CursorStatusProbe {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw CursorStatusProbeError.networkError("Invalid response")
@@ -51,7 +51,7 @@ extension CursorStatusProbe {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw CursorStatusProbeError.networkError("Failed to fetch user info")

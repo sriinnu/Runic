@@ -38,7 +38,7 @@ extension ClaudeWebAPIFetcher {
             request.timeoutInterval = 20
 
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await ProviderRequestSession.data(for: request)
                 let http = response as? HTTPURLResponse
                 let contentType = http?.value(forHTTPHeaderField: "Content-Type")
                 let truncated = data.prefix(Self.maxProbeBytes)
