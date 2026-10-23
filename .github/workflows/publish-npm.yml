@@ -1,7 +1,10 @@
 name: Publish npm
 
-# Publishes @sriinnu/runic when a GitHub release is published (Scripts/release.sh
-# creates it). Re-run by hand for an existing tag with "Run workflow".
+# Stages @sriinnu/runic when a GitHub release is published (Scripts/release.sh
+# publishes it last). A staged version goes live only after the maintainer
+# approves it with 2FA (npmjs.com, or `npm stage approve <id>`); this workflow
+# can't make anything live on its own. Re-run by hand for an existing tag with
+# "Run workflow".
 on:
   release:
     types: [published]
@@ -20,14 +23,14 @@ concurrency:
 
 jobs:
   publish:
-    name: Publish @sriinnu/runic
+    name: Stage @sriinnu/runic
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: npm
     permissions:
       contents: read
-      # Signs the npm provenance attestation, and is the credential for npm
-      # trusted publishing once it is configured for this workflow on npmjs.com.
+      # Signs the npm provenance attestation, and is the npm trusted publishing
+      # credential (configured for this workflow + environment on npmjs.com).
       id-token: write
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
@@ -50,13 +53,13 @@ jobs:
           [[ "v$pkg" == "$TAG" && "$env" == "$pkg" ]] || {
             echo "::error::tag $TAG, package.json $pkg and version.env $env disagree"; exit 1; }
           echo "VERSION=$pkg" >> "$GITHUB_ENV"
-      - name: Publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Auth is npm trusted publishing (OIDC via id-token above); no token exists.
+      - name: Stage
         run: |
           name=$(node -p "require('./package.json').name")
           if [[ "$(npm view "$name@$VERSION" version 2>/dev/null)" == "$VERSION" ]]; then
             echo "$name@$VERSION is already on npm."
             exit 0
           fi
-          npm publish --provenance --access public
+          npm stage publish --provenance --access public
+          echo "::notice::$name@$VERSION is staged. Approve it on npmjs.com or with 'npm stage approve'."

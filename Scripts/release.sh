@@ -54,7 +54,11 @@ git tag --sign "$TAG" --message "${APP_NAME} ${MARKETING_VERSION}"
 git tag --verify "$TAG" >/dev/null 2>&1 || err "Tag $TAG has no valid signature"
 git push origin "$TAG"
 
+# Releases are immutable once published (repo setting): the tag and assets are
+# frozen. So the release starts as a draft, gets every asset (deltas included),
+# and is published last.
 gh release create "$TAG" ${APP_NAME}-${MARKETING_VERSION}.zip ${APP_NAME}-${MARKETING_VERSION}.dSYM.zip \
+  --draft \
   --title "${APP_NAME} ${MARKETING_VERSION}" \
   --notes-file "$NOTES_FILE"
 
@@ -69,6 +73,11 @@ verify_appcast_entry "$APPCAST" "$MARKETING_VERSION" "$KEY_FILE"
 # release before anyone reads it.
 upload_deltas "$TAG" "$APP_NAME"
 check_appcast_deltas "$APPCAST" "$TAG" "$BUILD_NUMBER"
+check_assets "$TAG" "$ARTIFACT_PREFIX"
+
+# Publishing freezes the release and fires .github/workflows/publish-npm.yml,
+# which stages the npm package.
+gh release edit "$TAG" --draft=false
 
 git add "$APPCAST"
 git commit -m "docs: update appcast for ${MARKETING_VERSION}"
@@ -80,23 +89,15 @@ if [[ "${RUN_SPARKLE_UPDATE_TEST:-0}" == "1" ]]; then
   "$ROOT/Scripts/test_live_update.sh" "$PREV_TAG" "v${MARKETING_VERSION}"
 fi
 
-check_assets "$TAG" "$ARTIFACT_PREFIX"
-
 # Bump the Homebrew cask in the tap from the just-published artifact. Best-effort:
 # the tag and release assets already exist, so a tap hiccup must not hide them.
 # On failure, inspect the tap PR and rerun Scripts/update-homebrew-cask.sh if safe.
 "$ROOT/Scripts/update-homebrew-cask.sh" || \
   echo "WARN: Homebrew cask bump failed; the release IS published. Re-run Scripts/update-homebrew-cask.sh." >&2
 
-# Publish the same version to npm (README, LICENSE, notices, changelog and the
-# CLI installer; see "files" in package.json). Best-effort like the cask: the
-# release is already out, and re-running is safe because a published version is skipped.
-NPM_NAME=$(node -p "require('./package.json').name")
-if [[ "$(npm view "${NPM_NAME}@${MARKETING_VERSION}" version 2>/dev/null)" == "$MARKETING_VERSION" ]]; then
-  echo "npm: ${NPM_NAME}@${MARKETING_VERSION} is already published."
-else
-  npm publish --access public || \
-    echo "WARN: npm publish failed; the release IS published. Run 'npm publish --access public' from main." >&2
-fi
+# npm is not published from here: publishing the GitHub release above runs
+# .github/workflows/publish-npm.yml, which stages the package with provenance
+# (npm trusted publishing, no token). It goes live after approval with 2FA:
+# npmjs.com → @sriinnu/runic, or `npm stage list @sriinnu/runic` + `npm stage approve <id>`.
 
-echo "Release assets published. Merge the appcast PR and verify the live update feed to complete ${MARKETING_VERSION}."
+echo "Release published. Merge the appcast PR, approve the staged npm version, and verify the live update feed to complete ${MARKETING_VERSION}."

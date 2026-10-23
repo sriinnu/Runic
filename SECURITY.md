@@ -15,5 +15,6 @@ Only the latest release gets security fixes. Runic updates itself through Sparkl
 ## How releases are protected
 
 - Release builds are signed with a Developer ID certificate and notarized by Apple. Sparkle updates are verified with an EdDSA key.
-- Release tags are signed and can't be moved or deleted. `main` changes only through pull requests.
-- The npm package is published from GitHub Actions with a provenance attestation that links it to the tagged source.
+- Every release has a signed tag, and tags can't be moved or deleted. Published GitHub releases are immutable: their tag and assets can't be changed afterwards.
+- `main` changes only through pull requests with passing CI and signed commits.
+- The npm package is staged from GitHub Actions through npm trusted publishing (no stored token), with a provenance attestation that links it to the tagged source. It goes live only after the maintainer approves it with two-factor authentication.
