@@ -2,13 +2,16 @@
 set -euo pipefail
 
 # Verifies that the appcast entry for the given version has a valid ed25519 signature
-# and that the enclosure length matches the downloaded archive.
+# and that the enclosure length matches the archive. With a zip path, that local file
+# is checked (release.sh does this before publishing, while the release is still a
+# draft and its URL is not public); without one, the enclosure URL is downloaded.
 #
-# Usage: SPARKLE_PRIVATE_KEY_FILE=/path/to/key ./Scripts/verify_appcast.sh [version]
+# Usage: SPARKLE_PRIVATE_KEY_FILE=/path/to/key ./Scripts/verify_appcast.sh [version] [zip]
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 VERSION=${1:-$(source "$ROOT/version.env" && echo "$MARKETING_VERSION")}
 APPCAST="${ROOT}/appcast.xml"
+LOCAL_ZIP=${2:-}
 
 if [[ -z "${SPARKLE_PRIVATE_KEY_FILE:-}" ]]; then
   echo "SPARKLE_PRIVATE_KEY_FILE is required" >&2
@@ -78,8 +81,15 @@ URL=$(sed -n '1p' "$TMP_META")
 SIG=$(sed -n '2p' "$TMP_META")
 LEN_EXPECTED=$(sed -n '3p' "$TMP_META")
 
-echo "Downloading enclosure: $URL"
-curl -L -o "$TMP_ZIP" "$URL"
+if [[ -n "$LOCAL_ZIP" ]]; then
+  [[ -f "$LOCAL_ZIP" ]] || { echo "Zip not found: $LOCAL_ZIP" >&2; exit 1; }
+  echo "Checking local archive: $LOCAL_ZIP"
+  cp "$LOCAL_ZIP" "$TMP_ZIP"
+else
+  # A just-published asset can answer from a cached 404 for a short while.
+  echo "Downloading enclosure: $URL"
+  curl -fL --retry 6 --retry-delay 10 --retry-all-errors -o "$TMP_ZIP" "$URL"
+fi
 
 LEN_ACTUAL=$(stat -f%z "$TMP_ZIP")
 if [[ "$LEN_ACTUAL" != "$LEN_EXPECTED" ]]; then
