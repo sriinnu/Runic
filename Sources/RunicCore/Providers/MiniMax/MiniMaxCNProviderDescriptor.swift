@@ -28,7 +28,7 @@ public enum MiniMaxCNProviderDescriptor {
                 defaultEnabled: false,
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
-                dashboardURL: "https://platform.minimaxi.com/user-center/payment/coding-plan",
+                dashboardURL: "https://platform.minimaxi.com/console/plan",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
                     supportsModelBreakdown: false,

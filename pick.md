@@ -18,6 +18,8 @@
 - Built CLI smoke check using a temporary ledger: no token returned 403, foreign Origin returned 403, authorized invalid payload returned 422. The token was not saved in the test output.
 - PR #224's Cloudflare and macOS lint/build/test checks passed on `e51d0e0`.
 
+- Redirect follow-up (2.13.4): an unauthenticated sweep of every provider URL found two fetchers that detected sign-out by following the login bounce (SiliconFlow console, Ollama Cloud web). They now read the rejected redirect's `Location` via `ProviderRequestSession.redirectTarget(of:)`. MiniMax's coding-plan page moved to `/console/plan`. Remaining 3xx hits are browser-only dashboard links.
+
 ## Still open
 
 1. **MCP execution boundary:** An explicitly enabled plugin is a native executable with the user's filesystem and network access. Environment filtering and consent do not confine it. Review `Sources/RunicCore/RunicMCPPlugins.swift` and `Sources/RunicCLI/RunicMCPCommand.swift`; design an enforceable capability or isolation boundary before promising untrusted plugins are safe. Account for package changes after enablement.

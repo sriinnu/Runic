@@ -159,9 +159,10 @@ public enum OllamaCloudWebUsageFetcher {
         let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw OllamaCloudAPIError.invalidResponse }
         if http.statusCode == 401 || http.statusCode == 403 { return nil }
-        if let error = OllamaCloudAPIError.from(statusCode: http.statusCode) { throw error }
-        let path = http.url?.path ?? ""
+        // A dead session is answered with a 303 to /signin; the bounce is not followed.
+        let path = (ProviderRequestSession.redirectTarget(of: http) ?? http.url)?.path ?? ""
         if path.hasPrefix("/signin") || path.hasPrefix("/login") { return nil }
+        if let error = OllamaCloudAPIError.from(statusCode: http.statusCode) { throw error }
         guard let html = String(data: data, encoding: .utf8) else { throw OllamaCloudAPIError.decodingError }
         return OllamaCloudWebParser.parse(html: html)
     }
