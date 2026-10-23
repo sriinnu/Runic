@@ -67,7 +67,9 @@ SPARKLE_PRIVATE_KEY_FILE="$KEY_FILE" \
   "${APP_NAME}-${MARKETING_VERSION}.zip" \
   "https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml"
 
-verify_appcast_entry "$APPCAST" "$MARKETING_VERSION" "$KEY_FILE"
+# The release is still a draft, so its URLs aren't public: check the appcast
+# against the local zip that was uploaded to it.
+verify_appcast_entry "$APPCAST" "$MARKETING_VERSION" "$KEY_FILE" "${APP_NAME}-${MARKETING_VERSION}.zip"
 
 # The appcast now points at deltas that only exist locally; attach them to the
 # release before anyone reads it.
@@ -78,6 +80,9 @@ check_assets "$TAG" "$ARTIFACT_PREFIX"
 # Publishing freezes the release and fires .github/workflows/publish-npm.yml,
 # which stages the npm package.
 gh release edit "$TAG" --draft=false
+
+# Now the public URL must serve the same bytes before the appcast points at it.
+verify_appcast_entry "$APPCAST" "$MARKETING_VERSION" "$KEY_FILE"
 
 git add "$APPCAST"
 git commit -m "docs: update appcast for ${MARKETING_VERSION}"

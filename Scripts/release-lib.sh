@@ -176,12 +176,13 @@ verify_appcast_entry() {
   local appcast="$1"
   local version="$2"
   local key_file="$3"
+  local zip="${4:-}"
   local verify_script="${RELEASE_LIB_ROOT}/Scripts/verify_appcast.sh"
 
   [[ -f "$appcast" ]] || err "Appcast not found: $appcast"
   [[ -x "$verify_script" ]] || err "verify_appcast.sh not executable: $verify_script"
 
-  SPARKLE_PRIVATE_KEY_FILE="$key_file" "$verify_script" "$version"
+  SPARKLE_PRIVATE_KEY_FILE="$key_file" "$verify_script" "$version" ${zip:+"$zip"}
 }
 
 check_assets() {
