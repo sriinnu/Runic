@@ -3,6 +3,25 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.13.4</title>
+            <pubDate>Fri, 23 Oct 2026 13:19:46 +0200</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>187</sparkle:version>
+            <sparkle:shortVersionString>2.13.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.13.4</h2>
+<ul>
+<li>Security: provider credentials stay on the endpoint they were meant for. Provider API, OAuth, browser-cookie and local-model requests no longer follow redirects, so a redirecting server can't carry your key or cookies to another host. A signed-out SiliconFlow or Ollama Cloud browser session is still recognized from the sign-in bounce and says so, and the MiniMax coding-plan page moved to <code>platform.minimax.io/console/plan</code>.</li>
+<li>Security: <code>runic otel-collect</code> listens on loopback only and prints a fresh bearer token at each start. OTLP exporters and <code>/events</code> clients must now send <code>Authorization: Bearer <token></code>. Requests with a foreign Host or Origin, the wrong content type, or an oversized body are refused.</li>
+<li>Security: custom provider URLs must be HTTPS without a user name or password in them. The custom provider config, account diagnostics and the default telemetry ledger are readable by your user only.</li>
+<li>MCP plugins: newly discovered packages start disabled, and an enabled plugin gets only a small environment allowlist instead of your provider tokens. An enabled plugin is still a native program with your file and network access; only enable ones you trust.</li>
+<li>Team sync: encryption fails closed when its Keychain key can't be read or saved, instead of generating a replacement key.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.4/Runic-2.13.4.zip" length="48850857" type="application/octet-stream" sparkle:edSignature="CFryzUVU7LamFIyZm+Qfol83VZZrfnUvyfrJqCPXc5bUZiBAleT8A+Z28Qg74b9JN5HonollYmbye65VKhKHAA=="/>
+        </item>
+        <item>
             <title>2.13.3</title>
             <pubDate>Thu, 22 Oct 2026 22:41:55 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -35,18 +54,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.2/Runic184-182.delta" sparkle:deltaFrom="182" length="5623326" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="HFAW3/4jYQZSmtpsjBrg+wa/9MfOr8KBlbixlr7qC7dpQvMxzmgaGMaZRK54hdGj9kcTktbsXaep2ysktTRwCA=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.2/Runic184-177.delta" sparkle:deltaFrom="177" length="6906366" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="UREbk6Du4lwsGpzDsHei2H34eqBJynLisHO6PwhPjr2CZG6SdrwLk4T4MbpT/G2BJG+0JWtcjKq9BLhgX67CAQ=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.13.1</title>
-            <pubDate>Wed, 21 Oct 2026 14:02:18 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>182</sparkle:version>
-            <sparkle:shortVersionString>2.13.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.1/Runic-2.13.1.zip" length="48648673" type="application/octet-stream" sparkle:edSignature="P0nRTPjnJM4uxEr9mcWmFan2TwhV8cEwzw+kNQcqxvmus/T/TX9KhKUu7Mt/+CyeXeLHLH5cy9N8nXreo3sxDw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.1/Runic182-177.delta" sparkle:deltaFrom="177" length="6091010" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BjygqCKZ0ZXN+7JE60gcrJnUlpYpFmCgXB9pPHb0UPcZCMbSBI+HfO5g37Ev68LN/XiATrjVGD6Sy70pnfXRAg=="/>
             </sparkle:deltas>
         </item>
     </channel>
