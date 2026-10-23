@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.13.5 — 2026-10-23
+- Release integrity: the app is the same as 2.13.4; this release is the first through the hardened release path. The GitHub release is immutable once published (its tag and files can't be changed or swapped afterwards), and its tag is signed like every release tag.
+- npm: `@sriinnu/runic` is published from GitHub Actions through npm trusted publishing, with a provenance attestation that ties the package to this tag. No publish token exists, and each version goes live only after the maintainer approves it with a hardware security key.
+- Website: runic.srinivas.dev sends HSTS and Cross-Origin-Opener-Policy and builds from pinned dependencies.
+
 ## 2.13.4 — 2026-10-23
 - Security: provider credentials stay on the endpoint they were meant for. Provider API, OAuth, browser-cookie and local-model requests no longer follow redirects, so a redirecting server can't carry your key or cookies to another host. A signed-out SiliconFlow or Ollama Cloud browser session is still recognized from the sign-in bounce and says so, and the MiniMax coding-plan page moved to `platform.minimax.io/console/plan`.
 - Security: `runic otel-collect` listens on loopback only and prints a fresh bearer token at each start. OTLP exporters and `/events` clients must now send `Authorization: Bearer <token>`. Requests with a foreign Host or Origin, the wrong content type, or an oversized body are refused.
