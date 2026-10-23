@@ -16,6 +16,10 @@ permissions:
 env:
   SWIFTFORMAT_VERSION: 0.60.1
   SWIFTLINT_VERSION: 0.63.2
+  # sha256 of the release zips above (matches the GitHub release asset digests).
+  # Bump together with the versions; a mismatch fails the job before anything runs.
+  SWIFTFORMAT_SHA256: 23b50c75f4223c477e822833c4cf819a1c9abbb6d00e892900bda1c3a8231afd
+  SWIFTLINT_SHA256: c59a405c85f95b92ced677a500804e081596a4cae4a6a485af76065557d6ed29
 
 jobs:
   # One job on purpose: hosted macOS runners are scarce, and a second job can
@@ -25,7 +29,9 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - name: Toolchain
         run: swift --version
       # Same gates Scripts/release.sh and .githooks/pre-commit enforce.
@@ -38,6 +44,8 @@ jobs:
             "https://github.com/nicklockwood/SwiftFormat/releases/download/$SWIFTFORMAT_VERSION/swiftformat.zip"
           curl -sfL -o "$RUNNER_TEMP/swiftlint.zip" \
             "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT_VERSION/portable_swiftlint.zip"
+          echo "$SWIFTFORMAT_SHA256  $RUNNER_TEMP/swiftformat.zip" | shasum -a 256 -c -
+          echo "$SWIFTLINT_SHA256  $RUNNER_TEMP/swiftlint.zip" | shasum -a 256 -c -
           unzip -o -q "$RUNNER_TEMP/swiftformat.zip" -d "$RUNNER_TEMP/lint"
           unzip -o -q "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/lint"
           chmod +x "$RUNNER_TEMP/lint/swiftformat" "$RUNNER_TEMP/lint/swiftlint"
@@ -49,7 +57,7 @@ jobs:
         run: |
           "$RUNNER_TEMP/lint/swiftlint" version
           "$RUNNER_TEMP/lint/swiftlint" --strict
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .build
           key: spm-macos-${{ hashFiles('Package.resolved', 'Package.swift') }}
