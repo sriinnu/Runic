@@ -134,7 +134,7 @@ public struct TeamMembershipRecord: SyncableRecord {
 
         var email: String?
         if let encryptedEmail = ckRecord["email"] as? String {
-            email = try? teamSyncDecryptString(encryptedEmail)
+            email = try teamSyncDecryptString(encryptedEmail)
         }
 
         return TeamMembershipRecord(

@@ -335,10 +335,10 @@ public enum SiliconFlowConsoleFetcher {
         if let subject { request.addValue(subject, forHTTPHeaderField: "X-Subject-ID") }
         request.timeoutInterval = 15
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw SiliconFlowAPIError.invalidResponse }
-        let finalHost = http.url?.host
-        // A dead session is bounced to account.siliconflow.* (the login page).
+        let finalHost = ProviderRequestSession.redirectTarget(of: http)?.host ?? http.url?.host
+        // A dead session is bounced to account.siliconflow.* (the login page); the bounce is not followed.
         if finalHost?.hasPrefix("account.") == true || http.statusCode == 401 || http.statusCode == 403 {
             return (.signedOut, http.statusCode, finalHost, data)
         }

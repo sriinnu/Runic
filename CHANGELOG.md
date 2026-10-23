@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.13.4 — 2026-10-23
+- Security: provider credentials stay on the endpoint they were meant for. Provider API, OAuth, browser-cookie and local-model requests no longer follow redirects, so a redirecting server can't carry your key or cookies to another host. A signed-out SiliconFlow or Ollama Cloud browser session is still recognized from the sign-in bounce and says so, and the MiniMax coding-plan page moved to `platform.minimax.io/console/plan`.
+- Security: `runic otel-collect` listens on loopback only and prints a fresh bearer token at each start. OTLP exporters and `/events` clients must now send `Authorization: Bearer <token>`. Requests with a foreign Host or Origin, the wrong content type, or an oversized body are refused.
+- Security: custom provider URLs must be HTTPS without a user name or password in them. The custom provider config, account diagnostics and the default telemetry ledger are readable by your user only.
+- MCP plugins: newly discovered packages start disabled, and an enabled plugin gets only a small environment allowlist instead of your provider tokens. An enabled plugin is still a native program with your file and network access; only enable ones you trust.
+- Team sync: encryption fails closed when its Keychain key can't be read or saved, instead of generating a replacement key.
+
 ## 2.13.3 — 2026-10-22
 - Release: every build and every release tag is signed. `release.sh` signs the tag explicitly (`git tag --sign`) and verifies it before pushing, instead of relying on the global `tag.gpgSign` setting. Local packaging no longer falls back to ad-hoc or unsigned: `RUNIC_SIGNING=adhoc` and the lldb debug build sign with the "Runic Dev" cert, `build-macos.sh` and the screenshot script stop when no identity is found, and `package_app.sh` checks the finished bundle and rejects an ad-hoc seal.
 - SiliconFlow (China): its "Balance from browser sign-in" switch never showed in the list layout of Settings → Providers, because the China account rows only rendered their key field. China-slot switches now render under the key field (Kimi, z.ai, MiniMax, Qwen and StepFun China gain any switches they define too). A China slot connected through the browser sign-in also counts as configured, so SiliconFlow (China) shows in the menu without a `.cn` API key.

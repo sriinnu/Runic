@@ -40,7 +40,7 @@ public enum MiniMaxWebUsageError: LocalizedError, Sendable {
 }
 
 public struct MiniMaxWebUsageFetcher: Sendable {
-    private static let codingPlanURL = URL(string: "https://platform.minimax.io/user-center/payment/coding-plan")!
+    private static let codingPlanURL = URL(string: "https://platform.minimax.io/console/plan")!
     private static let remainsURL = URL(string: "https://platform.minimax.io/v1/api/openplatform/coding_plan/remains")!
 
     public init() {}
@@ -108,7 +108,7 @@ public struct MiniMaxWebUsageFetcher: Sendable {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw MiniMaxWebUsageError.networkError("Invalid response")
         }
@@ -138,7 +138,7 @@ public struct MiniMaxWebUsageFetcher: Sendable {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw MiniMaxWebUsageError.networkError("Invalid response")
         }

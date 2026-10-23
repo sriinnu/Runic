@@ -22,7 +22,7 @@ public enum MiniMaxProviderDescriptor {
                 isPrimaryProvider: false,
                 usesAccountFallback: false,
                 browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
-                dashboardURL: "https://platform.minimax.io/user-center/payment/coding-plan",
+                dashboardURL: "https://platform.minimax.io/console/plan",
                 statusPageURL: nil,
                 usageCoverage: ProviderUsageCoverage(
                     supportsModelBreakdown: false,

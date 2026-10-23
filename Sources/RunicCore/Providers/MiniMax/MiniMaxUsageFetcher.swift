@@ -337,7 +337,7 @@ public struct MiniMaxUsageFetcher: Sendable {
         }
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await ProviderRequestSession.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 return (data, response)
             }
@@ -346,7 +346,7 @@ public struct MiniMaxUsageFetcher: Sendable {
                     "status": "\(http.statusCode)",
                 ])
                 try await Task.sleep(nanoseconds: 2_000_000_000)
-                return try await URLSession.shared.data(for: request)
+                return try await ProviderRequestSession.data(for: request)
             }
             return (data, response)
         } catch {
@@ -355,7 +355,7 @@ public struct MiniMaxUsageFetcher: Sendable {
                     "error": "\(error)",
                 ])
                 try await Task.sleep(nanoseconds: 2_000_000_000)
-                return try await URLSession.shared.data(for: request)
+                return try await ProviderRequestSession.data(for: request)
             }
             throw error
         }

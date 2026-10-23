@@ -82,7 +82,7 @@ enum MuseUsageFetcher {
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Accept")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw MuseAPIError.invalidResponse
         }

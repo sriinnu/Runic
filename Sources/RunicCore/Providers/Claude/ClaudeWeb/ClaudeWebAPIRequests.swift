@@ -13,7 +13,7 @@ extension ClaudeWebAPIFetcher {
         request.httpMethod = "GET"
         request.timeoutInterval = 15
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FetchError.invalidResponse
@@ -45,7 +45,7 @@ extension ClaudeWebAPIFetcher {
         request.httpMethod = "GET"
         request.timeoutInterval = 15
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FetchError.invalidResponse
@@ -77,7 +77,7 @@ extension ClaudeWebAPIFetcher {
         request.timeoutInterval = 15
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await ProviderRequestSession.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { return nil }
             logger?("Overage API status: \(httpResponse.statusCode)")
             guard httpResponse.statusCode == 200 else { return nil }
@@ -100,7 +100,7 @@ extension ClaudeWebAPIFetcher {
         request.timeoutInterval = 15
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await ProviderRequestSession.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { return nil }
             logger?("Account API status: \(httpResponse.statusCode)")
             guard httpResponse.statusCode == 200 else { return nil }

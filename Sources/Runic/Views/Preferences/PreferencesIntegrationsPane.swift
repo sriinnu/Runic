@@ -132,7 +132,7 @@ struct IntegrationsPane: View {
                         icon: "shippingbox",
                         title: "No optional packages installed",
                         detail: "The built-in Runic server and its two tools are ready above. " +
-                            "Drop a package folder into mcpservers to add more tools.")
+                            "Drop a package folder into mcpservers, then enable it to add tools.")
                 } else {
                     ForEach(self.mcpPlugins, id: \.manifest.id) { package in
                         HStack(spacing: RunicSpacing.sm) {

@@ -250,7 +250,7 @@ public enum CodexOAuthUsageFetcher {
             request.setValue(accountId, forHTTPHeaderField: "ChatGPT-Account-Id")
         }
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await ProviderRequestSession.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw CodexOAuthFetchError.invalidResponse }
             switch http.statusCode {
             case 200...299:
@@ -297,7 +297,7 @@ public enum CodexOAuthUsageFetcher {
         }
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await ProviderRequestSession.data(for: request)
             guard let http = response as? HTTPURLResponse else {
                 throw CodexOAuthFetchError.invalidResponse
             }

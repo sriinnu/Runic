@@ -234,6 +234,7 @@ struct RunicMCPService {
         let process = Process()
         process.executableURL = package.executable
         process.currentDirectoryURL = package.directory
+        process.environment = Self.pluginEnvironment(from: ProcessInfo.processInfo.environment)
         let stdin = Pipe()
         let stdout = Pipe()
         process.standardInput = stdin
@@ -273,6 +274,11 @@ struct RunicMCPService {
         process.waitUntilExit()
         guard process.terminationStatus == 0 else { throw PluginInvocationError.failed }
         return try JSONDecoder().decode(Value.self, from: output)
+    }
+
+    static func pluginEnvironment(from environment: [String: String]) -> [String: String] {
+        let allowed = ["HOME", "PATH", "TMPDIR", "LANG", "LC_ALL"]
+        return environment.filter { allowed.contains($0.key) }
     }
 
     private struct PluginRequest: Encodable {

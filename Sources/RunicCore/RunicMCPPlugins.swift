@@ -132,7 +132,7 @@ public enum RunicMCPPluginRegistry {
         var seenIDs = Set(registered.map(\.manifest.id))
         var packages = registered
         for directory in self.discoveredDirectories(at: url) {
-            guard let package = try? self.loadPackage(at: directory, discovered: true),
+            guard let package = try? self.loadPackage(at: directory, enabled: false, discovered: true),
                   seenPaths.insert(package.directory.path).inserted,
                   seenIDs.insert(package.manifest.id).inserted
             else { continue }

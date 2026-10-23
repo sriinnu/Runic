@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 #if canImport(Network)
 import Network
@@ -7,16 +8,27 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
     private static let maxEventStreamClients = 16
     private static let eventStreamHeartbeatInterval: Duration = .seconds(15)
 
+    private struct RequestConfiguration {
+        let maxRequestBytes: Int
+        let host: String
+        let port: UInt16
+        let authorizationToken: String
+    }
+
     private let listener: NWListener
     private let queue = DispatchQueue(label: "runic.otel-genai.collector")
     private let sink: OTelGenAIIngestionSink
     private let eventHub: RunicLocalEventHub
-    private let maxRequestBytes: Int
+    private let requestConfiguration: RequestConfiguration
+    public let authorizationToken: String
 
     public init(
         configuration: OTelGenAICollectorConfiguration = OTelGenAICollectorConfiguration(),
         eventHub: RunicLocalEventHub = .shared) throws
     {
+        guard OTelGenAIHTTPCollectorRequestPolicy.isLoopbackHost(configuration.host) else {
+            throw OTelGenAICollectorError.nonLoopbackHost(configuration.host)
+        }
         guard let port = NWEndpoint.Port(rawValue: configuration.port) else {
             throw OTelGenAICollectorError.invalidContentLength
         }
@@ -27,17 +39,26 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
         self.listener = try NWListener(using: parameters)
         self.sink = OTelGenAIIngestionSink(configuration: configuration)
         self.eventHub = eventHub
-        self.maxRequestBytes = configuration.maxBodyBytes + 16384
+        var tokenBytes = [UInt8](repeating: 0, count: 32)
+        guard SecRandomCopyBytes(kSecRandomDefault, tokenBytes.count, &tokenBytes) == errSecSuccess else {
+            throw OTelGenAICollectorError.invalidAuthorizationToken
+        }
+        self.authorizationToken = tokenBytes.map { String(format: "%02x", $0) }.joined()
+        self.requestConfiguration = RequestConfiguration(
+            maxRequestBytes: configuration.maxBodyBytes + 16384,
+            host: configuration.host,
+            port: configuration.port,
+            authorizationToken: self.authorizationToken)
     }
 
     public func start() {
-        self.listener.newConnectionHandler = { [sink, eventHub, maxRequestBytes] connection in
+        self.listener.newConnectionHandler = { [sink, eventHub, requestConfiguration] connection in
             connection.start(queue: DispatchQueue(label: "runic.otel-genai.connection"))
             Self.receive(
                 connection: connection,
                 sink: sink,
                 eventHub: eventHub,
-                maxRequestBytes: maxRequestBytes,
+                configuration: requestConfiguration,
                 buffer: Data())
         }
         self.listener.start(queue: self.queue)
@@ -51,22 +72,40 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
         connection: NWConnection,
         sink: OTelGenAIIngestionSink,
         eventHub: RunicLocalEventHub,
-        maxRequestBytes: Int,
+        configuration: RequestConfiguration,
         buffer: Data)
     {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { data, _, isComplete, error in
             var nextBuffer = buffer
             if let data { nextBuffer.append(data) }
 
-            guard nextBuffer.count > maxRequestBytes || Self
+            guard nextBuffer.count > configuration.maxRequestBytes || Self
                 .hasCompleteHTTPRequest(nextBuffer) || isComplete || error != nil
             else {
                 Self.receive(
                     connection: connection,
                     sink: sink,
                     eventHub: eventHub,
-                    maxRequestBytes: maxRequestBytes,
+                    configuration: configuration,
                     buffer: nextBuffer)
+                return
+            }
+
+            guard nextBuffer.count <= configuration.maxRequestBytes else {
+                let response = Data("HTTP/1.1 413 Content Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    .utf8)
+                connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
+                return
+            }
+
+            guard OTelGenAIHTTPCollectorRequestPolicy.permits(
+                nextBuffer,
+                boundHost: configuration.host,
+                port: configuration.port,
+                authorizationToken: configuration.authorizationToken)
+            else {
+                let response = Data("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8)
+                connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
                 return
             }
 
@@ -257,6 +296,44 @@ public final class OTelGenAIHTTPCollector: @unchecked Sendable {
             }
         guard let contentLength else { return true }
         return data.count - headerRange.upperBound >= contentLength
+    }
+}
+
+enum OTelGenAIHTTPCollectorRequestPolicy {
+    static func isLoopbackHost(_ host: String) -> Bool {
+        ["127.0.0.1", "localhost", "::1"].contains(host.lowercased())
+    }
+
+    static func permits(_ request: Data, boundHost: String, port: UInt16, authorizationToken: String) -> Bool {
+        guard let headerEnd = request.range(of: Data("\r\n\r\n".utf8)),
+              let header = String(data: request[..<headerEnd.lowerBound], encoding: .utf8)
+        else { return false }
+
+        let lines = header.components(separatedBy: "\r\n").dropFirst()
+        let hosts = lines.filter { $0.lowercased().hasPrefix("host:") }
+        let authorization = lines.filter { $0.lowercased().hasPrefix("authorization:") }
+        guard hosts.count == 1,
+              authorization.count == 1,
+              !lines.contains(where: { $0.lowercased().hasPrefix("origin:") })
+        else { return false }
+
+        let supplied = authorization[0].dropFirst("authorization:".count)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard supplied.hasPrefix("Bearer ") else { return false }
+        let suppliedToken = supplied.dropFirst("Bearer ".count).utf8
+        let expectedToken = authorizationToken.utf8
+        guard suppliedToken.count == expectedToken.count else { return false }
+        var difference: UInt8 = 0
+        for (actual, expected) in zip(suppliedToken, expectedToken) {
+            difference |= actual ^ expected
+        }
+        guard difference == 0 else { return false }
+
+        let requestedHost = hosts[0].dropFirst(5).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard self.isLoopbackHost(boundHost) else { return false }
+        let bound = boundHost == "::1" ? "[::1]" : boundHost.lowercased()
+        let allowedHosts = [bound, "\(bound):\(port)"]
+        return allowedHosts.contains(requestedHost)
     }
 }
 

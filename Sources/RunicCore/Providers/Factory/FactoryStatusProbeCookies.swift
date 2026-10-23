@@ -153,7 +153,7 @@ extension FactoryStatusProbe {
             request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FactoryStatusProbeError.networkError("Invalid response")
@@ -208,7 +208,7 @@ extension FactoryStatusProbe {
         }
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FactoryStatusProbeError.networkError("Invalid response")

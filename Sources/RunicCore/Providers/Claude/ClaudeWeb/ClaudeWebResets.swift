@@ -122,7 +122,7 @@ public enum ClaudeWebResets {
         request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 15
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await ProviderRequestSession.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return ClaudeAPICreditGrant.parseNextChargeDate(data)
     }
@@ -135,7 +135,7 @@ public enum ClaudeWebResets {
         request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 15
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await ProviderRequestSession.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return Self.parseCreditBalance(data)
     }

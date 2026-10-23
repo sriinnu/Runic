@@ -41,7 +41,7 @@ Runic only exports enabled providers. The snapshot does not contain account emai
 
 ## Local tool packages
 
-Runic automatically discovers tool packages in direct child folders of `~/Library/Application Support/Runic/mcpservers/`. Open **Preferences → Sync → Integrations → Runic MCP → Open mcpservers** to create and reveal the folder. Drop a package folder there; Runic lists it in Settings within a few seconds, and `runic mcp list` lists it too. A connected MCP client may need to reconnect to refresh its tool list. Removing the folder stops discovery; switching its Enabled control off keeps the files in place and saves that choice.
+Runic automatically discovers tool packages in direct child folders of `~/Library/Application Support/Runic/mcpservers/`. Open **Preferences → Sync → Integrations → Runic MCP → Open mcpservers** to create and reveal the folder. Drop a package folder there; Runic lists it in Settings within a few seconds, and `runic mcp list` lists it too. Discovered packages start disabled; enable a package explicitly before an MCP client can call its executable. A connected MCP client may need to reconnect to refresh its tool list. Removing the folder stops discovery; switching its Enabled control off keeps the files in place and saves that choice.
 
 You can also load a package from another trusted local folder with **Add folder** or `runic mcp add /path/to/folder`. `runic mcp enable <id>`, `disable <id>`, and `remove <id>` manage these registrations. Removing a registered package leaves its files in place. A package inside `mcpservers` cannot be removed through the registry; move its folder instead.
 
@@ -77,6 +77,6 @@ cat >/dev/null
 printf '%s\n' '{"message":"hello from the example package"}'
 ```
 
-Put the containing `example` folder in `mcpservers`, then run `runic mcp list` and `runic mcp call example_hello`. The package should also appear in Settings within a few seconds. This sample ignores its input and returns fixed data; a real package should parse the JSON request and validate arguments.
+Put the containing `example` folder in `mcpservers`, run `runic mcp enable example`, then run `runic mcp list` and `runic mcp call example_hello`. The package should also appear in Settings within a few seconds. This sample ignores its input and returns fixed data; a real package should parse the JSON request and validate arguments.
 
-Packages are executable code with the same local user access as Runic. Install only packages you trust. They are registered by path, so updating the files in that folder updates the package without rebuilding Runic. This initial package API adds MCP tools; it does not add new usage providers or modify Runic's refresh scheduler.
+Packages are executable code with the same local user access as Runic. Install only packages you trust. The plugin process receives only `HOME`, `PATH`, `TMPDIR`, `LANG`, and `LC_ALL` from Runic's environment; it does not inherit provider tokens from environment variables. Packages are registered by path, so updating the files in that folder updates the package without rebuilding Runic. This initial package API adds MCP tools; it does not add new usage providers or modify Runic's refresh scheduler.

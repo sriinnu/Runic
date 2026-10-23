@@ -58,6 +58,8 @@ public enum OTelGenAICollectorError: LocalizedError, Sendable, Equatable {
     case unsupportedContentType(String?)
     case malformedHTTPRequest
     case invalidContentLength
+    case nonLoopbackHost(String)
+    case invalidAuthorizationToken
 
     public var errorDescription: String? {
         switch self {
@@ -75,6 +77,10 @@ public enum OTelGenAICollectorError: LocalizedError, Sendable, Equatable {
             "Malformed HTTP request."
         case .invalidContentLength:
             "Invalid HTTP Content-Length."
+        case let .nonLoopbackHost(host):
+            "OTLP collector only listens on a loopback host, not \(host)."
+        case .invalidAuthorizationToken:
+            "Could not create a secure OTLP collector authorization token."
         }
     }
 }
@@ -110,10 +116,17 @@ public actor OTelGenAIIngestionSink {
         let lines = try entries.map(Self.sanitizedJSONLine)
         let outputFile = self.currentOutputFile()
         let directory = outputFile.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700])
+        if self.rollsDefaultOutputDaily {
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+        }
 
         let payload = (lines.joined(separator: "\n") + "\n").data(using: .utf8) ?? Data()
         if FileManager.default.fileExists(atPath: outputFile.path) {
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: outputFile.path)
             let handle = try FileHandle(forWritingTo: outputFile)
             defer { try? handle.close() }
             try handle.seekToEnd()
@@ -121,6 +134,7 @@ public actor OTelGenAIIngestionSink {
         } else {
             try payload.write(to: outputFile, options: .atomic)
         }
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: outputFile.path)
 
         return OTelGenAICollectorResult(acceptedEntries: entries.count, outputFile: outputFile)
     }
@@ -206,9 +220,9 @@ public enum OTelGenAIHTTPIngestHandler {
         }
 
         let contentType = headers["content-type"]
-        if let contentType,
-           !contentType.lowercased().contains("json")
-        {
+        let mediaType = contentType?.split(separator: ";", maxSplits: 1).first?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard mediaType == "application/json" else {
             throw OTelGenAICollectorError.unsupportedContentType(contentType)
         }
 

@@ -417,7 +417,10 @@ public struct AntigravityStatusProbe: Sendable {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = context.timeout
         config.timeoutIntervalForResource = context.timeout
-        let session = URLSession(configuration: config, delegate: InsecureSessionDelegate(), delegateQueue: nil)
+        let session = URLSession(
+            configuration: config,
+            delegate: AntigravityLoopbackSessionDelegate(),
+            delegateQueue: nil)
         defer { session.invalidateAndCancel() }
 
         let (data, response) = try await session.data(for: request)
@@ -432,11 +435,22 @@ public struct AntigravityStatusProbe: Sendable {
     }
 }
 
-private final class InsecureSessionDelegate: NSObject {}
+final class AntigravityLoopbackSessionDelegate: NSObject {}
 
-extension InsecureSessionDelegate: URLSessionDelegate, URLSessionTaskDelegate {}
+extension AntigravityLoopbackSessionDelegate: URLSessionDelegate, URLSessionTaskDelegate {}
 
-extension InsecureSessionDelegate {
+extension AntigravityLoopbackSessionDelegate {
+    func urlSession(
+        _: URLSession,
+        task _: URLSessionTask,
+        willPerformHTTPRedirection _: HTTPURLResponse,
+        newRequest _: URLRequest,
+        completionHandler: @escaping @Sendable (URLRequest?) -> Void)
+    {
+        // The CSRF token belongs to the detected local server, never a redirect target.
+        completionHandler(nil)
+    }
+
     /// macOS 26+ delivers SSL challenges at the session level.
     func urlSession(
         _ session: URLSession,

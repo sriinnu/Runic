@@ -44,6 +44,14 @@ struct KeychainQueryPolicyTests {
     }
 
     @Test
+    func `team sync does not encrypt with an unpersisted key`() {
+        #expect(!RunicKeychainAccessPolicy.processMayUseKeychain)
+        #expect(throws: SyncError.self) {
+            try teamSyncEncryptString("test@example.invalid")
+        }
+    }
+
+    @Test
     func `RunicCore background keychain queries fail instead of prompting`() throws {
         var query: [String: Any] = [:]
 

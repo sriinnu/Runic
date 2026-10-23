@@ -102,7 +102,7 @@ Ledger entries carry token/cost provenance where known: exact local log, provide
 
 ## MiniMax
 - Web-only. Uses browser cookies plus a Chromium local storage access token.
-- Primary endpoint: `https://platform.minimax.io/user-center/payment/coding-plan` (HTML parse).
+- Primary endpoint: `https://platform.minimax.io/console/plan` (HTML parse).
 - Fallback endpoint: `https://platform.minimax.io/v1/api/openplatform/coding_plan/remains`.
 - Status: none yet.
 

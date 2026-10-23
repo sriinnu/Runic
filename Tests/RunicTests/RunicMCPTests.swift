@@ -6,6 +6,18 @@ import Testing
 
 struct RunicMCPTests {
     @Test
+    func `plugin process does not inherit provider secrets`() {
+        let environment = RunicMCPService.pluginEnvironment(from: [
+            "HOME": "/tmp/runic-test",
+            "PATH": "/usr/bin:/bin",
+            "OPENAI_API_KEY": "sentinel",
+        ])
+        #expect(environment["HOME"] == "/tmp/runic-test")
+        #expect(environment["PATH"] == "/usr/bin:/bin")
+        #expect(environment["OPENAI_API_KEY"] == nil)
+    }
+
+    @Test
     func `limits and health use sanitized saved state`() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -152,8 +164,9 @@ struct RunicMCPTests {
         let service = RunicMCPService(stateURL: root.appendingPathComponent("none"), registryURL: registryURL)
         #expect(RunicMCPPluginRegistry.registrations(at: registryURL).isEmpty)
         #expect(RunicMCPPluginRegistry.packages(at: registryURL).first?.discovered == true)
-        #expect(service.tools().map(\.name).contains("sample_hello"))
-        #expect(await (service.call(name: "sample_hello", arguments: [:])).isError == false)
+        #expect(RunicMCPPluginRegistry.packages(at: registryURL).first?.enabled == false)
+        #expect(!service.tools().map(\.name).contains("sample_hello"))
+        #expect(await (service.call(name: "sample_hello", arguments: [:])).isError == true)
 
         try RunicMCPPluginRegistry.setEnabled(false, id: "sample", at: registryURL)
         #expect(!service.tools().map(\.name).contains("sample_hello"))

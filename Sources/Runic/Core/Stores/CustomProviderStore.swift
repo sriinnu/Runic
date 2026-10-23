@@ -33,7 +33,6 @@ public enum CustomProviderStore {
     private static var storageURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let runicDir = appSupport.appendingPathComponent("Runic", isDirectory: true)
-        try? FileManager.default.createDirectory(at: runicDir, withIntermediateDirectories: true)
         return runicDir.appendingPathComponent("custom-providers.json")
     }
 
@@ -47,7 +46,11 @@ public enum CustomProviderStore {
         }
 
         do {
-            let data = try Data(contentsOf: storageURL)
+            let file = self.storageURL
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o700], ofItemAtPath: file.deletingLastPathComponent().path)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+            let data = try Data(contentsOf: file)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let providersData = try decoder.decode(CustomProvidersData.self, from: data)
@@ -67,7 +70,16 @@ public enum CustomProviderStore {
 
         do {
             let data = try encoder.encode(providersData)
-            try data.write(to: self.storageURL, options: .atomic)
+            let file = self.storageURL
+            let directory = file.deletingLastPathComponent()
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700])
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+            try data.write(to: file, options: .atomic)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o600], ofItemAtPath: file.path)
             Self.log.info("Saved \(providersData.providers.count) custom provider(s).")
         } catch {
             Self.log.error("Failed to save custom providers: \(error)")

@@ -114,7 +114,7 @@ public struct CopilotUsageFetcher: Sendable {
         request.setValue(authorization, forHTTPHeaderField: "Authorization")
         self.addCommonHeaders(to: &request)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw CopilotUsageFetchError.invalidResponse(details: "missing HTTP response")
         }
@@ -150,7 +150,7 @@ public struct CopilotUsageFetcher: Sendable {
         request.setValue("token \(self.token)", forHTTPHeaderField: "Authorization")
         self.addCommonHeaders(to: &request)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await ProviderRequestSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw CopilotUsageFetchError.invalidResponse(details: "token exchange missing HTTP response")
         }
