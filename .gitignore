@@ -171,3 +171,9 @@ RuniciOS/*.xcworkspace
 # Local design reference (not source)
 mockups/
 /Runic-branch-backups
+
+# Session handoffs (PICKUP.md, pick.md…) are local only, never committed.
+[Pp][Ii][Cc][Kk].md
+[Pp][Ii][Cc][Kk][Uu][Pp].md
+[Pp][Ii][Cc][Kk][Uu][Pp]*.md
+[Hh][Aa][Nn][Dd][Oo][Ff][Ff].md
