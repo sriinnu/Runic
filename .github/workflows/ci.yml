@@ -34,6 +34,13 @@ jobs:
           persist-credentials: false
       - name: Toolchain
         run: swift --version
+      # Session handoffs (PICKUP.md, pick.md…) are local only.
+      - name: No handoff files
+        run: |
+          if git ls-files | grep -iE '(^|/)(pick|pickup|handoff)(\.[A-Za-z0-9]+)?$'; then
+            echo "::error::handoff files are local only; remove them from the repo"
+            exit 1
+          fi
       # Same gates Scripts/release.sh and .githooks/pre-commit enforce.
       # Pinned: newer releases add rules and flag hundreds of files, so bump
       # these together with a reformat, not by accident.

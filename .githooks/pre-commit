@@ -2,6 +2,12 @@
 # Runs the same gates release.sh enforces, on staged Swift files only, so a
 # commit never lands something the release gate would bounce.
 set -euo pipefail
+# Session handoffs (PICKUP.md, pick.md…) are local only; never let one in.
+pickups=$(git diff --cached --name-only --diff-filter=ACMR | grep -iE '(^|/)(pick|pickup|handoff)(\.[A-Za-z0-9]+)?$' || true)
+if [ -n "$pickups" ]; then
+  echo "pre-commit: handoff files are local only, unstage them: $pickups" >&2
+  exit 1
+fi
 files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.swift' | grep -E '^(Sources|Tests)/' || true)
 [ -z "$files" ] && exit 0
 if command -v swiftformat >/dev/null; then
