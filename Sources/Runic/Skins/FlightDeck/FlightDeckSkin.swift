@@ -114,13 +114,22 @@ private struct FlightDeckTabStrip: View {
                 .padding(.vertical, 2)
             }
             Spacer(minLength: 4)
-            TimelineView(.everyMinute) { context in
-                Text(RunicFlightDeck.zulu(context.date))
-                    .font(RunicFlightDeck.mono(11))
-                    .skinFace()
-                    .foregroundStyle(self.runicTheme.secondaryText)
-                    .lineLimit(1)
-                    .accessibilityLabel("Zulu time \(RunicFlightDeck.zulu(context.date))")
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let zulu = RunicFlightDeck.zulu(context.date)
+                HStack(spacing: 0) {
+                    Text(zulu.dropLast())
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                    Text(":" + RunicFlightDeck.zuluSeconds(context.date))
+                        .foregroundStyle(self.runicTheme.accent)
+                    Text("Z")
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                }
+                .font(RunicFlightDeck.mono(11))
+                .skinFace()
+                .lineLimit(1)
+                .fixedSize()
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Zulu time \(zulu)")
             }
         }
         .frame(width: self.width)

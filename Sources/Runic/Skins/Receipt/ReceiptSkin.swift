@@ -112,7 +112,7 @@ private struct ReceiptPanel: View {
 // MARK: - Tabs
 
 /// The provider strip: outlined mono rectangles, the chosen one filled with
-/// paper, and the build as a ticket number at the right.
+/// paper, and a ticking till clock at the right.
 private struct ReceiptTabStrip: View {
     let items: [ProviderTabBarView.TabItem]
     let width: CGFloat
@@ -131,12 +131,21 @@ private struct ReceiptTabStrip: View {
                 .padding(.vertical, 3)
             }
             Spacer(minLength: 6)
-            Text(RunicReceipt.ticket)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let clock = RunicReceipt.tillClock(context.date)
+                HStack(spacing: 0) {
+                    Text(clock.minutes)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                    Text(":" + clock.seconds)
+                        .foregroundStyle(self.runicTheme.accent)
+                }
                 .font(RunicReceipt.mono(11))
                 .skinFace()
-                .foregroundStyle(self.runicTheme.secondaryText)
                 .lineLimit(1)
-                .accessibilityLabel("Build \(RunicReceipt.ticket)")
+                .fixedSize()
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Time \(clock.minutes)")
+            }
         }
         .frame(width: self.width)
         .accessibilityElement(children: .contain)

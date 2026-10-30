@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Receipt and Flight Deck skins: the top-right corner of the tab strip shows a clock with ticking seconds, the seconds in the theme accent. Receipt shows local time and replaces the `#000188` build number, which meant nothing at a glance; Flight Deck keeps its Zulu clock.
+
 ## 2.13.5 — 2026-10-23
 - Release integrity: the app is the same as 2.13.4; this release is the first through the hardened release path. The GitHub release is immutable once published (its tag and files can't be changed or swapped afterwards), and its tag is signed like every release tag.
 - npm: `@sriinnu/runic` is published from GitHub Actions through npm trusted publishing, with a provenance attestation that ties the package to this tag. No publish token exists, and each version goes live only after the maintainer approves it with a hardware security key.
