@@ -64,6 +64,9 @@ extension RunicCLI {
                 let summaries = UsageLedgerAggregator.dailySummaries(entries: entries, timeZone: timeZone)
                 RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
             }
+        case "peak":
+            let peaks = await Self.peakBurns(providers: providers, entries: entries, now: now, timeZone: timeZone)
+            RunicCLIInsightsRenderer.renderOutput(peaks, isJson: isJson, isPretty: isPretty)
         case "session":
             let summaries = UsageLedgerAggregator.sessionSummaries(entries: entries)
             RunicCLIInsightsRenderer.renderOutput(summaries, isJson: isJson, isPretty: isPretty)
@@ -93,6 +96,29 @@ extension RunicCLI {
         default:
             Self.exit(code: 1, message: "Unknown insights view: \(viewArg)")
         }
+    }
+
+    /// Each provider's busiest three-hour slot over the last seven days.
+    private static func peakBurns(
+        providers: [UsageProvider],
+        entries: [UsageLedgerEntry],
+        now: Date,
+        timeZone: TimeZone) async -> [UsageLedgerPeakBurn]
+    {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        var peaks: [UsageLedgerPeakBurn] = []
+        for provider in providers {
+            if let peak = await LedgerCache.shared.peakBurn(
+                provider: provider,
+                liveEntries: entries,
+                now: now,
+                calendar: calendar)
+            {
+                peaks.append(peak)
+            }
+        }
+        return peaks
     }
 
     private static func resolveInsightsProviders(_ raw: String?) -> [UsageProvider] {

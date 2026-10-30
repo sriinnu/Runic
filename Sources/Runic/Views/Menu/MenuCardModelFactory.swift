@@ -46,6 +46,8 @@ extension UsageMenuCardView.Model {
         var balanceSpend: BalanceSpendSummary?
         /// Spend estimated from local-log tokens at catalog prices.
         var logSpend: LogSpendEstimate?
+        /// The time-of-day slot that burned the most tokens this week.
+        var ledgerPeakBurn: UsageLedgerPeakBurn?
         var numberStyle: UsageFormatter.NumberStyle = .abbreviated
         var dateStyle: UsageFormatter.DateStyle = .relative
         /// The store's source label for the last successful fetch.
@@ -150,7 +152,17 @@ extension UsageMenuCardView.Model {
             placeholder: placeholder,
             progressColor: Self.progressColor(for: input.provider),
             needsCredentials: !input.liveFetchWasAvailable,
-            isServedByCLIFallback: isServedByCLIFallback)
+            isServedByCLIFallback: isServedByCLIFallback,
+            peakHoursText: Self.peakHoursText(
+                input.ledgerPeakBurn?.provider == input.provider ? input.ledgerPeakBurn : nil))
+    }
+
+    /// "15–18 · 41% of tokens · 7d"
+    static func peakHoursText(_ peak: UsageLedgerPeakBurn?) -> String? {
+        guard let peak else { return nil }
+        let slot = String(format: "%02d\u{2013}%02d", peak.startHour, peak.endHour)
+        let share = String(format: "%.0f%%", peak.share * 100)
+        return "\(slot) \u{00B7} \(share) of tokens \u{00B7} \(peak.lookbackDays)d"
     }
 
     private static func topModelLine(

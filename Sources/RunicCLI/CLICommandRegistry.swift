@@ -94,7 +94,8 @@ extension RunicCLI {
                 OptionDefinition(
                     label: "view",
                     names: [.long("view")],
-                    help: "View: daily | session | blocks | models | projects | compaction | comparative | efficiency"),
+                    help: "View: daily | peak | session | blocks | models | projects | compaction"
+                        + " | comparative | efficiency"),
                 OptionDefinition(label: "project", names: [.long("project")], help: "Filter to a specific project"),
                 OptionDefinition(
                     label: "timezone",

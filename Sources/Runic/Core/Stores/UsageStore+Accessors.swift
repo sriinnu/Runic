@@ -113,6 +113,10 @@ extension UsageStore {
         self.ledgerHourlySummaries[provider] ?? []
     }
 
+    func ledgerPeakBurn(for provider: UsageProvider) -> UsageLedgerPeakBurn? {
+        self.ledgerPeakBurns[provider]
+    }
+
     func ledgerActiveBlock(for provider: UsageProvider) -> UsageLedgerBlockSummary? {
         self.ledgerActiveBlocks[provider]
     }

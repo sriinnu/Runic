@@ -181,6 +181,7 @@ extension UsageStore {
         self.ledgerAnomalies[provider] = result.anomaliesByProvider[dataProvider]
         self.ledgerCompactions[provider] = result.compactionsByProvider[dataProvider]
         self.ledgerLogSpend[provider] = result.logSpendByProvider[dataProvider]
+        self.ledgerPeakBurns[provider] = result.peakBurnsByProvider[dataProvider]
 
         if let lastActivity = result.lastActivityByProvider[dataProvider] {
             self.lastLedgerActivityAt[provider] = lastActivity

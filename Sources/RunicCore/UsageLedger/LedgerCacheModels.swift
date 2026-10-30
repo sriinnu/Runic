@@ -41,6 +41,9 @@ public struct CachedDaily: Codable, Sendable, Equatable {
     public let costUSD: Double?
     public let requestCount: Int
     public let modelsUsed: [String]
+    /// Tokens per local hour (24 counts), so the time-of-day picture outlives
+    /// the raw logs. Nil on rows written before it existed.
+    public let hourlyTokens: [Int]?
 
     public init(
         dayKey: String,
@@ -50,7 +53,8 @@ public struct CachedDaily: Codable, Sendable, Equatable {
         cacheReadTokens: Int,
         costUSD: Double?,
         requestCount: Int,
-        modelsUsed: [String])
+        modelsUsed: [String],
+        hourlyTokens: [Int]? = nil)
     {
         self.dayKey = dayKey
         self.inputTokens = inputTokens
@@ -60,6 +64,7 @@ public struct CachedDaily: Codable, Sendable, Equatable {
         self.costUSD = costUSD
         self.requestCount = requestCount
         self.modelsUsed = modelsUsed
+        self.hourlyTokens = hourlyTokens
     }
 
     public var totalTokens: Int {
@@ -150,6 +155,8 @@ struct UsageRelayEvent: Codable {
     let tokenProvenance: MetricProvenance?
     let costProvenance: MetricProvenance?
     let sourceFingerprint: String?
+    /// The day's tokens per local hour (24 counts); nil on older records.
+    var hourlyTokens: [Int]?
 }
 
 struct UsageRelayWatermark: Codable {

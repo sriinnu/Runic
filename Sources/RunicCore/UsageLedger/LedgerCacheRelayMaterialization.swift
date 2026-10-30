@@ -90,8 +90,16 @@ extension LedgerCache {
             var hasCost = false
             var requests = 0
             var models = Set<String>()
+            var hourly: [Int]?
 
             for event in events {
+                if let eventHours = event.hourlyTokens, eventHours.count == 24 {
+                    var sum = hourly ?? [Int](repeating: 0, count: 24)
+                    for hour in 0..<24 {
+                        sum[hour] += eventHours[hour]
+                    }
+                    hourly = sum
+                }
                 input += event.inputTokens
                 output += event.outputTokens
                 cacheCreation += event.cacheCreationTokens
@@ -121,7 +129,8 @@ extension LedgerCache {
                 cacheReadTokens: cacheRead,
                 costUSD: hasCost ? cost : nil,
                 requestCount: requests,
-                modelsUsed: models.sorted())
+                modelsUsed: models.sorted(),
+                hourlyTokens: hourly)
         }
         .sorted { $0.dayKey < $1.dayKey }
 

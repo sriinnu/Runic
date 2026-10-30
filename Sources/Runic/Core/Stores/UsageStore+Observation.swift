@@ -18,6 +18,7 @@ extension UsageStore {
         _ = self.ledgerDailySummaries
         _ = self.ledgerAllDailySummaries
         _ = self.ledgerHourlySummaries
+        _ = self.ledgerPeakBurns
         _ = self.ledgerActiveBlocks
         _ = self.ledgerTopModels
         _ = self.ledgerTopProjects
