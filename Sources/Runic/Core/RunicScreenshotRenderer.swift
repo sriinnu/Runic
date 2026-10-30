@@ -276,6 +276,14 @@ enum RunicScreenshotRenderer {
                 updatedAt: now.addingTimeInterval(-240),
                 identity: nil)
             store.snapshots[provider] = snapshot
+            store.ledgerPeakBurns[provider] = UsageLedgerPeakBurn(
+                provider: provider,
+                startHour: [15, 9, 21, 12][index % 4],
+                slotHours: 3,
+                share: [0.41, 0.39, 0.26, 0.33][index % 4],
+                tokens: 1_200_000,
+                activeDays: 7,
+                lookbackDays: 7)
             Self.seedDemoBurnHistory(provider: provider, snapshot: snapshot, now: now)
         }
         // Prepaid-balance providers get a balance card with spend history.

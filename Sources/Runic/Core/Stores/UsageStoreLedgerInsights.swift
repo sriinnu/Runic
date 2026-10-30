@@ -16,6 +16,7 @@ struct LedgerRefreshResult {
     let anomaliesByProvider: [UsageProvider: UsageLedgerAnomalySummary]
     let compactionsByProvider: [UsageProvider: UsageLedgerCompactionSummary]
     var logSpendByProvider: [UsageProvider: LogSpendEstimate] = [:]
+    var peakBurnsByProvider: [UsageProvider: UsageLedgerPeakBurn] = [:]
     let errorsByProvider: [UsageProvider: String]
     let lastActivityByProvider: [UsageProvider: Date]
     let updatedAt: Date
@@ -134,7 +135,13 @@ struct UsageStoreLedgerInsightLoader {
                 calendar: calendar)
         }
 
-        return LedgerRefreshResult(
+        let peakBurnsByProvider = await self.peakBurnsByProvider(
+            entries: load.entries,
+            providers: load.providers,
+            now: now,
+            calendar: calendar)
+
+        var result = LedgerRefreshResult(
             dailyByProvider: dailyBuckets.dailyByProvider,
             allDailySummariesByProvider: dailyBuckets.allDailySummariesByProvider,
             hourlySummariesByProvider: self.hourlySummariesByProvider(entries: load.entries, timeZone: timeZone),
@@ -154,6 +161,8 @@ struct UsageStoreLedgerInsightLoader {
             updatedAt: now,
             scanDays: scanDays,
             providers: load.providers)
+        result.peakBurnsByProvider = peakBurnsByProvider
+        return result
     }
 }
 

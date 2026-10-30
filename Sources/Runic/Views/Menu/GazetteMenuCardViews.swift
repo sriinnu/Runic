@@ -75,6 +75,15 @@ struct GazetteMasthead: View {
                     .padding(.top, 2)
             }
 
+            if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
+                Text("Peak hours: \(peak)")
+                    .font(RunicGazette.copy(10))
+                    .foregroundStyle(RunicGazette.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+            }
+
             if self.model.subtitleStyle == .error, !self.model.subtitleText.isEmpty {
                 Text(self.model.subtitleText)
                     .font(RunicGazette.copy())

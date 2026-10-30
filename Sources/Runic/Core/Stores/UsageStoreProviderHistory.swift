@@ -425,6 +425,7 @@ struct CachedOTelProviderHistorySource: UsageLedgerSource {
             var cost = 0.0
             var requests = 0
             var models = Set<String>()
+            var hours = [Int](repeating: 0, count: 24)
         }
 
         var buckets: [String: Bucket] = [:]
@@ -438,6 +439,7 @@ struct CachedOTelProviderHistorySource: UsageLedgerSource {
             bucket.cost += entry.costUSD ?? 0
             bucket.requests += 1
             if let model = entry.model { bucket.models.insert(model) }
+            bucket.hours[Calendar.current.component(.hour, from: entry.timestamp)] += entry.totalTokens
             buckets[key] = bucket
         }
         return buckets.map { dayKey, bucket in
@@ -453,7 +455,8 @@ struct CachedOTelProviderHistorySource: UsageLedgerSource {
                 // `mergeDailies` detects changed days by CachedDaily equality —
                 // an unstable order made every multi-model day look "changed"
                 // and re-archive on each refresh.
-                modelsUsed: bucket.models.sorted())
+                modelsUsed: bucket.models.sorted(),
+                hourlyTokens: bucket.hours)
         }
     }
 }

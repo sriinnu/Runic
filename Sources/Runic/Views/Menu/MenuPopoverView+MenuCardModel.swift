@@ -56,6 +56,7 @@ extension MenuPopoverView {
             liveFetchWasAvailable: self.store.lastFetchAttempts[provider]?.contains(where: \.wasAvailable) ?? true,
             balanceSpend: self.store.balanceSpend(for: provider),
             logSpend: self.store.ledgerLogSpend[provider],
+            ledgerPeakBurn: self.store.ledgerPeakBurn(for: provider),
             numberStyle: self.settings.numberFormat.formatterStyle,
             dateStyle: self.settings.dateFormat.formatterStyle,
             sourceLabel: self.store.sourceLabel(for: provider))

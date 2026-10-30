@@ -280,6 +280,9 @@ struct DraftingProviderPage: View {
             cells.append(.init(label: "Session cost", value: ledger.sessionLine))
             cells.append(.init(label: "This month", value: ledger.monthLine))
         }
+        if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
+            cells.append(.init(label: "Peak hours", value: peak))
+        }
         if self.model.menuMode == .operator, let insights = self.model.insights {
             let lines = [
                 insights.contextLine, insights.compactionLine, insights.todayLine, insights.blockLine,

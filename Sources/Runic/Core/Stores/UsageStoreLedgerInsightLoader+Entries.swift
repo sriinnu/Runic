@@ -93,6 +93,23 @@ extension UsageStoreLedgerInsightLoader {
         return hourlySummariesByProvider
     }
 
+    func peakBurnsByProvider(
+        entries: [UsageLedgerEntry],
+        providers: [UsageProvider],
+        now: Date,
+        calendar: Calendar) async -> [UsageProvider: UsageLedgerPeakBurn]
+    {
+        var peaks: [UsageProvider: UsageLedgerPeakBurn] = [:]
+        for provider in providers {
+            peaks[provider] = await LedgerCache.shared.peakBurn(
+                provider: provider,
+                liveEntries: entries,
+                now: now,
+                calendar: calendar)
+        }
+        return peaks
+    }
+
     func activeBlocksByProvider(
         entries: [UsageLedgerEntry],
         now: Date) -> [UsageProvider: UsageLedgerBlockSummary]

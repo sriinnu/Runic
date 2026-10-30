@@ -175,6 +175,9 @@ struct UsageMenuCardView: View {
         /// True while Claude's numbers come through the CLI because Runic's
         /// token copy is stale: the card badges it and offers Reconnect.
         var isServedByCLIFallback: Bool = false
+        /// "15–18 · 41% of tokens · 7d": the slot of the day that burned the
+        /// most this week. Nil when the logs are too thin or too even to say.
+        var peakHoursText: String?
     }
 
     let model: Model

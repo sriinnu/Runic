@@ -33,7 +33,8 @@ extension LedgerCache {
                     operationKind: nil,
                     tokenProvenance: nil,
                     costProvenance: nil,
-                    sourceFingerprint: sourceFingerprint)
+                    sourceFingerprint: sourceFingerprint,
+                    hourlyTokens: daily.hourlyTokens)
                 let watermark = UsageRelayWatermark(
                     snapshotID: snapshotID,
                     dayKey: daily.dayKey,
@@ -196,7 +197,8 @@ extension LedgerCache {
             operationKind: nil,
             tokenProvenance: nil,
             costProvenance: nil,
-            sourceFingerprint: "daily-aggregate:\(provider):\(dayKey)")
+            sourceFingerprint: "daily-aggregate:\(provider):\(dayKey)",
+            hourlyTokens: UsageLedgerAggregator.hourlyTokens(entries))
     }
 
     func snapshotID(provider: String, dayKey: String, writtenAt: Date) -> String {

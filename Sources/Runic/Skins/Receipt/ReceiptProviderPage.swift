@@ -223,6 +223,9 @@ struct ReceiptProviderPage: View {
             rows.append(AccountRow(key: "Session cost", value: ledger.sessionLine, strong: true))
             rows.append(AccountRow(key: "This month", value: ledger.monthLine, strong: true))
         }
+        if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
+            rows.append(AccountRow(key: "Peak hours", value: peak))
+        }
         if self.model.menuMode == .operator, let insights = self.model.insights {
             let lines = [
                 insights.contextLine, insights.compactionLine, insights.todayLine, insights.blockLine,

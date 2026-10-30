@@ -157,6 +157,13 @@ struct UsageMenuCardHeaderView: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
+                Text("Peak hours: \(peak)")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(1)
+            }
         }
         .padding(.horizontal, MenuCardMetrics.horizontalPadding)
         .padding(.vertical, RunicSpacing.sm)

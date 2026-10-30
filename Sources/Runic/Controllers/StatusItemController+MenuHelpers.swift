@@ -367,6 +367,7 @@ extension StatusItemController {
             now: Date(),
             balanceSpend: self.store.balanceSpend(for: target),
             logSpend: self.store.ledgerLogSpend[target],
+            ledgerPeakBurn: self.store.ledgerPeakBurn(for: target),
             numberStyle: self.settings.numberFormat.formatterStyle,
             dateStyle: self.settings.dateFormat.formatterStyle,
             sourceLabel: self.store.sourceLabel(for: target))

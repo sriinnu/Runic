@@ -316,6 +316,9 @@ struct InstrumentProviderPage: View {
             rows.append(ReadoutRow(label: "Session", value: ledger.sessionLine.uppercased()))
             rows.append(ReadoutRow(label: "Month", value: ledger.monthLine.uppercased()))
         }
+        if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
+            rows.append(ReadoutRow(label: "Peak hrs", value: peak.uppercased()))
+        }
         if let insights {
             var sources: [String] = []
             if insights.modelLine != nil { sources.append("MDL") }

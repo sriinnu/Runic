@@ -335,6 +335,9 @@ struct DeparturesProviderPage: View {
             rows.append(AccountRow(key: "Session cost", value: ledger.sessionLine))
             rows.append(AccountRow(key: "This month", value: ledger.monthLine))
         }
+        if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
+            rows.append(AccountRow(key: "Peak hours", value: peak))
+        }
         return rows
     }
 

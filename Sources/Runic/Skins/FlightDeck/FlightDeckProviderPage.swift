@@ -341,6 +341,9 @@ struct FlightDeckProviderPage: View {
             rows.append(AccountRow(key: "Session cost", value: ledger.sessionLine))
             rows.append(AccountRow(key: "This month", value: ledger.monthLine))
         }
+        if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
+            rows.append(AccountRow(key: "Peak hours", value: peak))
+        }
         for metric in self.model.metrics where metric.percent == nil {
             let value = [metric.resetText, metric.detailText].compactMap(\.self).joined(separator: " \u{00B7} ")
             rows.append(AccountRow(key: metric.title, value: value.isEmpty ? "\u{2014}" : value))
