@@ -36,6 +36,14 @@ enum RunicResourceLocator {
         let workingDirectoryResourcesURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
             .appendingPathComponent("Sources/Runic/Resources", isDirectory: true)
 
+        // The source-tree fallbacks are for `swift run` only. A packaged app
+        // must never read them: `#filePath` still names the build machine's
+        // checkout, so fonts registered twice and CoreText could pick the
+        // checkout copy, which turned to missing glyphs once it was deleted.
+        let devFallbacks = Bundle.main.bundleURL.pathExtension == "app"
+            ? []
+            : [sourceResourcesURL, workingDirectoryResourcesURL]
+
         let candidates = [
             Bundle.main.resourceURL,
             Bundle.main.resourceURL?.appendingPathComponent("Resources", isDirectory: true),
@@ -45,9 +53,7 @@ enum RunicResourceLocator {
             Bundle.main.bundleURL.appendingPathComponent(
                 "Contents/Resources/Runic_Runic.bundle/Resources",
                 isDirectory: true),
-            sourceResourcesURL,
-            workingDirectoryResourcesURL,
-        ]
+        ] + devFallbacks
 
         var seen: Set<String> = []
         return candidates.compactMap { url in
