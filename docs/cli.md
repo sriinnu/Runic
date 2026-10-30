@@ -62,7 +62,9 @@ tar -xzf RunicCLI-0.14.1-linux-x86_64.tar.gz
 
 `runic insights` reads Claude/Codex local JSONL ledgers directly. Other providers, including `local-llm`, are included when OpenTelemetry GenAI JSON/JSONL files are configured through `RUNIC_OTEL_GENAI_LOG_PATHS`, `RUNIC_OTEL_GENAI_LOG_PATH`, or provider-specific variables such as `RUNIC_LOCAL_LLM_OTEL_GENAI_LOG_PATHS`. Runic also reads daily default collector ledgers at `~/Library/Application Support/Runic/otel-genai/ingest-YYYY-MM-DD.jsonl` automatically when present.
 
-Supported insight views: `daily`, `session`, `blocks`, `models`, `projects`, `compaction`, `comparative`, and `efficiency`.
+Supported insight views: `daily`, `peak`, `session`, `blocks`, `models`, `projects`, `compaction`, `comparative`, and `efficiency`.
+
+`--view peak` prints each provider's busiest three-hour slot of the day over the last seven days (`startHour`, `endHour`, `share` of tokens, `activeDays`), the same figure as the Peak hours line in the menu. It combines today's live logs with the hourly counts stored in each day's relay row, and prints nothing for a provider with fewer than three active days, or with no slot that holds 20% of the tokens and leads the next by 1.25×. Days recorded before 2.14.0 have no hourly counts, so the history fills in over the following days.
 
 ### Local OTLP JSON collector
 
