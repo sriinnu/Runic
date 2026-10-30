@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.14.0 — 2026-10-30
 - Receipt and Flight Deck skins: the top-right corner of the tab strip shows a clock with ticking seconds, the seconds in the theme accent. Receipt shows local time and replaces the `#000188` build number, which meant nothing at a glance; Flight Deck keeps its Zulu clock.
 - Peak hours: provider cards in Analyst and Operator mode show the three-hour slot of the day that burned the most tokens over the last seven days ("Peak hours: 21–00 · 26% of tokens · 7d"), for providers Runic reads from local logs (Claude, Codex, opencode, OpenTelemetry). It stays hidden until there are at least three active days, and when no slot holds 20% of the tokens and leads the next by a quarter. Each day's relay row now keeps 24 hourly token counts so this survives the raw logs; days recorded before this build have none, so the line appears after a few days of use. `runic insights --view peak` prints the same per provider.
 - Fonts: an installed Runic also registered fonts from the source checkout it was built from, and CoreText could pick that copy. Once the checkout moved or was deleted, those faces drew as boxes (Departures' Barlow text was all boxes). A packaged app now reads resources only from its own bundle.
