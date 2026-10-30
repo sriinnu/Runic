@@ -3,6 +3,23 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.14.0</title>
+            <pubDate>Fri, 30 Oct 2026 12:14:19 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>192</sparkle:version>
+            <sparkle:shortVersionString>2.14.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.14.0</h2>
+<ul>
+<li>Receipt and Flight Deck skins: the top-right corner of the tab strip shows a clock with ticking seconds, the seconds in the theme accent. Receipt shows local time and replaces the <code>#000188</code> build number, which meant nothing at a glance; Flight Deck keeps its Zulu clock.</li>
+<li>Peak hours: provider cards in Analyst and Operator mode show the three-hour slot of the day that burned the most tokens over the last seven days ("Peak hours: 21–00 · 26% of tokens · 7d"), for providers Runic reads from local logs (Claude, Codex, opencode, OpenTelemetry). It stays hidden until there are at least three active days, and when no slot holds 20% of the tokens and leads the next by a quarter. Each day's relay row now keeps 24 hourly token counts so this survives the raw logs; days recorded before this build have none, so the line appears after a few days of use. <code>runic insights --view peak</code> prints the same per provider.</li>
+<li>Fonts: an installed Runic also registered fonts from the source checkout it was built from, and CoreText could pick that copy. Once the checkout moved or was deleted, those faces drew as boxes (Departures' Barlow text was all boxes). A packaged app now reads resources only from its own bundle.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.14.0/Runic-2.14.0.zip" length="48974543" type="application/octet-stream" sparkle:edSignature="Zcj+EBGZ4BRZkrpwyM+GvngbC6nQlFqIvzXIci/izLswrqWjGkUKXHqfvmuvJ08VTN5fDy0lmXz/NlEKHeEhDQ=="/>
+        </item>
+        <item>
             <title>2.13.5</title>
             <pubDate>Fri, 23 Oct 2026 15:24:37 +0200</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -30,22 +47,6 @@
             <sparkle:shortVersionString>2.13.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.4/Runic-2.13.4.zip" length="48850857" type="application/octet-stream" sparkle:edSignature="CFryzUVU7LamFIyZm+Qfol83VZZrfnUvyfrJqCPXc5bUZiBAleT8A+Z28Qg74b9JN5HonollYmbye65VKhKHAA=="/>
-        </item>
-        <item>
-            <title>2.13.3</title>
-            <pubDate>Thu, 22 Oct 2026 22:41:55 +0200</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>186</sparkle:version>
-            <sparkle:shortVersionString>2.13.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.13.3</h2>
-<ul>
-<li>Release: every build and every release tag is signed. <code>release.sh</code> signs the tag explicitly (<code>git tag --sign</code>) and verifies it before pushing, instead of relying on the global <code>tag.gpgSign</code> setting. Local packaging no longer falls back to ad-hoc or unsigned: <code>RUNIC_SIGNING=adhoc</code> and the lldb debug build sign with the "Runic Dev" cert, <code>build-macos.sh</code> and the screenshot script stop when no identity is found, and <code>package_app.sh</code> checks the finished bundle and rejects an ad-hoc seal.</li>
-<li>SiliconFlow (China): its "Balance from browser sign-in" switch never showed in the list layout of Settings → Providers, because the China account rows only rendered their key field. China-slot switches now render under the key field (Kimi, z.ai, MiniMax, Qwen and StepFun China gain any switches they define too). A China slot connected through the browser sign-in also counts as configured, so SiliconFlow (China) shows in the menu without a <code>.cn</code> API key.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.13.3/Runic-2.13.3.zip" length="48783410" type="application/octet-stream" sparkle:edSignature="92Jyg+7H9TbUFyg3Qt/J+0H3fxTRdkKEaVX9D2BIx/iuvsXTCDGIPFrUlSYUoaNmhiEa3UsM0UvaXp8Msjt4Ag=="/>
         </item>
     </channel>
 </rss>
