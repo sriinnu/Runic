@@ -47,8 +47,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
-# The site's lockfile pins what Cloudflare Pages installs.
-!site/package-lock.json
 
 # TypeScript build outputs
 dist/
