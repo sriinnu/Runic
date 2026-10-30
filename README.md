@@ -12,6 +12,14 @@
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/sriinnu)
 [![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/sriinnu)
 
+[Website](https://runic.srinivas.dev) · [Wiki](https://github.com/sriinnu/Runic/wiki) · [Download](https://github.com/sriinnu/Runic/releases/latest)
+
+<img src="https://raw.githubusercontent.com/wiki/sriinnu/Runic/images/menu-claude-2.jpg" alt="Runic menu showing Claude session and weekly limits, pace and insights" height="420" />
+<img src="https://raw.githubusercontent.com/wiki/sriinnu/Runic/images/theme-flightdeck.jpg" alt="Flight Deck skin: provider gauges as a cockpit display with reset waypoints" height="420" />
+<img src="https://raw.githubusercontent.com/wiki/sriinnu/Runic/images/theme-receipt.jpg" alt="Receipt skin: usage printed as a till receipt" height="420" />
+
+<sub>Demo data. Every theme and skin: <a href="https://runic.srinivas.dev/themes-and-skins">runic.srinivas.dev/themes-and-skins</a> or the <a href="https://github.com/sriinnu/Runic/wiki/Themes-and-Skins">wiki</a>.</sub>
+
 </div>
 
 Runic is a menubar app for seeing AI usage, quota signals, reset windows, cost estimates, context metadata, and local usage history across the providers you enable.
@@ -37,6 +45,7 @@ Its job is not to make provider usage look cleaner than it is. Its job is to rep
 - Tracks China and international platforms as separate accounts where a vendor runs both (Kimi, z.ai, MiniMax, Qwen, StepFun), so both subscriptions can be watched at once.
 - Hot-reloads `~/Library/Application Support/Runic/config.json` for endpoint overrides, extra log paths, and rolling-window quota gauges — edit the file, no restart.
 - Reads capability metadata from Kosha-discovery when present, then falls back to bundled context metadata.
+- Comes in 13 themes, seven of them full skins that redraw the whole menu (Flight Deck, Receipt, Departures, Gazette, Sumi, Drafting, Instrument). See [Themes and Skins](https://runic.srinivas.dev/themes-and-skins).
 - Exports scoped usage data as CSV or JSON with provenance fields where known.
 - Provides a CLI for scripts and diagnostics.
 
@@ -80,7 +89,7 @@ runic insights --provider all --view compaction --json --pretty
 runic otel-collect --port 4318
 ```
 
-Install it from Preferences -> Performance -> Refresh -> Install CLI.
+Install it from **Settings → Performance → Refresh & Safety → Install CLI**.
 
 `runic cost` refreshes today's live usage by default. `--rebuild` is the explicit historical repair path and may scan provider JSONL history.
 
@@ -101,6 +110,8 @@ Refresh usage in Runic first. A missing field means that provider has not suppli
 
 ## Docs
 
+The [website](https://runic.srinivas.dev) and the [wiki](https://github.com/sriinnu/Runic/wiki) carry the user guide, screenshots and per-provider notes. The repo docs below are the source for developers:
+
 - Provider behavior: [docs/providers.md](docs/providers.md)
 - CLI details: [docs/cli.md](docs/cli.md)
 - MCP server and tool packages: [docs/mcp.md](docs/mcp.md)
@@ -113,7 +124,7 @@ Refresh usage in Runic first. A missing field means that provider has not suppli
 
 Start with [SKILL.md](SKILL.md), [docs/architecture.md](docs/architecture.md), [docs/provider.md](docs/provider.md), and [docs/providers.md](docs/providers.md).
 
-Keep the root README as a statement of truth and project stance. Put detailed provider behavior, screenshots, local paths, feature matrices, research notes, and implementation reports in the right docs or ignored local notes.
+Keep the root README as a statement of truth and project stance. Put detailed provider behavior, local paths, feature matrices, research notes, and implementation reports in the right docs or ignored local notes. Screenshots live in the wiki (`images/`) and are sanitized demo renders; the README only links them.
 
 Do not commit keys, tokens, browser session dumps, local account screenshots, account emails, org IDs, unredacted diagnostics, or provider secrets.
 
