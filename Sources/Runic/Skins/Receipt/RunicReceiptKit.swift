@@ -46,10 +46,13 @@ enum RunicReceipt {
         return build
     }()
 
-    /// "#000156" — the build as a six-digit ticket number on the body.
-    static var ticket: String {
-        if let build, let number = Int(build) { return String(format: "#%06d", number) }
-        return "v\(RunicVersion.marketing)"
+    /// ("15:21", "07") — the till clock on the tab strip, local time; the
+    /// seconds print apart so they can tick in the accent.
+    static func tillClock(_ date: Date) -> (minutes: String, seconds: String) {
+        let parts = Calendar.current.dateComponents([.hour, .minute, .second], from: date)
+        return (
+            String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0),
+            String(format: "%02d", parts.second ?? 0))
     }
 
     /// "TXN 156 · CASHIER: RUNIC 2.10.1"

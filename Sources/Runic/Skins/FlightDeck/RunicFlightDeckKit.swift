@@ -48,6 +48,11 @@ enum RunicFlightDeck {
         return formatter.string(from: date) + "Z"
     }
 
+    /// "07" — the Zulu clock's seconds, printed apart in the accent.
+    static func zuluSeconds(_ date: Date) -> String {
+        String(format: "%02d", Calendar(identifier: .gregorian).component(.second, from: date))
+    }
+
     /// "CODEX" — a provider as a callsign.
     static func callsign(_ name: String) -> String {
         name.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
