@@ -439,11 +439,20 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 resetDescription: resetDescription)
         }
 
-        guard let primary = makeWindow(usage.fiveHour, windowMinutes: 5 * 60) else {
+        // The flat keys and the `limits` list carry the same windows, and a reply
+        // can fill in only one of them. Take whichever has the number, so an
+        // empty `five_hour` doesn't throw away a reply that still has limits.
+        let session = makeWindow(usage.fiveHour, windowMinutes: 5 * 60)
+            ?? Self.limitWindow(usage.limits, kind: "session", windowMinutes: 5 * 60)
+        let sevenDay = makeWindow(usage.sevenDay, windowMinutes: 7 * 24 * 60)
+            ?? Self.limitWindow(usage.limits, kind: "weekly_all", windowMinutes: 7 * 24 * 60)
+
+        // No session window at all: the weekly one leads, and its length titles
+        // it "Weekly" rather than passing it off as a session.
+        guard let primary = session ?? sevenDay else {
             throw ClaudeUsageError.parseFailed("missing session data")
         }
-
-        let weekly = makeWindow(usage.sevenDay, windowMinutes: 7 * 24 * 60)
+        let weekly = session == nil ? nil : sevenDay
         let modelSpecific = makeWindow(
             usage.sevenDaySonnet ?? usage.sevenDayOpus,
             windowMinutes: 7 * 24 * 60) ?? Self.scopedLimitWindow(usage.limits)
@@ -462,6 +471,21 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             // Max plans include a monthly API credit; the tier says which.
                 .with(includedMonthlyCreditUSD: ClaudeAPICreditGrant
                     .monthlyUSD(rateLimitTier: credentials.rateLimitTier))
+    }
+
+    /// An account-wide window from the `limits` list, by `kind`. Skips entries
+    /// scoped to one model and entries with no percentage.
+    static func limitWindow(_ limits: [OAuthLimitEntry]?, kind: String, windowMinutes: Int) -> RateWindow? {
+        guard let limits else { return nil }
+        let matches = limits.filter { $0.kind == kind && $0.scopedModelName == nil && $0.percent != nil }
+        guard let entry = matches.first(where: { $0.isActive == true }) ?? matches.first,
+              let percent = entry.percent else { return nil }
+        let resetDate = ClaudeOAuthUsageFetcher.parseISO8601Date(entry.resetsAt)
+        return RateWindow(
+            usedPercent: percent,
+            windowMinutes: windowMinutes,
+            resetsAt: resetDate,
+            resetDescription: resetDate.map(Self.formatResetDate))
     }
 
     /// A model-scoped weekly limit from the `limits` list (a promotional

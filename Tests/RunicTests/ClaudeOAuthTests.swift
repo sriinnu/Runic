@@ -96,6 +96,65 @@ struct ClaudeOAuthTests {
     }
 
     @Test
+    func `reads session and weekly from limits when flat windows are empty`() throws {
+        let json = """
+        {
+          "five_hour": null,
+          "seven_day": { "utilization": null, "resets_at": null },
+          "limits": [
+            { "kind": "session", "group": "session", "percent": 32,
+              "resets_at": "2026-11-03T15:00:00.000Z", "scope": null, "is_active": false },
+            { "kind": "weekly_all", "group": "weekly", "percent": 24,
+              "resets_at": "2026-11-07T02:00:00.000Z", "scope": null, "is_active": false },
+            { "kind": "weekly_scoped", "group": "weekly", "percent": 46,
+              "resets_at": "2026-11-07T02:00:00.000Z",
+              "scope": { "model": { "id": null, "display_name": "Fable" } }, "is_active": true }
+          ]
+        }
+        """
+        let snap = try ClaudeUsageFetcher._mapOAuthUsageForTesting(Data(json.utf8))
+        #expect(snap.primary.usedPercent == 32)
+        #expect(snap.primary.windowMinutes == 300)
+        #expect(snap.primary.resetsAt != nil)
+        #expect(snap.secondary?.usedPercent == 24)
+        #expect(snap.secondary?.windowMinutes == 7 * 24 * 60)
+        #expect(snap.opus?.label == "Fable weekly")
+    }
+
+    @Test
+    func `flat windows win over limits`() throws {
+        let json = """
+        {
+          "five_hour": { "utilization": 12, "resets_at": "2026-11-03T15:00:00.000Z" },
+          "limits": [ { "kind": "session", "percent": 99, "scope": null } ]
+        }
+        """
+        let snap = try ClaudeUsageFetcher._mapOAuthUsageForTesting(Data(json.utf8))
+        #expect(snap.primary.usedPercent == 12)
+    }
+
+    @Test
+    func `a weekly only reply leads with weekly instead of failing`() throws {
+        let json = """
+        {
+          "five_hour": null,
+          "seven_day": { "utilization": 8, "resets_at": "2026-11-07T02:00:00.000Z" }
+        }
+        """
+        let snap = try ClaudeUsageFetcher._mapOAuthUsageForTesting(Data(json.utf8))
+        #expect(snap.primary.usedPercent == 8)
+        #expect(snap.primary.windowMinutes == 7 * 24 * 60)
+        #expect(snap.secondary == nil)
+    }
+
+    @Test
+    func `a reply with no windows still fails`() throws {
+        #expect(throws: ClaudeUsageError.self) {
+            try ClaudeUsageFetcher._mapOAuthUsageForTesting(Data(#"{"five_hour": null, "limits": []}"#.utf8))
+        }
+    }
+
+    @Test
     func `maps O auth extra usage`() throws {
         let json = """
         {
