@@ -38,13 +38,17 @@ public struct SavedBrowserSession: Sendable {
         #endif
     }
 
-    public func store(_ value: String) {
+    /// False when the Keychain refused it, so nothing was saved.
+    @discardableResult
+    public func store(_ value: String) -> Bool {
         #if os(macOS)
         self.clear()
         var query = self.baseQuery()
         query[kSecValueData as String] = Data(value.utf8)
         query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        _ = RunicKeychainGate.add(query as CFDictionary)
+        return RunicKeychainGate.add(query as CFDictionary) == errSecSuccess
+        #else
+        return false
         #endif
     }
 

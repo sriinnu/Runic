@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import WebKit
 
 /// Sign in to a website inside Runic, for numbers that only exist behind a web
@@ -19,28 +20,38 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
         }
     }
 
-    /// One site to sign in to. `accept` is asked whenever the cookies change,
-    /// and says whether they're a working login.
+    /// One site to sign in to. `validate` is asked as the cookies change, and
+    /// returns what to do to keep a working login, or nil while there is none.
+    /// Throwing ends the sign-in: this login can't work however long it waits.
+    /// Keeping is separate so a window closed mid-check saves nothing.
     struct Step {
         let site: String
         let url: URL
-        let accept: @Sendable ([HTTPCookie]) async -> Bool
+        let validate: @Sendable ([HTTPCookie]) async throws -> (@Sendable () -> Void)?
     }
 
     /// Only one at a time. Holds the window alive while it's open.
     private static var current: WebSignInWindow?
 
+    /// A login check can fail on a passing network problem with the same
+    /// cookies, so they get asked again after this long.
+    private static let retryInterval: TimeInterval = 10
+
     /// Opens one window and walks the steps in it, sharing its cookies, so a
     /// site that shares a login with the one before needs no second sign-in.
-    /// Throws only if the window closes before the first step is done; closing
-    /// later keeps what was already signed in.
+    /// Throws only if the first step never completes; closing later keeps what
+    /// was already signed in. A second caller joins the window already open.
     static func run(steps: [Step]) async throws {
-        guard let first = steps.first else { return }
-        self.current?.finish(.failure(Failure.closed(site: first.site)))
-        let signIn = WebSignInWindow(steps: steps)
-        self.current = signIn
+        guard !steps.isEmpty else { return }
         try await withCheckedThrowingContinuation { continuation in
-            signIn.continuation = continuation
+            if let current = self.current {
+                current.continuations.append(continuation)
+                current.bringToFront()
+                return
+            }
+            let signIn = WebSignInWindow(steps: steps)
+            self.current = signIn
+            signIn.continuations.append(continuation)
             signIn.show()
         }
     }
@@ -53,9 +64,12 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
 
     private let webView: WKWebView
     private var window: NSWindow?
-    private var continuation: CheckedContinuation<Void, Error>?
+    private var continuations: [CheckedContinuation<Void, Error>] = []
+    private var isFinished = false
+    private var isChecking = false
     private var polling: Task<Void, Never>?
-    private var lastTried: String?
+    private var lastTried: SHA256Digest?
+    private var lastTriedAt = Date.distantPast
 
     private init(steps: [Step]) {
         self.steps = steps
@@ -76,15 +90,14 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered,
             defer: false)
-        window.title = "Sign in to \(self.step.site)"
         window.isReleasedWhenClosed = false
         window.contentView = self.webView
         window.delegate = self
         window.center()
         self.window = window
+        self.updateTitle()
         self.webView.load(URLRequest(url: self.step.url))
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
+        self.bringToFront()
         self.polling = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.checkCookies()
@@ -93,31 +106,69 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
         }
     }
 
+    private func bringToFront() {
+        NSApp.activate(ignoringOtherApps: true)
+        self.window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// There's no address bar, so the title says where this page really is:
+    /// a password should only go in when that host looks right.
+    private func updateTitle() {
+        let host = self.webView.url?.host ?? self.step.url.host ?? self.step.site
+        self.window?.title = "Sign in to \(self.step.site) — on \(host)"
+    }
+
     private func checkCookies() async {
-        guard self.continuation != nil else { return }
+        // One check at a time, so a result always belongs to the current step.
+        guard !self.isFinished, !self.isChecking else { return }
+        self.isChecking = true
+        defer { self.isChecking = false }
+
         let cookies = await self.webView.configuration.websiteDataStore.httpCookieStore.allCookies()
-        let fingerprint = cookies.map { "\($0.domain)|\($0.name)|\($0.value)" }.sorted().joined(separator: "\n")
-        guard !cookies.isEmpty, fingerprint != self.lastTried else { return }
+        guard !self.isFinished, !cookies.isEmpty else { return }
+        let fingerprint = SHA256.hash(data: Data(
+            cookies.map { "\($0.domain)|\($0.name)|\($0.value)" }.sorted().joined(separator: "\n").utf8))
+        let now = Date()
+        guard fingerprint != self.lastTried || now.timeIntervalSince(self.lastTriedAt) >= Self.retryInterval
+        else { return }
         self.lastTried = fingerprint
-        guard await self.step.accept(cookies), self.continuation != nil else { return }
+        self.lastTriedAt = now
+
+        do {
+            guard let keep = try await self.step.validate(cookies), !self.isFinished else { return }
+            keep()
+            self.advance()
+        } catch {
+            guard !self.isFinished else { return }
+            // A later site failing doesn't undo the login already kept.
+            self.finish(self.stepIndex == 0 ? .failure(error) : .success(()))
+        }
+    }
+
+    private func advance() {
         guard self.stepIndex + 1 < self.steps.count else {
             self.finish(.success(()))
             return
         }
         self.stepIndex += 1
         self.lastTried = nil
-        self.window?.title = "Sign in to \(self.step.site)"
+        self.lastTriedAt = .distantPast
+        self.updateTitle()
         self.webView.load(URLRequest(url: self.step.url))
     }
 
     private func finish(_ result: Result<Void, Error>) {
-        guard let continuation = self.continuation else { return }
-        self.continuation = nil
+        guard !self.isFinished else { return }
+        self.isFinished = true
         self.polling?.cancel()
         self.window?.delegate = nil
         self.window?.close()
         if Self.current === self { Self.current = nil }
-        continuation.resume(with: result)
+        let waiting = self.continuations
+        self.continuations = []
+        for continuation in waiting {
+            continuation.resume(with: result)
+        }
     }
 
     func windowWillClose(_: Notification) {
@@ -128,7 +179,23 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
         }
     }
 
+    /// Logins and their identity providers are https; nothing else loads here.
+    func webView(
+        _: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void)
+    {
+        let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+        let scheme = navigationAction.request.url?.scheme?.lowercased()
+        decisionHandler(!isMainFrame || scheme == "https" ? .allow : .cancel)
+    }
+
+    func webView(_: WKWebView, didCommit _: WKNavigation!) {
+        self.updateTitle()
+    }
+
     func webView(_: WKWebView, didFinish _: WKNavigation!) {
+        self.updateTitle()
         Task { await self.checkCookies() }
     }
 

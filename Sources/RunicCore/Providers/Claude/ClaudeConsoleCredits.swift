@@ -36,6 +36,7 @@ public enum ClaudeConsoleCredits {
     }
 
     private static let baseURL = "https://platform.claude.com/api/organizations"
+    private static let attachDeadlineSeconds = 10
     private static let session = SavedBrowserSession.claudeConsole
 
     private static let failureLock = NSLock()
@@ -82,7 +83,9 @@ public enum ClaudeConsoleCredits {
         for candidate in candidates {
             do {
                 _ = try await Self.fetch(cookieHeader: candidate.cookieHeader)
-                Self.session.store(candidate.cookieHeader)
+                guard Self.session.store(candidate.cookieHeader) else {
+                    throw Failure.unexpectedReply("Runic couldn't save the login to the Keychain")
+                }
                 Self.setLastFailure(nil)
                 Self.recordConnectTrace(trace, outcome: "connected via \(candidate.source)")
                 return candidate.source
@@ -98,6 +101,13 @@ public enum ClaudeConsoleCredits {
         #endif
     }
 
+    /// Claude's own sites, matched exactly: a host merely containing "claude"
+    /// is browsing data that stays out of the diagnostics file.
+    static func isClaudeHost(_ host: String) -> Bool {
+        let name = host.hasPrefix(".") ? String(host.dropFirst()) : host
+        return ["claude.ai", "claude.com"].contains { name == $0 || name.hasSuffix(".\($0)") }
+    }
+
     /// Whether a cookie is one a browser would send to platform.claude.com, as
     /// opposed to the docs or support sites.
     public static func isConsoleCookie(_ cookie: HTTPCookie) -> Bool {
@@ -105,16 +115,24 @@ public enum ClaudeConsoleCredits {
         return domain == "claude.com" || domain == "platform.claude.com"
     }
 
-    /// Settings action for a login made inside Runic: keep these cookies if the
-    /// Console accepts them. False while the page is still signed out.
-    public static func connect(cookies: [HTTPCookie]) async -> Bool {
+    /// For a login made inside Runic: what to do to keep these cookies, or nil
+    /// while the Console doesn't accept them yet (still signed out, or a network
+    /// problem). Throws when signed in with no Console organization.
+    public static func validate(cookies: [HTTPCookie]) async throws -> (@Sendable () -> Void)? {
         let kept = cookies.filter(Self.isConsoleCookie)
-        guard !kept.isEmpty else { return false }
+        guard !kept.isEmpty else { return nil }
         let header = kept.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
-        guard await (try? Self.fetch(cookieHeader: header)) != nil else { return false }
-        Self.session.store(header)
-        Self.setLastFailure(nil)
-        return true
+        do {
+            _ = try await Self.fetch(cookieHeader: header)
+        } catch Failure.noConsoleOrganization {
+            throw Failure.noConsoleOrganization
+        } catch {
+            return nil
+        }
+        return {
+            Self.session.store(header)
+            Self.setLastFailure(nil)
+        }
     }
 
     /// Adds the credits to a snapshot. Best effort: the usage still shows when
@@ -122,12 +140,29 @@ public enum ClaudeConsoleCredits {
     static func attach(to snapshot: ClaudeUsageSnapshot) async -> ClaudeUsageSnapshot {
         guard let cookieHeader = self.session.load() else { return snapshot }
         do {
-            let credits = try await self.fetch(cookieHeader: cookieHeader)
+            let credits = try await self.fetchWithinDeadline(cookieHeader: cookieHeader)
             self.setLastFailure(nil)
             return snapshot.with(apiCredits: credits)
         } catch {
             self.setLastFailure(error.localizedDescription)
             return snapshot
+        }
+    }
+
+    /// The usage fetch this rides on has its own overall timeout, so a slow
+    /// Console must give up first rather than cost the usage numbers too.
+    private static func fetchWithinDeadline(cookieHeader: String) async throws -> ProviderAPICredits {
+        try await withThrowingTaskGroup(of: ProviderAPICredits.self) { group in
+            group.addTask { try await self.fetch(cookieHeader: cookieHeader) }
+            group.addTask {
+                try await Task.sleep(for: .seconds(self.attachDeadlineSeconds))
+                throw Failure.unexpectedReply("no answer in \(self.attachDeadlineSeconds)s")
+            }
+            defer { group.cancelAll() }
+            guard let credits = try await group.next() else {
+                throw Failure.unexpectedReply("no answer")
+            }
+            return credits
         }
     }
 
@@ -147,6 +182,10 @@ public enum ClaudeConsoleCredits {
         guard let url = URL(string: address) else { throw Failure.unexpectedReply("bad address") }
         var request = URLRequest(url: url)
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+        // The login lives only in Runic's Keychain item: nothing from these
+        // replies goes in the app's shared cookie store, where it would outlive
+        // a disconnect.
+        request.httpShouldHandleCookies = false
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 15
         let (data, response) = try await ProviderRequestSession.data(for: request)
@@ -175,6 +214,8 @@ public enum ClaudeConsoleCredits {
             let currency: String?
             let remainingMinor: Double?
             let grantedMinor: Double?
+            let remaining: Balance?
+            let granted: Balance?
             let expiresAt: String?
 
             private enum CodingKeys: String, CodingKey {
@@ -182,15 +223,20 @@ public enum ClaudeConsoleCredits {
                 case currency
                 case remainingMinor = "remaining_amount_minor_units"
                 case grantedMinor = "granted_amount_minor_units"
+                case remaining
+                case granted
                 case expiresAt = "expires_at"
             }
         }
-        struct Reply: Decodable {
-            struct Balance: Decodable {
-                let money: ClaudeMoney?
-                let credits: ClaudeMoney?
-            }
+        struct Balance: Decodable {
+            let money: ClaudeMoney?
+            let credits: ClaudeMoney?
 
+            var value: Double? {
+                (self.money ?? self.credits)?.value
+            }
+        }
+        struct Reply: Decodable {
             let currency: String?
             let balance: Balance?
             let tranches: [Tranche]?
@@ -208,11 +254,14 @@ public enum ClaudeConsoleCredits {
         else { return nil }
         let grants = ((reply.promoTranches ?? []) + (reply.tranches ?? [])).compactMap { tranche
             -> ProviderAPICredits.Grant? in
-            guard let remaining = tranche.remainingMinor else { return nil }
+            // The nested amounts carry their own exponent; the flat minor-unit
+            // fields don't, and have only been seen with two decimals.
+            guard let remaining = tranche.remaining?.value ?? tranche.remainingMinor.map({ $0 / 100 })
+            else { return nil }
             return ProviderAPICredits.Grant(
                 name: tranche.name,
-                remaining: remaining / 100,
-                granted: tranche.grantedMinor.map { $0 / 100 },
+                remaining: remaining,
+                granted: tranche.granted?.value ?? tranche.grantedMinor.map { $0 / 100 },
                 expiresAt: ClaudeOAuthUsageFetcher.parseISO8601Date(tranche.expiresAt))
         }
         return ProviderAPICredits(
@@ -230,7 +279,7 @@ public enum ClaudeConsoleCredits {
 
         func add(_ report: BrowserCookieReadReport) {
             let claude = report.hosts
-                .filter { $0.key.contains("claude") }
+                .filter { ClaudeConsoleCredits.isClaudeHost($0.key) }
                 .sorted { $0.key < $1.key }
                 .map { "\($0.key) \($0.value.failed)/\($0.value.rows) failed" }
                 .joined(separator: ", ")

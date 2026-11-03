@@ -47,21 +47,30 @@ public enum ClaudeWebResets {
         return info.sourceLabel
     }
 
-    /// Settings action for a login made inside Runic: keep a session claude.ai
-    /// accepts. A Console session is tried too, since it may work here and save
-    /// a second sign-in. False while nothing works.
-    public static func connect(cookies: [HTTPCookie]) async -> Bool {
-        let keys = cookies.filter { $0.name == "sessionKey" && $0.value.hasPrefix("sk-ant-") }.map(\.value)
-        for key in Set(keys) {
+    /// For a login made inside Runic: what to do to keep a session claude.ai
+    /// accepts, or nil while nothing works. A Console session is tried too, since
+    /// it may save a second sign-in; a cookie from any other site never is.
+    public static func validate(cookies: [HTTPCookie]) async -> (@Sendable () -> Void)? {
+        for key in self.sessionKeys(in: cookies) {
             guard await (try? ClaudeWebAPIFetcher.fetchOrganizationInfo(sessionKey: key)) != nil else { continue }
-            SessionStore.store(key)
-            return true
+            return { SessionStore.store(key) }
         }
-        return false
+        return nil
+    }
+
+    static func sessionKeys(in cookies: [HTTPCookie]) -> Set<String> {
+        Set(cookies
+            .filter { cookie in
+                let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
+                return ["claude.ai", "claude.com"].contains { domain == $0 || domain.hasSuffix(".\($0)") }
+                    && cookie.name == "sessionKey" && cookie.value.hasPrefix("sk-ant-")
+            }
+            .map(\.value))
     }
 
     public static func disconnect() {
         SessionStore.clear()
+        self.setLastFailure(nil)
     }
 
     public static var isConnected: Bool {

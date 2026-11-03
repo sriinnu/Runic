@@ -102,13 +102,17 @@ struct ClaudeProviderImplementation: ProviderImplementation {
         }
     }
 
-    /// The browser's login when macOS allows reading it, otherwise a sign-in
-    /// window. A failure with a login present (an unexpected reply) is reported.
+    /// The browser's login when it works, otherwise a sign-in window. That covers
+    /// macOS refusing the browser's folder and a browser profile that holds
+    /// cookies but isn't signed in: either way, signing in here is the fix.
     private static func connectConsole() async throws -> String {
         do {
             return try await ClaudeConsoleCredits.connect()
-        } catch ClaudeConsoleCredits.Failure.notSignedIn {
+        } catch {
             try await WebSignInWindow.run(steps: self.signInSteps(startingWithConsole: true))
+            guard ClaudeConsoleCredits.isConnected else {
+                throw ClaudeConsoleCredits.Failure.unexpectedReply("Runic couldn't save the login to the Keychain")
+            }
             return "the Runic sign-in window"
         }
     }
@@ -119,12 +123,12 @@ struct ClaudeProviderImplementation: ProviderImplementation {
     private static func signInSteps(startingWithConsole: Bool) -> [WebSignInWindow.Step] {
         let console = URL(string: "https://platform.claude.com/settings/billing").map { url in
             WebSignInWindow.Step(site: "platform.claude.com", url: url) { cookies in
-                await ClaudeConsoleCredits.connect(cookies: cookies)
+                try await ClaudeConsoleCredits.validate(cookies: cookies)
             }
         }
         let chat = URL(string: "https://claude.ai/login").map { url in
             WebSignInWindow.Step(site: "claude.ai", url: url) { cookies in
-                await ClaudeWebResets.connect(cookies: cookies)
+                await ClaudeWebResets.validate(cookies: cookies)
             }
         }
         let wanted = startingWithConsole

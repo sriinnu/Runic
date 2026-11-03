@@ -144,7 +144,7 @@ struct ProviderSettingsDescriptorTests {
             setLastAppActiveRunAt: { _, _ in },
             requestConfirmation: { _ in })
         let toggles = ClaudeProviderImplementation().settingsToggles(context: context)
-        // Only the opt-in claude.ai resets switch, off until the user turns it on.
+        // Only the opt-in web sign-in switches: resets and the Console balance.
         #expect(toggles.map(\.id) == [ClaudeProviderImplementation.webResetsToggleID, "claude-console-credits"])
         #expect(toggles.first?.binding.wrappedValue == false)
     }
