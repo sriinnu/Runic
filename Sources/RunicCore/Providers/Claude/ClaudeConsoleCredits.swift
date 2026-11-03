@@ -13,16 +13,18 @@ import Silo
 /// to the plan's monthly amount and Settings says why.
 public enum ClaudeConsoleCredits {
     public enum Failure: LocalizedError, Sendable {
-        case notSignedIn
+        /// `details` says what each browser answered, when one had a problem.
+        case notSignedIn(details: String?)
         case sessionExpired
         case noConsoleOrganization
         case unexpectedReply(String)
 
         public var errorDescription: String? {
             switch self {
-            case .notSignedIn:
+            case let .notSignedIn(details):
                 "No Claude Console login found. Runic reads Chrome, Edge, Brave and Arc (allow the Keychain "
                     + "prompt when it appears). Sign in at platform.claude.com in one of them, then turn this on again."
+                    + (details.map { "\n\n\($0)" } ?? "")
             case .sessionExpired:
                 "The saved Claude Console login expired. Turn this off and on again to reconnect."
             case .noConsoleOrganization:
@@ -62,24 +64,32 @@ public enum ClaudeConsoleCredits {
     /// balance, and keep Runic's own copy. Returns where it was found.
     public static func connect() async throws -> String {
         #if os(macOS)
+        var trace: [String] = []
         let candidates = BrowserCookieAccess.$allowsKeychainPrompt.withValue(true) {
-            Self.browserSessions()
+            Self.browserSessions(trace: &trace)
         }
-        guard !candidates.isEmpty else { throw Failure.notSignedIn }
-        var lastError: Error = Failure.notSignedIn
+        guard !candidates.isEmpty else {
+            Self.recordConnectTrace(trace, outcome: "no candidates")
+            let problems = trace.filter { $0.contains(": failed: ") && !$0.contains("not found") }
+            throw Failure.notSignedIn(details: problems.isEmpty ? nil : problems.joined(separator: "\n"))
+        }
+        var lastError: Error = Failure.notSignedIn(details: nil)
         for candidate in candidates {
             do {
                 _ = try await Self.fetch(cookieHeader: candidate.cookieHeader)
                 Self.session.store(candidate.cookieHeader)
                 Self.setLastFailure(nil)
+                Self.recordConnectTrace(trace, outcome: "connected via \(candidate.source)")
                 return candidate.source
             } catch {
+                trace.append("\(candidate.source): \(error.localizedDescription)")
                 lastError = error
             }
         }
+        Self.recordConnectTrace(trace, outcome: "every candidate failed")
         throw lastError
         #else
-        throw Failure.notSignedIn
+        throw Failure.notSignedIn(details: nil)
         #endif
     }
 
@@ -195,13 +205,22 @@ public enum ClaudeConsoleCredits {
 
     /// One candidate per browser profile holding Console cookies. Whether a
     /// profile is signed in is settled by asking the Console, not by cookie name.
-    private static func browserSessions() -> [BrowserSession] {
+    private static func browserSessions(trace: inout [String]) -> [BrowserSession] {
         let client = BrowserCookieClient()
         let order = ProviderDefaults.metadata[.claude]?.browserCookieOrder ?? Browser.defaultImportOrder
         var sessions: [BrowserSession] = []
         for browser in order {
             let query = BrowserCookieQuery(domains: ["claude.com"])
-            guard let sources = try? client.records(matching: query, in: browser) else { continue }
+            let sources: [BrowserCookieStoreRecords]
+            do {
+                sources = try client.records(matching: query, in: browser)
+            } catch {
+                trace.append("\(browser.displayName): failed: \(error.localizedDescription)")
+                continue
+            }
+            if sources.allSatisfy(\.records.isEmpty) {
+                trace.append("\(browser.displayName): \(sources.count) profiles, no claude.com cookies")
+            }
             for source in sources where !source.records.isEmpty {
                 // Only what a browser would send to platform.claude.com, not
                 // the cookies of the docs or support sites.
@@ -210,6 +229,9 @@ public enum ClaudeConsoleCredits {
                         let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
                         return domain == "claude.com" || domain == "platform.claude.com"
                     }
+                // Names only, never values: enough to spot a renamed login cookie.
+                let names = Set(cookies.map(\.name)).sorted().joined(separator: ", ")
+                trace.append("\(source.label): \(source.records.count) claude.com, \(cookies.count) kept (\(names))")
                 guard !cookies.isEmpty else { continue }
                 sessions.append(BrowserSession(
                     cookieHeader: cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; "),
@@ -217,6 +239,22 @@ public enum ClaudeConsoleCredits {
             }
         }
         return sessions
+    }
+
+    /// The unified log redacts its messages, so keep the last connect attempt
+    /// in `diagnostics/`. Browser names, counts and cookie names; no values.
+    private static func recordConnectTrace(_ trace: [String], outcome: String) {
+        let report: [String: Any] = [
+            "at": ISO8601DateFormatter().string(from: Date()),
+            "outcome": outcome,
+            "trace": trace,
+        ]
+        guard let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),
+            let json = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+        else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? json.write(to: directory.appendingPathComponent("claude-console-connect.json"), options: .atomic)
     }
     #endif
 }
