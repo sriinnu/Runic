@@ -121,3 +121,9 @@ expected, and refills the cache.
 - Cost usage relay: `Sources/RunicCore/CostUsageFetcher.swift`,
   `Sources/RunicCore/UsageLedger/ClaudeUsageLogSource.swift`,
   `Sources/RunicCore/UsageLedger/LedgerCache.swift`
+
+## API credit balance
+
+API keys can't read the Claude Console's credit balance, and the Admin API has no endpoint for it. To see it on the card, turn on **API credit balance from the Console** in the Claude settings. Runic uses your platform.claude.com login from your browser. If macOS blocks reading the browser's folder, a Runic window asks you to sign in once instead. It keeps a copy in its own Keychain item and fetches `GET platform.claude.com/api/organizations/{org}/prepaid/credits` on each Claude refresh.
+
+The card then shows, for example, `API credits $390.14 left · $190.13 expires in 13h`. The endpoint is undocumented: if a fetch fails, the card falls back to the plan's monthly amount and the settings line says why.

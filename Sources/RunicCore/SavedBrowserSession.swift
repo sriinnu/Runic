@@ -18,6 +18,7 @@ public struct SavedBrowserSession: Sendable {
 
     public static let siliconFlow = SavedBrowserSession(account: "siliconflow-web-session")
     public static let siliconFlowCN = SavedBrowserSession(account: "siliconflow-cn-web-session")
+    public static let claudeConsole = SavedBrowserSession(account: "claude-console-web-session")
     public static let ollamaCloud = SavedBrowserSession(account: "ollama-cloud-web-session")
 
     public func load() -> String? {
@@ -37,13 +38,17 @@ public struct SavedBrowserSession: Sendable {
         #endif
     }
 
-    public func store(_ value: String) {
+    /// False when the Keychain refused it, so nothing was saved.
+    @discardableResult
+    public func store(_ value: String) -> Bool {
         #if os(macOS)
         self.clear()
         var query = self.baseQuery()
         query[kSecValueData as String] = Data(value.utf8)
         query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        _ = RunicKeychainGate.add(query as CFDictionary)
+        return RunicKeychainGate.add(query as CFDictionary) == errSecSuccess
+        #else
+        return false
         #endif
     }
 

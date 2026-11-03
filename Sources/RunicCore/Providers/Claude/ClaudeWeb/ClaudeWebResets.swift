@@ -22,7 +22,8 @@ public enum ClaudeWebResets {
             case .noBrowserSession:
                 "No claude.ai login found. Runic reads Chrome, Edge, Brave and Arc (allow the Keychain "
                     + "prompt when it appears); Safari's cookies also need Full Disk Access for Runic in "
-                    + "System Settings → Privacy & Security. Sign in at claude.ai in one of them, then turn this on again."
+                    + "System Settings → Privacy & Security. Sign in at claude.ai in one of them, "
+                    + "then turn this on again."
             case .sessionExpired:
                 "The saved claude.ai login expired. Turn this off and on again to reconnect."
             }
@@ -46,8 +47,30 @@ public enum ClaudeWebResets {
         return info.sourceLabel
     }
 
+    /// For a login made inside Runic: what to do to keep a session claude.ai
+    /// accepts, or nil while nothing works. A Console session is tried too, since
+    /// it may save a second sign-in; a cookie from any other site never is.
+    public static func validate(cookies: [HTTPCookie]) async -> (@Sendable () -> Void)? {
+        for key in self.sessionKeys(in: cookies) {
+            guard await (try? ClaudeWebAPIFetcher.fetchOrganizationInfo(sessionKey: key)) != nil else { continue }
+            return { SessionStore.store(key) }
+        }
+        return nil
+    }
+
+    static func sessionKeys(in cookies: [HTTPCookie]) -> Set<String> {
+        Set(cookies
+            .filter { cookie in
+                let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
+                return ["claude.ai", "claude.com"].contains { domain == $0 || domain.hasSuffix(".\($0)") }
+                    && cookie.name == "sessionKey" && cookie.value.hasPrefix("sk-ant-")
+            }
+            .map(\.value))
+    }
+
     public static func disconnect() {
         SessionStore.clear()
+        self.setLastFailure(nil)
     }
 
     public static var isConnected: Bool {

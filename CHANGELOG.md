@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Claude: the card can show what's left of your API credits and when the next grant expires. Turn on "API credit balance from the Console" in the Claude settings; it uses your browser's login, or a sign-in window inside Runic if macOS blocks reading the browser. "Banked resets from claude.ai" shares that window, so both switches take one sign-in.
 - Claude: when Claude's usage reply has no session window, the card now leads with the weekly limit. It used to discard the whole reply and show "missing session data" above stale numbers, and re-entering the Keychain password couldn't clear it.
 - Usage cards: a provider dropping a limit window is no longer an error. The next window leads, and with none the card says "no usage limits reported". Codex, Gemini and Copilot also stop drawing a made-up 0% gauge in that case, and Claude's CLI fallback stops calling the weekly row a session.
 

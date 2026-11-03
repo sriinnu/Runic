@@ -125,6 +125,19 @@ extension ClaudeUsageSnapshot {
         return self.replacingProviderCost(cost)
     }
 
+    /// The Console's API credit balance, carried on the usage-credits cost. A
+    /// snapshot with no spend block yet gets a zero USD cost to hang it on.
+    func with(apiCredits: ProviderAPICredits) -> ClaudeUsageSnapshot {
+        var cost = self.providerCost ?? ProviderCostSnapshot(
+            used: 0,
+            limit: 0,
+            currencyCode: "USD",
+            period: "Monthly",
+            updatedAt: self.updatedAt)
+        cost.apiCredits = apiCredits
+        return self.replacingProviderCost(cost)
+    }
+
     private func replacingProviderCost(_ cost: ProviderCostSnapshot?) -> ClaudeUsageSnapshot {
         var copy = ClaudeUsageSnapshot(
             primary: self.primary,
@@ -318,18 +331,20 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 snap = try await self.loadViaCLIFallback(model: model, gap: gap)
             }
             snap = await self.applyWebExtrasIfNeeded(to: snap)
-            return await ClaudeWebResets.attach(to: snap)
+            snap = await ClaudeWebResets.attach(to: snap)
+            return await ClaudeConsoleCredits.attach(to: snap)
         case .web:
-            return try await self.loadViaWebAPI()
+            let snap = try await self.loadViaWebAPI()
+            return await ClaudeConsoleCredits.attach(to: snap)
         case .cli:
             do {
                 var snap = try await self.loadViaPTY(model: model, timeout: 10)
                 snap = await self.applyWebExtrasIfNeeded(to: snap)
-                return snap
+                return await ClaudeConsoleCredits.attach(to: snap)
             } catch {
                 var snap = try await self.loadViaPTY(model: model, timeout: 24)
                 snap = await self.applyWebExtrasIfNeeded(to: snap)
-                return snap
+                return await ClaudeConsoleCredits.attach(to: snap)
             }
         }
     }

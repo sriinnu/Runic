@@ -699,16 +699,33 @@ extension UsageMenuCardView.Model {
             spendLine: spendLine)
     }
 
-    /// "API credits $200 a month · next grant Nov 3" — the plan's included
-    /// API credit, only when there is one. Pro and Free carry none and show
-    /// nothing. The remaining balance is not shown: it lives in the Console.
-    static func apiCreditGrantLine(_ cost: ProviderCostSnapshot) -> String? {
+    /// "API credits $390.14 left · $190.13 expires in 13h" with the Console
+    /// connected. Otherwise "API credits $200 a month · next grant Nov 3": the
+    /// plan's included API credit, only when there is one. Pro and Free carry
+    /// none and show nothing.
+    static func apiCreditGrantLine(_ cost: ProviderCostSnapshot, now: Date = Date()) -> String? {
+        if let credits = cost.apiCredits {
+            let money = { (value: Double) in UsageFormatter.currencyString(value, currencyCode: credits.currencyCode) }
+            var line = "API credits \(money(credits.available(at: now))) left"
+            if let next = credits.nextExpiring(after: now), let expiresAt = next.expiresAt {
+                line += " · \(money(next.remaining)) expires \(Self.creditExpiryText(expiresAt, now: now))"
+            }
+            return line
+        }
         guard let amount = cost.includedMonthlyCreditUSD, amount > 0 else { return nil }
         var line = "API credits \(UsageFormatter.currencyString(amount, currencyCode: "USD")) a month"
         if let next = cost.includedCreditNextGrantAt {
             line += " · next grant \(next.formatted(.dateTime.month(.abbreviated).day()))"
         }
         return line
+    }
+
+    /// "in 13h" while it's close enough to act on, a date after that.
+    private static func creditExpiryText(_ date: Date, now: Date) -> String {
+        let minutes = Int(date.timeIntervalSince(now) / 60)
+        if minutes < 60 { return "in \(max(1, minutes))m" }
+        if minutes < 48 * 60 { return "in \(minutes / 60)h" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 
     private static func clamped(_ value: Double) -> Double {
