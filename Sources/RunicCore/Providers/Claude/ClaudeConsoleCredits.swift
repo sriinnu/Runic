@@ -98,6 +98,25 @@ public enum ClaudeConsoleCredits {
         #endif
     }
 
+    /// Whether a cookie is one a browser would send to platform.claude.com, as
+    /// opposed to the docs or support sites.
+    public static func isConsoleCookie(_ cookie: HTTPCookie) -> Bool {
+        let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
+        return domain == "claude.com" || domain == "platform.claude.com"
+    }
+
+    /// Settings action for a login made inside Runic: keep these cookies if the
+    /// Console accepts them. False while the page is still signed out.
+    public static func connect(cookies: [HTTPCookie]) async -> Bool {
+        let kept = cookies.filter(Self.isConsoleCookie)
+        guard !kept.isEmpty else { return false }
+        let header = kept.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        guard await (try? Self.fetch(cookieHeader: header)) != nil else { return false }
+        Self.session.store(header)
+        Self.setLastFailure(nil)
+        return true
+    }
+
     /// Adds the credits to a snapshot. Best effort: the usage still shows when
     /// this fails. Saved login only, never the browser, never a prompt.
     static func attach(to snapshot: ClaudeUsageSnapshot) async -> ClaudeUsageSnapshot {
@@ -250,13 +269,8 @@ public enum ClaudeConsoleCredits {
                 trace.append("\(browser.displayName): no claude.com cookies readable")
             }
             for source in sources where !source.records.isEmpty {
-                // Only what a browser would send to platform.claude.com, not
-                // the cookies of the docs or support sites.
                 let cookies = BrowserCookieClient.makeHTTPCookies(source.records, origin: query.origin)
-                    .filter { cookie in
-                        let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
-                        return domain == "claude.com" || domain == "platform.claude.com"
-                    }
+                    .filter(Self.isConsoleCookie)
                 // Names only, never values: enough to spot a renamed login cookie.
                 let names = Set(cookies.map(\.name)).sorted().joined(separator: ", ")
                 trace.append("\(source.label): \(source.records.count) claude.com, \(cookies.count) kept (\(names))")

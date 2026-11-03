@@ -60,6 +60,31 @@ struct ClaudeConsoleCreditsTests {
         #expect(ClaudeConsoleCredits.consoleOrganizationID(chatOnly) == nil)
     }
 
+    private static func cookie(name: String = "n", value: String = "v", domain: String) throws -> HTTPCookie {
+        try #require(HTTPCookie(properties: [.name: name, .value: value, .domain: domain, .path: "/"]))
+    }
+
+    @Test
+    func `only console cookies are sent to the console`() throws {
+        #expect(try ClaudeConsoleCredits.isConsoleCookie(Self.cookie(domain: "platform.claude.com")))
+        #expect(try ClaudeConsoleCredits.isConsoleCookie(Self.cookie(domain: ".claude.com")))
+        #expect(try !ClaudeConsoleCredits.isConsoleCookie(Self.cookie(domain: "docs.claude.com")))
+        #expect(try !ClaudeConsoleCredits.isConsoleCookie(Self.cookie(domain: "evilclaude.com")))
+        #expect(try !ClaudeConsoleCredits.isConsoleCookie(Self.cookie(domain: "claude.ai")))
+    }
+
+    @Test
+    func `a page with no console cookies never counts as signed in`() async throws {
+        let cookies = try [Self.cookie(domain: "docs.claude.com")]
+        #expect(await ClaudeConsoleCredits.connect(cookies: cookies) == false)
+    }
+
+    @Test
+    func `a claude ai page without a session key never counts as signed in`() throws {
+        let other = try Self.cookie(name: "sessionKey", value: "not-a-key", domain: "claude.ai")
+        #expect(ClaudeWebResets.connect(cookies: [other]) == false)
+    }
+
     @Test
     func `the card names the balance and the next expiry`() throws {
         var cost = ProviderCostSnapshot(used: 0, limit: 0, currencyCode: "USD", updatedAt: .init())

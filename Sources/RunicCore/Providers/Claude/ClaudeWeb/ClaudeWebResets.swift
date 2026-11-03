@@ -22,7 +22,8 @@ public enum ClaudeWebResets {
             case .noBrowserSession:
                 "No claude.ai login found. Runic reads Chrome, Edge, Brave and Arc (allow the Keychain "
                     + "prompt when it appears); Safari's cookies also need Full Disk Access for Runic in "
-                    + "System Settings → Privacy & Security. Sign in at claude.ai in one of them, then turn this on again."
+                    + "System Settings → Privacy & Security. Sign in at claude.ai in one of them, "
+                    + "then turn this on again."
             case .sessionExpired:
                 "The saved claude.ai login expired. Turn this off and on again to reconnect."
             }
@@ -44,6 +45,15 @@ public enum ClaudeWebResets {
         }
         SessionStore.store(info.key)
         return info.sourceLabel
+    }
+
+    /// Settings action for a login made inside Runic: keep the session once
+    /// the page has one. False while it's still signed out.
+    public static func connect(cookies: [HTTPCookie]) -> Bool {
+        guard let key = cookies.first(where: { $0.name == "sessionKey" && $0.value.hasPrefix("sk-ant-") })?.value
+        else { return false }
+        SessionStore.store(key)
+        return true
     }
 
     public static func disconnect() {
