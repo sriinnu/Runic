@@ -16,6 +16,8 @@ enum BrowserSignInToggle {
         let isConnected: @Sendable () -> Bool
         let connect: @Sendable () async throws -> String
         let disconnect: @Sendable () -> Void
+        /// Why the last refresh failed, when the provider keeps it.
+        var lastFailure: (@Sendable () -> String?)?
     }
 
     static func descriptor(
@@ -38,7 +40,7 @@ enum BrowserSignInToggle {
             title: title,
             subtitle: subtitle,
             binding: binding,
-            statusText: { context.statusText(id) },
+            statusText: { hooks.lastFailure?() ?? context.statusText(id) },
             actions: [],
             isVisible: nil,
             onChange: nil,

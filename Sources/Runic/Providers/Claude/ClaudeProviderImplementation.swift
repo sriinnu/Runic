@@ -43,6 +43,19 @@ struct ClaudeProviderImplementation: ProviderImplementation {
                 onChange: nil,
                 onAppDidBecomeActive: nil,
                 onAppearWhenEnabled: nil),
+            BrowserSignInToggle.descriptor(
+                id: "claude-console-credits",
+                title: "API credit balance from the Console",
+                subtitle: "Shows what's left of your API credits and when the next grant expires. API keys can't "
+                    + "read this, so turning it on reads your platform.claude.com login from your browser once "
+                    + "(macOS may ask for your password) and keeps a copy in Runic's own Keychain item.",
+                hooks: BrowserSignInToggle.Hooks(
+                    site: "platform.claude.com",
+                    isConnected: { ClaudeConsoleCredits.isConnected },
+                    connect: { try await ClaudeConsoleCredits.connect() },
+                    disconnect: { ClaudeConsoleCredits.disconnect() },
+                    lastFailure: { ClaudeConsoleCredits.lastFailure }),
+                context: context),
         ]
     }
 

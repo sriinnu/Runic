@@ -7,9 +7,10 @@ import Foundation
 /// period. Pro and Free get none, so nothing is shown for them.
 ///
 /// claude.ai exposes no endpoint for the grant or its remaining balance
-/// (that lives in the Console, behind a separate login); what Runic can
-/// know is the plan tier (from the OAuth credentials) and the next billing
-/// date (from `subscription_details`, with the claude.ai switch on).
+/// (that lives in the Console, behind a separate login: see
+/// `ClaudeConsoleCredits`). Without that connection, what Runic can know is the
+/// plan tier (from the OAuth credentials) and the next billing date (from
+/// `subscription_details`, with the claude.ai switch on).
 enum ClaudeAPICreditGrant {
     /// Monthly grant in USD for a `rate_limit_tier` such as
     /// `default_claude_max_20x`; nil when the tier carries none.
