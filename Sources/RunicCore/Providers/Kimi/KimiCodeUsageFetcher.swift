@@ -149,11 +149,8 @@ enum KimiCodeUsageFetcher {
             }
         }
 
-        guard let primary = windows.first else {
-            throw KimiCodeUsageError.noUsageData
-        }
         return UsageSnapshot(
-            primary: primary,
+            primary: windows.first ?? .noLimitsReported,
             secondary: windows.dropFirst().first,
             tertiary: windows.dropFirst(2).first,
             updatedAt: now,
@@ -244,14 +241,6 @@ enum KimiCodeUsageFetcher {
             ? [.withInternetDateTime, .withFractionalSeconds]
             : [.withInternetDateTime]
         return formatter.date(from: value)
-    }
-}
-
-enum KimiCodeUsageError: LocalizedError {
-    case noUsageData
-
-    var errorDescription: String? {
-        "Kimi Code returned no plan usage."
     }
 }
 

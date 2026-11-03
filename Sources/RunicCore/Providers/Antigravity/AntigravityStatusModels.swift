@@ -24,11 +24,7 @@ public struct AntigravityStatusSnapshot: Sendable {
         // depleted" notification, and sort first as most-constrained — drop it.
         let known = self.modelQuotas.filter { $0.remainingFraction != nil }
         let ordered = Self.selectModels(known)
-        guard let primaryQuota = ordered.first else {
-            throw AntigravityStatusProbeError.parseFailed("No quota models available")
-        }
-
-        let primary = Self.rateWindow(for: primaryQuota)
+        let primary = ordered.first.map { Self.rateWindow(for: $0) } ?? .noLimitsReported
         let secondary = ordered.count > 1 ? Self.rateWindow(for: ordered[1]) : nil
         let tertiary = ordered.count > 2 ? Self.rateWindow(for: ordered[2]) : nil
 

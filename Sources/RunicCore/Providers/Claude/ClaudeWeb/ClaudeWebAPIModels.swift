@@ -57,7 +57,8 @@ extension ClaudeWebAPIFetcher {
 
     /// Claude usage data from the API
     public struct WebUsageData: Sendable {
-        public let sessionPercentUsed: Double
+        /// Nil when the reply has no session window.
+        public let sessionPercentUsed: Double?
         public let sessionResetsAt: Date?
         public let weeklyPercentUsed: Double?
         public let weeklyResetsAt: Date?
@@ -70,7 +71,7 @@ extension ClaudeWebAPIFetcher {
         public var resetCredits: UsageResetCredits?
 
         public init(
-            sessionPercentUsed: Double,
+            sessionPercentUsed: Double?,
             sessionResetsAt: Date?,
             weeklyPercentUsed: Double?,
             weeklyResetsAt: Date?,

@@ -148,10 +148,10 @@ struct ClaudeOAuthTests {
     }
 
     @Test
-    func `a reply with no windows still fails`() throws {
-        #expect(throws: ClaudeUsageError.self) {
-            try ClaudeUsageFetcher._mapOAuthUsageForTesting(Data(#"{"five_hour": null, "limits": []}"#.utf8))
-        }
+    func `a reply with no windows says so without a gauge`() throws {
+        let snap = try ClaudeUsageFetcher._mapOAuthUsageForTesting(Data(#"{"five_hour": null, "limits": []}"#.utf8))
+        #expect(snap.primary == .noLimitsReported)
+        #expect(snap.primary.gaugePercent(showUsed: true) == nil)
     }
 
     @Test

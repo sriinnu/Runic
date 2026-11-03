@@ -7,7 +7,6 @@ public enum CopilotUsageFetchError: LocalizedError, Sendable {
     case unauthorized(details: String)
     case endpointUnavailable(details: String)
     case invalidResponse(details: String)
-    case noQuotaData
     case allAttemptsFailed(details: [String])
     case missingCredentials(details: String)
 
@@ -28,8 +27,6 @@ public enum CopilotUsageFetchError: LocalizedError, Sendable {
                 return "GitHub Copilot returned an invalid response."
             }
             return "GitHub Copilot returned an invalid response. \(details)"
-        case .noQuotaData:
-            return "GitHub Copilot returned no quota snapshots."
         case let .allAttemptsFailed(details):
             let compact = details
                 .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -176,9 +173,6 @@ public struct CopilotUsageFetcher: Sendable {
     private func makeSnapshot(from usage: CopilotUsageResponse) throws -> UsageSnapshot {
         let resetDate = self.parseDate(usage.quotaResetDate)
         let orderedSnapshots = self.orderedQuotaSnapshots(usage.quotaSnapshots)
-        guard !orderedSnapshots.isEmpty else {
-            throw CopilotUsageFetchError.noQuotaData
-        }
         let primary = self.makeRateWindow(from: orderedSnapshots.first, resetAt: resetDate)
         let secondary = self.makeRateWindow(
             from: orderedSnapshots.count > 1 ? orderedSnapshots[1] : nil,
@@ -187,11 +181,7 @@ public struct CopilotUsageFetcher: Sendable {
             from: orderedSnapshots.count > 2 ? orderedSnapshots[2] : nil,
             resetAt: resetDate)
 
-        let resolvedPrimary = primary ?? RateWindow(
-            usedPercent: 0,
-            windowMinutes: nil,
-            resetsAt: resetDate,
-            resetDescription: nil)
+        let resolvedPrimary = primary ?? .noLimitsReported
 
         let plan = usage.copilotPlan?
             .replacingOccurrences(of: "_", with: " ")

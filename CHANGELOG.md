@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Claude: when Claude's usage reply has no session window, the card now leads with the weekly limit. It used to discard the whole reply and show "missing session data" above stale numbers, and re-entering the Keychain password couldn't clear it.
+- Usage cards: a provider dropping a limit window is no longer an error. The next window leads, and with none the card says "no usage limits reported". Codex, Gemini and Copilot also stop drawing a made-up 0% gauge in that case, and Claude's CLI fallback stops calling the weekly row a session.
 
 ## 2.14.0 — 2026-10-30
 - Receipt and Flight Deck skins: the top-right corner of the tab strip shows a clock with ticking seconds, the seconds in the theme accent. Receipt shows local time and replaces the `#000188` build number, which meant nothing at a glance; Flight Deck keeps its Zulu clock.

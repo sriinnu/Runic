@@ -238,11 +238,11 @@ extension GeminiStatusProbe {
 
     static func parseAPIResponse(_ data: Data, email: String?) throws -> GeminiStatusSnapshot {
         let decoder = JSONDecoder()
-        let response = try decoder.decode(QuotaResponse.self, from: data)
-
-        guard let buckets = response.buckets, !buckets.isEmpty else {
-            throw GeminiStatusProbeError.parseFailed("No quota buckets in response")
+        guard let response = try? decoder.decode(QuotaResponse.self, from: data) else {
+            throw GeminiStatusProbeError.parseFailed("Invalid quota response")
         }
+
+        let buckets = response.buckets ?? []
 
         // Group quotas by model, keeping lowest per model (input tokens usually)
         var modelQuotaMap: [String: (fraction: Double, resetString: String?)] = [:]

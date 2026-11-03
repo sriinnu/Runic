@@ -107,7 +107,7 @@ final class AntigravityStatusProbeTests: XCTestCase {
 
         let data = Data(json.utf8)
         let snapshot = try AntigravityStatusProbe.parseUserStatusResponse(data)
-        // Unknown-only quotas must surface as an error, not a 0%-remaining window.
-        XCTAssertThrowsError(try snapshot.toUsageSnapshot())
+        // Unknown-only quotas must not become a 0%-remaining window.
+        XCTAssertEqual(try snapshot.toUsageSnapshot().primary, .noLimitsReported)
     }
 }

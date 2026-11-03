@@ -66,11 +66,6 @@ extension ClaudeWebAPIFetcher {
                 sessionResets = self.parseISO8601Date(resetsAt)
             }
         }
-        guard let sessionPercent else {
-            // If we can't parse session utilization, treat this as a failure so callers can fall back to the CLI.
-            throw FetchError.invalidResponse
-        }
-
         // Parse seven_day (weekly) usage
         var weeklyPercent: Double?
         var weeklyResets: Date?

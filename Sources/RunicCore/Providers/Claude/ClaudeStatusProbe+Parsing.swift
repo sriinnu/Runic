@@ -18,6 +18,7 @@ extension ClaudeStatusProbe {
         }
     }
 
+    private static let sessionLabelNeedle = Data("current session".utf8)
     private static let weeklyLabelNeedle = Data("current week".utf8)
     private static let opusLabelNeedle = Data("opus".utf8)
     private static let sonnetLabelNeedle = Data("sonnet".utf8)
@@ -54,25 +55,34 @@ extension ClaudeStatusProbe {
         // Fallback: order-based percent scraping when labels are present but the surrounding layout moved.
         // Only apply the fallback when the corresponding label exists in the rendered panel; enterprise accounts
         // may omit the weekly panel entirely, and we should treat that as "unavailable" rather than guessing.
+        // The same goes for the session row: without it, the panel's first percent is the weekly limit.
+        let hasSessionLabel = labelContext.contains(Self.sessionLabelNeedle)
         let hasWeeklyLabel = labelContext.contains(Self.weeklyLabelNeedle)
         let hasOpusLabel = labelContext.contains(Self.opusLabelNeedle) || labelContext.contains(Self.sonnetLabelNeedle)
 
         if sessionPct == nil || (hasWeeklyLabel && weeklyPct == nil) || (hasOpusLabel && opusPct == nil) {
             let ordered = self.allPercents(clean)
-            if sessionPct == nil, ordered.indices.contains(0) { sessionPct = ordered[0] }
-            if hasWeeklyLabel, weeklyPct == nil, ordered.indices.contains(1) { weeklyPct = ordered[1] }
-            if hasOpusLabel, opusPct == nil, ordered.indices.contains(2) { opusPct = ordered[2] }
+            // Count only the rows the panel has, so a missing row doesn't shift the rest.
+            let weeklyIndex = hasSessionLabel ? 1 : 0
+            let opusIndex = weeklyIndex + (hasWeeklyLabel ? 1 : 0)
+            if hasSessionLabel, sessionPct == nil, ordered.indices.contains(0) { sessionPct = ordered[0] }
+            if hasWeeklyLabel, weeklyPct == nil, ordered.indices.contains(weeklyIndex) {
+                weeklyPct = ordered[weeklyIndex]
+            }
+            if hasOpusLabel, opusPct == nil, ordered.indices.contains(opusIndex) { opusPct = ordered[opusIndex] }
         }
 
         let identity = Self.parseIdentity(usageText: clean, statusText: statusClean)
 
-        guard let sessionPct else {
+        // Any one row is enough. Reading none means the panel didn't render as
+        // expected, which says nothing about the account's limits.
+        guard sessionPct != nil || weeklyPct != nil || opusPct != nil else {
             Self.dumpIfNeeded(
                 enabled: shouldDump,
-                reason: "missing session label",
+                reason: "no usage rows",
                 usage: clean,
                 status: statusText)
-            throw ClaudeStatusProbeError.parseFailed("Missing Current session")
+            throw ClaudeStatusProbeError.parseFailed("No usage rows in the Claude CLI panel")
         }
 
         let sessionReset = self.extractReset(labelSubstring: "Current session", context: labelContext)
