@@ -65,9 +65,14 @@ public enum ClaudeConsoleCredits {
     public static func connect() async throws -> String {
         #if os(macOS)
         var trace: [String] = []
+        let reads = ReadReports()
+        let reporter: @Sendable (BrowserCookieReadReport) -> Void = { reads.add($0) }
         let candidates = BrowserCookieAccess.$allowsKeychainPrompt.withValue(true) {
-            Self.browserSessions(trace: &trace)
+            BrowserCookieAccess.$readReporter.withValue(reporter) {
+                Self.browserSessions(trace: &trace)
+            }
         }
+        trace += reads.lines
         guard !candidates.isEmpty else {
             Self.recordConnectTrace(trace, outcome: "no candidates")
             let problems = trace.filter { $0.contains(": failed: ") && !$0.contains("not found") }
@@ -198,6 +203,29 @@ public enum ClaudeConsoleCredits {
     }
 
     #if os(macOS)
+    /// Summaries of each database read, keeping only Claude's hosts: the
+    /// rest of the host table is browsing data and stays out of the file.
+    private final class ReadReports: @unchecked Sendable {
+        private let lock = NSLock()
+        private var collected: [String] = []
+
+        func add(_ report: BrowserCookieReadReport) {
+            let claude = report.hosts
+                .filter { $0.key.contains("claude") }
+                .sorted { $0.key < $1.key }
+                .map { "\($0.key) \($0.value.failed)/\($0.value.rows) failed" }
+                .joined(separator: ", ")
+            let line = "\(report.store): \(report.rows) rows, \(report.encrypted) encrypted, "
+                + "\(report.failed) failed, formats \(report.prefixes), failed formats \(report.failedPrefixes); "
+                + "Claude hosts: \(claude.isEmpty ? "none" : claude)"
+            self.lock.withLock { self.collected.append(line) }
+        }
+
+        var lines: [String] {
+            self.lock.withLock { self.collected }
+        }
+    }
+
     private struct BrowserSession {
         let cookieHeader: String
         let source: String
@@ -219,7 +247,7 @@ public enum ClaudeConsoleCredits {
                 continue
             }
             if sources.allSatisfy(\.records.isEmpty) {
-                trace.append("\(browser.displayName): \(sources.count) profiles, no claude.com cookies")
+                trace.append("\(browser.displayName): no claude.com cookies readable")
             }
             for source in sources where !source.records.isEmpty {
                 // Only what a browser would send to platform.claude.com, not

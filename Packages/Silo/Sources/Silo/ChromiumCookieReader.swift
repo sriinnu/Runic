@@ -50,6 +50,8 @@ struct ChromiumCookieReader {
         var records: [BrowserCookieRecord] = []
         var usedEncryptedValues = false
         var failedDecryptions = 0
+        var report = BrowserCookieReadReport(store: store.label)
+        defer { BrowserCookieAccess.readReporter?(report) }
 
         while sqlite3_step(statement) == SQLITE_ROW {
             let hostKey = columnText(statement, index["host_key"] ?? 0) ?? ""
@@ -63,14 +65,23 @@ struct ChromiumCookieReader {
             let isHttpOnly = (columnInt(statement, index["is_httponly"] ?? 7) ?? 0) != 0
             let sameSiteValue = columnInt(statement, index["samesite"] ?? 8) ?? 0
 
+            report.rows += 1
+            report.hosts[hostKey, default: .init()].rows += 1
+
             let decryptedValue: String
             if value.isEmpty, let encrypted = encrypted, encryptedLength > 0 {
                 usedEncryptedValues = true
                 let data = Data(bytes: encrypted, count: encryptedLength)
+                let prefix = BrowserCookieReadReport.prefix(of: data)
+                report.encrypted += 1
+                report.prefixes[prefix, default: 0] += 1
                 if let decrypted = decryptor.decrypt(data: data) {
                     decryptedValue = decrypted
                 } else {
                     failedDecryptions += 1
+                    report.failed += 1
+                    report.failedPrefixes[prefix, default: 0] += 1
+                    report.hosts[hostKey, default: .init()].failed += 1
                     continue
                 }
             } else {
