@@ -169,12 +169,13 @@ extension MiniMaxUsageSnapshot {
             used: self.used,
             modelName: self.modelName,
             remainingPercent: self.remainingPercent)
-        let primary = primaryQuota.toRateWindow(
-            windowMinutes: self.sessionWindowMinutes,
-            resetsAt: self.sessionResetsAt)
+        // A zero total with no percentage means no session quota was reported.
+        let session = self.total > 0 || self.remainingPercent != nil
+            ? primaryQuota.toRateWindow(windowMinutes: self.sessionWindowMinutes, resetsAt: self.sessionResetsAt)
+            : nil
         // Surfacing weekly quota as secondary — the only slot available
         // alongside primary, so users see both session *and* cycle usage.
-        let secondary = self.weeklyQuota?.toRateWindow(
+        let weekly = self.weeklyQuota?.toRateWindow(
             windowMinutes: 7 * 24 * 60,
             resetsAt: self.weeklyResetsAt)
         // Additional model quotas beyond the primary and beyond the weekly
@@ -188,8 +189,8 @@ extension MiniMaxUsageSnapshot {
             loginMethod: "api-key")
 
         return UsageSnapshot(
-            primary: primary,
-            secondary: secondary,
+            primary: session ?? weekly ?? .noLimitsReported,
+            secondary: session == nil ? nil : weekly,
             tertiary: tertiary,
             providerCost: nil,
             updatedAt: self.updatedAt,
@@ -244,7 +245,7 @@ public struct MiniMaxUsageFetcher: Sendable {
             }
 
             guard let models = apiResponse.modelRemains, !models.isEmpty else {
-                throw MiniMaxUsageError.parseFailed("No model quota found")
+                return MiniMaxUsageSnapshot(total: 0, used: 0, updatedAt: Date())
             }
 
             // Pick the first model with a non-zero session quota as primary.

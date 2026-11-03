@@ -253,7 +253,7 @@ struct GeminiStatusProbeAPITests {
                 return GeminiAPITestHelpers.response(
                     url: url.absoluteString,
                     status: 200,
-                    body: GeminiAPITestHelpers.jsonData(["buckets": []]))
+                    body: Data("not json".utf8))
             default:
                 return GeminiAPITestHelpers.response(url: url.absoluteString, status: 404, body: Data())
             }

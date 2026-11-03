@@ -152,7 +152,8 @@ extension UsageStore {
                 lines.append("Web API summary:")
 
                 let sessionReset = web.sessionResetsAt?.description ?? "nil"
-                lines.append("session_used=\(web.sessionPercentUsed)% resetsAt=\(sessionReset)")
+                let sessionUsed = web.sessionPercentUsed.map { "\($0)%" } ?? "none"
+                lines.append("session_used=\(sessionUsed) resetsAt=\(sessionReset)")
 
                 if let weekly = web.weeklyPercentUsed {
                     let weeklyReset = web.weeklyResetsAt?.description ?? "nil"

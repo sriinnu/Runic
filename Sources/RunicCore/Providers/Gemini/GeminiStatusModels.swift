@@ -35,12 +35,7 @@ public struct GeminiStatusSnapshot: Sendable {
         let secondaryQuota = selected.count > 1 ? selected[1] : nil
         let tertiaryQuota = selected.count > 2 ? selected[2] : nil
 
-        let primary = Self.rateWindow(from: primaryQuota) ?? RateWindow(
-            usedPercent: 0,
-            windowMinutes: 1440,
-            resetsAt: nil,
-            resetDescription: nil,
-            label: nil)
+        let primary = Self.rateWindow(from: primaryQuota) ?? .noLimitsReported
         let secondary = Self.rateWindow(from: secondaryQuota)
         let tertiary = Self.rateWindow(from: tertiaryQuota)
 

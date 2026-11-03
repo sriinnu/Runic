@@ -36,6 +36,16 @@ public struct RateWindow: Codable, Equatable, Sendable {
         max(0, 100 - self.usedPercent)
     }
 
+    /// The headline when a provider answered but reports no limit right now.
+    /// Providers add and drop windows without notice, so this is a normal state
+    /// and not a failure. It has no gauge, so it never reads as 0% used.
+    public static let noLimitsReported = RateWindow(
+        usedPercent: 0,
+        windowMinutes: nil,
+        resetsAt: nil,
+        resetDescription: "Signed in · no usage limits reported",
+        hasKnownLimit: false)
+
     /// The percentage to render on a quota gauge, or `nil` when this window
     /// has no real limit (`hasKnownLimit == false`) and no gauge should be
     /// shown at all.

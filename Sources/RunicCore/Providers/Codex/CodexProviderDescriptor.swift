@@ -204,8 +204,8 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
             loginMethod: Self.resolvePlan(response: response, credentials: credentials))
 
         return UsageSnapshot(
-            primary: primary ?? RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
-            secondary: secondary,
+            primary: primary ?? secondary ?? .noLimitsReported,
+            secondary: primary == nil ? nil : secondary,
             tertiary: tertiary,
             resetCredits: resetCredits,
             updatedAt: Date(),

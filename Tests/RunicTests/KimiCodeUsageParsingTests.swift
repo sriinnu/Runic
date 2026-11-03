@@ -73,8 +73,8 @@ struct KimiCodeUsageParsingTests {
     }
 
     @Test
-    func `empty payload is an error, not a blank card`() {
-        #expect(throws: KimiCodeUsageError.self) { try self.parse("{}") }
+    func `empty payload says no limits, not a blank card or an error`() throws {
+        #expect(try self.parse("{}").primary == .noLimitsReported)
     }
 
     @Test

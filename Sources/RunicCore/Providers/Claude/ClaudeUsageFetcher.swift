@@ -207,21 +207,19 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             return nil
         }
 
-        func makeWindow(_ dict: [String: Any]?) -> RateWindow? {
+        func makeWindow(_ dict: [String: Any]?, windowMinutes: Int? = nil) -> RateWindow? {
             guard let dict else { return nil }
             let pct = (dict["pct_used"] as? NSNumber)?.doubleValue ?? 0
             let resetText = dict["resets"] as? String
             return RateWindow(
                 usedPercent: pct,
-                windowMinutes: nil,
+                windowMinutes: windowMinutes,
                 resetsAt: Self.parseReset(text: resetText),
                 resetDescription: resetText)
         }
 
-        guard let session = makeWindow(firstWindowDict(["session_5h"])) else {
-            throw ClaudeUsageError.parseFailed("missing session data")
-        }
-        let weekAll = makeWindow(firstWindowDict(["week_all_models", "week_all"]))
+        let session = makeWindow(firstWindowDict(["session_5h"]))
+        let weekAll = makeWindow(firstWindowDict(["week_all_models", "week_all"]), windowMinutes: 7 * 24 * 60)
 
         let rawEmail = (obj["account_email"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let email = (rawEmail?.isEmpty ?? true) ? nil : rawEmail
@@ -244,8 +242,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 resetDescription: resets)
         }()
         return ClaudeUsageSnapshot(
-            primary: session,
-            secondary: weekAll,
+            primary: session ?? weekAll ?? .noLimitsReported,
+            secondary: session == nil ? nil : weekAll,
             opus: opusWindow,
             providerCost: nil,
             updatedAt: Date(),
@@ -448,10 +446,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             ?? Self.limitWindow(usage.limits, kind: "weekly_all", windowMinutes: 7 * 24 * 60)
 
         // No session window at all: the weekly one leads, and its length titles
-        // it "Weekly" rather than passing it off as a session.
-        guard let primary = session ?? sevenDay else {
-            throw ClaudeUsageError.parseFailed("missing session data")
-        }
+        // it "Weekly" rather than passing it off as a session. With neither, the
+        // reply still carries a model limit, spend or resets worth showing.
+        let primary = session ?? sevenDay ?? .noLimitsReported
         let weekly = session == nil ? nil : sevenDay
         let modelSpecific = makeWindow(
             usage.sevenDaySonnet ?? usage.sevenDayOpus,
@@ -538,13 +535,15 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             Self.log.debug(msg)
         }
         // Convert web API data to ClaudeUsageSnapshot format
-        let primary = RateWindow(
-            usedPercent: webData.sessionPercentUsed,
-            windowMinutes: 5 * 60,
-            resetsAt: webData.sessionResetsAt,
-            resetDescription: webData.sessionResetsAt.map { Self.formatResetDate($0) })
+        let session: RateWindow? = webData.sessionPercentUsed.map { pct in
+            RateWindow(
+                usedPercent: pct,
+                windowMinutes: 5 * 60,
+                resetsAt: webData.sessionResetsAt,
+                resetDescription: webData.sessionResetsAt.map { Self.formatResetDate($0) })
+        }
 
-        let secondary: RateWindow? = webData.weeklyPercentUsed.map { pct in
+        let weekly: RateWindow? = webData.weeklyPercentUsed.map { pct in
             RateWindow(
                 usedPercent: pct,
                 windowMinutes: 7 * 24 * 60,
@@ -561,8 +560,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         }
 
         return ClaudeUsageSnapshot(
-            primary: primary,
-            secondary: secondary,
+            primary: session ?? weekly ?? .noLimitsReported,
+            secondary: session == nil ? nil : weekly,
             opus: opus,
             providerCost: webData.extraUsageCost,
             updatedAt: Date(),
@@ -587,28 +586,27 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         let probe = ClaudeStatusProbe(claudeBinary: "claude", timeout: timeout)
         let snap = try await probe.fetch()
 
-        guard let sessionPctLeft = snap.sessionPercentLeft else {
-            throw ClaudeUsageError.parseFailed("missing session data")
-        }
-
-        func makeWindow(pctLeft: Int?, reset: String?) -> RateWindow? {
+        func makeWindow(pctLeft: Int?, reset: String?, windowMinutes: Int? = nil) -> RateWindow? {
             guard let left = pctLeft else { return nil }
             let used = max(0, min(100, 100 - Double(left)))
             let resetClean = reset?.trimmingCharacters(in: .whitespacesAndNewlines)
             return RateWindow(
                 usedPercent: used,
-                windowMinutes: nil,
+                windowMinutes: windowMinutes,
                 resetsAt: ClaudeStatusProbe.parseResetDate(from: resetClean),
                 resetDescription: resetClean)
         }
 
-        let primary = makeWindow(pctLeft: sessionPctLeft, reset: snap.primaryResetDescription)!
-        let weekly = makeWindow(pctLeft: snap.weeklyPercentLeft, reset: snap.secondaryResetDescription)
+        let session = makeWindow(pctLeft: snap.sessionPercentLeft, reset: snap.primaryResetDescription)
+        let weekly = makeWindow(
+            pctLeft: snap.weeklyPercentLeft,
+            reset: snap.secondaryResetDescription,
+            windowMinutes: 7 * 24 * 60)
         let opus = makeWindow(pctLeft: snap.opusPercentLeft, reset: snap.opusResetDescription)
 
         return ClaudeUsageSnapshot(
-            primary: primary,
-            secondary: weekly,
+            primary: session ?? weekly ?? .noLimitsReported,
+            secondary: session == nil ? nil : weekly,
             opus: opus,
             providerCost: nil,
             updatedAt: Date(),
