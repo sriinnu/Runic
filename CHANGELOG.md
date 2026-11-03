@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Claude: when Claude's usage reply has no session window, the card now leads with the weekly limit. It used to discard the whole reply and show "missing session data" above stale numbers, and re-entering the Keychain password couldn't clear it.
+
 ## 2.14.0 — 2026-10-30
 - Receipt and Flight Deck skins: the top-right corner of the tab strip shows a clock with ticking seconds, the seconds in the theme accent. Receipt shows local time and replaces the `#000188` build number, which meant nothing at a glance; Flight Deck keeps its Zulu clock.
 - Peak hours: provider cards in Analyst and Operator mode show the three-hour slot of the day that burned the most tokens over the last seven days ("Peak hours: 21–00 · 26% of tokens · 7d"), for providers Runic reads from local logs (Claude, Codex, opencode, OpenTelemetry). It stays hidden until there are at least three active days, and when no slot holds 20% of the tokens and leads the next by a quarter. Each day's relay row now keeps 24 hourly token counts so this survives the raw logs; days recorded before this build have none, so the line appears after a few days of use. `runic insights --view peak` prints the same per provider.

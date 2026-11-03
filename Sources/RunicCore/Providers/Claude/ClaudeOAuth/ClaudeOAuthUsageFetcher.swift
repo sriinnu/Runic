@@ -108,6 +108,9 @@ enum ClaudeOAuthUsageFetcher {
             "at": ISO8601DateFormatter().string(from: Date()),
             "query": url.query ?? "",
             "topLevelKeys": root.keys.sorted(),
+            "fiveHour": Self.windowState(root["five_hour"]),
+            "sevenDay": Self.windowState(root["seven_day"]),
+            "limitKinds": ((root["limits"] as? [[String: Any]]) ?? []).compactMap { $0["kind"] as? String },
             "cedarEmber": blockState,
             "cedarEmberKeys": ((block as? [String: Any])?.keys.sorted()) ?? [],
             "spendKeys": ((root["spend"] as? [String: Any])?.keys.sorted()) ?? [],
@@ -129,6 +132,14 @@ enum ClaudeOAuthUsageFetcher {
         else { return }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try? json.write(to: directory.appendingPathComponent("claude-usage-shape.json"), options: .atomic)
+    }
+
+    /// Whether a usage window came back with a number, without saying what it is.
+    private static func windowState(_ value: Any?) -> String {
+        guard let value else { return "absent" }
+        if value is NSNull { return "null" }
+        guard let window = value as? [String: Any] else { return "unexpected" }
+        return window["utilization"] is NSNumber ? "has-utilization" : "no-utilization"
     }
 
     static func recordRejectedResetsQuery(status: Int) {
