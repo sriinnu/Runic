@@ -80,9 +80,9 @@ struct ClaudeConsoleCreditsTests {
     }
 
     @Test
-    func `a claude ai page without a session key never counts as signed in`() throws {
+    func `a claude ai page without a session key never counts as signed in`() async throws {
         let other = try Self.cookie(name: "sessionKey", value: "not-a-key", domain: "claude.ai")
-        #expect(ClaudeWebResets.connect(cookies: [other]) == false)
+        #expect(await ClaudeWebResets.connect(cookies: [other]) == false)
     }
 
     @Test

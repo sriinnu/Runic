@@ -21,9 +21,12 @@ struct ClaudeProviderImplementation: ProviderImplementation {
     func settingsToggles(context: ProviderSettingsContext) -> [ProviderSettingsToggleDescriptor] {
         let id = Self.webResetsToggleID
         let binding = Binding<Bool>(
-            get: { context.settings.claudeWebResetsEnabled },
+            // One sign-in can connect this while the Console switch is the one
+            // being turned on, so a saved session counts as on.
+            get: { context.settings.claudeWebResetsEnabled || ClaudeWebResets.isConnected },
             set: { enabled in
-                guard enabled != context.settings.claudeWebResetsEnabled else { return }
+                guard enabled != (context.settings.claudeWebResetsEnabled || ClaudeWebResets.isConnected)
+                else { return }
                 context.settings.claudeWebResetsEnabled = enabled
                 Task { @MainActor in
                     await Self.applyWebResets(enabled: enabled, context: context)
@@ -34,8 +37,9 @@ struct ClaudeProviderImplementation: ProviderImplementation {
                 id: id,
                 title: "Banked resets from claude.ai",
                 subtitle: "Claude only lists launch and promo resets to claude.ai and to Claude Code itself, "
-                    + "not to other apps. Turning this on reads your claude.ai login from your browser once "
-                    + "(macOS may ask for your password) and keeps a copy in Runic's own Keychain item.",
+                    + "not to other apps. Turning this on uses your claude.ai login from your browser, or a Runic "
+                    + "sign-in window if macOS blocks that. That window also connects the Console balance below, "
+                    + "so both take one sign-in. Runic keeps copies in its own Keychain item.",
                 binding: binding,
                 statusText: { ClaudeWebResets.lastFailure ?? context.statusText(id) },
                 actions: [],
@@ -48,8 +52,8 @@ struct ClaudeProviderImplementation: ProviderImplementation {
                 title: "API credit balance from the Console",
                 subtitle: "Shows what's left of your API credits and when the next grant expires. API keys can't "
                     + "read this, so turning it on uses your platform.claude.com login from your browser, or asks "
-                    + "you to sign in once in a Runic window if macOS blocks that. Runic keeps a copy in its own "
-                    + "Keychain item.",
+                    + "you to sign in once in a Runic window if macOS blocks that. That window also connects "
+                    + "the claude.ai resets above. Runic keeps copies in its own Keychain item.",
                 hooks: BrowserSignInToggle.Hooks(
                     site: "platform.claude.com",
                     isConnected: { ClaudeConsoleCredits.isConnected },
@@ -74,12 +78,10 @@ struct ClaudeProviderImplementation: ProviderImplementation {
             Result { try ClaudeWebResets.connect() }
         }.value
         // macOS can refuse Runic the browser's folder: sign in here instead.
-        if case .failure = result, let url = URL(string: "https://claude.ai/login") {
-            context.setStatusText(id, "Waiting for you to sign in to claude.ai…")
+        if case .failure = result {
+            context.setStatusText(id, "Waiting for you to sign in…")
             do {
-                try await WebSignInWindow.run(site: "claude.ai", url: url) { cookies in
-                    ClaudeWebResets.connect(cookies: cookies)
-                }
+                try await WebSignInWindow.run(steps: Self.signInSteps(startingWithConsole: false))
                 result = .success("the Runic sign-in window")
             } catch {
                 result = .failure(error)
@@ -106,12 +108,29 @@ struct ClaudeProviderImplementation: ProviderImplementation {
         do {
             return try await ClaudeConsoleCredits.connect()
         } catch ClaudeConsoleCredits.Failure.notSignedIn {
-            guard let url = URL(string: "https://platform.claude.com/settings/billing") else { throw URLError(.badURL) }
-            try await WebSignInWindow.run(site: "platform.claude.com", url: url) { cookies in
-                await ClaudeConsoleCredits.connect(cookies: cookies)
-            }
+            try await WebSignInWindow.run(steps: self.signInSteps(startingWithConsole: true))
             return "the Runic sign-in window"
         }
+    }
+
+    /// One window signs in to everything not connected yet, starting with the
+    /// switch the user just turned on, so both switches take one sign-in.
+    @MainActor
+    private static func signInSteps(startingWithConsole: Bool) -> [WebSignInWindow.Step] {
+        let console = URL(string: "https://platform.claude.com/settings/billing").map { url in
+            WebSignInWindow.Step(site: "platform.claude.com", url: url) { cookies in
+                await ClaudeConsoleCredits.connect(cookies: cookies)
+            }
+        }
+        let chat = URL(string: "https://claude.ai/login").map { url in
+            WebSignInWindow.Step(site: "claude.ai", url: url) { cookies in
+                await ClaudeWebResets.connect(cookies: cookies)
+            }
+        }
+        let wanted = startingWithConsole
+            ? [console, ClaudeWebResets.isConnected ? nil : chat]
+            : [chat, ClaudeConsoleCredits.isConnected ? nil : console]
+        return wanted.compactMap(\.self)
     }
 
     /// A `/login` in the terminal rewrites the CLI's Keychain item behind

@@ -47,13 +47,17 @@ public enum ClaudeWebResets {
         return info.sourceLabel
     }
 
-    /// Settings action for a login made inside Runic: keep the session once
-    /// the page has one. False while it's still signed out.
-    public static func connect(cookies: [HTTPCookie]) -> Bool {
-        guard let key = cookies.first(where: { $0.name == "sessionKey" && $0.value.hasPrefix("sk-ant-") })?.value
-        else { return false }
-        SessionStore.store(key)
-        return true
+    /// Settings action for a login made inside Runic: keep a session claude.ai
+    /// accepts. A Console session is tried too, since it may work here and save
+    /// a second sign-in. False while nothing works.
+    public static func connect(cookies: [HTTPCookie]) async -> Bool {
+        let keys = cookies.filter { $0.name == "sessionKey" && $0.value.hasPrefix("sk-ant-") }.map(\.value)
+        for key in Set(keys) {
+            guard await (try? ClaudeWebAPIFetcher.fetchOrganizationInfo(sessionKey: key)) != nil else { continue }
+            SessionStore.store(key)
+            return true
+        }
+        return false
     }
 
     public static func disconnect() {
