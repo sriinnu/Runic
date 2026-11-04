@@ -226,17 +226,54 @@ public enum SiliconFlowConsoleFetcher {
         china: Bool,
         environment: [String: String]) async -> (@Sendable () -> Void)?
     {
-        guard let header = SiliconFlowCookieImporter.signInCookieHeader(from: cookies, china: china)
-        else { return nil }
+        let trace = SiliconFlowConsoleTrace()
+        guard let header = SiliconFlowCookieImporter.signInCookieHeader(from: cookies, china: china) else {
+            // Names only, never values: enough to tell a login that never came
+            // back from one whose cookie was renamed.
+            let names = Set(cookies.map { "\($0.name)@\($0.domain)" }).sorted().joined(separator: ", ")
+            trace.note("sign-in window: no session-token yet (\(names))")
+            trace.finish(china: china, failure: nil)
+            return nil
+        }
         let session = SiliconFlowCookieSession(cookieHeader: header, sourceLabel: "the Runic sign-in window")
-        guard await (try? self.firstBalance(
-            sessions: [session],
-            china: china,
-            environment: environment,
-            trace: SiliconFlowConsoleTrace())) != nil
-        else { return nil }
+        do {
+            _ = try await self.firstBalance(sessions: [session], china: china, environment: environment, trace: trace)
+        } catch {
+            trace.finish(china: china, failure: error.localizedDescription)
+            return nil
+        }
+        trace.finish(china: china, failure: nil)
         let saved = self.savedSession(china: china)
         return { saved.store(header) }
+    }
+
+    public static func looksLikePastedSession(_ text: String) -> Bool {
+        SiliconFlowCookieImporter.pastedCookieHeader(text) != nil
+    }
+
+    /// For a sign-in the window can't do, such as Google turning it away: a
+    /// session copied from a browser's developer tools. Checked for a balance
+    /// before it's kept, like every other way in.
+    public static func connect(
+        pastedCookie: String,
+        china: Bool,
+        environment: [String: String]) async throws
+    {
+        guard let header = SiliconFlowCookieImporter.pastedCookieHeader(pastedCookie) else {
+            throw SiliconFlowConsoleError.notSignedIn(china: china)
+        }
+        let trace = SiliconFlowConsoleTrace()
+        let session = SiliconFlowCookieSession(cookieHeader: header, sourceLabel: "a pasted session")
+        do {
+            _ = try await self.firstBalance(sessions: [session], china: china, environment: environment, trace: trace)
+            guard self.savedSession(china: china).store(header) else {
+                throw SiliconFlowConsoleError.notSignedIn(china: china)
+            }
+            trace.finish(china: china, failure: nil)
+        } catch {
+            trace.finish(china: china, failure: error.localizedDescription)
+            throw error
+        }
     }
 
     public static func disconnect(china: Bool) {
@@ -387,6 +424,21 @@ struct SiliconFlowCookieSession {
 
 enum SiliconFlowCookieImporter {
     private static let cookieClient = BrowserCookieClient()
+
+    /// What someone pasted, as a `Cookie:` header: the token's value alone, the
+    /// `name=value` pair, or a whole header. Nil for anything that isn't a login.
+    static func pastedCookieHeader(_ text: String) -> String? {
+        var pasted = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if pasted.lowercased().hasPrefix("cookie:") {
+            pasted = String(pasted.dropFirst("cookie:".count)).trimmingCharacters(in: .whitespaces)
+        }
+        guard pasted.count >= 20, !pasted.contains(where: \.isNewline) else { return nil }
+        if pasted.contains("=") {
+            return pasted.lowercased().contains("session-token") ? pasted : nil
+        }
+        guard !pasted.contains(" "), !pasted.contains(";") else { return nil }
+        return "__SF_auth.session-token=\(pasted)"
+    }
 
     /// The cookies a browser would send to the console, as a `Cookie:` header,
     /// once they include a login.

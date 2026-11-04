@@ -34,6 +34,24 @@ struct WebSignInCookieTests {
     }
 
     @Test
+    func `a pasted siliconflow session can be the value, the pair or the whole header`() {
+        let token = String(repeating: "a", count: 40)
+        let pair = "__SF_auth.session-token=\(token)"
+        #expect(SiliconFlowCookieImporter.pastedCookieHeader(token) == pair)
+        #expect(SiliconFlowCookieImporter.pastedCookieHeader("  \(pair)\n") == pair)
+        #expect(SiliconFlowCookieImporter.pastedCookieHeader("Cookie: other=1; \(pair)") == "other=1; \(pair)")
+    }
+
+    @Test
+    func `pasted text that isn't a siliconflow login is turned away`() {
+        let token = String(repeating: "a", count: 40)
+        #expect(SiliconFlowCookieImporter.pastedCookieHeader("short") == nil)
+        #expect(SiliconFlowCookieImporter.pastedCookieHeader("SID=\(token)") == nil)
+        #expect(SiliconFlowCookieImporter.pastedCookieHeader("one two \(token)") == nil)
+        #expect(SiliconFlowCookieImporter.pastedCookieHeader("__SF_auth.session-token=\(token)\nX: y") == nil)
+    }
+
+    @Test
     func `siliconflow signs in on the matching region`() {
         #expect(SiliconFlowConsoleFetcher.signInURL(china: false).host == "cloud.siliconflow.com")
         #expect(SiliconFlowConsoleFetcher.signInURL(china: true).host == "cloud.siliconflow.cn")
