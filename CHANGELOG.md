@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- SiliconFlow: if signing in through Runic's window doesn't work, which can happen with Google, you can now paste your session cookie into a new field in the SiliconFlow settings. Runic checks that it returns a balance before saving it to its own Keychain item.
+
 ## 2.15.1 — 2026-11-04
 - Security: updated Sparkle, the framework that installs Runic updates, from 2.8.1 to 2.9.2, which fixes a published vulnerability in how it applies delta updates.
 - SiliconFlow and Ollama Cloud: fixed "Balance from browser sign-in" and "Usage from browser sign-in" failing on macOS 27, which blocks Runic from reading your browser's cookies. When the browser can't give a working login, Runic now opens a sign-in window of its own. Passkeys and security keys don't work in that window, so choose another way to sign in.

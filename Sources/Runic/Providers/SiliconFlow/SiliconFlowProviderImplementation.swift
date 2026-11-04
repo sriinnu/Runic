@@ -19,6 +19,12 @@ struct SiliconFlowProviderImplementation: ProviderImplementation {
                 binding: context.stringBinding(\.siliconFlowAPIToken),
                 actions: [],
                 isVisible: nil),
+            SiliconFlowPastedSessionField.descriptor(
+                id: "siliconflow-pasted-session",
+                host: "cloud.siliconflow.com",
+                china: false,
+                statusToggleID: "siliconflow-browser-sign-in",
+                context: context),
         ]
     }
 
