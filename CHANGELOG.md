@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Security: updated Sparkle, the framework that installs Runic updates, from 2.8.1 to 2.9.2, which fixes a published vulnerability in how it applies delta updates.
 - SiliconFlow and Ollama Cloud: fixed "Balance from browser sign-in" and "Usage from browser sign-in" failing on macOS 27, which blocks Runic from reading your browser's cookies. When the browser can't give a working login, Runic now opens a sign-in window of its own. Passkeys and security keys don't work in that window, so choose another way to sign in.
 - Claude: turning off "Banked resets from claude.ai" while its sign-in window is open now stays off.
 - Provider cards: connecting or disconnecting a website login during a refresh now updates the card right after that refresh, not at the next scheduled one.
