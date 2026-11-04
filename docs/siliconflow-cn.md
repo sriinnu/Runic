@@ -20,6 +20,8 @@ SiliconFlow reads the balance from the console with the browser sign-in, and che
      `Cookie:` header is kept in Runic's own Keychain item (`siliconflow[-cn]-web-session`); every
      refresh uses that copy and never touches the browser (background reads cannot prompt, which is why
      reading the browser on each refresh silently failed in 2.13.1).
+   - **When the browser can't help:** macOS 27 blocks Runic from reading browser folders, so turning the switch on then opens a sign-in window inside Runic. Passkeys and security keys don't work in that window. Google sign-in has been reported failing there, cause unconfirmed.
+   - **Pasted session:** "Session cookie (if sign-in doesn't work)" in Settings takes the `__SF_auth.session-token` value, the `name=value` pair or a whole `Cookie:` header, and saves it only after the console returns a balance for it. This field hasn't yet been confirmed with a real session.
    - Auth: the browser's `siliconflow.cn` cookies (must include `__SF_auth.session-token`),
      imported in the default browser order, one session per profile.
    - `X-Subject-ID`: tried from `SILICONFLOW_CN_SUBJECT_ID`, then any subject-looking cookie, then without it.
