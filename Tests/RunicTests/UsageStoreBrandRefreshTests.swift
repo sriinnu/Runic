@@ -31,6 +31,20 @@ struct UsageStoreBrandRefreshTests {
     }
 
     @Test
+    func `a sign-in change waits for the refresh already running`() async {
+        let store = self.makeStore(suiteName: "UsageStoreBrandRefreshTests-wait")
+        self.setEnabled(store, .codex, true)
+        store.refreshingProviders.insert(.codex)
+        #expect(await store.waitForRunningRefresh(of: .codex, timeout: 0.1) == false)
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(150))
+            store.refreshingProviders.remove(.codex)
+        }
+        #expect(await store.waitForRunningRefresh(of: .codex, timeout: 5))
+    }
+
+    @Test
     func `single-region provider refreshes only itself`() {
         let store = self.makeStore(suiteName: "UsageStoreBrandRefreshTests-single")
         self.setEnabled(store, .codex, true)

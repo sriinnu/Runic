@@ -215,6 +215,30 @@ public enum SiliconFlowConsoleFetcher {
         }
     }
 
+    public static func signInURL(china: Bool) -> URL {
+        URL(string: "https://\(SiliconFlowConsole.host(china: china))/me/expensebill")!
+    }
+
+    /// For a login made inside Runic: what to do to keep these cookies, or nil
+    /// while the console doesn't return a balance for them yet.
+    public static func validate(
+        cookies: [HTTPCookie],
+        china: Bool,
+        environment: [String: String]) async -> (@Sendable () -> Void)?
+    {
+        guard let header = SiliconFlowCookieImporter.signInCookieHeader(from: cookies, china: china)
+        else { return nil }
+        let session = SiliconFlowCookieSession(cookieHeader: header, sourceLabel: "the Runic sign-in window")
+        guard await (try? self.firstBalance(
+            sessions: [session],
+            china: china,
+            environment: environment,
+            trace: SiliconFlowConsoleTrace())) != nil
+        else { return nil }
+        let saved = self.savedSession(china: china)
+        return { saved.store(header) }
+    }
+
     public static func disconnect(china: Bool) {
         self.savedSession(china: china).clear()
     }
@@ -363,6 +387,18 @@ struct SiliconFlowCookieSession {
 
 enum SiliconFlowCookieImporter {
     private static let cookieClient = BrowserCookieClient()
+
+    /// The cookies a browser would send to the console, as a `Cookie:` header,
+    /// once they include a login.
+    static func signInCookieHeader(from cookies: [HTTPCookie], china: Bool) -> String? {
+        let site = china ? "siliconflow.cn" : "siliconflow.com"
+        let kept = cookies.filter { cookie in
+            let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
+            return domain == site || domain.hasSuffix(".\(site)")
+        }
+        guard kept.contains(where: { $0.name.lowercased().contains("session-token") }) else { return nil }
+        return kept.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+    }
 
     /// One session per browser profile holding a SiliconFlow login cookie
     /// (`__SF_auth.session-token`), same flow as the Cursor and Ollama importers.

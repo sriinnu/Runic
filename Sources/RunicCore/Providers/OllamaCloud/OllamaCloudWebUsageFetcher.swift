@@ -87,6 +87,16 @@ enum OllamaCloudCookieImporter {
     private static let cookieClient = BrowserCookieClient()
     private static let cookieDomains = ["ollama.com"]
 
+    /// The cookies a browser would send to ollama.com, as a `Cookie:` header.
+    static func signInCookieHeader(from cookies: [HTTPCookie]) -> String? {
+        let kept = cookies.filter { cookie in
+            let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
+            return domain == "ollama.com" || domain.hasSuffix(".ollama.com")
+        }
+        guard !kept.isEmpty else { return nil }
+        return kept.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+    }
+
     /// One session per browser profile that holds any ollama.com cookies; the
     /// caller tries them in order until one is actually signed in.
     static func importSessions(logger: ((String) -> Void)? = nil) -> [OllamaCloudCookieSession] {
@@ -114,7 +124,7 @@ enum OllamaCloudCookieImporter {
 }
 
 public enum OllamaCloudWebUsageFetcher {
-    static let settingsURL = URL(string: "https://ollama.com/settings")!
+    public static let settingsURL = URL(string: "https://ollama.com/settings")!
 
     /// Settings action: read the ollama.com login from the browser (the one
     /// read allowed to show the "Chrome Safe Storage" Keychain dialog), check
@@ -129,6 +139,15 @@ public enum OllamaCloudWebUsageFetcher {
             return session.sourceLabel
         }
         throw OllamaCloudAPIError.noBrowserSession
+    }
+
+    /// For a login made inside Runic: what to do to keep these cookies, or nil
+    /// while ollama.com doesn't accept them yet.
+    public static func validate(cookies: [HTTPCookie]) async -> (@Sendable () -> Void)? {
+        guard let header = OllamaCloudCookieImporter.signInCookieHeader(from: cookies),
+              await (try? self.fetch(cookieHeader: header)) != nil
+        else { return nil }
+        return { SavedBrowserSession.ollamaCloud.store(header) }
     }
 
     public static func disconnect() {

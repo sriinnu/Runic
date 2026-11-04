@@ -31,8 +31,8 @@ struct SiliconFlowProviderImplementation: ProviderImplementation {
                 id: "siliconflow-browser-sign-in",
                 title: "Balance from browser sign-in",
                 subtitle: "SiliconFlow retired its balance API; the balance now comes from the cloud.siliconflow.com "
-                    + "console. Turning this on reads your sign-in from your browser once (macOS may ask "
-                    + "for your password) and keeps a copy in Runic's own Keychain item.",
+                    + "console. Turning this on uses your sign-in from your browser, or asks you to sign in once in a "
+                    + "Runic window if macOS blocks that. Runic keeps a copy in its own Keychain item.",
                 hooks: BrowserSignInToggle.Hooks(
                     site: "cloud.siliconflow.com",
                     isConnected: { SiliconFlowConsoleFetcher.isConnected(china: false) },
@@ -41,7 +41,16 @@ struct SiliconFlowProviderImplementation: ProviderImplementation {
                             china: false,
                             environment: ProcessInfo.processInfo.environment)
                     },
-                    disconnect: { SiliconFlowConsoleFetcher.disconnect(china: false) }),
+                    disconnect: { SiliconFlowConsoleFetcher.disconnect(china: false) },
+                    signIn: WebSignInWindow.Step(
+                        site: "cloud.siliconflow.com",
+                        url: SiliconFlowConsoleFetcher.signInURL(china: false))
+                    { cookies in
+                        await SiliconFlowConsoleFetcher.validate(
+                            cookies: cookies,
+                            china: false,
+                            environment: ProcessInfo.processInfo.environment)
+                    }),
                 context: context),
         ]
     }

@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Security: updated Sparkle, the framework that installs Runic updates, from 2.8.1 to 2.9.2, which fixes a published vulnerability in how it applies delta updates.
+- SiliconFlow and Ollama Cloud: fixed "Balance from browser sign-in" and "Usage from browser sign-in" failing on macOS 27, which blocks Runic from reading your browser's cookies. When the browser can't give a working login, Runic now opens a sign-in window of its own. Passkeys and security keys don't work in that window, so choose another way to sign in.
+- Claude: turning off "Banked resets from claude.ai" while its sign-in window is open now stays off.
+- Provider cards: connecting or disconnecting a website login during a refresh now updates the card right after that refresh, not at the next scheduled one.
 - Widget: fixed the widget never getting new data on macOS 27. The system was silently blocking Runic from writing to the folder it shares with the widget. It now uses a shared folder macOS allows, so widget data starts fresh.
 - Flight Deck and Instrument skins: the balance tile and light now count prepaid balances and Console API credits. Claude showed `BAL ----` right above its "API credits $206.84 left" row.
 - Claude: fixed the CLI fallback failing now and then with a false timeout. A character split between two reads made Runic throw away the whole usage panel. The fallback also waits longer for the prompt, types `/usage` again if the command was lost, and no longer depends on the "Current session" row that Claude stopped showing.
