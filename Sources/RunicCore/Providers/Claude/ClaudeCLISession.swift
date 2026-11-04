@@ -92,6 +92,7 @@ actor ClaudeCLISession {
         resendsWithoutStopText: Int = 0) async throws -> String
     {
         try self.ensureStarted(binary: binary)
+        self.lastCapture = CaptureTrace()
         self.isCapturing = true
         self.lastActivityAt = Date()
         defer {
@@ -112,8 +113,6 @@ actor ClaudeCLISession {
             try self.send("\r")
         }
         var resendsLeft = trimmed.isEmpty || stopOnSubstrings.isEmpty ? 0 : resendsWithoutStopText
-        self.lastCapture.resends = 0
-        self.lastCapture.bytes = 0
 
         let stopNeedles = stopOnSubstrings.map { Data($0.utf8) }
         let sendNeedles = self.sendOnSubstrings.map { (needle: Data($0.key.utf8), keys: Data($0.value.utf8)) }
