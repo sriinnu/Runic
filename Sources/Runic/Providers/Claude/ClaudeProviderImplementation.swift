@@ -70,7 +70,7 @@ struct ClaudeProviderImplementation: ProviderImplementation {
         guard enabled else {
             ClaudeWebResets.disconnect()
             context.setStatusText(id, nil)
-            await context.store.reloadProvider(.claude)
+            await context.store.reloadAfterSignInChange(.claude)
             return
         }
         context.setStatusText(id, "Looking for your claude.ai login…")
@@ -82,6 +82,13 @@ struct ClaudeProviderImplementation: ProviderImplementation {
             context.setStatusText(id, "Waiting for you to sign in…")
             do {
                 try await WebSignInWindow.run(steps: Self.signInSteps(startingWithConsole: false))
+                // Turned off while the window was open: the off wins.
+                guard context.settings.claudeWebResetsEnabled else {
+                    ClaudeWebResets.disconnect()
+                    context.setStatusText(id, nil)
+                    await context.store.reloadAfterSignInChange(.claude)
+                    return
+                }
                 result = .success("the Runic sign-in window")
             } catch {
                 result = .failure(error)
@@ -90,7 +97,7 @@ struct ClaudeProviderImplementation: ProviderImplementation {
         switch result {
         case let .success(source):
             context.setStatusText(id, "Connected via \(source). Resets refresh with Claude.")
-            await context.store.reloadProvider(.claude)
+            await context.store.reloadAfterSignInChange(.claude)
         case let .failure(error):
             context.settings.claudeWebResetsEnabled = false
             context.setStatusText(id, nil)

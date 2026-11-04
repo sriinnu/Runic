@@ -167,6 +167,24 @@ extension UsageStore {
         await self.refreshSingleProvider(provider)
     }
 
+    /// A login was just saved or removed, so a refresh already running used the
+    /// old one. Wait for it instead of skipping, or the card stays wrong until
+    /// the next scheduled refresh.
+    func reloadAfterSignInChange(_ provider: UsageProvider) async {
+        _ = await self.waitForRunningRefresh(of: provider, timeout: 90)
+        await self.reloadProvider(provider)
+    }
+
+    /// False when it was still running at the timeout.
+    func waitForRunningRefresh(of provider: UsageProvider, timeout: TimeInterval) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while self.refreshSlots(for: provider).contains(where: { self.refreshingProviders.contains($0) }) {
+            guard Date() < deadline else { return false }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        return true
+    }
+
     func refreshSingleProvider(_ provider: UsageProvider) async {
         let startedAt = Date()
         self.isRefreshing = true

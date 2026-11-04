@@ -28,6 +28,81 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
         let site: String
         let url: URL
         let validate: @Sendable ([HTTPCookie]) async throws -> (@Sendable () -> Void)?
+        /// For a site whose login isn't in its cookies: picks up the headers its
+        /// own page sends, for `validate` to read.
+        var headerCapture: HeaderCapture?
+    }
+
+    /// Holds the auth headers a site's own page sends to one API prefix. Only
+    /// ever filled from that site's main frame, and held in memory until `validate`
+    /// decides to keep them.
+    final class HeaderCapture: @unchecked Sendable {
+        struct Headers {
+            let authorization: String
+            let organization: String?
+        }
+
+        let siteHost: String
+        let apiPrefix: String
+        private let lock = NSLock()
+        private var captured: Headers?
+
+        init(siteHost: String, apiPrefix: String) {
+            self.siteHost = siteHost
+            self.apiPrefix = apiPrefix
+        }
+
+        var headers: Headers? {
+            self.lock.withLock { self.captured }
+        }
+
+        func store(_ headers: Headers) {
+            self.lock.withLock { self.captured = headers }
+        }
+
+        /// JSON-escapes the prefix: a script is the only place it goes.
+        var script: String {
+            let encoded = (try? JSONSerialization.data(withJSONObject: [self.apiPrefix]))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+            return """
+            (() => {
+              const prefix = \(encoded)[0];
+              const original = window.fetch;
+              window.fetch = function (input, init) {
+                try {
+                  const url = typeof input === "string" ? input : (input && input.url) || String(input);
+                  if (url.startsWith(prefix)) {
+                    const headers = new Headers((init && init.headers) || (input && input.headers) || {});
+                    const authorization = headers.get("authorization");
+                    if (authorization) {
+                      window.webkit.messageHandlers.\(WebSignInWindow.captureHandlerName).postMessage({
+                        authorization,
+                        organization: headers.get("openai-organization"),
+                      });
+                    }
+                  }
+                } catch {}
+                return original.apply(this, arguments);
+              };
+            })();
+            """
+        }
+    }
+
+    fileprivate nonisolated static let captureHandlerName = "runicHeaderCapture"
+
+    /// `WKUserContentController` keeps its handler alive, which would keep a
+    /// closed window alive with it.
+    private final class WeakCaptureHandler: NSObject, WKScriptMessageHandler {
+        weak var owner: WebSignInWindow?
+
+        init(owner: WebSignInWindow) {
+            self.owner = owner
+        }
+
+        func userContentController(_: WKUserContentController, didReceive message: WKScriptMessage) {
+            self.owner?.receiveCapture(message)
+        }
     }
 
     /// Only one at a time. Holds the window alive while it's open.
@@ -82,6 +157,31 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
         super.init()
         self.webView.navigationDelegate = self
         self.webView.uiDelegate = self
+        for capture in steps.compactMap(\.headerCapture) {
+            let controller = configuration.userContentController
+            controller.add(WeakCaptureHandler(owner: self), name: Self.captureHandlerName)
+            controller.addUserScript(WKUserScript(
+                source: capture.script,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true))
+        }
+    }
+
+    /// Takes headers only from the step's own site, over https, in the main frame.
+    private func receiveCapture(_ message: WKScriptMessage) {
+        guard let capture = self.step.headerCapture,
+              message.frameInfo.isMainFrame,
+              message.frameInfo.securityOrigin.protocol == "https",
+              message.frameInfo.securityOrigin.host == capture.siteHost,
+              let body = message.body as? [String: Any],
+              let authorization = body["authorization"] as? String
+        else { return }
+        capture.store(WebSignInWindow.HeaderCapture.Headers(
+            authorization: authorization,
+            organization: body["organization"] as? String))
+        // Cookies may not have changed, so don't let the fingerprint skip this.
+        self.lastTried = nil
+        Task { await self.checkCookies() }
     }
 
     private func show() {
@@ -161,6 +261,8 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
         guard !self.isFinished else { return }
         self.isFinished = true
         self.polling?.cancel()
+        self.webView.configuration.userContentController.removeAllScriptMessageHandlers()
+        self.webView.configuration.userContentController.removeAllUserScripts()
         self.window?.delegate = nil
         self.window?.close()
         if Self.current === self { Self.current = nil }

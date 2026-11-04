@@ -13,7 +13,7 @@ struct OllamaCloudProviderImplementation: ProviderImplementation {
             ProviderSettingsFieldDescriptor(
                 id: "ollama-cloud-api-token",
                 title: "API key",
-                subtitle: "Optional — Pro accounts just stay signed in to ollama.com in a browser.",
+                subtitle: "Optional — Pro and Max accounts can use the sign-in switch below instead.",
                 kind: .secure,
                 placeholder: "Paste key…",
                 binding: context.stringBinding(\.ollamaCloudAPIToken),
@@ -31,13 +31,17 @@ struct OllamaCloudProviderImplementation: ProviderImplementation {
                 id: "ollama-cloud-browser-sign-in",
                 title: "Usage from browser sign-in",
                 subtitle: "For Pro and Max plans, which sign in on ollama.com instead of using an API key. "
-                    + "Turning this on reads your ollama.com sign-in from your browser once (macOS may ask "
-                    + "for your password) and keeps a copy in Runic's own Keychain item.",
+                    + "Turning this on uses your ollama.com sign-in from your browser, or asks you to sign in once "
+                    + "in a Runic window if macOS blocks that. Runic keeps a copy in its own Keychain item.",
                 hooks: BrowserSignInToggle.Hooks(
                     site: "ollama.com",
                     isConnected: { OllamaCloudWebUsageFetcher.isConnected },
                     connect: { try await OllamaCloudWebUsageFetcher.connect() },
-                    disconnect: { OllamaCloudWebUsageFetcher.disconnect() }),
+                    disconnect: { OllamaCloudWebUsageFetcher.disconnect() },
+                    signIn: WebSignInWindow
+                        .Step(site: "ollama.com", url: OllamaCloudWebUsageFetcher.settingsURL) { cookies in
+                            await OllamaCloudWebUsageFetcher.validate(cookies: cookies)
+                        }),
                 context: context),
         ]
     }

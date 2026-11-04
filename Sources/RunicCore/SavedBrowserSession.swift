@@ -19,6 +19,7 @@ public struct SavedBrowserSession: Sendable {
     public static let siliconFlow = SavedBrowserSession(account: "siliconflow-web-session")
     public static let siliconFlowCN = SavedBrowserSession(account: "siliconflow-cn-web-session")
     public static let claudeConsole = SavedBrowserSession(account: "claude-console-web-session")
+    public static let openAIPlatform = SavedBrowserSession(account: "openai-platform-web-session")
     public static let ollamaCloud = SavedBrowserSession(account: "ollama-cloud-web-session")
 
     public func load() -> String? {
