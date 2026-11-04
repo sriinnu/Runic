@@ -25,7 +25,9 @@ runtime and owns the `ollama` CLI alias. Ollama Cloud's CLI name is
    item (`ollama-cloud-web-session`), and on every refresh does `GET https://ollama.com/settings` with it, reading
    the "Session usage" / "Weekly usage" blocks: percent from `NN% used`, reset
    time from `data-time="<ISO8601>"`. Each browser profile with ollama.com
-   cookies is tried until one is signed in; none → "Not signed in to ollama.com".
+   cookies is tried until one is signed in. If none works, which is normal on macOS 27 because it blocks
+   Runic from reading browser folders, the switch opens a sign-in window inside Runic. Passkeys and security
+   keys don't work in that window.
    The parser is label-driven (`OllamaCloudWebParser`) because the real page
    markup has not been captured; if usage shows 0/blank, save the page text and
    adjust the labels there.
