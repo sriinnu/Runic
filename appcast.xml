@@ -3,24 +3,31 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.15.2</title>
+            <pubDate>Wed, 04 Nov 2026 15:01:09 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>209</sparkle:version>
+            <sparkle:shortVersionString>2.15.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.15.2</h2>
+<ul>
+<li>SiliconFlow: if signing in through Runic's window doesn't work, which can happen with Google, you can now paste your session cookie into a new field in the SiliconFlow settings. Runic checks that it returns a balance before saving it to its own Keychain item.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic-2.15.2.zip" length="49679560" type="application/octet-stream" sparkle:edSignature="MT55FeWA9iVsZDrrXUTzwW5y3VJqlwPcgVQ17HzybTR0SNI8YQIA6+SNlAeYbEwcxwSEANOXqWgLVpW4b9HiCQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic209-207.delta" sparkle:deltaFrom="207" length="4287530" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="umqBBOkxacbi5ysjULl3FyBpVJSvfcybnZEBqEB9vEJ27zsOxhBMhKaJnQcFN5/gJmtsLQ0lyzcLiCYD8EQ6BA=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic209-192.delta" sparkle:deltaFrom="192" length="10160694" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="VSI+ChT3RDhFm8HY63/CaZOlxYLdUIBKPxj2JpuQiFC0MbnhjjChWlLW2a1Bpmir3OhODPpzV4ZMGOv+MaugCA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.15.1</title>
             <pubDate>Wed, 04 Nov 2026 12:58:44 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>207</sparkle:version>
             <sparkle:shortVersionString>2.15.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.15.1</h2>
-<ul>
-<li>Security: updated Sparkle, the framework that installs Runic updates, from 2.8.1 to 2.9.2, which fixes a published vulnerability in how it applies delta updates.</li>
-<li>SiliconFlow and Ollama Cloud: fixed "Balance from browser sign-in" and "Usage from browser sign-in" failing on macOS 27, which blocks Runic from reading your browser's cookies. When the browser can't give a working login, Runic now opens a sign-in window of its own. Passkeys and security keys don't work in that window, so choose another way to sign in.</li>
-<li>Claude: turning off "Banked resets from claude.ai" while its sign-in window is open now stays off.</li>
-<li>Provider cards: connecting or disconnecting a website login during a refresh now updates the card right after that refresh, not at the next scheduled one.</li>
-<li>Widget: fixed the widget never getting new data on macOS 27. The system was silently blocking Runic from writing to the folder it shares with the widget. It now uses a shared folder macOS allows, so widget data starts fresh.</li>
-<li>Flight Deck and Instrument skins: the balance tile and light now count prepaid balances and Console API credits. Claude showed <code>BAL ----</code> right above its "API credits $206.84 left" row.</li>
-<li>Claude: fixed the CLI fallback failing now and then with a false timeout. A character split between two reads made Runic throw away the whole usage panel. The fallback also waits longer for the prompt, types <code>/usage</code> again if the command was lost, and no longer depends on the "Current session" row that Claude stopped showing.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.1/Runic-2.15.1.zip" length="49655116" type="application/octet-stream" sparkle:edSignature="2vJlFPSDiNrORWsoWAgS8fKNvnji7uRLYkHF10+lu80TMUXhXNCpfbmrC/jbJinrY2qqrm4wGjJytAkoJwgSCA=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.1/Runic207-192.delta" sparkle:deltaFrom="192" length="10116926" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="eCS01XujnX1Pc6/T2wdFPwHn9f1OF8MgBHhvAw/qhQoHWTRHMo3VdadzBMWeWgaFGgnLH7lUtX/Jx0rf1UhBCQ=="/>
@@ -45,15 +52,6 @@
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.0/Runic201-192.delta" sparkle:deltaFrom="192" length="9604990" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="DkZD4S35bL13CJd53h3bXCkKa6Q5CPK9BWldXqe1QzZ2bIVC2SD28tey21f04oy//zsNWpzYdTHr/Yn6VYB5AA=="/>
             </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.14.0</title>
-            <pubDate>Fri, 30 Oct 2026 12:14:19 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>192</sparkle:version>
-            <sparkle:shortVersionString>2.14.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.14.0/Runic-2.14.0.zip" length="48974543" type="application/octet-stream" sparkle:edSignature="Zcj+EBGZ4BRZkrpwyM+GvngbC6nQlFqIvzXIci/izLswrqWjGkUKXHqfvmuvJ08VTN5fDy0lmXz/NlEKHeEhDQ=="/>
         </item>
     </channel>
 </rss>
