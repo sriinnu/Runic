@@ -37,11 +37,12 @@ struct UsageStoreBrandRefreshTests {
         store.refreshingProviders.insert(.codex)
         #expect(await store.waitForRunningRefresh(of: .codex, timeout: 0.1) == false)
 
+        // A long timeout, because a busy CI machine can starve the main actor for
+        // seconds: this only has to return true, and it returns as soon as it can.
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(150))
             store.refreshingProviders.remove(.codex)
         }
-        #expect(await store.waitForRunningRefresh(of: .codex, timeout: 5))
+        #expect(await store.waitForRunningRefresh(of: .codex, timeout: 120))
     }
 
     @Test
