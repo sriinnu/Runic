@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.15.2 — 2026-11-04
 - SiliconFlow: if signing in through Runic's window doesn't work, which can happen with Google, you can now paste your session cookie into a new field in the SiliconFlow settings. Runic checks that it returns a balance before saving it to its own Keychain item.
 
 ## 2.15.1 — 2026-11-04
