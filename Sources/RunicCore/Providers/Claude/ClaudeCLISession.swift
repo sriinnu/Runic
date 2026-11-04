@@ -34,6 +34,15 @@ actor ClaudeCLISession {
     private var lastActivityAt: Date?
     private var idleShutdownTask: Task<Void, Never>?
     private var isCapturing = false
+    private let promptSilenceSeconds: TimeInterval = 8
+    /// How the last capture went, counts only, for the fallback's diagnostics.
+    struct CaptureTrace {
+        var promptSeenBy = "already up"
+        var resends = 0
+        var bytes = 0
+    }
+
+    private(set) var lastCapture = CaptureTrace()
     /// Claude Code 2.1 drops keystrokes typed before its prompt is up (about a
     /// second after launch), so the first command waits for it.
     private var promptSeen = false
@@ -79,9 +88,11 @@ actor ClaudeCLISession {
         idleTimeout: TimeInterval? = 3.0,
         stopOnSubstrings: [String] = [],
         settleAfterStop: TimeInterval = 0.25,
-        sendEnterEvery: TimeInterval? = nil) async throws -> String
+        sendEnterEvery: TimeInterval? = nil,
+        resendsWithoutStopText: Int = 0) async throws -> String
     {
         try self.ensureStarted(binary: binary)
+        self.lastCapture = CaptureTrace()
         self.isCapturing = true
         self.lastActivityAt = Date()
         defer {
@@ -101,6 +112,7 @@ actor ClaudeCLISession {
             try self.send(trimmed)
             try self.send("\r")
         }
+        var resendsLeft = trimmed.isEmpty || stopOnSubstrings.isEmpty ? 0 : resendsWithoutStopText
 
         let stopNeedles = stopOnSubstrings.map { Data($0.utf8) }
         let sendNeedles = self.sendOnSubstrings.map { (needle: Data($0.key.utf8), keys: Data($0.value.utf8)) }
@@ -150,12 +162,19 @@ actor ClaudeCLISession {
                 break
             }
 
-            if let idleTimeout,
-               !buffer.isEmpty,
-               Date().timeIntervalSince(lastOutputAt) >= idleTimeout
-            {
-                stoppedEarly = true
-                break
+            if let idleTimeout, Date().timeIntervalSince(lastOutputAt) >= idleTimeout {
+                // Silence without the text we came for: a TUI still settling can
+                // swallow the command, so type it again before settling for this.
+                if resendsLeft > 0 {
+                    resendsLeft -= 1
+                    self.lastCapture.resends += 1
+                    try self.send(trimmed)
+                    try self.send("\r")
+                    lastOutputAt = Date()
+                } else if !buffer.isEmpty {
+                    stoppedEarly = true
+                    break
+                }
             }
 
             if let every = sendEnterEvery, Date().timeIntervalSince(lastEnterAt) >= every {
@@ -182,10 +201,15 @@ actor ClaudeCLISession {
             }
         }
 
-        guard !buffer.isEmpty, let text = String(data: buffer, encoding: .utf8) else {
+        self.lastCapture.bytes = buffer.count
+        guard !buffer.isEmpty else {
             throw SessionError.timedOut(afterSeconds: Int(timeout))
         }
-        return text
+        // Lossy on purpose. A read can split a multi-byte character, and the panel
+        // is full of them (the ❯ prompt, the █ bars). Strict decoding fails on the
+        // whole capture then, which used to look like a timeout.
+        // swiftlint:disable:next optional_data_string_conversion
+        return String(decoding: buffer, as: UTF8.self)
     }
 
     /// Reads startup output until the input prompt (❯) shows, or output has
@@ -199,6 +223,7 @@ actor ClaudeCLISession {
         var seen = Data()
         var lastOutputAt: Date?
         let deadline = Date().addingTimeInterval(timeout)
+        self.lastCapture.promptSeenBy = "deadline"
         while Date() < deadline {
             let chunk = self.readChunk()
             if !chunk.isEmpty {
@@ -211,11 +236,17 @@ actor ClaudeCLISession {
                 for item in sendNeedles where chunk.range(of: item.needle) != nil {
                     try? self.primaryHandle?.write(contentsOf: item.keys)
                 }
-                if seen.range(of: prompt) != nil { break }
-            } else if let lastOutputAt, Date().timeIntervalSince(lastOutputAt) >= 3.0 {
+                if seen.range(of: prompt) != nil {
+                    self.lastCapture.promptSeenBy = "glyph"
+                    break
+                }
+            } else if let lastOutputAt,
+                      Date().timeIntervalSince(lastOutputAt) >= self.promptSilenceSeconds
+            {
                 // No prompt glyph in this TUI build: treat a long silence after
-                // the banner as ready. A cold start pauses for well over a
-                // second between banner and prompt, so this has to be generous.
+                // the banner as ready. A cold start can pause for seconds between
+                // banner and prompt, and a command typed in that pause is lost.
+                self.lastCapture.promptSeenBy = "silence"
                 break
             }
             if let proc = self.process, !proc.isRunning {

@@ -154,7 +154,26 @@ extension UsageMenuCardView.Model {
             needsCredentials: !input.liveFetchWasAvailable,
             isServedByCLIFallback: isServedByCLIFallback,
             peakHoursText: Self.peakHoursText(
-                input.ledgerPeakBurn?.provider == input.provider ? input.ledgerPeakBurn : nil))
+                input.ledgerPeakBurn?.provider == input.provider ? input.ledgerPeakBurn : nil),
+            balanceSummaryText: input.showOptionalCreditsAndExtraUsage
+                ? Self.balanceSummaryText(creditsText: creditsText, snapshot: input.snapshot)
+                : nil)
+    }
+
+    /// One number for the summary tiles: credits first, then a prepaid balance,
+    /// then the Console's API credits. A plan's included credit isn't money left,
+    /// so it doesn't count.
+    static func balanceSummaryText(
+        creditsText: String?,
+        snapshot: UsageSnapshot?,
+        now: Date = Date()) -> String?
+    {
+        if let creditsText { return creditsText }
+        if let balance = snapshot?.balance {
+            return BalanceFormatter.amount(balance.available, currency: balance.currency)
+        }
+        guard let credits = snapshot?.providerCost?.apiCredits else { return nil }
+        return UsageFormatter.currencyString(credits.available(at: now), currencyCode: credits.currencyCode)
     }
 
     /// "15–18 · 41% of tokens · 7d"

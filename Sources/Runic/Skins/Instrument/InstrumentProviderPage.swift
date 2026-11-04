@@ -240,7 +240,7 @@ struct InstrumentProviderPage: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 InstrumentLampLabel(lamp: self.capLamp.lamp, text: self.capLamp.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                InstrumentLampLabel(lamp: self.model.creditsText == nil ? .off : .green, text: "Balance")
+                InstrumentLampLabel(lamp: self.model.balanceSummaryText == nil ? .off : .green, text: "Balance")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -269,7 +269,7 @@ struct InstrumentProviderPage: View {
         case .info: "link ok"
         }
         let cap = self.capLamp.lamp.isLit ? self.capLamp.text : "no cap"
-        let balance = self.model.creditsText == nil ? "no balance" : "balance on"
+        let balance = self.model.balanceSummaryText == nil ? "no balance" : "balance on"
         return "Status: \(link), \(cap), \(balance)"
     }
 

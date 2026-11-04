@@ -127,7 +127,9 @@ public struct ClaudeStatusProbe: Sendable {
 
     /// Run claude CLI inside a PTY so we can respond to interactive permission prompts.
     private static func capture(subcommand: String, binary: String, timeout: TimeInterval) async throws -> String {
-        let stopOnSubstrings = subcommand == "/usage" ? ["Current session"] : []
+        // "Current session" is gone whenever Claude drops that window, so stop on
+        // any row of the panel, not on one that may never come.
+        let stopOnSubstrings = subcommand == "/usage" ? ["Current session", "Current week", "% used"] : []
         do {
             return try await ClaudeCLISession.shared.capture(
                 subcommand: subcommand,
@@ -136,7 +138,8 @@ public struct ClaudeStatusProbe: Sendable {
                 idleTimeout: 3.0,
                 stopOnSubstrings: stopOnSubstrings,
                 settleAfterStop: subcommand == "/usage" ? 2.0 : 0.25,
-                sendEnterEvery: nil)
+                sendEnterEvery: nil,
+                resendsWithoutStopText: subcommand == "/usage" ? 2 : 0)
         } catch let error as ClaudeCLISession.SessionError {
             switch error {
             case .processExited:
