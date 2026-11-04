@@ -47,13 +47,13 @@ grep -q "sha256 \"${SHA}\"" "$CASK" || { echo "Failed to set cask sha256" >&2; e
 
 cd "$WORK/tap"
 # The tap's main branch only accepts changes through pull requests (ruleset,
-# 2026-09), so land the bump as a branch + PR and merge it. The clone runs
-# with commit signing off: the tap has no signing requirement and the global
-# config points at a hardware key that can't be touched headless.
+# 2026-09), so land the bump as a branch + PR and merge it. Every commit is
+# signed: if signing fails this stops, and release.sh warns that the cask still
+# needs its bump, rather than an unsigned commit landing in the tap.
 BRANCH="runic-${MARKETING_VERSION}"
 git checkout -q -b "$BRANCH"
 git add "$CASK_RELPATH"
-git -c commit.gpgsign=false commit -m "runic ${MARKETING_VERSION}" --quiet
+git commit -S -m "runic ${MARKETING_VERSION}" --quiet
 git push -q -u origin "$BRANCH"
 PR_URL=$(gh pr list --head "$BRANCH" --json url --jq '.[0].url')
 if [[ -z "$PR_URL" ]]; then
