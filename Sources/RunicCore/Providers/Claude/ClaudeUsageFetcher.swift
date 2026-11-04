@@ -408,9 +408,10 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 Self.log.info("Claude OAuth copy unavailable; usage read through the CLI")
                 return snap
             } catch {
+                let trace = await ClaudeCLISession.shared.lastCapture
                 await ClaudeCLISession.shared.reset()
                 Self.log.warning("Claude CLI fallback attempt \(attempt) failed: \(error.localizedDescription)")
-                Self.recordFallbackFailure(attempt: attempt, error: error, gap: gap)
+                Self.recordFallbackFailure(attempt: attempt, error: error, gap: gap, trace: trace)
             }
         }
         throw gap.underlying
@@ -419,13 +420,21 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     /// Unified-log bodies are private, so keep the last fallback failure where
     /// the user can read it: `~/Library/Application Support/Runic/diagnostics`.
     /// Error descriptions only — no token, account or screen text.
-    private static func recordFallbackFailure(attempt: Int, error: Error, gap: OAuthCredentialGap) {
+    private static func recordFallbackFailure(
+        attempt: Int,
+        error: Error,
+        gap: OAuthCredentialGap,
+        trace: ClaudeCLISession.CaptureTrace)
+    {
         let shape: [String: Any] = [
             "at": ISO8601DateFormatter().string(from: Date()),
             "attempt": attempt,
             "cancelled": Task.isCancelled,
             "oauthGap": gap.underlying.localizedDescription,
             "cliError": String(describing: error),
+            "promptSeenBy": trace.promptSeenBy,
+            "resends": trace.resends,
+            "bytes": trace.bytes,
         ]
         guard let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),

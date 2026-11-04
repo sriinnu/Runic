@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Widget: fixed the widget never getting new data on macOS 27. The system was silently blocking Runic from writing to the folder it shares with the widget. It now uses a shared folder macOS allows, so widget data starts fresh.
+- Flight Deck and Instrument skins: the balance tile and light now count prepaid balances and Console API credits. Claude showed `BAL ----` right above its "API credits $206.84 left" row.
+- Claude: fixed the CLI fallback failing now and then with a false timeout. A character split between two reads made Runic throw away the whole usage panel. The fallback also waits longer for the prompt, types `/usage` again if the command was lost, and no longer depends on the "Current session" row that Claude stopped showing.
+
 ## 2.15.0 — 2026-11-03
 - Claude: the card can show what's left of your API credits and when the next grant expires. Turn on "API credit balance from the Console" in the Claude settings; it uses your browser's login, or a sign-in window inside Runic if macOS blocks reading the browser. "Banked resets from claude.ai" shares that window, so both switches take one sign-in.
 - Claude: when Claude's usage reply has no session window, the card now leads with the weekly limit. It used to discard the whole reply and show "missing session data" above stale numbers, and re-entering the Keychain password couldn't clear it.

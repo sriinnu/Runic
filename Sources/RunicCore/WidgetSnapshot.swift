@@ -99,7 +99,10 @@ public struct WidgetSnapshot: Codable, Sendable {
 }
 
 public enum WidgetSnapshotStore {
-    public static let appGroupID = "group.com.sriinnu.athena.runic"
+    /// Team-prefixed on purpose. A `group.` ID needs a provisioning profile,
+    /// which a Developer ID build doesn't carry, and macOS 27 denies such an app
+    /// its container with no prompt, so the widget would never get new data.
+    public static let appGroupID = "RSH5FK4MB6.com.sriinnu.athena.runic"
     private static let filename = "widget-snapshot.json"
 
     public static func load(bundleID: String? = Bundle.main.bundleIdentifier) -> WidgetSnapshot? {
@@ -114,7 +117,7 @@ public enum WidgetSnapshotStore {
             let data = try self.encoder.encode(snapshot)
             try data.write(to: url, options: [.atomic])
         } catch {
-            return
+            RunicLog.logger("widget-snapshot").error("Widget snapshot write failed: \(error.localizedDescription)")
         }
     }
 
@@ -141,7 +144,7 @@ public enum WidgetSnapshotStore {
     private static func groupID(for bundleID: String?) -> String? {
         guard let bundleID, !bundleID.isEmpty else { return self.appGroupID }
         if bundleID.contains(".debug") {
-            return "group.com.sriinnu.athena.runic.debug"
+            return "\(self.appGroupID).debug"
         }
         return self.appGroupID
     }

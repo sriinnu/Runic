@@ -178,6 +178,10 @@ struct UsageMenuCardView: View {
         /// "15–18 · 41% of tokens · 7d": the slot of the day that burned the
         /// most this week. Nil when the logs are too thin or too even to say.
         var peakHoursText: String?
+        /// What's left to spend, wherever it comes from: credits, a prepaid
+        /// balance or the Console's API credits. For summary tiles and lamps;
+        /// the rows below still say where the number came from.
+        var balanceSummaryText: String?
     }
 
     let model: Model

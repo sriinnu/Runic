@@ -173,9 +173,9 @@ if [[ "$SIGNING_MODE" == "adhoc" ]]; then
   AUTO_CHECKS=false
 fi
 WIDGET_BUNDLE_ID="${BUNDLE_ID}.widget"
-APP_GROUP_ID="group.com.sriinnu.athena.runic"
+APP_GROUP_ID="RSH5FK4MB6.com.sriinnu.athena.runic"
 if [[ "$BUNDLE_ID" == *".debug"* ]]; then
-  APP_GROUP_ID="group.com.sriinnu.athena.runic.debug"
+  APP_GROUP_ID="RSH5FK4MB6.com.sriinnu.athena.runic.debug"
 fi
 ENTITLEMENTS_DIR="$ROOT/.build/entitlements"
 APP_ENTITLEMENTS="${ENTITLEMENTS_DIR}/${APP_NAME}.entitlements"

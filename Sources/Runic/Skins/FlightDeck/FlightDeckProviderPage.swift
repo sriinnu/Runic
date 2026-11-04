@@ -139,7 +139,7 @@ struct FlightDeckProviderPage: View {
         if !exhausted.isEmpty {
             tags.append(("\(RunicFlightDeck.callsign(self.model.providerName)) EXH", .magenta))
         }
-        tags.append(("BAL", self.model.creditsText == nil ? .off : .cyan))
+        tags.append(("BAL", self.model.balanceSummaryText == nil ? .off : .cyan))
         return tags.map { (text: $0.0, tone: $0.1) }
     }
 
@@ -299,7 +299,7 @@ struct FlightDeckProviderPage: View {
         let second = gauges.count > 1 ? gauges[1] : nil
         let context = RunicFlightDeck.readout(from: self.model.insights?.contextLine)
             ?? RunicFlightDeck.readout(from: self.model.topModelLine)
-        let balance = self.model.creditsText.map { RunicFlightDeck.readout(from: $0) ?? $0 }
+        let balance = self.model.balanceSummaryText.map { RunicFlightDeck.readout(from: $0) ?? $0 }
         return HStack(spacing: 5) {
             FlightDeckCell(
                 label: "\(RunicFlightDeck.windowCode(first?.title ?? "SES")) RST",
