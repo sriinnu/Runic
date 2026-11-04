@@ -89,7 +89,9 @@ enum BrowserSignInToggle {
             return try await hooks.connect()
         } catch {
             guard let signIn = hooks.signIn else { throw error }
-            context.setStatusText(id, "Waiting for you to sign in…")
+            context.setStatusText(
+                id,
+                "Waiting for you to sign in. Passkeys don't work in this window, so choose another way.")
             try await WebSignInWindow.run(steps: [signIn])
             guard hooks.isConnected() else { throw SaveFailure(site: hooks.site) }
             return "the Runic sign-in window"

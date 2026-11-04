@@ -648,15 +648,12 @@ extension UsageMenuCardView.Model {
         return 30
     }
 
-    static func providerCostSection(
+    private static func providerCostSection(
         provider: UsageProvider,
         cost: ProviderCostSnapshot?) -> ProviderCostSection?
     {
         guard let cost else { return nil }
         if provider == .claude, let section = Self.claudeUsageCreditsSection(cost) { return section }
-        if provider == .codex, cost.apiCredits != nil, let line = Self.apiCreditGrantLine(cost) {
-            return ProviderCostSection(title: "OpenAI API", percentUsed: nil, spendLine: line)
-        }
         let title = switch provider {
         case .cursor: "On-demand usage"
         case .ollamacloud: "Cloud spend"

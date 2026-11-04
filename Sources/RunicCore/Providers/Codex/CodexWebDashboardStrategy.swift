@@ -26,8 +26,8 @@ public struct CodexWebDashboardStrategy: ProviderFetchStrategy {
             timeout: context.webTimeout,
             debugDumpHTML: context.webDebugDumpHTML,
             verbose: context.verbose)
-        return await self.makeResult(
-            usage: OpenAIPlatformCredits.attach(to: result.usage),
+        return self.makeResult(
+            usage: result.usage,
             credits: result.credits,
             dashboard: result.dashboard,
             sourceLabel: "openai-web")

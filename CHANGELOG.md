@@ -1,8 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Codex: the card can show what's left of your OpenAI API credits and when the next grant expires. Turn on "API credit balance from OpenAI" in the Codex settings and sign in to platform.openai.com in the Runic window that opens.
-- SiliconFlow and Ollama Cloud: fixed "Balance from browser sign-in" and "Usage from browser sign-in" failing on macOS 27, which blocks Runic from reading your browser's cookies. When the browser can't give a working login, Runic now opens a sign-in window of its own.
+- SiliconFlow and Ollama Cloud: fixed "Balance from browser sign-in" and "Usage from browser sign-in" failing on macOS 27, which blocks Runic from reading your browser's cookies. When the browser can't give a working login, Runic now opens a sign-in window of its own. Passkeys and security keys don't work in that window, so choose another way to sign in.
 - Claude: turning off "Banked resets from claude.ai" while its sign-in window is open now stays off.
 - Provider cards: connecting or disconnecting a website login during a refresh now updates the card right after that refresh, not at the next scheduled one.
 - Widget: fixed the widget never getting new data on macOS 27. The system was silently blocking Runic from writing to the folder it shares with the widget. It now uses a shared folder macOS allows, so widget data starts fresh.

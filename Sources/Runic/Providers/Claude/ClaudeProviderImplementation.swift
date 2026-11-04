@@ -79,7 +79,9 @@ struct ClaudeProviderImplementation: ProviderImplementation {
         }.value
         // macOS can refuse Runic the browser's folder: sign in here instead.
         if case .failure = result {
-            context.setStatusText(id, "Waiting for you to sign in…")
+            context.setStatusText(
+                id,
+                "Waiting for you to sign in. Passkeys don't work in this window, so choose another way.")
             do {
                 try await WebSignInWindow.run(steps: Self.signInSteps(startingWithConsole: false))
                 // Turned off while the window was open: the off wins.

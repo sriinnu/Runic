@@ -126,8 +126,8 @@ struct CodexCLIUsageStrategy: ProviderFetchStrategy {
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
         let usage = try await context.fetcher.loadLatestUsage()
         let credits = await context.includeCredits ? (try? context.fetcher.loadLatestCredits()) : nil
-        return await self.makeResult(
-            usage: OpenAIPlatformCredits.attach(to: usage),
+        return self.makeResult(
+            usage: usage,
             credits: credits,
             sourceLabel: "codex-cli")
     }
@@ -169,9 +169,8 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
                 ?? UsageResetCredits(availableCount: summary.availableCount)
         }
 
-        return await self.makeResult(
-            usage: OpenAIPlatformCredits.attach(
-                to: Self.mapUsage(usage, credentials: credentials, resetCredits: resetCredits)),
+        return self.makeResult(
+            usage: Self.mapUsage(usage, credentials: credentials, resetCredits: resetCredits),
             credits: Self.mapCredits(usage.credits),
             sourceLabel: "oauth")
     }

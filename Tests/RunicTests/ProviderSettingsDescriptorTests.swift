@@ -107,7 +107,7 @@ struct ProviderSettingsDescriptorTests {
             requestConfirmation: { _ in })
 
         let toggles = CodexProviderImplementation().settingsToggles(context: context)
-        #expect(toggles.map(\.id) == ["codex-api-credits"])
+        #expect(toggles.isEmpty)
     }
 
     @Test
