@@ -3,18 +3,33 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.15.3</title>
+            <pubDate>Tue, 17 Nov 2026 22:46:51 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>210</sparkle:version>
+            <sparkle:shortVersionString>2.15.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.15.3</h2>
+<ul>
+<li>Claude and Codex: spend from your local logs is priced again for current models. Runic had no price for Claude Opus 4.6 and later (Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.x) or for Codex's GPT-6 Sol and Luna, so those days showed $0. Prices now come from models.dev and include long-context rates. Today's GPT-6.2 Sol and GPT-6.2 Astra are covered. GPT-5.6 Sol was charged at half its real price and is fixed too. After updating, Runic re-prices the days still in your logs once.</li>
+<li>Context labels: Claude 4.7 and later show their 1M window, and Codex's GPT-6.1 Sol and Terra show 500K.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.3/Runic-2.15.3.zip" length="49767459" type="application/octet-stream" sparkle:edSignature="2B1DfujIl6W2GUS68IaozVPZcERuJtTk6JVFrRI/3g27uJuTCId70yJ2RBJtDv7joWPGD2XKZELnloRQPrYjCA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.3/Runic210-209.delta" sparkle:deltaFrom="209" length="6116386" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="99qwR6XE+DHy6Z4fARP9PAOGZAATR1OZE/AMOhegyl17pc1NLRJynoZcz38Pu6QG/hnjLR2jW/5Yxa79kgJdDQ=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.3/Runic210-207.delta" sparkle:deltaFrom="207" length="6583334" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="fQOML3hXTL3k79F6ImNvqKNEcGNEgQRDNAKU6qffImp1LtmCaMoT/o0RNA/1CTlgybNFqoJPhEkRU+XrRL0CCQ=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.3/Runic210-192.delta" sparkle:deltaFrom="192" length="10269782" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="GLT2lq011RZbuIU4EZv0+IAo4lNqNtd/Yzs8flKwMQn2my7kvki5MGaTRkHoHVrgkffUJbLC3sIJtuA1PHjKAA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.15.2</title>
             <pubDate>Wed, 04 Nov 2026 15:01:09 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>209</sparkle:version>
             <sparkle:shortVersionString>2.15.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.15.2</h2>
-<ul>
-<li>SiliconFlow: if signing in through Runic's window doesn't work, which can happen with Google, you can now paste your session cookie into a new field in the SiliconFlow settings. Runic checks that it returns a balance before saving it to its own Keychain item.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic-2.15.2.zip" length="49679560" type="application/octet-stream" sparkle:edSignature="MT55FeWA9iVsZDrrXUTzwW5y3VJqlwPcgVQ17HzybTR0SNI8YQIA6+SNlAeYbEwcxwSEANOXqWgLVpW4b9HiCQ=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic209-207.delta" sparkle:deltaFrom="207" length="4287530" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="umqBBOkxacbi5ysjULl3FyBpVJSvfcybnZEBqEB9vEJ27zsOxhBMhKaJnQcFN5/gJmtsLQ0lyzcLiCYD8EQ6BA=="/>
@@ -31,26 +46,6 @@
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.1/Runic-2.15.1.zip" length="49655116" type="application/octet-stream" sparkle:edSignature="2vJlFPSDiNrORWsoWAgS8fKNvnji7uRLYkHF10+lu80TMUXhXNCpfbmrC/jbJinrY2qqrm4wGjJytAkoJwgSCA=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.1/Runic207-192.delta" sparkle:deltaFrom="192" length="10116926" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="eCS01XujnX1Pc6/T2wdFPwHn9f1OF8MgBHhvAw/qhQoHWTRHMo3VdadzBMWeWgaFGgnLH7lUtX/Jx0rf1UhBCQ=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.15.0</title>
-            <pubDate>Tue, 03 Nov 2026 19:48:30 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>201</sparkle:version>
-            <sparkle:shortVersionString>2.15.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.15.0</h2>
-<ul>
-<li>Claude: the card can show what's left of your API credits and when the next grant expires. Turn on "API credit balance from the Console" in the Claude settings; it uses your browser's login, or a sign-in window inside Runic if macOS blocks reading the browser. "Banked resets from claude.ai" shares that window, so both switches take one sign-in.</li>
-<li>Claude: when Claude's usage reply has no session window, the card now leads with the weekly limit. It used to discard the whole reply and show "missing session data" above stale numbers, and re-entering the Keychain password couldn't clear it.</li>
-<li>Usage cards: a provider dropping a limit window is no longer an error. The next window leads, and with none the card says "no usage limits reported". Codex, Gemini and Copilot also stop drawing a made-up 0% gauge in that case, and Claude's CLI fallback stops calling the weekly row a session.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.0/Runic-2.15.0.zip" length="49496068" type="application/octet-stream" sparkle:edSignature="XUP/lq1CuMpVSd0A0HUh27fHy002eQGCiK0jm/BOV1zbF1doyMKemb0rDSwmXM8msxqd4Ksai0XRJB6qaZgHDw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.0/Runic201-192.delta" sparkle:deltaFrom="192" length="9604990" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="DkZD4S35bL13CJd53h3bXCkKa6Q5CPK9BWldXqe1QzZ2bIVC2SD28tey21f04oy//zsNWpzYdTHr/Yn6VYB5AA=="/>
             </sparkle:deltas>
         </item>
     </channel>
