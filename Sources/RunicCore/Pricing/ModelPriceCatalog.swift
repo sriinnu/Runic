@@ -6,19 +6,30 @@ public struct ModelPrice: Codable, Sendable, Equatable {
     public let output: Double
     public let cacheRead: Double?
     public let cacheWrite: Double?
+    /// Long-context rates, lowest threshold first. A request whose context
+    /// exceeds a tier's size bills every token at that tier's rates.
+    public let tiers: [ModelPriceTier]?
 
     enum CodingKeys: String, CodingKey {
         case input
         case output
         case cacheRead = "cache_read"
         case cacheWrite = "cache_write"
+        case tiers
     }
 
-    public init(input: Double, output: Double, cacheRead: Double? = nil, cacheWrite: Double? = nil) {
+    public init(
+        input: Double,
+        output: Double,
+        cacheRead: Double? = nil,
+        cacheWrite: Double? = nil,
+        tiers: [ModelPriceTier]? = nil)
+    {
         self.input = input
         self.output = output
         self.cacheRead = cacheRead
         self.cacheWrite = cacheWrite
+        self.tiers = tiers
     }
 
     /// Cost in USD. A cache rate the catalog doesn't list is billed as input,
@@ -29,6 +40,46 @@ public struct ModelPrice: Codable, Sendable, Equatable {
             + Double(cacheWrite) * (self.cacheWrite ?? self.input)
             + Double(cacheRead) * (self.cacheRead ?? self.input)
         return total / 1_000_000
+    }
+
+    /// The rates for one request. Long-context billing is whole-request: once
+    /// the context (fresh input plus cache reads and writes) exceeds a tier's
+    /// size, every class bills at that tier. Exactly at the size stays base.
+    public func rates(forContextTokens context: Int) -> ModelPrice {
+        guard let tier = (self.tiers ?? []).filter({ context > $0.contextAbove })
+            .max(by: { $0.contextAbove < $1.contextAbove })
+        else { return self }
+        return ModelPrice(
+            input: tier.input,
+            output: tier.output,
+            cacheRead: tier.cacheRead,
+            cacheWrite: tier.cacheWrite)
+    }
+}
+
+/// One long-context price step from models.dev's `cost.tiers`.
+public struct ModelPriceTier: Codable, Sendable, Equatable {
+    /// The tier applies when a request's context is larger than this.
+    public let contextAbove: Int
+    public let input: Double
+    public let output: Double
+    public let cacheRead: Double?
+    public let cacheWrite: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case contextAbove = "above"
+        case input
+        case output
+        case cacheRead = "cache_read"
+        case cacheWrite = "cache_write"
+    }
+
+    public init(contextAbove: Int, input: Double, output: Double, cacheRead: Double? = nil, cacheWrite: Double? = nil) {
+        self.contextAbove = contextAbove
+        self.input = input
+        self.output = output
+        self.cacheRead = cacheRead
+        self.cacheWrite = cacheWrite
     }
 }
 
@@ -61,8 +112,20 @@ public struct ModelPriceCatalog: Sendable, Equatable {
         Set(self.providerIDs.keys)
     }
 
+    /// Vendor lists that price Claude and Codex logs. Kept apart from
+    /// `providerIDs` so those providers don't get a balance-style estimate.
+    static let vendorIDs: Set<String> = ["anthropic", "openai"]
+
     static var catalogIDs: Set<String> {
-        Set(self.providerIDs.values.flatMap(\.self))
+        Set(self.providerIDs.values.flatMap(\.self)).union(self.vendorIDs)
+    }
+
+    /// A model's price from one vendor's own list ("anthropic", "openai").
+    public func vendorPrice(_ vendor: String, model: String) -> ModelPrice? {
+        for candidate in Self.candidates(for: model) {
+            if let price = self.prices[vendor]?[candidate] { return price }
+        }
+        return nil
     }
 
     public func price(for provider: UsageProvider, model: String) -> ModelPrice? {
@@ -137,11 +200,32 @@ public struct ModelPriceCatalog: Sendable, Equatable {
                     input: input,
                     output: output,
                     cacheRead: (cost["cache_read"] as? NSNumber)?.doubleValue,
-                    cacheWrite: (cost["cache_write"] as? NSNumber)?.doubleValue)
+                    cacheWrite: (cost["cache_write"] as? NSNumber)?.doubleValue,
+                    tiers: Self.contextTiers(cost["tiers"]))
             }
         }
         guard !prices.isEmpty else { throw CocoaError(.coderValueNotFound) }
         return ModelPriceCatalog(prices: prices, snapshot: snapshot)
+    }
+
+    /// `cost.tiers` entries of type "context"; other tier kinds are ignored.
+    static func contextTiers(_ raw: Any?) -> [ModelPriceTier]? {
+        guard let entries = raw as? [[String: Any]] else { return nil }
+        let tiers = entries.compactMap { entry -> ModelPriceTier? in
+            guard let tier = entry["tier"] as? [String: Any],
+                  (tier["type"] as? String) == "context",
+                  let size = (tier["size"] as? NSNumber)?.intValue,
+                  let input = (entry["input"] as? NSNumber)?.doubleValue,
+                  let output = (entry["output"] as? NSNumber)?.doubleValue
+            else { return nil }
+            return ModelPriceTier(
+                contextAbove: size,
+                input: input,
+                output: output,
+                cacheRead: (entry["cache_read"] as? NSNumber)?.doubleValue,
+                cacheWrite: (entry["cache_write"] as? NSNumber)?.doubleValue)
+        }.sorted { $0.contextAbove < $1.contextAbove }
+        return tiers.isEmpty ? nil : tiers
     }
 
     /// The copy shipped with the app, used until a live fetch succeeds.

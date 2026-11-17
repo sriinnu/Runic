@@ -88,10 +88,13 @@ struct LogSpendEstimateTests {
         let json = """
         {"deepseek": {"models": {"DeepSeek-V4-Flash": {"cost": {"input": 0.15, "output": 0.6, "cache_read": 0.003}},
                                  "deepseek-ocr": {"name": "no cost"}}},
-         "anthropic": {"models": {"claude-x": {"cost": {"input": 3, "output": 15}}}}}
+         "anthropic": {"models": {"claude-x": {"cost": {"input": 3, "output": 15}}}},
+         "openrouter": {"models": {"deepseek-v4-flash": {"cost": {"input": 9, "output": 9}}}}}
         """
         let catalog = try ModelPriceCatalog.fromModelsDev(Data(json.utf8), snapshot: "2026-09-23")
-        #expect(catalog.prices.keys.sorted() == ["deepseek"])
+        // Vendor lists price Claude/Codex logs; resellers are dropped.
+        #expect(catalog.prices.keys.sorted() == ["anthropic", "deepseek"])
+        #expect(catalog.price(for: .claude, model: "claude-x") == nil)
         #expect(catalog.price(for: .deepseek, model: "deepseek-v4-flash")?.cacheRead == 0.003)
         let roundTrip = try ModelPriceCatalog.decodeSnapshot(catalog.encodedSnapshot())
         #expect(roundTrip == catalog)

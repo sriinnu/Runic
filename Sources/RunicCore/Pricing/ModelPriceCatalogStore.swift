@@ -9,6 +9,11 @@ public final class ModelPriceCatalogStore: @unchecked Sendable {
     static let sourceURL = URL(string: "https://models.dev/api.json")!
     static let maxAge: TimeInterval = 24 * 3600
     static let failureBackoff: TimeInterval = 15 * 60
+    /// v2 adds the Anthropic and OpenAI lists with long-context tiers. A new
+    /// name makes installs with the older, trimmed cache fetch again at once.
+    static let cacheFileName = "models-dev-v2.json"
+    /// How long the per-request pricing path reuses one merged catalog.
+    static let pricingReuse: TimeInterval = 60
 
     private let lock = NSLock()
     private let directory: URL?
@@ -17,6 +22,7 @@ public final class ModelPriceCatalogStore: @unchecked Sendable {
     private var lastFailureAt: Date?
     private var loadedFromDisk = false
     private var isFetching = false
+    private var pricing: (catalog: ModelPriceCatalog, at: Date)?
     private static let log = RunicLog.logger("model-prices")
 
     public init(directory: URL? = ModelPriceCatalogStore.defaultDirectory()) {
@@ -32,6 +38,20 @@ public final class ModelPriceCatalogStore: @unchecked Sendable {
         self.lock.unlock()
         if let custom = self.read("custom-prices.json") { catalog = catalog.overlaid(by: custom) }
         return catalog
+    }
+
+    /// `catalog()` for hot paths that price every log line: the merged result
+    /// is reused for a minute instead of re-reading overrides per request.
+    public func pricingCatalog(now: Date = Date()) -> ModelPriceCatalog {
+        if let cached = self.lock.withLock({ self.pricing }),
+           now.timeIntervalSince(cached.at) < Self.pricingReuse,
+           now >= cached.at
+        {
+            return cached.catalog
+        }
+        let fresh = self.catalog()
+        self.lock.withLock { self.pricing = (fresh, now) }
+        return fresh
     }
 
     /// Fetches models.dev when the cached copy is over a day old, backing off
@@ -50,7 +70,7 @@ public final class ModelPriceCatalogStore: @unchecked Sendable {
             Self.log.warning("models.dev price fetch failed: \(error.localizedDescription)")
         }
         self.finishFetch(fetched, now: now)
-        if let fetched, let data = try? fetched.encodedSnapshot() { self.write(data, to: "models-dev.json") }
+        if let fetched, let data = try? fetched.encodedSnapshot() { self.write(data, to: Self.cacheFileName) }
     }
 
     private func beginFetchIfStale(now: Date) -> Bool {
@@ -68,6 +88,7 @@ public final class ModelPriceCatalogStore: @unchecked Sendable {
         self.lock.withLock {
             self.isFetching = false
             if let fetched {
+                self.pricing = nil
                 self.live = fetched
                 self.liveFetchedAt = now
                 self.lastFailureAt = nil
@@ -80,7 +101,7 @@ public final class ModelPriceCatalogStore: @unchecked Sendable {
     private func loadFromDiskLocked() {
         guard !self.loadedFromDisk else { return }
         self.loadedFromDisk = true
-        guard let url = self.directory?.appendingPathComponent("models-dev.json"),
+        guard let url = self.directory?.appendingPathComponent(Self.cacheFileName),
               let data = try? Data(contentsOf: url),
               let catalog = try? ModelPriceCatalog.decodeSnapshot(data) else { return }
         self.live = catalog
