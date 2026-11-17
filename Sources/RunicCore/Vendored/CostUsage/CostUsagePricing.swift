@@ -56,32 +56,8 @@ enum CostUsagePricing {
             inputCostPerToken: 7.5e-7,
             outputCostPerToken: 4.5e-6,
             cacheReadInputCostPerToken: 7.5e-8),
-        // gpt-5.6 tiers (sol/terra/luna) and gpt-6-astra. Rates from the kosha
-        // registry (OpenRouter provider-live, 2026-09-06), per-million ÷ 1e6.
-        "gpt-5.6": CodexPricing(
-            inputCostPerToken: 2e-6,
-            outputCostPerToken: 1e-5,
-            cacheReadInputCostPerToken: 2e-7),
-        "gpt-5.6-sol": CodexPricing(
-            inputCostPerToken: 2e-6,
-            outputCostPerToken: 1e-5,
-            cacheReadInputCostPerToken: 2e-7),
-        "gpt-5.6-terra": CodexPricing(
-            inputCostPerToken: 2e-6,
-            outputCostPerToken: 1.2e-5,
-            cacheReadInputCostPerToken: 2e-7),
-        "gpt-5.6-luna": CodexPricing(
-            inputCostPerToken: 2e-7,
-            outputCostPerToken: 1.2e-6,
-            cacheReadInputCostPerToken: 2e-8),
-        "gpt-6": CodexPricing(
-            inputCostPerToken: 1e-5,
-            outputCostPerToken: 5e-5,
-            cacheReadInputCostPerToken: 1e-6),
-        "gpt-6-astra": CodexPricing(
-            inputCostPerToken: 1e-5,
-            outputCostPerToken: 5e-5,
-            cacheReadInputCostPerToken: 1e-6),
+        // gpt-5.6 and later price from the models.dev catalog (with its
+        // long-context tiers): the hand-kept 5.6/6.x rates here were wrong.
         "gpt-5.5": CodexPricing(
             inputCostPerToken: 5e-6,
             outputCostPerToken: 3e-5,
@@ -173,6 +149,18 @@ enum CostUsagePricing {
         return trimmed
     }
 
+    /// Catalog list per log family. Only the vendor's own list, never a reseller's.
+    static let openAIVendor = "openai"
+    static let anthropicVendor = "anthropic"
+
+    static func catalogPrice(vendor: String, model: String, catalog: ModelPriceCatalog) -> ModelPrice? {
+        if let price = catalog.vendorPrice(vendor, model: model) { return price }
+        if vendor == self.openAIVendor, let codexRange = model.range(of: "-codex") {
+            return catalog.vendorPrice(vendor, model: String(model[..<codexRange.lowerBound]))
+        }
+        return nil
+    }
+
     static func normalizeClaudeModel(_ raw: String) -> String {
         var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.hasPrefix("anthropic.") {
@@ -202,11 +190,24 @@ enum CostUsagePricing {
         return trimmed
     }
 
-    static func codexCostUSD(model: String, inputTokens: Int, cachedInputTokens: Int, outputTokens: Int) -> Double? {
+    static func codexCostUSD(
+        model: String,
+        inputTokens: Int,
+        cachedInputTokens: Int,
+        outputTokens: Int,
+        catalog: ModelPriceCatalog? = nil) -> Double?
+    {
         let key = self.normalizeCodexModel(model)
-        guard let pricing = self.codex[key] else { return nil }
         let cached = min(max(0, cachedInputTokens), max(0, inputTokens))
         let nonCached = max(0, inputTokens - cached)
+        guard let pricing = self.codex[key] else {
+            let catalog = catalog ?? ModelPriceCatalogStore.shared.pricingCatalog()
+            guard let price = self.catalogPrice(vendor: self.openAIVendor, model: key, catalog: catalog)
+            else { return nil }
+            // Codex input already includes the cached tokens: context = input.
+            return price.rates(forContextTokens: max(0, inputTokens))
+                .cost(input: nonCached, output: max(0, outputTokens), cacheWrite: 0, cacheRead: cached)
+        }
         return Double(nonCached) * pricing.inputCostPerToken
             + Double(cached) * pricing.cacheReadInputCostPerToken
             + Double(max(0, outputTokens)) * pricing.outputCostPerToken
@@ -217,15 +218,22 @@ enum CostUsagePricing {
         inputTokens: Int,
         cacheReadInputTokens: Int,
         cacheCreationInputTokens: Int,
-        outputTokens: Int) -> Double?
+        outputTokens: Int,
+        catalog: ModelPriceCatalog? = nil) -> Double?
     {
         let key = self.normalizeClaudeModel(model)
-        guard let pricing = self.claude[key] else { return nil }
-
         let input = max(0, inputTokens)
         let cacheRead = max(0, cacheReadInputTokens)
         let cacheCreation = max(0, cacheCreationInputTokens)
         let output = max(0, outputTokens)
+
+        guard let pricing = self.claude[key] else {
+            let catalog = catalog ?? ModelPriceCatalogStore.shared.pricingCatalog()
+            guard let price = self.catalogPrice(vendor: self.anthropicVendor, model: key, catalog: catalog)
+            else { return nil }
+            return price.rates(forContextTokens: input + cacheRead + cacheCreation)
+                .cost(input: input, output: output, cacheWrite: cacheCreation, cacheRead: cacheRead)
+        }
 
         // Anthropic long-context billing is whole-request: once the input context
         // (input + cache reads + cache writes) EXCEEDS the threshold, EVERY token

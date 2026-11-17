@@ -288,7 +288,9 @@ public actor LedgerCache {
     /// v3: Codex 0.153 `token_usage_record` lines were never parsed; files already
     /// scanned to their end are resumed by byte offset, so only a full rebuild
     /// picks the missed usage (gpt-6-astra sessions) back up.
-    static let catchUpHealVersion = 3
+    /// v4: Claude 4.6+ / 5.x and Codex gpt-5.6+ / 6.x had no price, so their days
+    /// were saved at $0. A rebuild re-prices them from the models.dev catalog.
+    static let catchUpHealVersion = 4
 
     /// Whether this provider still needs the one-time legacy catch-up repair.
     ///
