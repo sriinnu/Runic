@@ -290,7 +290,9 @@ public actor LedgerCache {
     /// picks the missed usage (gpt-6-astra sessions) back up.
     /// v4: Claude 4.6+ / 5.x and Codex gpt-5.6+ / 6.x had no price, so their days
     /// were saved at $0. A rebuild re-prices them from the models.dev catalog.
-    static let catchUpHealVersion = 4
+    /// v5: v4 could be stamped by a 1-day scan (the CLI) without rebuilding,
+    /// so installs marked v4 still held $0 days. Only a rebuild stamps now.
+    static let catchUpHealVersion = 5
 
     /// Whether this provider still needs the one-time legacy catch-up repair.
     ///

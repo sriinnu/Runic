@@ -64,7 +64,9 @@ public struct OpencodeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         let catchUpDays = await self.catchUpDays(scanMode: scanMode)
         let window = self.scanWindow(todayKey: todayKey, scanMode: scanMode, catchUpDays: catchUpDays)
         let isRebuild = if case .rebuildHistory = scanMode { true } else { false }
-        let markHealed = healing || isRebuild
+        // Only a rebuild repairs history. A short scan (the CLI's 1-day insights)
+        // must leave the heal pending, or the next app launch skips it.
+        let markHealed = isRebuild
 
         let cache = self.cache
         // On rebuild, skip the mtime pre-filter entirely and rely on the per-entry

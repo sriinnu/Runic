@@ -72,7 +72,9 @@ public struct ClaudeUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         // A rebuild (fresh install, explicit, or the one-time heal) fully covers the
         // window, so stamp the heal too — otherwise the next refresh would heal again.
         let isRebuild = if case .rebuildHistory = scanMode { true } else { false }
-        let markHealed = healing || isRebuild
+        // Only a rebuild repairs history. A short scan (the CLI's 1-day insights)
+        // must leave the heal pending, or the next app launch skips it.
+        let markHealed = isRebuild
         let allFiles = self.findUsageFiles(in: projectsDirs, minDate: window.fileMinModificationDate)
 
         // Claude keeps long-lived project JSONLs. Normal refresh opens only
