@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.15.4 — 2026-11-18
+- Claude and Codex: 2.15.3's one-time re-pricing of past days could be skipped. Running the `runic` command-line tool before the app marked it done without re-pricing anything, so past days stayed at $0. It now counts as done only after a full rescan. This update runs it again.
+
 ## 2.15.3 — 2026-11-17
 - Claude and Codex: spend from your local logs is priced again for current models. Runic had no price for Claude Opus 4.6 and later (Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.x) or for Codex's GPT-6 Sol and Luna, so those days showed $0. Prices now come from models.dev and include long-context rates. Today's GPT-6.2 Sol and GPT-6.2 Astra are covered. GPT-5.6 Sol was charged at half its real price and is fixed too. After updating, Runic re-prices the days still in your logs once.
 - Context labels: Claude 4.7 and later show their 1M window, and Codex's GPT-6.1 Sol and Terra show 500K.
