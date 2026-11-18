@@ -54,7 +54,9 @@ public struct CodexUsageLogSource: UsageLedgerSource, @unchecked Sendable {
         // A rebuild (fresh install, explicit, or the one-time heal) fully covers the
         // window, so stamp the heal too — otherwise the next refresh would heal again.
         let isRebuild = if case .rebuildHistory = scanMode { true } else { false }
-        let markHealed = healing || isRebuild
+        // Only a rebuild repairs history. A short scan (the CLI's 1-day insights)
+        // must leave the heal pending, or the next app launch skips it.
+        let markHealed = isRebuild
 
         // Relay contract: normal refresh never reopens historical provider
         // JSONLs. Explicit rebuild mode is the repair path that opts into

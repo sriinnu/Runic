@@ -304,6 +304,45 @@ extension CodexUsageLogSourceTests {
     }
 
     @Test
+    func `a one day scan leaves the heal pending for the next full scan`() async throws {
+        // 2.15.3: the CLI's 1-day `insights` ran first on an unhealed install and
+        // stamped the heal without rebuilding, so the app never re-priced history.
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("runic-codex-usage-tests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let now = Date(timeIntervalSince1970: 1_767_252_000)
+        let twoDaysAgo = Calendar.current.date(byAdding: .day, value: -2, to: now) ?? now
+        let cache = LedgerCache(cacheDir: root.appendingPathComponent("ledger-cache", isDirectory: true))
+        await cache.markScanComplete(provider: "codex", scanDate: now, coveredMaxAgeDays: 30)
+        try Self.writeSession(root: root, date: twoDaysAgo, input: 333, modifiedAt: now, fileManager: fm)
+
+        let shortScan = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 1,
+            now: now,
+            cache: cache)
+        _ = try await shortScan.loadEntries()
+        #expect(await cache.needsCatchUpHeal(provider: "codex") == true)
+
+        let fullScan = CodexUsageLogSource(
+            environment: [:],
+            fileManager: fm,
+            sessionsRoot: root,
+            maxAgeDays: 30,
+            now: now,
+            cache: cache)
+        let entries = try await fullScan.loadEntries()
+        #expect(entries.map(\.inputTokens) == [333])
+        #expect(await cache.needsCatchUpHeal(provider: "codex") == false)
+    }
+
+    @Test
     func `codex catch-up clears a today that dropped to zero while a gap day has usage`() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
