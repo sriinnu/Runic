@@ -76,6 +76,15 @@ extension GeminiStatusProbe {
             throw GeminiStatusProbeError.notLoggedIn
         }
 
+        if httpResponse.statusCode == 403 {
+            let message = await Self.describeForbiddenError(
+                responseData: data,
+                accessToken: accessToken,
+                timeout: timeout,
+                dataLoader: dataLoader)
+            throw GeminiStatusProbeError.apiError(message)
+        }
+
         guard httpResponse.statusCode == 200 else {
             throw GeminiStatusProbeError.apiError("HTTP \(httpResponse.statusCode)")
         }
@@ -84,31 +93,13 @@ extension GeminiStatusProbe {
         let claims = Self.extractClaimsFromToken(creds.idToken)
         let snapshot = try Self.parseAPIResponse(data, email: claims.email)
 
-        // Detect plan via loadCodeAssist API (most reliable method)
-        let userTier = await Self.fetchUserTier(
+        // Detect plan via loadCodeAssist API (paidTier reflects Google AI Ultra/Pro even when
+        // currentTier reports standard-tier or free-tier).
+        let plan = await Self.fetchAccountPlan(
             accessToken: accessToken,
+            hostedDomain: claims.hostedDomain,
             timeout: timeout,
             dataLoader: dataLoader)
-
-        // Plan display strings with tier mapping:
-        // - standard-tier: Paid subscription (AI Pro, AI Ultra, Code Assist
-        //   Standard/Enterprise, Developer Program Premium)
-        // - free-tier + hd claim: Workspace account (Gemini included free since Jan 2025)
-        // - free-tier: Personal free account (1000 req/day limit)
-        // - legacy-tier: Unknown legacy/grandfathered tier
-        // - nil (API failed): Leave blank (no display)
-        let plan: String? = switch (userTier, claims.hostedDomain) {
-        case (.standard, _):
-            "Paid"
-        case let (.free, .some(domain)):
-            { Self.log.info("Workspace account detected", metadata: ["domain": domain]); return "Workspace" }()
-        case (.free, .none):
-            { Self.log.info("Personal free account"); return "Free" }()
-        case (.legacy, _):
-            "Legacy"
-        case (.none, _):
-            { Self.log.info("Tier detection failed, leaving plan blank"); return nil }()
-        }
 
         return GeminiStatusSnapshot(
             modelQuotas: snapshot.modelQuotas,
@@ -161,10 +152,159 @@ extension GeminiStatusProbe {
         return nil
     }
 
+    struct GeminiTierDescriptor: Equatable {
+        let id: String?
+        let name: String?
+    }
+
+    public static func resolvePlan(from json: [String: Any], hostedDomain: String?) -> String? {
+        let paidTier = Self.tierDescriptor(from: json["paidTier"] as? [String: Any])
+        let currentTier = Self.tierDescriptor(from: json["currentTier"] as? [String: Any])
+
+        if let paidTier,
+           let resolved = Self.planName(for: paidTier, hostedDomain: hostedDomain, isPaidTier: true)
+        {
+            return resolved
+        }
+        if let currentTier,
+           let resolved = Self.planName(for: currentTier, hostedDomain: hostedDomain, isPaidTier: false)
+        {
+            return resolved
+        }
+        return nil
+    }
+
+    private static func tierDescriptor(from raw: [String: Any]?) -> GeminiTierDescriptor? {
+        guard let raw else { return nil }
+        let id = (raw["id"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = (raw["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (id?.isEmpty == false) || (name?.isEmpty == false) else { return nil }
+        return GeminiTierDescriptor(
+            id: id?.isEmpty == false ? id : nil,
+            name: name?.isEmpty == false ? name : nil)
+    }
+
+    private static func planName(
+        for descriptor: GeminiTierDescriptor,
+        hostedDomain: String?,
+        isPaidTier: Bool) -> String?
+    {
+        let tierId = descriptor.id?.lowercased() ?? ""
+        let tierName = descriptor.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let lowerName = tierName.lowercased()
+
+        if tierId == GeminiUserTierId.g1Ultra.rawValue || lowerName.contains("ultra") {
+            return "Google AI Ultra"
+        }
+        if tierId == GeminiUserTierId.g1Pro.rawValue || lowerName.contains("ai pro") || lowerName.contains("one pro") {
+            return "Google AI Pro"
+        }
+        if lowerName.contains("enterprise") {
+            return "Enterprise"
+        }
+        if tierId == GeminiUserTierId.standard.rawValue {
+            if lowerName.contains("pro") { return "Google AI Pro" }
+            return "Paid"
+        }
+        if tierId == GeminiUserTierId.free.rawValue {
+            if isPaidTier { return nil }
+            if let domain = hostedDomain, !domain.isEmpty {
+                Self.log.info("Workspace account detected", metadata: ["domain": domain])
+                return "Workspace"
+            }
+            Self.log.info("Personal free account")
+            return "Free"
+        }
+        if tierId == GeminiUserTierId.legacy.rawValue {
+            return "Legacy"
+        }
+        if !tierName.isEmpty {
+            return tierName
+        }
+        return nil
+    }
+
+    static func fetchAccountPlan(
+        accessToken: String,
+        hostedDomain: String?,
+        timeout: TimeInterval,
+        dataLoader: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse)) async -> String?
+    {
+        guard let json = await postLoadCodeAssist(
+            accessToken: accessToken,
+            timeout: timeout,
+            dataLoader: dataLoader)
+        else { return nil }
+
+        if let resolved = Self.resolvePlan(from: json, hostedDomain: hostedDomain) {
+            Self.log.info("loadCodeAssist: plan resolved", metadata: ["plan": resolved])
+            return resolved
+        }
+
+        Self.log.warning("loadCodeAssist: no tier metadata in response", metadata: [
+            "json": "\(json)",
+        ])
+        return nil
+    }
+
     static func fetchUserTier(
         accessToken: String,
         timeout: TimeInterval,
         dataLoader: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse)) async -> GeminiUserTierId?
+    {
+        guard let json = await postLoadCodeAssist(
+            accessToken: accessToken,
+            timeout: timeout,
+            dataLoader: dataLoader)
+        else { return nil }
+
+        let tierId = ((json["paidTier"] as? [String: Any])?["id"] as? String)
+            ?? ((json["currentTier"] as? [String: Any])?["id"] as? String)
+        guard let tierId else {
+            Self.log.warning("loadCodeAssist: no currentTier.id in response", metadata: [
+                "json": "\(json)",
+            ])
+            return nil
+        }
+
+        guard let tier = GeminiUserTierId(rawValue: tierId) else {
+            Self.log.warning("loadCodeAssist: unknown tier ID", metadata: ["tierId": tierId])
+            return nil
+        }
+
+        Self.log.info("loadCodeAssist: tier detected", metadata: ["tier": tierId])
+        return tier
+    }
+
+    private static func describeForbiddenError(
+        responseData: Data,
+        accessToken: String,
+        timeout: TimeInterval,
+        dataLoader: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse)) async -> String
+    {
+        if let json = await postLoadCodeAssist(
+            accessToken: accessToken,
+            timeout: timeout,
+            dataLoader: dataLoader),
+            let ineligible = json["ineligibleTiers"] as? [[String: Any]],
+            ineligible.contains(where: { ($0["reasonCode"] as? String) == "UNSUPPORTED_CLIENT" })
+        {
+            return "Google deprecated personal Gemini CLI OAuth; use Antigravity for Google AI Pro/Ultra quotas."
+        }
+
+        if let rawBody = String(data: responseData, encoding: .utf8),
+           rawBody.contains("SUBSCRIPTION_REQUIRED")
+        {
+            return "Gemini Code Assist license required (HTTP 403). For Google AI Pro/Ultra, use Antigravity."
+        }
+
+        return "HTTP 403"
+    }
+
+    private static func postLoadCodeAssist(
+        accessToken: String,
+        timeout: TimeInterval,
+        dataLoader: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse)) async -> [String: Any]?
     {
         guard let url = URL(string: loadCodeAssistEndpoint) else {
             self.log.warning("loadCodeAssist: invalid endpoint URL")
@@ -207,22 +347,7 @@ extension GeminiStatusProbe {
             return nil
         }
 
-        guard let currentTier = json["currentTier"] as? [String: Any],
-              let tierId = currentTier["id"] as? String
-        else {
-            Self.log.warning("loadCodeAssist: no currentTier.id in response", metadata: [
-                "json": "\(json)",
-            ])
-            return nil
-        }
-
-        guard let tier = GeminiUserTierId(rawValue: tierId) else {
-            Self.log.warning("loadCodeAssist: unknown tier ID", metadata: ["tierId": tierId])
-            return nil
-        }
-
-        Self.log.info("loadCodeAssist: tier detected", metadata: ["tier": tierId])
-        return tier
+        return json
     }
 
     private struct QuotaBucket: Decodable {

@@ -71,7 +71,11 @@ public struct ClaudeStatusProbe: Sendable {
         let timeout = self.timeout
         let usage = try await Self.capture(subcommand: "/usage", binary: resolved, timeout: timeout)
         let status = try? await Self.capture(subcommand: "/status", binary: resolved, timeout: min(timeout, 12))
-        let snap = try Self.parse(text: usage, statusText: status)
+        let banner = await ClaudeCLISession.shared.startupBanner
+        let combinedStatus = [status, banner.isEmpty ? nil : banner].compactMap(\.self).joined(separator: "\n")
+        let snap = try Self.parse(
+            text: usage,
+            statusText: combinedStatus.isEmpty ? nil : combinedStatus)
 
         Self.log.info("Claude CLI scrape ok", metadata: [
             "sessionPercentLeft": "\(snap.sessionPercentLeft ?? -1)",
@@ -129,7 +133,10 @@ public struct ClaudeStatusProbe: Sendable {
     private static func capture(subcommand: String, binary: String, timeout: TimeInterval) async throws -> String {
         // "Current session" is gone whenever Claude drops that window, so stop on
         // any row of the panel, not on one that may never come.
-        let stopOnSubstrings = subcommand == "/usage" ? ["Current session", "Current week", "% used"] : []
+        let isUsage = subcommand == "/usage"
+        let stopOnSubstrings = isUsage
+            ? ["Current session", "Current week", "% used"]
+            : ["Login method:", "Email:", "Organization:"]
         do {
             return try await ClaudeCLISession.shared.capture(
                 subcommand: subcommand,
@@ -137,9 +144,10 @@ public struct ClaudeStatusProbe: Sendable {
                 timeout: timeout,
                 idleTimeout: 3.0,
                 stopOnSubstrings: stopOnSubstrings,
-                settleAfterStop: subcommand == "/usage" ? 2.0 : 0.25,
+                settleAfterStop: isUsage ? 2.0 : 0.5,
                 sendEnterEvery: nil,
-                resendsWithoutStopText: subcommand == "/usage" ? 2 : 0)
+                resendsWithoutStopText: isUsage ? 2 : 0,
+                dismissBeforeSend: !isUsage)
         } catch let error as ClaudeCLISession.SessionError {
             switch error {
             case .processExited:

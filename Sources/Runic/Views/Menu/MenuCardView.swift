@@ -109,6 +109,8 @@ struct UsageMenuCardView: View {
             /// unlimited/unknown (spend is shown without a gauge).
             let percentUsed: Double?
             let spendLine: String
+            var primarySpendLine: String?
+            var apiCreditsLine: String?
         }
 
         struct InsightsSection {
@@ -182,6 +184,9 @@ struct UsageMenuCardView: View {
         /// balance or the Console's API credits. For summary tiles and lamps;
         /// the rows below still say where the number came from.
         var balanceSummaryText: String?
+        /// Summary of active banked resets for custom skins that do not render
+        /// metric detail lines directly (e.g. FlightDeck).
+        var bankedResetsText: String?
     }
 
     let model: Model

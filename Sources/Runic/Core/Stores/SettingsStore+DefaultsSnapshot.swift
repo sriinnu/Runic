@@ -175,7 +175,7 @@ struct SettingsStoreDefaultsSnapshot {
                 "providerSwitcherIconSize",
                 defaultValue: ProviderSwitcherIconSize.medium,
                 userDefaults: userDefaults),
-            providersPaneSidebar: Self.bool("providersPaneSidebar", defaultValue: false, userDefaults: userDefaults),
+            providersPaneSidebar: Self.bool("providersPaneSidebar", defaultValue: true, userDefaults: userDefaults),
             azureOpenAIEndpoint: userDefaults.string(forKey: "azureOpenAIEndpoint") ?? "",
             azureOpenAIDeployment: userDefaults.string(forKey: "azureOpenAIDeployment") ?? "",
             azureOpenAIAPIVersion: userDefaults.string(forKey: "azureOpenAIAPIVersion") ?? "2024-10-21",

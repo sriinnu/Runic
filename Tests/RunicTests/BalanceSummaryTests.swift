@@ -59,4 +59,73 @@ struct BalanceSummaryTests {
             now: self.now)
         #expect(text == nil)
     }
+
+    @Test
+    func `codex missing credits keeps placeholder text without filling balance summary`() throws {
+        let metadata = try #require(ProviderDefaults.metadata[.codex])
+        let model = UsageMenuCardView.Model.make(.init(
+            provider: .codex,
+            metadata: metadata,
+            snapshot: self.snapshot(),
+            credits: nil,
+            creditsError: nil,
+            dashboard: nil,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            now: self.now))
+        #expect(model.creditsText == "0 left")
+        #expect(model.creditsHintText != nil)
+        #expect(model.balanceSummaryText == nil)
+    }
+
+    @Test
+    func `flight deck balance readout preserves currency symbols and iso codes`() {
+        #expect(RunicFlightDeck.compactBalance(from: "12.50 EUR") == "12.50 EUR")
+        #expect(RunicFlightDeck.compactBalance(from: "¥85.04") == "¥85.04")
+        #expect(RunicFlightDeck.compactBalance(from: "$12.34 left") == "$12.34")
+        #expect(RunicFlightDeck.compactBalance(from: nil) == nil)
+    }
+
+    @MainActor
+    @Test
+    func `flight deck front page exhausted helper respects showsUsed toggle`() {
+        let fullLeft = OverviewMenuView.ProviderSummary(
+            id: "claude",
+            provider: .claude,
+            name: "Claude",
+            icon: nil,
+            usedPercent: 100,
+            todayTokens: 0,
+            brandColor: .accentColor,
+            resetDescription: nil,
+            windowLabel: nil,
+            topModelContext: nil,
+            hasQuota: true,
+            bankedResetsText: nil)
+        #expect(FlightDeckFrontPage.isExhausted(fullLeft, showsUsed: false) == false)
+        #expect(FlightDeckFrontPage.isExhausted(fullLeft, showsUsed: true) == true)
+
+        let emptyLeft = OverviewMenuView.ProviderSummary(
+            id: "claude",
+            provider: .claude,
+            name: "Claude",
+            icon: nil,
+            usedPercent: 0,
+            todayTokens: 0,
+            brandColor: .accentColor,
+            resetDescription: nil,
+            windowLabel: nil,
+            topModelContext: nil,
+            hasQuota: true,
+            bankedResetsText: nil)
+        #expect(FlightDeckFrontPage.isExhausted(emptyLeft, showsUsed: false) == true)
+        #expect(FlightDeckFrontPage.isExhausted(emptyLeft, showsUsed: true) == false)
+    }
 }

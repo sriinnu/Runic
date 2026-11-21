@@ -147,6 +147,12 @@ extension StatusItemController {
         Task { await self.store.reloadProvider(provider) }
     }
 
+    @objc func handleTriggerProviderLoginNotification(_ notification: Notification) {
+        guard let raw = notification.userInfo?["provider"] as? String,
+              let provider = UsageProvider(rawValue: raw) else { return }
+        self.runSwitchAccount(provider: provider)
+    }
+
     func showProviderSettings(_ provider: UsageProvider) {
         self.preferencesSelection.provider = provider
         self.openSettings(tab: .providers)

@@ -60,7 +60,7 @@ struct ProviderErrorView: View {
             }
 
             if self.isExpanded {
-                ScrollView(.horizontal, showsIndicators: true) {
+                ScrollView([.horizontal, .vertical], showsIndicators: true) {
                     Text(self.display.full)
                         .font(self.fonts.caption)
                         .foregroundStyle(.primary)
@@ -71,7 +71,7 @@ struct ProviderErrorView: View {
                 .frame(maxHeight: 200)
                 .background(
                     RoundedRectangle(cornerRadius: ProviderListMetrics.errorCardCornerRadius, style: .continuous)
-                        .fill(Color(nsColor: .textBackgroundColor)))
+                        .fill(self.runicTheme.cardFill.opacity(0.88)))
                 .overlay(
                     RoundedRectangle(cornerRadius: ProviderListMetrics.errorCardCornerRadius, style: .continuous)
                         .stroke(Color.orange.opacity(0.3), lineWidth: 1))

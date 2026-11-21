@@ -9,6 +9,7 @@ struct DebugPane: View {
     @Bindable var store: UsageStore
     @Environment(\.runicTheme) private var runicTheme
     @State private var currentLogProvider: UsageProvider = .codex
+    @State private var currentNotificationProvider: UsageProvider = .codex
     @State private var currentFetchProvider: UsageProvider = .codex
     @State private var isLoadingLog = false
     @State private var logText: String = ""
@@ -49,7 +50,6 @@ struct DebugPane: View {
                 Button("Replay selected animation") {
                     self.replaySelectedAnimation()
                 }
-                .keyboardShortcut(.defaultAction)
 
                 Button {
                     NotificationCenter.default.post(name: .runicDebugBlinkNow, object: nil)
@@ -190,7 +190,7 @@ struct DebugPane: View {
                 ScrollView {
                     Text(self.store.openAIDashboardCookieImportDebugLog?.isEmpty == false
                         ? (self.store.openAIDashboardCookieImportDebugLog ?? "")
-                        : "No log yet. Enable \"Access OpenAI via web\" in General to run an import.")
+                        : "No log yet. Enable \"Access OpenAI via web\" in Providers → Codex to run an import.")
                         .font(self.fonts.footnote)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -229,20 +229,20 @@ struct DebugPane: View {
                 caption: "Trigger test notifications for the 5-hour session window (depleted/restored).")
             {
                 RunicSegmentedPicker(
-                    selection: self.$currentLogProvider,
+                    selection: self.$currentNotificationProvider,
                     options: [(UsageProvider.codex, "Codex"), (UsageProvider.claude, "Claude")])
                     .frame(width: 240)
 
                 HStack(spacing: RunicSpacing.sm) {
                     Button {
-                        self.postSessionNotification(.depleted, provider: self.currentLogProvider)
+                        self.postSessionNotification(.depleted, provider: self.currentNotificationProvider)
                     } label: {
                         Label("Post depleted", systemImage: "bell.badge")
                     }
                     .controlSize(.small)
 
                     Button {
-                        self.postSessionNotification(.restored, provider: self.currentLogProvider)
+                        self.postSessionNotification(.restored, provider: self.currentNotificationProvider)
                     } label: {
                         Label("Post restored", systemImage: "bell")
                     }

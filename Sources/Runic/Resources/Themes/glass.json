@@ -1,32 +1,36 @@
 {
   "id": "glass",
   "displayName": "Glass",
-  "tagline": "Frosted midnight",
+  "tagline": "Optical liquid glass",
   "symbolName": "sparkle.magnifyingglass",
   "isCustom": true,
-  "prefersDarkAppearance": true,
+  "prefersDarkAppearance": null,
   "colors": {
-    "primary":       "#203B4F",
-    "secondary":     "#6DBDD4",
-    "accent":        "#87CDE6",
-    "highlight":     "#B8ACE3",
-    "warm":          "#F4A183",
-    "tertiary":      "#84D3B6",
-    "surface":       "#080E16",
-    "surfaceAlt":    "#121F2A",
-    "cardFill":      "#1B2A34D1",
-    "cardStroke":    "#FFFFFF3B",
-    "primaryText":   "#F3F9FC",
-    "secondaryText": "#BBD0D9"
+    "primary":       "#0B111A|#F7F9FC",
+    "secondary":     "#4B3CD6|#9A8CFF",
+    "accent":        "#0052CC|#52A8FF",
+    "highlight":     "#9A4D00|#FFB340",
+    "warm":          "#C42318|#FF6159",
+    "tertiary":      "#09754E|#34D399",
+    "surface":       "#EEF2F7|#0C1017",
+    "surfaceAlt":    "#E3E9F1|#141B24",
+    "cardFill":      "#FFFFFFC4|#1A222ECC",
+    "cardStroke":    "#0B111A24|#FFFFFF2B",
+    "primaryText":   "#0B111A|#F7F9FC",
+    "secondaryText": "#344052|#A9B5C7"
   },
   "fonts":   { "body": "system", "numeric": "system" },
   "shape":   { "cornerMultiplier": 1.0, "separator": "hairline" },
   "motion":  { "preset": "snappy" },
   "density": { "preset": "normal" },
   "style": {
+    "skin": "liquidglass",
     "typography": { "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
-    "chrome": { "borderStyle": "hairline", "borderWeight": 0.7, "borderOpacity": 0.48, "cornerStyle": "soft", "panelDepth": "low" },
-    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.08, "materialIntensity": 0.0 },
+    "chrome": {
+      "borderStyle": "hairline", "borderWeight": 0.5, "borderOpacity": 0.6,
+      "cornerStyle": "soft", "panelDepth": "low"
+    },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0 },
     "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "accent" }
   }
 }

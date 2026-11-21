@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import RunicCore
 import SwiftUI
 
@@ -6,49 +7,206 @@ import SwiftUI
 struct GeneralPane: View {
     @Environment(\.runicFonts) private var fonts
     @Environment(\.runicTheme) private var runicTheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
-    @State private var appeared = false
-    @State private var diagnosticsStatus: String?
-    @State private var guardrailStatus: String?
     @State private var launchAtLoginStatus: String?
-    @State private var isImportingOpenAIWebCookies = false
+    @State private var isInstallingCLI = false
+    @State private var cliStatus: String?
 
     var body: some View {
         LiquidPreferencesPane {
-            LiquidSection(title: "System") {
+            SettingsGroupCard(title: "Startup & Shortcut") {
                 PreferenceToggleRow(
                     title: "Start at Login",
                     subtitle: "Open Runic when your Mac starts.",
                     binding: self.launchAtLoginBinding)
+
                 if let launchAtLoginStatus = self.launchAtLoginStatus {
                     Text(launchAtLoginStatus)
-                        .font(self.preferenceHelpFont)
+                        .font(self.fonts.footnote)
                         .foregroundStyle(.orange)
                 }
-            }
-            .liquidEntrance(appeared: self.appeared, index: 0)
 
-            LiquidSection(title: "Configuration") {
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text("Config file")
-                            .font(self.preferenceTitleFont)
+                Divider()
 
-                        Text(
-                            "Provider endpoint URLs and log paths live in one JSON file that Runic watches. " +
-                                "Edit it and changes apply instantly — no rebuild, no restart.")
-                            .font(self.preferenceHelpFont)
-                            .foregroundStyle(self.preferenceHelpColor)
-                            .lineSpacing(self.preferenceHelpLineSpacing)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Text(RunicConfigStore.storageURL.path)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(self.preferenceHelpColor)
-                            .textSelection(.enabled)
+                VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
+                    HStack(alignment: .center, spacing: RunicSpacing.sm) {
+                        Text("Open menu")
+                            .font(self.fonts.callout.weight(.medium))
+                        Spacer()
+                        KeyboardShortcuts.Recorder(for: .openMenu)
                     }
+                    Text("Trigger the menu bar menu from anywhere.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                }
+            }
+
+            SettingsGroupCard(title: "Refresh & Safety") {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    Text("Refresh cadence")
+                        .font(self.fonts.callout.weight(.medium))
+
+                    RunicSegmentedPicker(
+                        selection: self.$settings.refreshFrequency,
+                        cases: RefreshFrequency.allCases,
+                        label: \.label)
+
+                    if self.settings.refreshFrequency == .manual {
+                        Text("Auto-refresh is off; use the menu's Refresh command.")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                    }
+
+                    if let badgeText = self.store.autoRefreshDisableBadgeText() {
+                        Text(badgeText)
+                            .font(self.fonts.caption2.weight(.medium))
+                            .padding(.horizontal, RunicSpacing.xs)
+                            .padding(.vertical, RunicSpacing.xxs)
+                            .background(Capsule(style: .continuous).fill(self.runicTheme.menuSubtleFill))
+                            .overlay(Capsule(style: .continuous).stroke(
+                                self.runicTheme.menuSeparatorColor.opacity(0.55),
+                                lineWidth: 0.7))
+                            .foregroundStyle(self.runicTheme.secondaryText)
+                    }
+
+                    Text("Auto-refresh pauses during sleep or lock and can switch to Manual below.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    PreferenceToggleRow(
+                        title: "Switch to Manual when idle",
+                        subtitle: "If your Mac is idle for the threshold below, Runic switches auto-refresh to Manual.",
+                        binding: self.$settings.autoDisableRefreshWhenIdleEnabled)
+
+                    PreferenceStepperRow(
+                        title: "Idle threshold",
+                        subtitle: nil,
+                        step: 1,
+                        range: 1...60,
+                        valueLabel: { "\($0) min" },
+                        value: self.$settings.autoDisableRefreshWhenIdleMinutes)
+                        .disabled(!self.settings.autoDisableRefreshWhenIdleEnabled)
+                        .opacity(self.settings.autoDisableRefreshWhenIdleEnabled ? 1 : 0.5)
+                }
+
+                PreferenceToggleRow(
+                    title: "Switch to Manual on sleep/lock",
+                    subtitle: "When your Mac sleeps or locks, auto-refresh moves to Manual to avoid background checks.",
+                    binding: self.$settings.autoDisableRefreshOnSleepEnabled)
+
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    PreferenceToggleRow(
+                        title: "Warn after repeated auto-refreshes",
+                        subtitle: "Sends a notification after the configured number of auto-refresh cycles.",
+                        binding: self.$settings.autoRefreshWarningEnabled)
+
+                    PreferenceStepperRow(
+                        title: "Warning threshold",
+                        subtitle: nil,
+                        step: 1,
+                        range: 5...100,
+                        valueLabel: { "\($0) runs" },
+                        value: self.$settings.autoRefreshWarningThreshold)
+                        .disabled(!self.settings.autoRefreshWarningEnabled)
+                        .opacity(self.settings.autoRefreshWarningEnabled ? 1 : 0.5)
+                }
+
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    PreferenceToggleRow(
+                        title: "Skip inactive providers",
+                        subtitle: "Pauses auto-refresh for providers with no usage changes for the threshold below.",
+                        binding: self.$settings.autoSuspendInactiveProvidersEnabled)
+
+                    PreferenceStepperRow(
+                        title: "Inactive threshold",
+                        subtitle: nil,
+                        step: 30,
+                        range: 30...10080,
+                        valueLabel: { Self.inactiveThresholdLabel(for: $0) },
+                        value: self.$settings.autoSuspendInactiveProvidersMinutes)
+                        .disabled(!self.settings.autoSuspendInactiveProvidersEnabled)
+                        .opacity(self.settings.autoSuspendInactiveProvidersEnabled ? 1 : 0.5)
+                }
+            }
+
+            SettingsGroupCard(title: "Usage, Status & Notifications") {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    PreferenceToggleRow(
+                        title: "Show cost summary",
+                        subtitle: "Shows local cost totals in Analyst and Operator menu modes.",
+                        binding: self.$settings.costUsageEnabled)
+
+                    if self.settings.costUsageEnabled {
+                        Text("Auto-refresh: hourly · Timeout: 10m")
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                        self.costStatusLine(provider: .claude)
+                        self.costStatusLine(provider: .codex)
+                    }
+                }
+
+                PreferenceToggleRow(
+                    title: "Check provider status",
+                    subtitle: "Polls provider status pages for active incidents.",
+                    binding: self.$settings.statusChecksEnabled)
+
+                PreferenceToggleRow(
+                    title: "Session quota notifications",
+                    subtitle: "Notifies when your 5-hour session quota depletes or resets.",
+                    binding: self.$settings.sessionQuotaNotificationsEnabled)
+            }
+
+            SettingsGroupCard(title: "CLI & Configuration") {
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    HStack(spacing: RunicSpacing.sm) {
+                        Button {
+                            Task { await self.installCLI() }
+                        } label: {
+                            if self.isInstallingCLI {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Label("Install CLI", systemImage: "terminal")
+                            }
+                        }
+                        .buttonStyle(.runicBordered)
+                        .disabled(self.isInstallingCLI)
+
+                        if let status = self.cliStatus {
+                            Text(status)
+                                .font(self.fonts.footnote)
+                                .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                                .lineLimit(2)
+                        }
+                    }
+
+                    Text("Symlinks RunicCLI to /usr/local/bin or /opt/homebrew/bin as runic.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: RunicSpacing.xs) {
+                    Text("Config file")
+                        .font(self.fonts.callout.weight(.medium))
+
+                    Text(
+                        "Provider endpoint URLs and log paths live in one JSON file that Runic watches. " +
+                            "Edit it and changes apply instantly — no rebuild, no restart.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(RunicConfigStore.storageURL.path)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                        .textSelection(.enabled)
 
                     HStack(spacing: RunicSpacing.sm) {
                         Button {
@@ -74,269 +232,13 @@ struct GeneralPane: View {
                     }
 
                     Text(self.configStatusLine)
-                        .font(self.preferenceHelpFont)
-                        .foregroundStyle(self.preferenceHelpColor)
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
                 }
             }
-            .liquidEntrance(appeared: self.appeared, index: 1)
-
-            LiquidSection(title: "Usage") {
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Toggle(isOn: self.$settings.costUsageEnabled) {
-                            Text("Show cost summary")
-                                .font(self.preferenceTitleFont)
-                        }
-                        .runicPreferenceToggleStyle()
-
-                        Text("Shows local cost totals in Analyst and Operator menu modes.")
-                            .font(self.preferenceHelpFont)
-                            .fontDesign(self.preferenceHelpDesign)
-                            .tracking(self.preferenceHelpTracking)
-                            .foregroundStyle(self.preferenceHelpColor)
-                            .lineSpacing(self.preferenceHelpLineSpacing)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        if self.settings.costUsageEnabled {
-                            Text("Auto-refresh: hourly · Timeout: 10m")
-                                .font(self.preferenceHelpFont)
-                                .fontDesign(self.preferenceHelpDesign)
-                                .tracking(self.preferenceHelpTracking)
-                                .foregroundStyle(self.preferenceHelpColor)
-
-                            self.costStatusLine(provider: .claude)
-                            self.costStatusLine(provider: .codex)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Toggle(isOn: self.$settings.openAIWebAccessEnabled) {
-                            Text("Access OpenAI via web")
-                                .font(self.preferenceTitleFont)
-                        }
-                        .runicPreferenceToggleStyle()
-
-                        Text("Enable extras after manual cookie import.")
-                            .font(self.preferenceHelpFont)
-                            .fontDesign(self.preferenceHelpDesign)
-                            .tracking(self.preferenceHelpTracking)
-                            .foregroundStyle(self.preferenceHelpColor)
-                            .lineSpacing(self.preferenceHelpLineSpacing)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        HStack(spacing: RunicSpacing.sm) {
-                            Button {
-                                self.importOpenAIWebCookies()
-                            } label: {
-                                if self.isImportingOpenAIWebCookies {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
-                                Text("Import Browser Cookies Now")
-                            }
-                            .buttonStyle(.runicBordered)
-                            .disabled(self.isImportingOpenAIWebCookies || !self.settings.openAIWebAccessEnabled)
-
-                            if let status = self.openAIWebStatusText {
-                                Text(status)
-                                    .font(self.preferenceHelpFont)
-                                    .fontDesign(self.preferenceHelpDesign)
-                                    .tracking(self.preferenceHelpTracking)
-                                    .foregroundStyle(self.preferenceHelpColor)
-                                    .lineLimit(2)
-                            }
-                        }
-                    }
-                }
-            }
-            .liquidEntrance(appeared: self.appeared, index: 2)
-
-            LiquidSection(title: "Status") {
-                PreferenceToggleRow(
-                    title: "Check provider status",
-                    subtitle: "Polls provider status pages.",
-                    binding: self.$settings.statusChecksEnabled)
-                PreferenceToggleRow(
-                    title: "Vibrant menu bar icon",
-                    subtitle: "Shows usage pressure in the menu bar.",
-                    binding: self.$settings.menuBarVibrantIconEnabled)
-            }
-            .liquidEntrance(appeared: self.appeared, index: 3)
-
-            LiquidSection(title: "Notifications") {
-                PreferenceToggleRow(
-                    title: "Session quota notifications",
-                    subtitle: "Warns when session quota resets.",
-                    binding: self.$settings.sessionQuotaNotificationsEnabled)
-            }
-            .liquidEntrance(appeared: self.appeared, index: 4)
-
-            LiquidSection(title: "Display Settings") {
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text("Menu refresh rate")
-                            .font(self.preferenceTitleFont)
-
-                        RunicSegmentedPicker(
-                            selection: self.$settings.refreshFrequency,
-                            cases: RefreshFrequency.allCases,
-                            label: \.label)
-
-                        Text(
-                            "How often to refresh usage data. " +
-                                "Manual updates only when you reload; it won't update the menu bar on its own.")
-                            .font(self.preferenceHelpFont)
-                            .foregroundStyle(self.preferenceHelpColor)
-                    }
-
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text("Chart style")
-                            .font(self.preferenceTitleFont)
-
-                        RunicSegmentedPicker(
-                            selection: self.$settings.chartStyle,
-                            options: [(ChartStyle.line, "Line"), (ChartStyle.area, "Area"), (ChartStyle.bar, "Bar")])
-                            .frame(maxWidth: 360)
-
-                        Text("Timeline charts can render as a line, filled area, or bars.")
-                            .font(self.preferenceHelpFont)
-                            .foregroundStyle(self.preferenceHelpColor)
-                    }
-
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text("Number format")
-                            .font(self.preferenceTitleFont)
-
-                        RunicSegmentedPicker(
-                            selection: self.$settings.numberFormat,
-                            options: [
-                                (NumberFormat.abbreviated, "Abbreviated (45.2K)"),
-                                (NumberFormat.full, "Full (45,234)"),
-                            ])
-                            .frame(maxWidth: 360)
-
-                        Text("How to display large numbers in the UI.")
-                            .font(self.preferenceHelpFont)
-                            .foregroundStyle(self.preferenceHelpColor)
-                    }
-
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text("Date format")
-                            .font(self.preferenceTitleFont)
-
-                        RunicSegmentedPicker(
-                            selection: self.$settings.dateFormat,
-                            options: [
-                                (DateFormat.relative, "Relative (2h ago)"),
-                                (DateFormat.absolute, "Absolute (Jan 31, 2:30 PM)"),
-                            ])
-                            .frame(maxWidth: 360)
-
-                        Text("How to display timestamps throughout the app.")
-                            .font(self.preferenceHelpFont)
-                            .foregroundStyle(self.preferenceHelpColor)
-                    }
-
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        AppearancePreviewCard(
-                            theme: self.settings.theme,
-                            fontFamily: self.settings.selectedFontFamily,
-                            providers: Array(self.store.enabledProviders().prefix(4)))
-                            .id(self.settings.visualSettingsRevision)
-                            .padding(.bottom, RunicSpacing.xs)
-
-                        Text("Theme")
-                            .font(self.preferenceTitleFont)
-
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.adaptive(minimum: 122, maximum: 176), spacing: RunicSpacing.xs),
-                            ],
-                            alignment: .leading,
-                            spacing: RunicSpacing.xs)
-                        {
-                            ForEach(Theme.allCases) { theme in
-                                ThemeChoiceButton(
-                                    theme: theme,
-                                    isSelected: self.settings.theme == theme)
-                                {
-                                    withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) {
-                                        self.settings.theme = theme
-                                    }
-                                }
-                            }
-                        }
-                        .frame(maxWidth: 560, alignment: .leading)
-
-                        Text("Custom skins apply immediately to Runic panels; System/Light/Dark follow macOS chrome.")
-                            .font(self.preferenceHelpFont)
-                            .foregroundStyle(self.preferenceHelpColor)
-                    }
-
-                    VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                        Text("Font")
-                            .font(self.preferenceTitleFont)
-
-                        let themeFont = RunicFontChoice.resolvedThemeFamily(
-                            self.settings.theme.palette.style.typography.bodyFamily)
-                        let followsTheme = self.settings.selectedFontFamily == RunicFontChoice.themeDefaultID
-                        Picker("", selection: self.$settings.selectedFontFamily) {
-                            ForEach(RunicFontChoice.availableChoices()) { choice in
-                                Text(choice.displayName)
-                                    .font(choice.previewFont)
-                                    .tag(choice.id)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(maxWidth: 360)
-
-                        Text("\"Theme default\" follows each theme's own face; pick a family to " +
-                            "override it. Install extra families with Font Book and they appear here.")
-                            .font(self.preferenceHelpFont)
-                            .foregroundStyle(self.preferenceHelpColor)
-
-                        if followsTheme, let themeFont {
-                            Text("\(self.settings.theme.label) uses " +
-                                "\(RunicFontChoice.displayName(for: themeFont)).")
-                                .font(self.preferenceHelpFont)
-                                .foregroundStyle(self.preferenceHelpColor)
-                        }
-
-                        TypographyRulesPreview(
-                            fontFamily: self.settings.selectedFontFamily,
-                            theme: self.settings.theme)
-                            .id(self.settings.visualSettingsRevision)
-                            .padding(.top, RunicSpacing.xs)
-                    }
-                }
-            }
-            .liquidEntrance(appeared: self.appeared, index: 5)
-
-            LiquidSection(title: "Operations") {
-                RunicOperationsCenterView(
-                    settings: self.settings,
-                    store: self.store,
-                    diagnosticsStatus: self.diagnosticsStatus,
-                    guardrailStatus: self.guardrailStatus,
-                    onCopyDiagnostics: self.copyDiagnostics,
-                    onInstallGuardrails: self.installGuardrails)
-            }
-            .liquidEntrance(appeared: self.appeared, index: 6)
-
-            HStack {
-                Spacer()
-                Button("Quit Runic") { NSApp.terminate(nil) }
-                    .buttonStyle(.runicProminent)
-                    .controlSize(.large)
-            }
-            .liquidEntrance(appeared: self.appeared, index: 7)
         }
         .onAppear {
             self.settings.launchAtLogin = LaunchAtLoginManager.isEnabled()
-            guard !self.appeared else { return }
-            withAnimation(self.runicTheme.motion.curve(reduceMotion: self.reduceMotion)) { self.appeared = true }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             self.settings.launchAtLogin = LaunchAtLoginManager.isEnabled()
@@ -355,22 +257,6 @@ struct GeneralPane: View {
         }
     }
 
-    private func copyDiagnostics() {
-        let report = RunicDiagnosticsReport.makeText(settings: self.settings, store: self.store)
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(report, forType: .string)
-        self.diagnosticsStatus = "Copied redacted diagnostics"
-    }
-
-    private func installGuardrails() {
-        do {
-            let count = try RunicDiagnosticsReport.installDefaultGuardrails()
-            self.guardrailStatus = count == 0 ? "Guardrails already installed" : "Installed \(count) guardrails"
-        } catch {
-            self.guardrailStatus = "Failed: \(error.localizedDescription)"
-        }
-    }
-
     private var launchAtLoginBinding: Binding<Bool> {
         Binding(
             get: { self.settings.launchAtLogin },
@@ -380,41 +266,69 @@ struct GeneralPane: View {
             })
     }
 
-    private var preferenceTitleFont: Font {
-        self.fonts.callout.weight(.medium)
-    }
-
-    private var preferenceHelpFont: Font {
-        self.fonts.footnote
-    }
-
-    private var preferenceHelpDesign: Font.Design? {
-        nil
-    }
-
-    private var preferenceHelpTracking: CGFloat {
-        RunicFont.activeRules.letterSpacing
-    }
-
-    private var preferenceHelpColor: Color {
-        self.runicTheme.subduedSecondaryText
-    }
-
-    private var preferenceHelpLineSpacing: CGFloat {
-        0
-    }
-
-    private var openAIWebStatusText: String? {
-        self.store.openAIDashboardCookieImportStatus ?? self.store.lastOpenAIDashboardError
-    }
-
-    private func importOpenAIWebCookies() {
-        guard !self.isImportingOpenAIWebCookies else { return }
-        self.isImportingOpenAIWebCookies = true
-        Task { @MainActor in
-            await self.store.importOpenAIDashboardBrowserCookiesNow()
-            self.isImportingOpenAIWebCookies = false
+    private static func inactiveThresholdLabel(for minutes: Int) -> String {
+        let inactiveMinutes = max(1, minutes)
+        if inactiveMinutes % 60 == 0 {
+            return "\(inactiveMinutes / 60) hr"
         }
+        return "\(inactiveMinutes) min"
+    }
+
+    private func installCLI() async {
+        if self.isInstallingCLI { return }
+        self.isInstallingCLI = true
+        defer { self.isInstallingCLI = false }
+
+        let helperURL = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/RunicCLI")
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: helperURL.path) else {
+            self.cliStatus = "RunicCLI not found in app bundle."
+            return
+        }
+
+        let destinations = [
+            "/usr/local/bin/runic",
+            "/opt/homebrew/bin/runic",
+        ]
+
+        var results: [String] = []
+        for dest in destinations {
+            let dir = (dest as NSString).deletingLastPathComponent
+            guard fm.fileExists(atPath: dir) else { continue }
+            guard fm.isWritableFile(atPath: dir) else {
+                results.append("No write access: \(dir)")
+                continue
+            }
+
+            if fm.fileExists(atPath: dest) {
+                if Self.isLink(atPath: dest, pointingTo: helperURL.path) {
+                    results.append("Installed: \(dir)")
+                } else {
+                    results.append("Exists: \(dir)")
+                }
+                continue
+            }
+
+            do {
+                try fm.createSymbolicLink(atPath: dest, withDestinationPath: helperURL.path)
+                results.append("Installed: \(dir)")
+            } catch {
+                results.append("Failed: \(dir)")
+            }
+        }
+
+        self.cliStatus = results.isEmpty
+            ? "No writable bin dirs found."
+            : results.joined(separator: " · ")
+    }
+
+    private static func isLink(atPath path: String, pointingTo destination: String) -> Bool {
+        guard let link = try? FileManager.default.destinationOfSymbolicLink(atPath: path) else { return false }
+        let dir = (path as NSString).deletingLastPathComponent
+        let resolved = URL(fileURLWithPath: link, relativeTo: URL(fileURLWithPath: dir))
+            .standardizedFileURL
+            .path
+        return resolved == destination
     }
 
     private func costStatusLine(provider: UsageProvider) -> some View {
@@ -422,10 +336,8 @@ struct GeneralPane: View {
 
         guard provider == .claude || provider == .codex else {
             return Text("\(name): unsupported")
-                .font(self.preferenceHelpFont)
-                .fontDesign(self.preferenceHelpDesign)
-                .tracking(self.preferenceHelpTracking)
-                .foregroundStyle(self.preferenceHelpColor)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.subduedSecondaryText)
         }
 
         if self.store.isTokenRefreshInFlight(for: provider) {
@@ -438,10 +350,8 @@ struct GeneralPane: View {
                 return formatter.string(from: seconds).map { " (\($0))" } ?? ""
             }()
             return Text("\(name): fetching…\(elapsed)")
-                .font(self.preferenceHelpFont)
-                .fontDesign(self.preferenceHelpDesign)
-                .tracking(self.preferenceHelpTracking)
-                .foregroundStyle(self.preferenceHelpColor)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.subduedSecondaryText)
         }
         if let snapshot = self.store.tokenSnapshot(for: provider) {
             let updated = UsageFormatter.updatedString(
@@ -449,33 +359,25 @@ struct GeneralPane: View {
                 style: self.settings.dateFormat.formatterStyle)
             let cost = snapshot.last30DaysCostUSD.map { UsageFormatter.usdString($0) } ?? "—"
             return Text("\(name): \(updated) · 30d \(cost)")
-                .font(self.preferenceHelpFont)
-                .fontDesign(self.preferenceHelpDesign)
-                .tracking(self.preferenceHelpTracking)
-                .foregroundStyle(self.preferenceHelpColor)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.subduedSecondaryText)
         }
         if let error = self.store.tokenError(for: provider), !error.isEmpty {
             let truncated = UsageFormatter.truncatedSingleLine(error, max: 120)
             return Text("\(name): \(truncated)")
-                .font(self.preferenceHelpFont)
-                .fontDesign(self.preferenceHelpDesign)
-                .tracking(self.preferenceHelpTracking)
-                .foregroundStyle(self.preferenceHelpColor)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.subduedSecondaryText)
         }
         if let lastAttempt = self.store.tokenLastAttemptAt(for: provider) {
             let rel = RelativeDateTimeFormatter()
             rel.unitsStyle = .abbreviated
             let when = rel.localizedString(for: lastAttempt, relativeTo: Date())
             return Text("\(name): last attempt \(when)")
-                .font(self.preferenceHelpFont)
-                .fontDesign(self.preferenceHelpDesign)
-                .tracking(self.preferenceHelpTracking)
-                .foregroundStyle(self.preferenceHelpColor)
+                .font(self.fonts.footnote)
+                .foregroundStyle(self.runicTheme.subduedSecondaryText)
         }
         return Text("\(name): no data yet")
-            .font(self.preferenceHelpFont)
-            .fontDesign(self.preferenceHelpDesign)
-            .tracking(self.preferenceHelpTracking)
-            .foregroundStyle(self.preferenceHelpColor)
+            .font(self.fonts.footnote)
+            .foregroundStyle(self.runicTheme.subduedSecondaryText)
     }
 }

@@ -205,6 +205,13 @@ extension ClaudeWebAPIFetcher {
     private static func inferPlan(rateLimitTier: String?, billingType: String?) -> String? {
         let tier = rateLimitTier?.lowercased() ?? ""
         let billing = billingType?.lowercased() ?? ""
+        if tier.contains("ultra") { return "Claude Ultra" }
+        if tier.contains("max_20x") || tier.contains("max 20x") || tier.contains("max20x") {
+            return "Claude Max 20x"
+        }
+        if tier.contains("max_5x") || tier.contains("max 5x") || tier.contains("max5x") {
+            return "Claude Max 5x"
+        }
         if tier.contains("max") { return "Claude Max" }
         if tier.contains("pro") { return "Claude Pro" }
         if tier.contains("team") { return "Claude Team" }

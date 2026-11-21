@@ -89,14 +89,17 @@ extension UsageMenuCardView.Model {
             // Actual spend already appears in Extra usage; do not repeat a credits hint.
             nil
         } else {
-            Self.creditsLine(metadata: input.metadata, credits: input.credits)
+            Self.creditsLine(provider: input.provider, metadata: input.metadata, credits: input.credits)
         }
-        let creditsHintText = creditsText != nil && input.credits == nil && input.metadata.supportsCredits
+        let creditsHintText = input.provider == .codex
+            && creditsText != nil
+            && input.credits == nil
+            && input.metadata.supportsCredits
             ? "Balance unavailable; showing 0 until the next refresh." : nil
         let providerCost: ProviderCostSection? = if !input.showOptionalCreditsAndExtraUsage {
             nil
         } else {
-            Self.providerCostSection(provider: input.provider, cost: input.snapshot?.providerCost)
+            Self.providerCostSection(provider: input.provider, cost: input.snapshot?.providerCost, now: input.now)
         }
         let tokenUsage = Self.tokenUsageSection(
             provider: input.provider,
@@ -156,8 +159,13 @@ extension UsageMenuCardView.Model {
             peakHoursText: Self.peakHoursText(
                 input.ledgerPeakBurn?.provider == input.provider ? input.ledgerPeakBurn : nil),
             balanceSummaryText: input.showOptionalCreditsAndExtraUsage
-                ? Self.balanceSummaryText(creditsText: creditsText, snapshot: input.snapshot)
-                : nil)
+                ? Self.balanceSummaryText(
+                    creditsText: input.credits != nil ? creditsText : nil,
+                    snapshot: input.snapshot,
+                    now: input.now)
+                : nil,
+            bankedResetsText: input.snapshot?.resetCredits
+                .flatMap { ResetCreditEntry.summaryLine(for: $0, now: input.now) })
     }
 
     /// One number for the summary tiles: credits first, then a prepaid balance,
@@ -329,12 +337,11 @@ extension UsageMenuCardView.Model {
         // Banked resets ride on the primary window's detail line: that is the
         // window the user will spend one on.
         let bankedResets = snapshot.resetCredits.flatMap { ResetCreditEntry.summaryLine(for: $0, now: input.now) }
-        // Kimi keys are either Open Platform (a balance, titled by metadata) or a
-        // Kimi Code subscription (5h / weekly windows that name themselves).
-        let windowsNameThemselves = input.provider.brandRoot == .kimi
+        /// Windows that carry their own label (Antigravity models, Copilot
+        /// categories, Kimi Code 5h/weekly, Ollama Cloud monthly credits, Muse, etc.)
+        /// name themselves instead of falling back to generic metadata slot names.
         func title(_ window: RateWindow, fallback: String) -> String {
-            guard windowsNameThemselves || fallback.isEmpty,
-                  let own = window.label?.trimmingCharacters(in: .whitespacesAndNewlines), !own.isEmpty
+            guard let own = window.label?.trimmingCharacters(in: .whitespacesAndNewlines), !own.isEmpty
             else { return fallback }
             return own
         }
@@ -549,13 +556,14 @@ extension UsageMenuCardView.Model {
     }
 
     private static func creditsLine(
+        provider: UsageProvider,
         metadata: ProviderMetadata,
         credits: CreditsSnapshot?) -> String?
     {
         if let credits {
             return UsageFormatter.creditsString(from: credits.remaining)
         }
-        guard metadata.supportsCredits else { return nil }
+        guard provider == .codex, metadata.supportsCredits else { return nil }
         return UsageFormatter.creditsString(from: 0)
     }
 
@@ -650,10 +658,11 @@ extension UsageMenuCardView.Model {
 
     private static func providerCostSection(
         provider: UsageProvider,
-        cost: ProviderCostSnapshot?) -> ProviderCostSection?
+        cost: ProviderCostSnapshot?,
+        now: Date = Date()) -> ProviderCostSection?
     {
         guard let cost else { return nil }
-        if provider == .claude, let section = Self.claudeUsageCreditsSection(cost) { return section }
+        if provider == .claude, let section = Self.claudeUsageCreditsSection(cost, now: now) { return section }
         let title = switch provider {
         case .cursor: "On-demand usage"
         case .ollamacloud: "Cloud spend"
@@ -667,27 +676,33 @@ extension UsageMenuCardView.Model {
             // keeps requiring a limit, matching its previous behavior.
             // Ollama Cloud reports spend over the last four weeks, no cap.
             guard provider != .claude, cost.used > 0 else { return nil }
+            let spendLine = "\(cost.period ?? "This month"): \(used)"
             return ProviderCostSection(
                 title: title,
                 percentUsed: nil,
-                spendLine: "\(cost.period ?? "This month"): \(used)")
+                spendLine: spendLine,
+                primarySpendLine: spendLine,
+                apiCreditsLine: nil)
         }
 
         let limit = UsageFormatter.currencyString(cost.limit, currencyCode: cost.currencyCode)
         let percentUsed = Self.clamped((cost.used / cost.limit) * 100)
+        let spendLine = "This month: \(used) / \(limit)"
 
         return ProviderCostSection(
             title: title,
             percentUsed: percentUsed,
-            spendLine: "This month: \(used) / \(limit)")
+            spendLine: spendLine,
+            primarySpendLine: spendLine,
+            apiCreditsLine: nil)
     }
 
     /// Claude usage credits from the `spend` block: on/off, spent against the
     /// monthly limit, and the prepaid balance. Only for the newer block
     /// (`isEnabled` or `balance` set); the older `extra_usage` path below
     /// keeps its original behavior.
-    static func claudeUsageCreditsSection(_ cost: ProviderCostSnapshot) -> ProviderCostSection? {
-        let grant = Self.apiCreditGrantLine(cost)
+    static func claudeUsageCreditsSection(_ cost: ProviderCostSnapshot, now: Date = Date()) -> ProviderCostSection? {
+        let grant = Self.apiCreditGrantLine(cost, now: now)
         guard cost.isEnabled != nil || cost.balance != nil || grant != nil else { return nil }
         let money = { (value: Double) in UsageFormatter.currencyString(value, currencyCode: cost.currencyCode) }
         let balance = cost.balance.map { "Balance \(money($0))" }
@@ -696,7 +711,9 @@ extension UsageMenuCardView.Model {
             return ProviderCostSection(
                 title: "Usage credits",
                 percentUsed: nil,
-                spendLine: [line, grant].compactMap(\.self).joined(separator: "\n"))
+                spendLine: [line, grant].compactMap(\.self).joined(separator: "\n"),
+                primarySpendLine: line,
+                apiCreditsLine: grant)
         }
         var parts: [String] = []
         var percent: Double?
@@ -709,13 +726,16 @@ extension UsageMenuCardView.Model {
             }
             if let balance { parts.append(balance) }
         }
-        let spendLine = [parts.isEmpty ? nil : parts.joined(separator: " · "), grant]
+        let primaryLine = parts.isEmpty ? nil : parts.joined(separator: " · ")
+        let spendLine = [primaryLine, grant]
             .compactMap(\.self)
             .joined(separator: "\n")
         return ProviderCostSection(
             title: "Usage credits",
             percentUsed: percent,
-            spendLine: spendLine)
+            spendLine: spendLine,
+            primarySpendLine: primaryLine,
+            apiCreditsLine: grant)
     }
 
     /// "API credits $390.14 left · $190.13 expires in 13h" with the Console

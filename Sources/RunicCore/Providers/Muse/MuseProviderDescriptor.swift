@@ -75,11 +75,11 @@ struct MuseAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveToken(environment: context.env) != nil
+        context.credential(for: .muse) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let apiKey = Self.resolveToken(environment: context.env) else {
+        guard let apiKey = context.credential(for: .muse)?.token else {
             throw MuseSettingsError.missingToken
         }
         let result = try await MuseUsageFetcher.fetchModels(apiKey: apiKey)
@@ -90,10 +90,6 @@ struct MuseAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveToken(environment: [String: String]) -> String? {
-        ProviderTokenResolver.museToken(environment: environment)
     }
 }
 

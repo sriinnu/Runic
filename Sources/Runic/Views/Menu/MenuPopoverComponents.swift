@@ -93,6 +93,8 @@ struct MenuPopoverBackground: View {
             // the tabs' feet overlap the sheet's cut edge like folder tabs.
             RunicPaperStage(skyBand: self.showsProviderTabs ? 48 : 0)
                 .ignoresSafeArea()
+        } else if self.runicTheme.skinID == LiquidGlassSkin.skinID {
+            LiquidGlassStageBackground()
         } else {
             self.standardBody
         }
@@ -101,13 +103,6 @@ struct MenuPopoverBackground: View {
     private var standardBody: some View {
         ZStack {
             self.runicTheme.menuSurfaceGradient
-            if self.runicTheme.id == "glass" {
-                RadialGradient(
-                    colors: [self.runicTheme.accent.opacity(0.14), .clear],
-                    center: .topLeading,
-                    startRadius: 8,
-                    endRadius: 320)
-            }
             if self.runicTheme.isTerminalHUD {
                 // CRT flourishes — the hex code-rain gutter and scanlines — only
                 // when the theme asks for them. A clean terminal keeps

@@ -114,13 +114,15 @@ enum RunicDrafting {
         return "RESET \(body)"
     }
 
-    /// The signed delta inside a pace line: "Pace: Behind (-34%) · …" → −34.
+    /// The signed delta inside a pace line: "Pace: Behind (-34%) · …" → -34.
     static func paceDelta(_ detail: String) -> Double? {
         guard detail.hasPrefix("Pace:"),
               let open = detail.range(of: "("), let close = detail.range(of: "%)"),
               open.upperBound < close.lowerBound
         else { return nil }
-        let raw = detail[open.upperBound..<close.lowerBound].replacingOccurrences(of: "+", with: "")
+        let raw = detail[open.upperBound..<close.lowerBound]
+            .replacingOccurrences(of: "+", with: "")
+            .replacingOccurrences(of: "\u{2212}", with: "-")
         guard let delta = Double(raw), delta != 0 else { return nil }
         return delta
     }

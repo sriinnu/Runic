@@ -73,7 +73,7 @@ struct ProviderSettingsDescriptorTests {
     }
 
     @Test
-    func `codex does not expose open AI web toggle`() throws {
+    func `codex exposes open AI web toggle and cookie import action`() throws {
         let defaults = try #require(UserDefaults(suiteName: "ProviderSettingsDescriptorTests-codex"))
         defaults.removePersistentDomain(forName: "ProviderSettingsDescriptorTests-codex")
         let settings = SettingsStore(
@@ -107,7 +107,8 @@ struct ProviderSettingsDescriptorTests {
             requestConfirmation: { _ in })
 
         let toggles = CodexProviderImplementation().settingsToggles(context: context)
-        #expect(toggles.isEmpty)
+        #expect(toggles.map(\.id) == ["codex-openai-web-access"])
+        #expect(toggles.first?.actions.map(\.id) == ["codex-import-openai-web-cookies"])
     }
 
     @Test

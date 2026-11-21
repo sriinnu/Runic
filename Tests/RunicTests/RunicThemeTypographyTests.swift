@@ -220,12 +220,14 @@ extension RunicTests {
     @MainActor
     @Test
     func `theme polish helpers keep motion contrast and chrome scoped`() {
-        let retro = Theme.retro.palette
+        let relief = Theme.relief.palette
+        let meridian = Theme.meridian.palette
         let terminal = Theme.terminal.palette
         let glass = Theme.glass.palette
         let light = Theme.sumi.palette
 
-        #expect(retro.prefersRetroToggleChrome)
+        #expect(relief.prefersRetroToggleChrome)
+        #expect(meridian.prefersRetroToggleChrome)
         #expect(terminal.prefersRetroToggleChrome)
         #expect(glass.prefersRetroToggleChrome)
         #expect(light.prefersRetroToggleChrome)

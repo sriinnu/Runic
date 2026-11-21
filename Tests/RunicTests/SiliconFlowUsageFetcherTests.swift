@@ -71,4 +71,12 @@ struct SiliconFlowUsageFetcherTests {
         #expect(SiliconFlowConsole.cookieValue(in: header) { $0.lowercased().contains("subject") } == "99")
         #expect(SiliconFlowConsole.cookieValue(in: header) { $0 == "missing" } == nil)
     }
+
+    @Test
+    func `invalid pasted session error identifies region console host`() {
+        let intl = SiliconFlowConsoleError.invalidPastedSession(china: false).errorDescription
+        let china = SiliconFlowConsoleError.invalidPastedSession(china: true).errorDescription
+        #expect(intl?.contains("cloud.siliconflow.com") == true)
+        #expect(china?.contains("cloud.siliconflow.cn") == true)
+    }
 }

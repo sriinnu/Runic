@@ -108,6 +108,7 @@ struct AnalyticsAddBudgetSheet: View {
     @Binding var projectName: String
     @Binding var monthlyLimit: String
     @Binding var alertThreshold: String
+    let errorMessage: String?
     let onAdd: () -> Void
     let onCancel: () -> Void
 
@@ -131,15 +132,36 @@ struct AnalyticsAddBudgetSheet: View {
                     .textFieldStyle(.roundedBorder)
             }
 
+            if let errorMessage, !errorMessage.isEmpty {
+                HStack(spacing: RunicSpacing.xs) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(self.fonts.caption)
+                        .foregroundStyle(.red)
+                    Text(errorMessage)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(RunicSpacing.xs)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(
+                        cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                        style: .continuous)
+                        .fill(Color.red.opacity(0.10)))
+            }
+
             HStack {
                 Button("Cancel", action: self.onCancel)
                     .buttonStyle(.runicBordered)
+                    .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Add", action: self.onAdd)
                     .buttonStyle(.runicProminent)
+                    .keyboardShortcut(.defaultAction)
             }
         }
         .padding(RunicSpacing.lg)
-        .frame(width: 400)
+        .frame(width: 420)
     }
 }

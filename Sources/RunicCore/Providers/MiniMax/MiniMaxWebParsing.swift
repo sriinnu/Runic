@@ -339,7 +339,7 @@ enum MiniMaxWebParsing {
 
         if let used, let total, total > 0 {
             return ModelRemainsUsage(
-                usedPercent: min(100, max(0, (total - used) / total * 100)),
+                usedPercent: min(100, max(0, used / total * 100)),
                 modelName: modelName)
         }
         if let remaining, let total, total > 0 {
@@ -361,7 +361,9 @@ enum MiniMaxWebParsing {
             if remains > 1_000_000_000 {
                 return self.timestamp(remains)
             }
-            return now.addingTimeInterval(remains)
+            // MiniMax `remains_time` is in milliseconds (e.g. 14_400_000 for 4h).
+            let seconds = remains > 1_000_000 ? remains / 1000 : remains
+            return now.addingTimeInterval(seconds)
         }
         return endTime
     }

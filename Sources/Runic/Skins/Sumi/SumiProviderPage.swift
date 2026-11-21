@@ -210,7 +210,14 @@ struct SumiProviderPage: View {
         }
         if let cost = self.model.providerCost {
             let used = cost.percentUsed.map { String(format: " \u{00B7} %.0f%% of limit", min(100, max(0, $0))) } ?? ""
-            rows.append(AccountRow(key: cost.title, value: cost.spendLine + used, strong: true))
+            if let primary = cost.primarySpendLine {
+                rows.append(AccountRow(key: cost.title, value: primary + used, strong: true))
+                if let apiCredits = cost.apiCreditsLine {
+                    rows.append(AccountRow(key: "API credits", value: apiCredits, strong: true))
+                }
+            } else {
+                rows.append(AccountRow(key: cost.title, value: cost.spendLine + used, strong: true))
+            }
         }
         if self.model.menuMode != .glance, let ledger = self.model.tokenUsage {
             rows.append(AccountRow(key: "Session cost", value: ledger.sessionLine, strong: true))
@@ -259,7 +266,11 @@ struct SumiProviderPage: View {
         else { return nil }
         let delta = Double(detail[open.upperBound..<close.lowerBound].replacingOccurrences(of: "+", with: "")) ?? 0
         guard delta != 0 else { return nil }
-        return min(100, max(0, percent - delta))
+        let target = switch metric.percentStyle {
+        case .used: percent - delta
+        case .left: percent + delta
+        }
+        return min(100, max(0, target))
     }
 }
 

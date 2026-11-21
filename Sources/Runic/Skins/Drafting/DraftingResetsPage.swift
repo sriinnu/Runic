@@ -219,9 +219,11 @@ private struct DraftingCreditRow: View {
                 .frame(width: 40, height: 40)
                 .overlay(Rectangle().stroke(amber, lineWidth: 1))
             VStack(alignment: .leading, spacing: 2) {
-                Text(self.showsProvider
-                    ? "Banked resets \u{00B7} \(self.entry.providerName)"
-                    : (self.entry.availableCount == 1 ? "Banked reset" : "Banked resets"))
+                let noun = self.entry.availableCount == 1 ? "Banked reset" : "Banked resets"
+                let titleText = self.showsProvider
+                    ? "\(noun) \u{00B7} \(self.entry.providerName)"
+                    : noun
+                Text(titleText)
                     .font(RunicDrafting.strong(12.5))
                     .skinFace()
                     .foregroundStyle(self.runicTheme.primaryText)
@@ -236,8 +238,9 @@ private struct DraftingCreditRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
-            if let latest = self.entry.latestExpiry {
-                Text(ResetScheduleMenuView.compactDuration(max(0, latest.timeIntervalSince(self.now))))
+            if let deadline = self.entry.nearestExpiry ?? self.entry.latestExpiry {
+                let remaining = deadline.timeIntervalSince(self.now)
+                Text(remaining <= 0 ? "now" : ResetScheduleMenuView.compactDuration(remaining))
                     .font(RunicDrafting.numeral(14))
                     .skinFace()
                     .foregroundStyle(self.runicTheme.primaryText)

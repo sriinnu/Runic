@@ -41,12 +41,13 @@ struct DraftingFrontPage: View {
                 if let onAddRegion = self.view.onAddRegion {
                     ForEach(OverviewMenuView.brandGroups(self.view.summaries)) { group in
                         if let missing = group.missingSlot {
-                            DraftingButton(title: "Add \(missing.region.displayName) account", compact: true) {
+                            let label = OverviewMenuView.addRegionLabel(for: missing)
+                            DraftingButton(title: label, compact: true) {
                                 onAddRegion(missing)
                             }
                             .padding(.top, 10)
                             .padding(.leading, 26)
-                            .accessibilityLabel("Add \(missing.region.displayName) account")
+                            .accessibilityLabel(label)
                         }
                     }
                 }
@@ -151,6 +152,10 @@ struct DraftingFrontRow: View {
                     .foregroundStyle(self.runicTheme.primaryText)
                     .lineLimit(1)
                     .layoutPriority(1)
+                if let plan = self.summary.planBadge, !plan.isEmpty {
+                    DraftingCap(text: plan.uppercased())
+                        .fixedSize(horizontal: true, vertical: false)
+                }
                 if let window = self.summary.windowLabel, !window.isEmpty {
                     DraftingCap(text: "\u{00B7} \(window)")
                 }

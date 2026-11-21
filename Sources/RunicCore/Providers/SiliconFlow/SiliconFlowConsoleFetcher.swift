@@ -84,6 +84,7 @@ enum SiliconFlowConsoleError: LocalizedError, Equatable {
     case needsSubjectID(china: Bool)
     case notConnected(china: Bool)
     case sessionExpired(china: Bool)
+    case invalidPastedSession(china: Bool)
     case httpError(statusCode: Int)
 
     var errorDescription: String? {
@@ -97,6 +98,9 @@ enum SiliconFlowConsoleError: LocalizedError, Equatable {
         case let .sessionExpired(china):
             "The saved \(SiliconFlowConsole.host(china: china)) sign-in expired. Sign in again in your browser, " +
                 "then turn “Balance from browser sign-in” off and on."
+        case let .invalidPastedSession(china):
+            "That doesn’t look like a SiliconFlow sign-in. Copy the Cookie header or fetch(…) request " +
+                "for \(SiliconFlowConsole.host(china: china)) from Developer Tools."
         case let .needsSubjectID(china):
             "Signed in to SiliconFlow, but the console also wants your user ID " +
                 "(avatar menu, top right of the console). Export " +
@@ -162,8 +166,12 @@ final class SiliconFlowConsoleTrace: @unchecked Sendable {
         self.requests.append(entry)
     }
 
-    func finish(china: Bool, failure: String?) {
-        Self.lock.withLock { Self.lastFailureByRegion[china] = failure }
+    func finish(china: Bool, isConnect: Bool = false, failure: String?) {
+        if !isConnect {
+            Self.lock.withLock { Self.lastFailureByRegion[china] = failure }
+        } else if failure == nil {
+            Self.lock.withLock { Self.lastFailureByRegion[china] = nil }
+        }
         var report: [String: Any] = [
             "at": ISO8601DateFormatter().string(from: Date()),
             "host": SiliconFlowConsole.host(china: china),
@@ -176,7 +184,11 @@ final class SiliconFlowConsoleTrace: @unchecked Sendable {
             let json = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
         else { return }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let name = china ? "siliconflow-console-cn.json" : "siliconflow-console.json"
+        let name = if isConnect {
+            china ? "siliconflow-console-connect-cn.json" : "siliconflow-console-connect.json"
+        } else {
+            china ? "siliconflow-console-cn.json" : "siliconflow-console.json"
+        }
         try? json.write(to: directory.appendingPathComponent(name), options: .atomic)
     }
 
@@ -207,10 +219,10 @@ public enum SiliconFlowConsoleFetcher {
                 environment: environment,
                 trace: trace)
             self.savedSession(china: china).store(session.cookieHeader)
-            trace.finish(china: china, failure: nil)
+            trace.finish(china: china, isConnect: true, failure: nil)
             return session.sourceLabel
         } catch {
-            trace.finish(china: china, failure: error.localizedDescription)
+            trace.finish(china: china, isConnect: true, failure: error.localizedDescription)
             throw error
         }
     }
@@ -232,17 +244,17 @@ public enum SiliconFlowConsoleFetcher {
             // back from one whose cookie was renamed.
             let names = Set(cookies.map { "\($0.name)@\($0.domain)" }).sorted().joined(separator: ", ")
             trace.note("sign-in window: no session-token yet (\(names))")
-            trace.finish(china: china, failure: nil)
+            trace.finish(china: china, isConnect: true, failure: "pending session-token")
             return nil
         }
         let session = SiliconFlowCookieSession(cookieHeader: header, sourceLabel: "the Runic sign-in window")
         do {
             _ = try await self.firstBalance(sessions: [session], china: china, environment: environment, trace: trace)
         } catch {
-            trace.finish(china: china, failure: error.localizedDescription)
+            trace.finish(china: china, isConnect: true, failure: error.localizedDescription)
             return nil
         }
-        trace.finish(china: china, failure: nil)
+        trace.finish(china: china, isConnect: true, failure: nil)
         let saved = self.savedSession(china: china)
         return { saved.store(header) }
     }
@@ -259,19 +271,22 @@ public enum SiliconFlowConsoleFetcher {
         china: Bool,
         environment: [String: String]) async throws
     {
-        guard let header = SiliconFlowCookieImporter.pastedCookieHeader(pastedCookie) else {
-            throw SiliconFlowConsoleError.notSignedIn(china: china)
-        }
         let trace = SiliconFlowConsoleTrace()
+        guard let header = SiliconFlowCookieImporter.pastedCookieHeader(pastedCookie) else {
+            trace.note("paste validation: missing or unrecognized cookie header")
+            let error = SiliconFlowConsoleError.invalidPastedSession(china: china)
+            trace.finish(china: china, isConnect: true, failure: error.localizedDescription)
+            throw error
+        }
         let session = SiliconFlowCookieSession(cookieHeader: header, sourceLabel: "a pasted session")
         do {
             _ = try await self.firstBalance(sessions: [session], china: china, environment: environment, trace: trace)
             guard self.savedSession(china: china).store(header) else {
                 throw SiliconFlowConsoleError.notSignedIn(china: china)
             }
-            trace.finish(china: china, failure: nil)
+            trace.finish(china: china, isConnect: true, failure: nil)
         } catch {
-            trace.finish(china: china, failure: error.localizedDescription)
+            trace.finish(china: china, isConnect: true, failure: error.localizedDescription)
             throw error
         }
     }

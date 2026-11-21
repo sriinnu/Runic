@@ -26,6 +26,8 @@ struct OverviewMenuView: View {
         var hasQuota: Bool = true
         /// "2 resets" when the provider banks manual limit resets.
         var bankedResetsText: String?
+        /// Compact subscription tier badge ("Ultra", "Max", "Pro", ...).
+        var planBadge: String?
 
         /// Brand-level provider (the international slot for a two-region
         /// brand, else the provider itself). Rows sharing a root stack
@@ -292,9 +294,11 @@ struct OverviewMenuView: View {
     /// Pill text for the overview row: a live countdown when the window
     /// knows its reset moment, otherwise the provider's own phrase.
     /// Pill text for banked resets: "2 resets" / "1 reset".
-    static func bankedResetsPill(for credits: UsageResetCredits?) -> String? {
-        guard let credits, credits.hasAny else { return nil }
-        return credits.availableCount == 1 ? "1 reset" : "\(credits.availableCount) resets"
+    static func bankedResetsPill(for credits: UsageResetCredits?, now: Date = .init()) -> String? {
+        guard let credits else { return nil }
+        let count = credits.effectiveAvailableCount(now: now)
+        guard count > 0 else { return nil }
+        return count == 1 ? "1 reset" : "\(count) resets"
     }
 
     static func resetPill(for window: RateWindow?, now: Date = .init()) -> String? {
@@ -364,7 +368,7 @@ private struct BrandStackView: View {
                     HStack(spacing: RunicSpacing.xxs) {
                         Image(systemName: "plus.circle")
                             .font(.system(size: 9, weight: .semibold))
-                        Text("Add \(missing.region.displayName) account")
+                        Text(OverviewMenuView.addRegionLabel(for: missing))
                             .font(self.fonts.system(size: 9, weight: .medium))
                     }
                     .foregroundStyle(self.runicTheme.iconColor(for: .navigation, hovered: true))
@@ -373,7 +377,7 @@ private struct BrandStackView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Add \(self.brandName) \(missing.region.displayName) account")
+                .accessibilityLabel(OverviewMenuView.addRegionLabel(for: missing))
             }
         }
         .padding(RunicSpacing.compact)
@@ -418,7 +422,7 @@ private struct ProviderRow: View {
                     .font(self.fonts.system(size: 8, weight: .bold))
                     .tracking(0.6)
                     .foregroundStyle(self.runicTheme.secondaryText)
-                    .frame(width: 14 + 58 + RunicSpacing.xs, alignment: .leading)
+                    .frame(width: 14 + 84 + RunicSpacing.xs, alignment: .leading)
                     .padding(.leading, 14 + RunicSpacing.xs)
             } else {
                 // Icon with brand tint
@@ -433,8 +437,9 @@ private struct ProviderRow: View {
                 Text(self.summary.name)
                     .font(self.fonts.caption)
                     .fontWeight(.medium)
-                    .frame(width: 58, alignment: .leading)
+                    .frame(width: 84, alignment: .leading)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
 
             // Progress bar with gradient fill
@@ -489,8 +494,9 @@ private struct ProviderRow: View {
             }
         }
 
-        // Second line: window + reset + context
-        let hasSecondLine = self.summary.windowLabel != nil ||
+        // Second line: plan tier + window + reset + context
+        let hasSecondLine = self.summary.planBadge != nil ||
+            self.summary.windowLabel != nil ||
             self.summary.resetDescription != nil ||
             self.summary.bankedResetsText != nil ||
             self.summary.topModelContext != nil
@@ -498,8 +504,11 @@ private struct ProviderRow: View {
         if hasSecondLine {
             HStack(spacing: RunicSpacing.xxs) {
                 // Spacer for icon + name width
-                Color.clear.frame(width: 14 + 58 + RunicSpacing.xs * 2, height: 0)
+                Color.clear.frame(width: 14 + 84 + RunicSpacing.xs * 2, height: 0)
 
+                if let plan = self.summary.planBadge {
+                    PlanTierPill(text: plan)
+                }
                 if let window = self.summary.windowLabel {
                     InfoPill(text: window)
                 }
@@ -515,6 +524,32 @@ private struct ProviderRow: View {
                 Spacer()
             }
         }
+    }
+}
+
+private struct PlanTierPill: View {
+    @Environment(\.runicFonts) private var fonts
+    let text: String
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        let elevated = OverviewMenuView.isElevatedPlanBadge(self.text)
+        Text(self.text.uppercased())
+            .font(self.fonts.system(size: 7.5, weight: .bold))
+            .tracking(0.4)
+            .foregroundStyle(elevated ? self.runicTheme.accent : self.runicTheme.secondaryText)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 1)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(elevated ? self.runicTheme.accent.opacity(0.14) : self.runicTheme.menuSubtleFill))
+            .overlay(
+                Capsule(style: .continuous)
+                    .strokeBorder(
+                        (elevated ? self.runicTheme.accent : self.runicTheme.cardStroke).opacity(0.45),
+                        lineWidth: 0.5))
     }
 }
 
@@ -596,11 +631,12 @@ struct GazetteOverviewBody: View {
                 if let onAddRegion = self.view.onAddRegion {
                     ForEach(OverviewMenuView.brandGroups(self.view.summaries)) { group in
                         if let missing = group.missingSlot {
-                            GazetteLink(text: "Add \(missing.region.displayName) account \u{2192}") {
+                            let label = OverviewMenuView.addRegionLabel(for: missing)
+                            GazetteLink(text: "\(label) \u{2192}") {
                                 onAddRegion(missing)
                             }
                             .padding(.bottom, 6)
-                            .accessibilityLabel("Add \(missing.region.displayName) account")
+                            .accessibilityLabel(label)
                         }
                     }
                 }
@@ -635,6 +671,44 @@ struct GazetteOverviewBody: View {
 /// One provider on the front page: brand mark and name, a dotted leader to
 /// the percentage (and today's tokens), a thin gauge, the window and reset
 /// as a tracked byline.
+extension OverviewMenuView {
+    static func addRegionLabel(for slot: UsageProvider) -> String {
+        let displayName = ProviderDefaults.metadata[slot]?.displayName ?? slot.rawValue
+        return "Add \(displayName)"
+    }
+
+    static func planBadge(
+        for provider: UsageProvider,
+        snapshot: UsageSnapshot?,
+        account: AccountInfo,
+        metadata: ProviderMetadata) -> String?
+    {
+        if let plan = snapshot?.loginMethod(for: provider),
+           let badge = UsageFormatter.planTierBadge(plan)
+        {
+            return badge
+        }
+        if metadata.usesAccountFallback,
+           let plan = account.plan,
+           let badge = UsageFormatter.planTierBadge(plan)
+        {
+            return badge
+        }
+        return nil
+    }
+
+    static func isElevatedPlanBadge(_ badge: String) -> Bool {
+        let lower = badge.lowercased()
+        return lower.contains("ultra")
+            || lower.contains("max")
+            || lower.contains("pro")
+            || lower.contains("plus")
+            || lower.contains("enterprise")
+            || lower.contains("team")
+            || lower.contains("business")
+    }
+}
+
 private struct GazetteOverviewRow: View {
     let summary: OverviewMenuView.ProviderSummary
     let showsUsed: Bool
@@ -655,6 +729,10 @@ private struct GazetteOverviewRow: View {
                     .font(RunicGazette.headline(14))
                     .lineLimit(1)
                     .layoutPriority(1)
+                if let plan = self.summary.planBadge {
+                    GazetteLabel(text: plan, size: 8.5, color: self.runicTheme.accent, tracking: 0.8)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
                 GazetteLeader()
                 Text(self.summary.hasQuota ? "\(Int(self.summary.usedPercent))%" : "\u{2014}")
                     .font(RunicGazette.numeral(14))

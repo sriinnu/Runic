@@ -340,8 +340,7 @@ struct RunicFontChoice: Identifiable, Hashable {
         RunicFont.previewFont(for: self.id, size: 13)
     }
 
-    /// Build the full list: system fonts first, then bundled custom fonts.
-    static func availableChoices() -> [RunicFontChoice] {
+    private static let cachedAvailableChoices: [RunicFontChoice] = {
         var choices: [RunicFontChoice] = [.themeDefault, .monaSans, .sfPro, .sfRounded, .newYork, .sfMono]
         let bundledFamilies = Set(RunicTypography.discoverBundledFontFamilies())
         let curatedBundled: [RunicFontChoice] = [
@@ -357,19 +356,24 @@ struct RunicFontChoice: Identifiable, Hashable {
             .operatorMono,
         ]
         for choice in curatedBundled
-            where bundledFamilies.contains(choice.id) || self.isFontFamilyAvailable(choice.id)
+            where bundledFamilies.contains(choice.id) || RunicFontChoice.isFontFamilyAvailable(choice.id)
         {
             choices.append(choice)
         }
 
         var seen = Set(choices.map(\.id))
         for family in bundledFamilies.sorted() {
-            guard !self.hiddenBundledFamilies.contains(family) else { continue }
-            guard !self.isPrunedFamily(family) else { continue }
+            guard !RunicFontChoice.hiddenBundledFamilies.contains(family) else { continue }
+            guard !RunicFontChoice.isPrunedFamily(family) else { continue }
             guard seen.insert(family).inserted else { continue }
             choices.append(RunicFontChoice(id: family, displayName: family))
         }
         return choices
+    }()
+
+    /// Build the full list: system fonts first, then bundled custom fonts (cached once).
+    static func availableChoices() -> [RunicFontChoice] {
+        self.cachedAvailableChoices
     }
 
     static func displayName(for id: String) -> String {

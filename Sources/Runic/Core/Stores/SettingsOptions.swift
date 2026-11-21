@@ -140,38 +140,48 @@ enum DateFormat: String, CaseIterable, Identifiable {
 }
 
 enum Theme: String, CaseIterable, Identifiable {
-    case retro
     case system
     case dark
+    case glass
+    case meridian
+    case relief
     case sumi
     case blueprint
-    case relief
-    case glass
     case terminal
-    case yantra
     case gazette
-    case receipt
     case flightdeck
     case departures
 
-    /// The signature look — parchment + navy bevels, System-7 chrome with
-    /// modern info architecture. New installs land here.
-    static let `default`: Theme = .retro
+    /// Adaptive optical Liquid Glass — follows macOS light/dark out of the box.
+    static let `default`: Theme = .glass
 
     /// Raw values that used to exist and are now retired. Migration code in
     /// `SettingsStore+DefaultsSnapshot` rewrites these on load via
     /// `migrated(fromRetired:)`.
-    static let retiredRawValues: Set<String> = ["pine", "nocturne", "prism", "light", "daybreak", "noir"]
+    static let retiredRawValues: Set<String> = [
+        "pine",
+        "nocturne",
+        "prism",
+        "light",
+        "daybreak",
+        "noir",
+        "retro",
+        "receipt",
+        "yantra",
+    ]
 
     /// Nearest living theme for a retired one: the two light themes land on
     /// Sumi (the light theme with a point of view), the old dark ones on
-    /// Blueprint, the prism showpiece on Glass, and anything else on the
-    /// default.
+    /// Blueprint, the prism showpiece on Glass, Retro on Relief, Receipt on
+    /// Gazette, Yantra on Meridian, and anything else on the default.
     static func migrated(fromRetired raw: String) -> Theme {
         switch raw {
         case "light", "daybreak": .sumi
         case "nocturne", "noir": .blueprint
         case "prism": .glass
+        case "retro": .relief
+        case "receipt": .gazette
+        case "yantra": .meridian
         default: .default
         }
     }
@@ -182,17 +192,15 @@ enum Theme: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .retro: "Retro"
         case .system: "System"
         case .dark: "Dark"
+        case .glass: "Glass"
+        case .meridian: "Meridian"
+        case .relief: "Relief"
         case .sumi: "Sumi"
         case .blueprint: "Blueprint"
-        case .relief: "Relief"
-        case .glass: "Glass"
         case .terminal: "Terminal"
-        case .yantra: "Yantra"
         case .gazette: "Gazette"
-        case .receipt: "Receipt"
         case .flightdeck: "Flight deck"
         case .departures: "Departures"
         }

@@ -10,6 +10,7 @@ struct RunicOperationsCenterView: View {
     let guardrailStatus: String?
     let onCopyDiagnostics: () -> Void
     let onInstallGuardrails: () -> Void
+    var onSelectProvider: ((UsageProvider) -> Void)?
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
@@ -41,7 +42,11 @@ struct RunicOperationsCenterView: View {
                     .font(self.fonts.caption.weight(.semibold))
                     .foregroundStyle(self.runicTheme.secondaryText)
                 ForEach(Array(health.prefix(6))) { row in
-                    ProviderHealthCompactRow(row: row)
+                    ProviderHealthCompactRow(
+                        row: row,
+                        onSelect: self.onSelectProvider.map { callback in
+                            { callback(row.provider) }
+                        })
                 }
                 if health.count > 6 {
                     Text("+ \(health.count - 6) more providers")
@@ -123,9 +128,11 @@ private struct ProviderHealthCompactRow: View {
     @Environment(\.runicFonts) private var fonts
     @Environment(\.runicTheme) private var runicTheme
     let row: RunicProviderHealthRow
+    var onSelect: (() -> Void)?
+    @State private var hovering = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: RunicSpacing.xs) {
+        let content = HStack(alignment: .center, spacing: RunicSpacing.xs) {
             if let icon = ProviderBrandIcon.image(for: self.row.provider, size: 20) {
                 Image(nsImage: icon)
                     .resizable()
@@ -159,8 +166,32 @@ private struct ProviderHealthCompactRow: View {
                 .background(
                     Capsule(style: .continuous)
                         .fill(self.stateColor.opacity(0.12)))
+
+            if self.onSelect != nil {
+                Image(systemName: "chevron.right")
+                    .font(self.fonts.caption2.weight(.semibold))
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
+            }
         }
-        .padding(.vertical, 2)
+        .padding(.horizontal, RunicSpacing.xxs)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(
+                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.xs),
+                style: .continuous)
+                .fill(self.hovering && self.onSelect != nil ? self.runicTheme.menuHoverFill : Color.clear))
+
+        if let onSelect = self.onSelect {
+            Button(action: onSelect) {
+                content
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { self.hovering = $0 }
+            .help("Open \(self.row.name) in Providers")
+        } else {
+            content
+        }
     }
 
     private var stateColor: Color {

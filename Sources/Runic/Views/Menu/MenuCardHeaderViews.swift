@@ -6,7 +6,13 @@ import SwiftUI
 /// a recovery action instead of only showing raw error text.
 enum MenuCardErrorClassifier {
     private static let authMarkers: [String] = [
-        "auth", // covers auth/authentication/unauthorized/oauth
+        "unauthorized",
+        "unauthenticated",
+        "authentication",
+        "auth failed",
+        "auth error",
+        "oauth token",
+        "oauth credential",
         "401",
         "403",
         "forbidden",
@@ -50,18 +56,12 @@ struct UsageMenuCardHeaderView: View {
                     Text(self.model.providerName)
                         .font(self.providerTitleFont)
                     if !self.model.email.isEmpty {
-                        if self.runicTheme.id == "retro" {
-                            Text(self.model.email)
-                                .font(self.fonts.caption)
-                                .foregroundStyle(self.runicTheme.secondaryText)
-                                .lineLimit(1)
-                        } else {
-                            ProfilePill(
-                                text: self.model.email,
-                                systemImage: "person.crop.circle",
-                                tint: self.brandAccent)
-                                .lineLimit(1)
-                        }
+                        ProfilePill(
+                            text: self.model.email,
+                            systemImage: "person.crop.circle",
+                            tint: self.brandAccent)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                     }
                 }
 
@@ -72,16 +72,14 @@ struct UsageMenuCardHeaderView: View {
                         MenuHeaderBadgeView(badge: badge, isHighlighted: self.isHighlighted)
                     }
                     if let plan = self.model.planText {
-                        if self.runicTheme.id == "retro" {
-                            RetroPlanTag(text: plan)
-                        } else {
-                            ProfilePill(
-                                text: plan,
-                                systemImage: "sparkles",
-                                tint: self.brandAccent,
-                                style: .plan)
-                                .lineLimit(1)
-                        }
+                        ProfilePill(
+                            text: plan,
+                            systemImage: "sparkles",
+                            tint: self.brandAccent,
+                            style: .plan)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .layoutPriority(1)
                     }
                 }
             }
@@ -91,7 +89,7 @@ struct UsageMenuCardHeaderView: View {
                 Text(self.model.subtitleText)
                     .font(self.fonts.footnote.weight(.medium))
                     .foregroundStyle(self.subtitleColor)
-                    .lineLimit(self.model.subtitleStyle == .error ? 4 : 1)
+                    .lineLimit(self.model.subtitleStyle == .error ? 6 : 1)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .layoutPriority(1)
@@ -197,7 +195,6 @@ struct UsageMenuCardHeaderView: View {
         let accentTop = self.runicTheme.isTerminalHUD ? self.runicTheme.accent : Color(nsColor: top)
         let accentBase = self.runicTheme.isTerminalHUD ? self.runicTheme.tertiary : Color(nsColor: base)
         let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
-        let isRetro = self.runicTheme.id == "retro"
         // Newsprint: the masthead block sits bare on the page — no card, no
         // brand wash. A bottom ink rule (headerBorder) frames it instead.
         let isGazette = self.runicTheme.isGazette
@@ -205,10 +202,7 @@ struct UsageMenuCardHeaderView: View {
             .fill(isGazette ? AnyShapeStyle(Color.clear) : self.runicTheme.cardBackgroundStyle)
             .overlay(
                 ZStack {
-                    // Brand-tinted gradient overlay washes the card with the
-                    // provider's hue. On Retro this clashes with the
-                    // parchment palette -- skip it entirely there.
-                    if !isRetro, !isGazette {
+                    if !isGazette {
                         LinearGradient(
                             colors: [
                                 accentTop.opacity(self.runicTheme.isTerminalHUD ? 0.10 : 0.14),
@@ -227,12 +221,7 @@ struct UsageMenuCardHeaderView: View {
     @ViewBuilder
     private var headerBorder: some View {
         let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.lg)
-        if self.runicTheme.id == "retro" {
-            // Retro: the outer MenuPopoverSurfaceCard bevel already frames
-            // the whole provider hero. Drawing another inner frame around
-            // just the email row produced nested-rectangle ugliness -- skip.
-            EmptyView()
-        } else if self.runicTheme.isGazette {
+        if self.runicTheme.isGazette {
             // Newsprint: a single heavy ink rule under the masthead block —
             // the double-rule the printed edition carries under its nameplate.
             VStack(spacing: 2) {

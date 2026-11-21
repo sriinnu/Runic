@@ -152,9 +152,8 @@ private struct SumiCreditRow: View {
         HStack(alignment: .center, spacing: 12) {
             SumiSeal(text: "\(self.entry.availableCount)", size: 32, rotation: 3)
             VStack(alignment: .leading, spacing: 2) {
-                Text(self.showsProvider
-                    ? "Banked resets \u{00B7} \(self.entry.providerName)"
-                    : (self.entry.availableCount == 1 ? "Banked reset" : "Banked resets"))
+                let noun = self.entry.availableCount == 1 ? "Banked reset" : "Banked resets"
+                Text(self.showsProvider ? "\(noun) \u{00B7} \(self.entry.providerName)" : noun)
                     .font(RunicSumi.strong(13))
                     .skinFace()
                     .foregroundStyle(self.runicTheme.primaryText)
@@ -167,8 +166,9 @@ private struct SumiCreditRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
-            if let latest = self.entry.latestExpiry {
-                Text(ResetScheduleMenuView.compactDuration(max(0, latest.timeIntervalSince(self.now))))
+            if let deadline = self.entry.nearestExpiry ?? self.entry.latestExpiry {
+                let remaining = deadline.timeIntervalSince(self.now)
+                Text(remaining <= 0 ? "now" : ResetScheduleMenuView.compactDuration(remaining))
                     .font(RunicSumi.numeral(18))
                     .skinFace()
                     .foregroundStyle(self.runicTheme.primaryText)

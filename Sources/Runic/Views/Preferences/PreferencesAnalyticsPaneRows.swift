@@ -32,7 +32,7 @@ extension AnalyticsPane {
 
             HStack(spacing: 4) {
                 Button {
-                    self.editingRule = rule
+                    self.activeSheet = .editRule(rule)
                 } label: {
                     Image(systemName: "pencil")
                 }
@@ -143,7 +143,8 @@ extension AnalyticsPane {
     }
 
     func addBudget() {
-        guard !self.newProjectID.isEmpty else {
+        let trimmedID = self.newProjectID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedID.isEmpty else {
             self.budgetErrorMessage = "Project ID is required"
             return
         }
@@ -158,9 +159,10 @@ extension AnalyticsPane {
             return
         }
 
+        let trimmedName = self.newProjectName.trimmingCharacters(in: .whitespacesAndNewlines)
         let budget = ProjectBudgetStore.ProjectBudget(
-            projectID: self.newProjectID,
-            projectName: self.newProjectName.isEmpty ? nil : self.newProjectName,
+            projectID: trimmedID,
+            projectName: trimmedName.isEmpty ? nil : trimmedName,
             monthlyLimit: limit,
             alertThreshold: threshold / 100.0,
             enabled: true)
@@ -168,7 +170,7 @@ extension AnalyticsPane {
         do {
             try ProjectBudgetStore.setBudget(budget)
             self.budgets = ProjectBudgetStore.getAllBudgets()
-            self.showingAddBudget = false
+            self.activeSheet = nil
             self.resetNewBudgetFields()
             self.budgetErrorMessage = nil
         } catch {
@@ -191,5 +193,6 @@ extension AnalyticsPane {
         self.newProjectName = ""
         self.newMonthlyLimit = ""
         self.newAlertThreshold = "80"
+        self.budgetErrorMessage = nil
     }
 }

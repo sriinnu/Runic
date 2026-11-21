@@ -81,16 +81,17 @@ struct DeparturesResetsPage: View {
     }
 
     private func heldRow(for credit: ResetCreditEntry, now: Date) -> some View {
-        let latest = credit.latestExpiry.map { max(0, $0.timeIntervalSince(now)) }
+        let deadline = credit.nearestExpiry ?? credit.latestExpiry
+        let countdown = deadline.map { max(0, $0.timeIntervalSince(now)) }
         var subtitle = "Banked \u{00D7} \(credit.availableCount) \u{00B7} redeem"
         if self.resets
             .showsProvider { subtitle = "Gate \(RunicDepartures.gate(for: credit.provider)) \u{00B7} " + subtitle }
         return DeparturesRow(
             width: self.resets.width,
-            time: credit.latestExpiry.map { RunicDepartures.boardTime($0, now: now) },
+            time: deadline.map { RunicDepartures.boardTime($0, now: now) },
             title: self.resets.showsProvider ? credit.providerName : (credit.title ?? "Banked"),
             subtitle: subtitle,
-            remaining: latest.map(RunicDepartures.boardRemaining),
+            remaining: countdown.map(RunicDepartures.boardRemaining),
             status: .held(self.runicTheme),
             accessibilityLabel: "\(credit.providerName), \(credit.summaryText)")
     }

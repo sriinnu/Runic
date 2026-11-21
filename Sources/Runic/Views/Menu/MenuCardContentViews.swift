@@ -20,8 +20,9 @@ struct ProviderCostContent: View {
                     tint: self.runicTheme.isTerminalHUD ? self.runicTheme.accent : self.progressColor,
                     accessibilityLabel: "Extra usage spent")
             }
+            let spendLine = self.section.primarySpendLine ?? self.section.spendLine
             HStack(alignment: .firstTextBaseline) {
-                Text(self.section.spendLine)
+                Text(spendLine)
                     .font(self.fonts.footnote)
                 Spacer()
                 if let percentUsed = self.section.percentUsed {
@@ -29,6 +30,11 @@ struct ProviderCostContent: View {
                         .font(self.fonts.footnote)
                         .foregroundStyle(self.runicTheme.secondaryText)
                 }
+            }
+            if self.section.primarySpendLine != nil, let apiCredits = self.section.apiCreditsLine {
+                Text(apiCredits)
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.secondaryText)
             }
         }
     }

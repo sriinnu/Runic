@@ -194,18 +194,23 @@ struct DraftingProviderPage: View {
     private var legend: some View {
         let ink = self.runicTheme.primary
         let isError = self.model.subtitleStyle == .error
+        let showsUsed = self.model.metrics.first?.percentStyle == .used
+        let hatchLabel = showsUsed ? "Used" : "Remaining"
+        let blankLabel = showsUsed ? "Remaining" : "Used"
+        let legendDesc = "Legend: hatched is \(hatchLabel.lowercased()), blank is \(blankLabel.lowercased()), " +
+            "dashed amber is the plan line"
         return HStack(spacing: 10) {
             HStack(spacing: 5) {
-                DraftingHatchBar(percent: 100, accessibilityLabel: "Used", height: 9)
+                DraftingHatchBar(percent: 100, accessibilityLabel: hatchLabel, height: 9)
                     .frame(width: 18)
-                DraftingCap(text: "Used", size: 9, tracking: 1)
+                DraftingCap(text: hatchLabel, size: 9, tracking: 1)
                     .fixedSize()
             }
             HStack(spacing: 5) {
                 Rectangle()
                     .stroke(ink, lineWidth: 1)
                     .frame(width: 18, height: 9)
-                DraftingCap(text: "Remaining", size: 9, tracking: 1)
+                DraftingCap(text: blankLabel, size: 9, tracking: 1)
                     .fixedSize()
             }
             HStack(spacing: 5) {
@@ -221,7 +226,7 @@ struct DraftingProviderPage: View {
                 color: isError ? self.runicTheme.warm : self.runicTheme.tertiary)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Legend: hatched is used, blank is remaining, dashed amber is the plan line")
+        .accessibilityLabel(legendDesc)
     }
 
     // MARK: Windows
@@ -256,13 +261,18 @@ struct DraftingProviderPage: View {
         }
     }
 
-    /// The plan line names where the window "should" be: the used share
-    /// pushed back by the pace delta ("Pace: Behind (-34%)" → used + 34).
+    /// The plan line names where the window "should" be: in `.used` mode, used
+    /// share pushed back by delta (`used - delta`); in `.left` mode, remaining
+    /// share pushed forward by delta (`remaining + delta`).
     static func paceMarker(for metric: UsageMenuCardView.Model.Metric) -> Double? {
         guard let percent = metric.percent, let detail = metric.detailText,
               let delta = RunicDrafting.paceDelta(detail)
         else { return nil }
-        return min(100, max(0, percent - delta))
+        let target = switch metric.percentStyle {
+        case .used: percent - delta
+        case .left: percent + delta
+        }
+        return min(100, max(0, target))
     }
 
     // MARK: Account
@@ -274,7 +284,14 @@ struct DraftingProviderPage: View {
         }
         if let cost = self.model.providerCost {
             let used = cost.percentUsed.map { String(format: " \u{00B7} %.0f%% of limit", min(100, max(0, $0))) } ?? ""
-            cells.append(.init(label: cost.title, value: cost.spendLine + used))
+            if let primary = cost.primarySpendLine {
+                cells.append(.init(label: cost.title, value: primary + used))
+                if let apiCredits = cost.apiCreditsLine {
+                    cells.append(.init(label: "API credits", value: apiCredits))
+                }
+            } else {
+                cells.append(.init(label: cost.title, value: cost.spendLine + used))
+            }
         }
         if self.model.menuMode != .glance, let ledger = self.model.tokenUsage {
             cells.append(.init(label: "Session cost", value: ledger.sessionLine))

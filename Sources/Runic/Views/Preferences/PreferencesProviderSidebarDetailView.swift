@@ -16,6 +16,8 @@ struct ProviderSidebarDetailView: View {
     let settingsFields: [ProviderSettingsFieldDescriptor]
     let errorDisplay: ProviderErrorDisplay?
     @Binding var isErrorExpanded: Bool
+    let supportsLoginFlow: Bool
+    let onSignIn: () -> Void
     let onCopyError: (String) -> Void
     @State var diagnosticsCopyStatus: String?
     @State var selectedSubview: ProviderDetailSubview = .overview
@@ -40,13 +42,40 @@ struct ProviderSidebarDetailView: View {
                         HStack(alignment: .top, spacing: RunicSpacing.sm) {
                             ProviderListBrandIcon(provider: self.provider)
                             VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                                Text(self.store.metadata(for: self.provider).displayName)
-                                    .font(self.fonts.title2.weight(.semibold))
+                                HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+                                    Text(self.store.metadata(for: self.provider).displayName)
+                                        .font(self.fonts.title2.weight(.semibold))
+                                    if let plan = UsageFormatter.planTierBadge(
+                                        self.store.snapshot(for: self.provider)?.loginMethod(for: self.provider))
+                                    {
+                                        Text(plan.uppercased())
+                                            .font(self.fonts.caption2.weight(.bold))
+                                            .foregroundStyle(self.runicTheme.accent)
+                                            .lineLimit(1)
+                                            .fixedSize(horizontal: true, vertical: false)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Capsule().fill(self.runicTheme.accent.opacity(0.14)))
+                                            .overlay(Capsule().strokeBorder(
+                                                self.runicTheme.accent.opacity(0.45),
+                                                lineWidth: 0.5))
+                                    }
+                                }
                                 Text(self.subtitle)
                                     .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.secondaryText)
                             }
                             Spacer()
+                            if self.isEnabled, self.supportsLoginFlow {
+                                Button {
+                                    self.onSignIn()
+                                } label: {
+                                    Label("Sign In", systemImage: "person.badge.key")
+                                }
+                                .buttonStyle(.runicBordered)
+                                .controlSize(.small)
+                                .help("Sign in or reconnect \(self.store.metadata(for: self.provider).displayName)")
+                            }
                             ProviderReloadButton(provider: self.provider, store: self.store, isEnabled: self.isEnabled)
                             // Paper owns its switch (the pill); other themes
                             // keep the native switch here since it is the
@@ -186,7 +215,7 @@ struct ProviderSidebarDetailView: View {
                 if self.isEnabled, !self.settingsFields.isEmpty {
                     ProviderSidebarSectionCard {
                         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                            ProviderSidebarSectionHeader(title: "Settings fields")
+                            ProviderSidebarSectionHeader(title: "Credentials & Paths")
                             ForEach(self.settingsFields) { field in
                                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                     Text(field.title)
@@ -197,12 +226,44 @@ struct ProviderSidebarDetailView: View {
                                     switch field.kind {
                                     case .plain:
                                         TextField(field.placeholder ?? "", text: field.binding)
-                                            .textFieldStyle(.roundedBorder)
+                                            .textFieldStyle(.plain)
                                             .font(self.fonts.callout)
+                                            .padding(.horizontal, RunicSpacing.xs)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                RoundedRectangle(
+                                                    cornerRadius: self.runicTheme.shape
+                                                        .cornerRadius(RunicCornerRadius.sm),
+                                                    style: .continuous)
+                                                    .fill(self.runicTheme.surfaceAlt.opacity(0.75)))
+                                            .overlay(
+                                                RoundedRectangle(
+                                                    cornerRadius: self.runicTheme.shape
+                                                        .cornerRadius(RunicCornerRadius.sm),
+                                                    style: .continuous)
+                                                    .strokeBorder(
+                                                        self.runicTheme.menuSeparatorColor.opacity(0.55),
+                                                        lineWidth: 0.8))
                                     case .secure:
                                         SecureField(field.placeholder ?? "", text: field.binding)
-                                            .textFieldStyle(.roundedBorder)
+                                            .textFieldStyle(.plain)
                                             .font(self.fonts.callout)
+                                            .padding(.horizontal, RunicSpacing.xs)
+                                            .padding(.vertical, 6)
+                                            .background(
+                                                RoundedRectangle(
+                                                    cornerRadius: self.runicTheme.shape
+                                                        .cornerRadius(RunicCornerRadius.sm),
+                                                    style: .continuous)
+                                                    .fill(self.runicTheme.surfaceAlt.opacity(0.75)))
+                                            .overlay(
+                                                RoundedRectangle(
+                                                    cornerRadius: self.runicTheme.shape
+                                                        .cornerRadius(RunicCornerRadius.sm),
+                                                    style: .continuous)
+                                                    .strokeBorder(
+                                                        self.runicTheme.menuSeparatorColor.opacity(0.55),
+                                                        lineWidth: 0.8))
                                     }
                                     self.fieldActions(field.actions)
                                 }
@@ -214,7 +275,7 @@ struct ProviderSidebarDetailView: View {
                 if self.isEnabled, !self.settingsToggles.isEmpty {
                     ProviderSidebarSectionCard {
                         VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                            ProviderSidebarSectionHeader(title: "Settings toggles")
+                            ProviderSidebarSectionHeader(title: "Options")
                             ForEach(self.settingsToggles) { toggle in
                                 VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
                                     Toggle(isOn: toggle.binding) {
@@ -228,21 +289,27 @@ struct ProviderSidebarDetailView: View {
                                     }
                                     .runicPreferenceToggleStyle()
 
+                                    if let status = toggle.statusText?(), !status.isEmpty {
+                                        Text(status)
+                                            .font(self.fonts.caption)
+                                            .foregroundStyle(self.runicTheme.secondaryText)
+                                            .padding(RunicSpacing.xs)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(
+                                                RoundedRectangle(
+                                                    cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                                                    style: .continuous)
+                                                    .fill(self.runicTheme.menuSubtleFill))
+                                            .overlay(
+                                                RoundedRectangle(
+                                                    cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                                                    style: .continuous)
+                                                    .strokeBorder(
+                                                        self.runicTheme.menuSeparatorColor.opacity(0.38),
+                                                        lineWidth: 0.8))
+                                    }
+
                                     if toggle.binding.wrappedValue {
-                                        if let status = toggle.statusText?(), !status.isEmpty {
-                                            Text(status)
-                                                .font(self.fonts.caption)
-                                                .foregroundStyle(self.runicTheme.secondaryText)
-                                                .padding(RunicSpacing.xs)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .background(
-                                                    RoundedRectangle(
-                                                        cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
-                                                        style: .continuous)
-                                                        .fill(Color(
-                                                            nsColor: .controlBackgroundColor).opacity(
-                                                            ProviderListMetrics.sidebarMicroCardBackgroundOpacity)))
-                                        }
                                         self.toggleActions(toggle.actions)
                                     }
                                 }

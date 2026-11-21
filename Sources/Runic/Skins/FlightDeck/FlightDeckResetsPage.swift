@@ -166,8 +166,9 @@ private struct FlightDeckHeldRow: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 6)
-            if let latest = self.entry.latestExpiry {
-                Text(RunicFlightDeck.eta(max(0, latest.timeIntervalSince(self.now))))
+            if let deadline = self.entry.nearestExpiry ?? self.entry.latestExpiry {
+                let remaining = deadline.timeIntervalSince(self.now)
+                Text(remaining <= 0 ? "NOW" : RunicFlightDeck.eta(remaining))
                     .font(RunicFlightDeck.mono(11, .bold))
                     .skinFace()
                     .foregroundStyle(self.runicTheme.highlight)
@@ -183,6 +184,7 @@ private struct FlightDeckHeldRow: View {
 
     private var text: String {
         let who = self.showsProvider ? "\(RunicFlightDeck.callsign(self.entry.providerName)) " : ""
-        return "\(who)BANKED RESETS \u{00B7} REDEEM AT PROVIDER"
+        let noun = self.entry.availableCount == 1 ? "BANKED RESET" : "BANKED RESETS"
+        return "\(who)\(noun) \u{00B7} REDEEM AT PROVIDER"
     }
 }

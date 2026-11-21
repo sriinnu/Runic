@@ -33,15 +33,25 @@ struct ThemeChoiceButton: View {
             .padding(.vertical, RunicSpacing.xs)
             .frame(minHeight: 56, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
-                    .fill(self.isSelected ? palette.accent.opacity(0.14) : Color.primary.opacity(0.035)))
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                    style: .continuous)
+                    .fill(
+                        self.isSelected
+                            ? palette.accent.opacity(0.14)
+                            : self.runicTheme.menuSubtleFill.opacity(0.65)))
             .overlay(
-                RoundedRectangle(cornerRadius: palette.shape.cornerRadius(RunicCornerRadius.sm), style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                    style: .continuous)
                     .stroke(
-                        self.isSelected ? palette.accent.opacity(0.72) : Color.primary.opacity(0.08),
-                        lineWidth: self.isSelected ? 1.3 : 0.7))
+                        self.isSelected
+                            ? palette.accent.opacity(0.78)
+                            : self.runicTheme.menuSeparatorColor.opacity(0.45),
+                        lineWidth: self.isSelected ? 1.4 : 0.8))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(self.isSelected ? [.isSelected] : [])
         .help(palette.displayName)
     }
 }
@@ -405,6 +415,7 @@ struct AppearancePreviewCard: View {
 
 struct TypographyRulesPreview: View {
     @Environment(\.runicFonts) private var fonts
+    @Environment(\.colorScheme) private var colorScheme
     let fontFamily: String
     let theme: Theme
     @Environment(\.runicTheme) private var runicTheme
@@ -421,7 +432,10 @@ struct TypographyRulesPreview: View {
     }
 
     private var tone: RunicBackgroundTone {
-        self.theme.palette.prefersDarkAppearance == false ? .light : .dark
+        if let prefersDark = self.theme.palette.prefersDarkAppearance {
+            return prefersDark ? .dark : .light
+        }
+        return self.colorScheme == .dark ? .dark : .light
     }
 
     var body: some View {

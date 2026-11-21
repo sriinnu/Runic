@@ -77,8 +77,9 @@ struct ResetCreditEntry: Identifiable, Equatable {
     }
 
     static func summaryLine(for credits: UsageResetCredits, now: Date = .init()) -> String? {
-        guard credits.hasAny else { return nil }
-        let count = credits.availableCount == 1 ? "1 banked reset" : "\(credits.availableCount) banked resets"
+        let countValue = credits.effectiveAvailableCount(now: now)
+        guard countValue > 0 else { return nil }
+        let count = countValue == 1 ? "1 banked reset" : "\(countValue) banked resets"
         if let latest = credits.latestExpiry(now: now) {
             return "\(count) · usable until \(UsageFormatter.resetExpiryString(from: latest, now: now))"
         }
@@ -90,7 +91,9 @@ enum ResetScheduleBuilder {
     /// One entry per provider that reports banked resets, most credits first.
     static func credits(_ inputs: [ProviderInput], now: Date = .init()) -> [ResetCreditEntry] {
         inputs.compactMap { input -> ResetCreditEntry? in
-            guard let credits = input.snapshot?.resetCredits, credits.hasAny else { return nil }
+            guard let credits = input.snapshot?.resetCredits else { return nil }
+            let countValue = credits.effectiveAvailableCount(now: now)
+            guard countValue > 0 else { return nil }
             let descriptor = ProviderDescriptorRegistry.descriptor(for: input.provider)
             let available = credits.available(now: now)
             return ResetCreditEntry(
@@ -101,7 +104,7 @@ enum ResetScheduleBuilder {
                     red: Double(descriptor.branding.color.red),
                     green: Double(descriptor.branding.color.green),
                     blue: Double(descriptor.branding.color.blue)),
-                availableCount: credits.availableCount,
+                availableCount: countValue,
                 title: available.first?.title ?? credits.credits.first?.title,
                 nearestExpiry: credits.nearestExpiry(now: now),
                 latestExpiry: credits.latestExpiry(now: now),

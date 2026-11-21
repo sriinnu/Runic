@@ -274,7 +274,7 @@ enum RunicScreenshotRenderer {
                 tertiary: nil,
                 resetCredits: banked,
                 updatedAt: now.addingTimeInterval(-240),
-                identity: nil)
+                identity: Self.demoIdentity(for: provider))
             store.snapshots[provider] = snapshot
             store.ledgerPeakBurns[provider] = UsageLedgerPeakBurn(
                 provider: provider,
@@ -323,6 +323,22 @@ enum RunicScreenshotRenderer {
         .stepfunCN,
     ]
 
+    private static func demoIdentity(for provider: UsageProvider) -> ProviderIdentitySnapshot? {
+        let plan: String? = switch provider {
+        case .antigravity, .gemini: "Google AI Ultra"
+        case .claude: "Claude Ultra"
+        case .codex: "Pro"
+        case .cursor: "Cursor Pro"
+        default: nil
+        }
+        guard let plan else { return nil }
+        return ProviderIdentitySnapshot(
+            providerID: provider,
+            accountEmail: "demo@example.com",
+            accountOrganization: nil,
+            loginMethod: plan)
+    }
+
     /// A believable cycle for the Burn panel: quiet, a burst, quiet again,
     /// ending exactly at the live reading so the curve meets the dot.
     private static func seedDemoBurnHistory(provider: UsageProvider, snapshot: UsageSnapshot, now: Date) {
@@ -357,6 +373,17 @@ enum RunicScreenshotRenderer {
         return Theme(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
     }
 
+    private static var appearanceOverride: NSAppearance? {
+        switch ProcessInfo.processInfo.environment["RUNIC_SCREENSHOT_APPEARANCE"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        {
+        case "light": NSAppearance(named: .aqua)
+        case "dark": NSAppearance(named: .darkAqua)
+        default: nil
+        }
+    }
+
     private static func writePreferences(
         store: UsageStore,
         settings: SettingsStore,
@@ -380,6 +407,10 @@ enum RunicScreenshotRenderer {
             styleMask: [.borderless],
             backing: .buffered,
             defer: false)
+        if let appearance = Self.appearanceOverride {
+            window.appearance = appearance
+            hostingView.appearance = appearance
+        }
         window.contentView = hostingView
         defer {
             window.orderOut(nil)
@@ -403,7 +434,13 @@ enum RunicScreenshotRenderer {
         // looked letter-spaced — and cost a long chase for a font bug that
         // did not exist.
         rep.size = hostingView.bounds.size
-        hostingView.cacheDisplay(in: hostingView.bounds, to: rep)
+        if let appearance = Self.appearanceOverride {
+            appearance.performAsCurrentDrawingAppearance {
+                hostingView.cacheDisplay(in: hostingView.bounds, to: rep)
+            }
+        } else {
+            hostingView.cacheDisplay(in: hostingView.bounds, to: rep)
+        }
 
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),

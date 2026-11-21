@@ -1,0 +1,50 @@
+{
+  "id": "meridian",
+  "displayName": "Meridian",
+  "tagline": "Chronometer dial",
+  "symbolName": "gauge.with.dots.needle.67percent",
+  "isCustom": true,
+  "prefersDarkAppearance": null,
+  "colors": {
+    "primary":       "#161B24|#F4F1E8",
+    "secondary":     "#7A5618|#7BB4FF",
+    "accent":        "#1A4E8E|#E2BC76",
+    "highlight":     "#8E5200|#F5B041",
+    "warm":          "#A8242C|#FF6B6B",
+    "tertiary":      "#156E4B|#4CD69B",
+    "surface":       "#F4F1EA|#0B1019",
+    "surfaceAlt":    "#EAE5DA|#121A28",
+    "cardFill":      "#FAF8F3|#162030",
+    "cardStroke":    "#1E243030|#E2BC7638",
+    "primaryText":   "#161B24|#F4F1E8",
+    "secondaryText": "#464E5C|#A8B2C4"
+  },
+  "fonts":   { "body": "system", "numeric": "tabular" },
+  "shape":   { "cornerMultiplier": 0.9, "separator": "hairline" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "normal" },
+  "style": {
+    "skin": "meridian",
+    "typography": {
+      "bodyFamily": "Manrope",
+      "numericFamily": "Geist Mono",
+      "scale": 1.0,
+      "tracking": 0.0,
+      "contrast": "strong"
+    },
+    "chrome": {
+      "borderStyle": "hairline",
+      "borderWeight": 0.75,
+      "borderOpacity": 0.7,
+      "cornerStyle": "soft",
+      "panelDepth": "low"
+    },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0 },
+    "controls": {
+      "selectedFillStyle": "accentSoft",
+      "progressStyle": "flatBar",
+      "hoverStyle": "neutral",
+      "chartSeries": "themed"
+    }
+  }
+}

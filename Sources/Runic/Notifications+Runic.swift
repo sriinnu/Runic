@@ -7,4 +7,7 @@ extension Notification.Name {
     /// source (one Keychain prompt at most). `userInfo["provider"]` is the
     /// `UsageProvider` raw value.
     static let runicReloadProvider = Notification.Name("runicReloadProvider")
+    /// Posted by Settings → Providers when the user clicks Sign In / Reconnect.
+    /// `userInfo["provider"]` is the `UsageProvider` raw value.
+    static let runicTriggerProviderLogin = Notification.Name("runicTriggerProviderLogin")
 }

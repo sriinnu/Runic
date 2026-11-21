@@ -4,11 +4,12 @@ import SwiftUI
 enum PreferencesLayoutMetrics {
     static let outerHorizontal: CGFloat = 0
     static let outerVertical: CGFloat = 0
-    static let paneHorizontal: CGFloat = 36
+    static let paneHorizontal: CGFloat = 28
     static let paneVertical: CGFloat = 24
-    static let paneSpacing: CGFloat = 24
-    static let sectionSpacing: CGFloat = 20
-    static let sectionHeaderSpacing: CGFloat = 16
+    static let paneSpacing: CGFloat = 18
+    static let sectionSpacing: CGFloat = 16
+    static let sectionHeaderSpacing: CGFloat = 12
+    static let sidebarRailWidth: CGFloat = 216
 }
 
 enum PreferencesTypographyMetrics {
@@ -40,14 +41,6 @@ struct PreferencesPane<Content: View>: View {
             .padding(.vertical, PreferencesLayoutMetrics.paneVertical)
         }
         .foregroundStyle(self.runicTheme.primaryText)
-        .background {
-            ZStack {
-                self.runicTheme.menuSurfaceGradient
-                if self.runicTheme.isTerminalHUD {
-                    RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
-                }
-            }
-        }
     }
 }
 
@@ -75,14 +68,6 @@ struct PreferencesListPane<Content: View>: View {
             .padding(.horizontal, self.horizontalPadding)
             .padding(.vertical, self.verticalPadding)
             .foregroundStyle(self.runicTheme.primaryText)
-            .background {
-                ZStack {
-                    self.runicTheme.menuSurfaceGradient
-                    if self.runicTheme.isTerminalHUD {
-                        RunicTerminalScanlineOverlay(opacity: self.runicTheme.style.effects.scanlineOpacity)
-                    }
-                }
-            }
     }
 }
 
@@ -151,6 +136,7 @@ struct PreferenceStepperRow: View {
                     .font(self.titleFont)
                 Spacer()
                 PreferenceStepperControl(
+                    title: self.title,
                     valueLabel: self.valueLabel(self.value),
                     canDecrement: self.value - self.step >= self.range.lowerBound,
                     canIncrement: self.value + self.step <= self.range.upperBound,
@@ -169,13 +155,11 @@ struct PreferenceStepperRow: View {
     }
 
     private var titleFont: Font {
-        self.runicTheme.isTerminalHUD
-            ? .system(size: 14, weight: .semibold, design: .monospaced)
-            : self.fonts.callout.weight(.medium)
+        self.fonts.callout.weight(.medium)
     }
 
     private var subtitleFont: Font {
-        self.runicTheme.isTerminalHUD ? .system(size: 12, weight: .regular) : self.fonts.footnote
+        self.fonts.footnote
     }
 
     private var subtitleColor: Color {
@@ -199,6 +183,7 @@ struct PreferencesDivider: View {
 @MainActor
 private struct PreferenceStepperControl: View {
     @Environment(\.runicFonts) private var fonts
+    let title: String
     let valueLabel: String
     let canDecrement: Bool
     let canIncrement: Bool
@@ -214,6 +199,7 @@ private struct PreferenceStepperControl: View {
             .buttonStyle(.runicBordered)
             .controlSize(.small)
             .disabled(!self.canDecrement)
+            .accessibilityLabel("Decrease \(self.title)")
 
             Text(self.valueLabel)
                 .font(self.fonts.footnote.weight(.semibold))
@@ -237,7 +223,58 @@ private struct PreferenceStepperControl: View {
             .buttonStyle(.runicBordered)
             .controlSize(.small)
             .disabled(!self.canIncrement)
+            .accessibilityLabel("Increase \(self.title)")
         }
+    }
+}
+
+/// Calm, unified grouped card used across all Settings panes.
+@MainActor
+struct SettingsGroupCard<Content: View>: View {
+    @Environment(\.runicFonts) private var fonts
+    @Environment(\.runicTheme) private var runicTheme
+    let title: String?
+    let caption: String?
+    let spacing: CGFloat
+    private let content: () -> Content
+
+    init(
+        title: String? = nil,
+        caption: String? = nil,
+        spacing: CGFloat = RunicSpacing.md,
+        @ViewBuilder content: @escaping () -> Content)
+    {
+        self.title = title
+        self.caption = caption
+        self.spacing = spacing
+        self.content = content
+    }
+
+    var body: some View {
+        let radius = self.runicTheme.shape.cornerRadius(RunicCornerRadius.md)
+        VStack(alignment: .leading, spacing: self.spacing) {
+            if let title, !title.isEmpty {
+                VStack(alignment: .leading, spacing: RunicSpacing.xxxs) {
+                    RunicPreferencesSectionTitle(text: title)
+                    if let caption, !caption.isEmpty {
+                        Text(caption)
+                            .font(self.fonts.footnote)
+                            .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            self.content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(RunicSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(self.runicTheme.cardFill.opacity(0.68)))
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.45), lineWidth: 1))
     }
 }
 

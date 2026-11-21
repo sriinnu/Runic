@@ -52,11 +52,11 @@ struct TypeSafeAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveToken(environment: context.env) != nil
+        context.credential(for: .typesafe) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let apiKey = Self.resolveToken(environment: context.env) else {
+        guard let apiKey = context.credential(for: .typesafe)?.token else {
             throw TypeSafeSettingsError.missingToken
         }
         let usage = try await TypeSafeUsageFetcher.fetchModels(apiKey: apiKey)
@@ -67,10 +67,6 @@ struct TypeSafeAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveToken(environment: [String: String]) -> String? {
-        ProviderTokenResolver.typeSafeToken(environment: environment)
     }
 }
 

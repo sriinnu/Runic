@@ -45,12 +45,15 @@ extension ProviderSidebarDetailView {
     }
 
     var historyDayDetailCard: some View {
-        ProviderSidebarSectionCard {
+        VStack(alignment: .leading, spacing: RunicSpacing.sm) {
+            Divider()
+                .padding(.top, RunicSpacing.xxs)
+
             VStack(alignment: .leading, spacing: RunicSpacing.sm) {
                 HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
                     Text("Day details")
                         .font(self.fonts.caption.weight(.semibold))
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.75))
                         .textCase(.uppercase)
                         .tracking(0.25)
                     Spacer()
@@ -60,7 +63,7 @@ extension ProviderSidebarDetailView {
                             cases: ProviderHistoryDayDetailMode.allCases,
                             label: \.rawValue)
                             .controlSize(.mini)
-                            .frame(maxWidth: 240)
+                            .frame(maxWidth: 210)
                     }
                 }
 
@@ -72,9 +75,9 @@ extension ProviderSidebarDetailView {
                     if self.historyDayDetailMode == .summary {
                         LazyVGrid(
                             columns: [
-                                GridItem(.flexible(minimum: 90), spacing: RunicSpacing.xs),
-                                GridItem(.flexible(minimum: 90), spacing: RunicSpacing.xs),
-                                GridItem(.flexible(minimum: 90), spacing: RunicSpacing.xs),
+                                GridItem(.flexible(minimum: 84), spacing: RunicSpacing.xs),
+                                GridItem(.flexible(minimum: 84), spacing: RunicSpacing.xs),
+                                GridItem(.flexible(minimum: 84), spacing: RunicSpacing.xs),
                             ],
                             alignment: .leading,
                             spacing: RunicSpacing.xs)
@@ -175,6 +178,13 @@ extension ProviderSidebarDetailView {
                         .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                 }
             }
+            .padding(RunicSpacing.sm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(
+                    cornerRadius: ProviderListMetrics.sidebarMicroCardCornerRadius,
+                    style: .continuous)
+                    .fill(self.runicTheme.surfaceAlt.opacity(0.55)))
         }
     }
 }

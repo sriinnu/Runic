@@ -38,9 +38,17 @@ public enum AntigravityProviderDescriptor {
                 noDataMessage: { "Antigravity cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .cli],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [AntigravityStatusFetchStrategy()] })),
+                pipeline: ProviderFetchPipeline(resolveStrategies: { context in
+                    switch context.sourceMode {
+                    case .cli:
+                        [AntigravityCLIFetchStrategy()]
+                    default:
+                        [AntigravityStatusFetchStrategy(), AntigravityCLIFetchStrategy()]
+                    }
+                })),
             cli: ProviderCLIConfig(
                 name: "antigravity",
+                aliases: ["agy"],
                 versionDetector: nil))
     }
 }
@@ -60,6 +68,34 @@ struct AntigravityStatusFetchStrategy: ProviderFetchStrategy {
         return self.makeResult(
             usage: usage,
             sourceLabel: "local")
+    }
+
+    func shouldFallback(on error: Error, context _: ProviderFetchContext) -> Bool {
+        guard let probeError = error as? AntigravityStatusProbeError else { return false }
+        switch probeError {
+        case .standaloneTokenUnavailable, .missingCSRFToken, .notRunning, .portDetectionFailed:
+            return AntigravityCLIProbe.resolveBinary() != nil
+        case .apiError, .parseFailed, .timedOut:
+            return false
+        }
+    }
+}
+
+struct AntigravityCLIFetchStrategy: ProviderFetchStrategy {
+    let id: String = "antigravity.cli"
+    let kind: ProviderFetchKind = .cli
+
+    func isAvailable(_: ProviderFetchContext) async -> Bool {
+        AntigravityCLIProbe.resolveBinary() != nil
+    }
+
+    func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
+        let probe = AntigravityCLIProbe()
+        let snap = try await probe.fetch()
+        let usage = try snap.toUsageSnapshot()
+        return self.makeResult(
+            usage: usage,
+            sourceLabel: "cli")
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {

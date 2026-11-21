@@ -132,13 +132,15 @@ extension StatusItemController {
             .environment(\.runicFonts, RunicFontStore.shared)
 
         let controller = NSHostingController(rootView: rootView)
+        controller.sizingOptions = []
+        controller.preferredContentSize = NSSize(width: Self.swiftUIPopoverWidth, height: Self.swiftUIPopoverHeight)
         let popover = NSPopover()
         popover.behavior = .transient
         popover.animates = true
         popover.delegate = self
         popover.appearance = self.settings.theme.palette.nsAppearance
-        popover.contentSize = NSSize(width: Self.swiftUIPopoverWidth, height: Self.swiftUIPopoverHeight)
         popover.contentViewController = controller
+        popover.contentSize = NSSize(width: Self.swiftUIPopoverWidth, height: Self.swiftUIPopoverHeight)
         self.popover = popover
 
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)

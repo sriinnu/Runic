@@ -41,18 +41,14 @@ extension TeamManagementView {
     }
 
     func editMemberQuota(member: TeamMember, in team: Team) {
-        self.editingMember = member
-        self.editingMemberTeamID = team.id
         self.memberQuotaHasLimit = member.quotaLimit != nil
         self.memberQuotaLimit = member.quotaLimit ?? 10000
-        self.showingQuotaSheet = true
+        self.activeSheet = .quota(member: member, teamID: team.id)
     }
 
     func changeMemberRole(member: TeamMember, in team: Team) {
-        self.changingRoleMember = member
-        self.changingRoleTeamID = team.id
         self.memberRoleSelection = member.role
-        self.showingRoleSheet = true
+        self.activeSheet = .role(member: member, teamID: team.id)
     }
 
     func removeMember(member: TeamMember, from team: Team) {

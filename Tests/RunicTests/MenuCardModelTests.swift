@@ -797,3 +797,162 @@ struct MenuCardModelTests {
         #expect(model.providerCost == nil)
     }
 }
+
+struct MenuCardModelAuditTests {
+    @Test
+    func `non codex supportsCredits providers do not synthesize fake zero credits`() throws {
+        let now = Date()
+        for provider in [UsageProvider.siliconflow, UsageProvider.openrouter] {
+            let metadata = try #require(ProviderDefaults.metadata[provider])
+            #expect(metadata.supportsCredits)
+            let model = UsageMenuCardView.Model.make(.init(
+                provider: provider,
+                metadata: metadata,
+                snapshot: nil,
+                credits: nil,
+                creditsError: nil,
+                dashboard: nil,
+                dashboardError: nil,
+                tokenSnapshot: nil,
+                tokenError: nil,
+                account: AccountInfo(email: nil, plan: nil),
+                isRefreshing: false,
+                lastError: nil,
+                usageBarsShowUsed: false,
+                tokenCostUsageEnabled: false,
+                showOptionalCreditsAndExtraUsage: true,
+                now: now))
+            #expect(model.creditsText == nil)
+            #expect(model.creditsHintText == nil)
+            #expect(model.balanceSummaryText == nil)
+        }
+        #expect(ProviderDefaults.metadata[.cursor]?.supportsCredits == false)
+    }
+
+    @Test
+    func `claude usage credits separates primary spend line from api credits line`() {
+        let now = Date(timeIntervalSince1970: 1_793_000_000)
+        var cost = ProviderCostSnapshot(
+            used: 12,
+            limit: 100,
+            currencyCode: "USD",
+            updatedAt: now)
+        cost.isEnabled = true
+        cost.balance = 25
+        cost.apiCredits = ProviderAPICredits(
+            available: 390,
+            currencyCode: "USD",
+            grants: [],
+            fetchedAt: now)
+        let section = UsageMenuCardView.Model.claudeUsageCreditsSection(cost, now: now)
+        #expect(section?.primarySpendLine?.contains("12") == true)
+        #expect(section?.apiCreditsLine?.contains("API credits") == true)
+        #expect(section?.apiCreditsLine?.contains("of limit") != true)
+        #expect(section?.spendLine.contains("\n") == true)
+    }
+
+    @Test
+    func `card populates banked resets text only when grants are not expired and honors window labels`() throws {
+        let now = Date(timeIntervalSince1970: 1_793_000_000)
+        let metadata = try #require(ProviderDefaults.metadata[.antigravity])
+        let activeResets = UsageResetCredits(
+            availableCount: 1,
+            credits: [
+                UsageResetCredit(
+                    id: "active-1",
+                    status: "available",
+                    expiresAt: now.addingTimeInterval(7200)),
+            ])
+        let activeSnapshot = UsageSnapshot(
+            primary: RateWindow(
+                usedPercent: 20,
+                windowMinutes: nil,
+                resetsAt: nil,
+                resetDescription: nil,
+                label: "Gemini 3.1 Pro"),
+            secondary: nil,
+            resetCredits: activeResets,
+            updatedAt: now)
+        let activeModel = UsageMenuCardView.Model.make(.init(
+            provider: .antigravity,
+            metadata: metadata,
+            snapshot: activeSnapshot,
+            credits: nil,
+            creditsError: nil,
+            dashboard: nil,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            now: now))
+        #expect(activeModel.metrics.first?.title == "Gemini 3.1 Pro")
+        #expect(activeModel.bankedResetsText?.hasPrefix("1 banked reset") == true)
+
+        let expiredSnapshot = UsageSnapshot(
+            primary: activeSnapshot.primary,
+            secondary: nil,
+            resetCredits: UsageResetCredits(
+                availableCount: 1,
+                credits: [
+                    UsageResetCredit(
+                        id: "expired-1",
+                        status: "available",
+                        expiresAt: now.addingTimeInterval(-60)),
+                ]),
+            updatedAt: now)
+        let expiredModel = UsageMenuCardView.Model.make(.init(
+            provider: .antigravity,
+            metadata: metadata,
+            snapshot: expiredSnapshot,
+            credits: nil,
+            creditsError: nil,
+            dashboard: nil,
+            dashboardError: nil,
+            tokenSnapshot: nil,
+            tokenError: nil,
+            account: AccountInfo(email: nil, plan: nil),
+            isRefreshing: false,
+            lastError: nil,
+            usageBarsShowUsed: false,
+            tokenCostUsageEnabled: false,
+            showOptionalCreditsAndExtraUsage: true,
+            now: now))
+        #expect(expiredModel.bankedResetsText == nil)
+    }
+
+    @MainActor
+    @Test
+    func `drafting pace marker aligns with remaining and used styles and unicode minus`() {
+        let leftMetric = UsageMenuCardView.Model.Metric(
+            id: "secondary",
+            title: "Weekly",
+            percent: 80,
+            percentStyle: .left,
+            resetText: nil,
+            detailText: "Pace: Behind (-34%) · projected 20%")
+        #expect(DraftingProviderPage.paceMarker(for: leftMetric) == 46)
+
+        let unicodeMinusMetric = UsageMenuCardView.Model.Metric(
+            id: "secondary",
+            title: "Weekly",
+            percent: 80,
+            percentStyle: .left,
+            resetText: nil,
+            detailText: "Pace: Behind (\u{2212}34%)")
+        #expect(DraftingProviderPage.paceMarker(for: unicodeMinusMetric) == 46)
+
+        let usedMetric = UsageMenuCardView.Model.Metric(
+            id: "secondary",
+            title: "Weekly",
+            percent: 20,
+            percentStyle: .used,
+            resetText: nil,
+            detailText: "Pace: Behind (-34%)")
+        #expect(DraftingProviderPage.paceMarker(for: usedMetric) == 54)
+    }
+}

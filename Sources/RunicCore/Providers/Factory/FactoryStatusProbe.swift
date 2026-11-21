@@ -41,19 +41,19 @@ public struct FactoryStatusProbe: Sendable {
         let log: (String) -> Void = { msg in logger?("[factory] \(msg)") }
         var lastError: Error?
 
-        let attempts: [FetchAttemptResult] = await [
-            self.attemptBrowserCookies(logger: log, sources: [.safari]),
-            self.attemptStoredCookies(logger: log),
-            self.attemptStoredBearer(logger: log),
-            self.attemptStoredRefreshToken(logger: log),
-            self.attemptLocalStorageTokens(logger: log),
-            self.attemptWorkOSCookies(logger: log, sources: [.safari]),
-            self.attemptBrowserCookies(logger: log, sources: [.chrome, .firefox]),
-            self.attemptWorkOSCookies(logger: log, sources: [.chrome, .firefox]),
+        let steps: [() async -> FetchAttemptResult] = [
+            { await self.attemptBrowserCookies(logger: log, sources: [.safari]) },
+            { await self.attemptStoredCookies(logger: log) },
+            { await self.attemptStoredBearer(logger: log) },
+            { await self.attemptStoredRefreshToken(logger: log) },
+            { await self.attemptLocalStorageTokens(logger: log) },
+            { await self.attemptWorkOSCookies(logger: log, sources: [.safari]) },
+            { await self.attemptBrowserCookies(logger: log, sources: [.chrome, .firefox]) },
+            { await self.attemptWorkOSCookies(logger: log, sources: [.chrome, .firefox]) },
         ]
 
-        for result in attempts {
-            switch result {
+        for step in steps {
+            switch await step() {
             case let .success(snapshot):
                 return snapshot
             case let .failure(error):
