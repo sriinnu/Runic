@@ -193,6 +193,11 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
             selector: #selector(self.handleReloadProviderNotification(_:)),
             name: .runicReloadProvider,
             object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.handleTriggerProviderLoginNotification(_:)),
+            name: .runicTriggerProviderLogin,
+            object: nil)
     }
 
     private func wireBindings() {

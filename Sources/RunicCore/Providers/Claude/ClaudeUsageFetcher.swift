@@ -334,16 +334,19 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             snap = await ClaudeWebResets.attach(to: snap)
             return await ClaudeConsoleCredits.attach(to: snap)
         case .web:
-            let snap = try await self.loadViaWebAPI()
+            var snap = try await self.loadViaWebAPI()
+            snap = await ClaudeWebResets.attach(to: snap)
             return await ClaudeConsoleCredits.attach(to: snap)
         case .cli:
             do {
                 var snap = try await self.loadViaPTY(model: model, timeout: 10)
                 snap = await self.applyWebExtrasIfNeeded(to: snap)
+                snap = await ClaudeWebResets.attach(to: snap)
                 return await ClaudeConsoleCredits.attach(to: snap)
             } catch {
                 var snap = try await self.loadViaPTY(model: model, timeout: 24)
                 snap = await self.applyWebExtrasIfNeeded(to: snap)
+                snap = await ClaudeWebResets.attach(to: snap)
                 return await ClaudeConsoleCredits.attach(to: snap)
             }
         }
@@ -476,7 +479,17 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         let weekly = session == nil ? nil : sevenDay
         let modelSpecific = makeWindow(
             usage.sevenDaySonnet ?? usage.sevenDayOpus,
-            windowMinutes: 7 * 24 * 60) ?? Self.scopedLimitWindow(usage.limits)
+            windowMinutes: 7 * 24 * 60)
+            .map { win in
+                guard usage.sevenDaySonnet == nil, usage.sevenDayOpus != nil else { return win }
+                return RateWindow(
+                    usedPercent: win.usedPercent,
+                    windowMinutes: win.windowMinutes,
+                    resetsAt: win.resetsAt,
+                    resetDescription: win.resetDescription,
+                    label: "Opus")
+            }
+            ?? Self.scopedLimitWindow(usage.limits)
 
         return ClaudeUsageSnapshot(
             primary: primary,
@@ -545,6 +558,13 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
 
     private static func inferPlan(rateLimitTier: String?) -> String? {
         let tier = rateLimitTier?.lowercased() ?? ""
+        if tier.contains("ultra") { return "Claude Ultra" }
+        if tier.contains("max_20x") || tier.contains("max 20x") || tier.contains("max20x") {
+            return "Claude Max 20x"
+        }
+        if tier.contains("max_5x") || tier.contains("max 5x") || tier.contains("max5x") {
+            return "Claude Max 5x"
+        }
         if tier.contains("max") { return "Claude Max" }
         if tier.contains("pro") { return "Claude Pro" }
         if tier.contains("team") { return "Claude Team" }
@@ -580,7 +600,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 usedPercent: opusPct,
                 windowMinutes: 7 * 24 * 60,
                 resetsAt: webData.weeklyResetsAt,
-                resetDescription: webData.weeklyResetsAt.map { Self.formatResetDate($0) })
+                resetDescription: webData.weeklyResetsAt.map { Self.formatResetDate($0) },
+                label: "Opus")
         }
 
         return ClaudeUsageSnapshot(
@@ -628,6 +649,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             windowMinutes: 7 * 24 * 60)
         let opus = makeWindow(pctLeft: snap.opusPercentLeft, reset: snap.opusResetDescription)
 
+        let resolvedLoginMethod = snap.loginMethod ?? Self.inferPlan(
+            rateLimitTier: (try? ClaudeOAuthCredentialsStore.load(environment: self.environment))?.rateLimitTier)
+
         return ClaudeUsageSnapshot(
             primary: session ?? weekly ?? .noLimitsReported,
             secondary: session == nil ? nil : weekly,
@@ -636,7 +660,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             updatedAt: Date(),
             accountEmail: snap.accountEmail,
             accountOrganization: snap.accountOrganization,
-            loginMethod: snap.loginMethod,
+            loginMethod: resolvedLoginMethod,
             rawText: snap.rawText)
     }
 

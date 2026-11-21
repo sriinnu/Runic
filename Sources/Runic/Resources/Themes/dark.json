@@ -1,32 +1,32 @@
 {
   "id": "dark",
   "displayName": "Dark",
-  "tagline": "Cinematic dark",
+  "tagline": "Obsidian graphite",
   "symbolName": "moon.stars.fill",
   "isCustom": false,
   "prefersDarkAppearance": true,
   "colors": {
-    "primary":       "#739EFF",
-    "secondary":     "#8CCCFF",
-    "accent":        "#8CCCFF",
-    "highlight":     "#FF9E2E",
-    "warm":          "#FF6180",
-    "tertiary":      "#61EBA8",
-    "surface":       "#06080B",
-    "surfaceAlt":    "#0F141DF2",
-    "cardFill":      "#FFFFFF0A",
-    "cardStroke":    "#8CCCFF2E",
-    "primaryText":   "#FFFFFFF2",
-    "secondaryText": "#FFFFFFAB"
+    "primary":       "#58A6FF",
+    "secondary":     "#9B8CFF",
+    "accent":        "#58A6FF",
+    "highlight":     "#F2A93B",
+    "warm":          "#FF6B7A",
+    "tertiary":      "#3DD68C",
+    "surface":       "#111214",
+    "surfaceAlt":    "#17191D",
+    "cardFill":      "#1C1F24",
+    "cardStroke":    "#FFFFFF1A",
+    "primaryText":   "#F3F5F8",
+    "secondaryText": "#A6AEB9"
   },
   "fonts":   { "body": "system", "numeric": "system" },
-  "shape":   { "cornerMultiplier": 1.0, "separator": "glow" },
+  "shape":   { "cornerMultiplier": 1.0, "separator": "hairline" },
   "motion":  { "preset": "standard" },
   "density": { "preset": "normal" },
   "style": {
     "typography": { "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
-    "chrome": { "borderStyle": "hairline", "borderWeight": 0.75, "borderOpacity": 0.48, "cornerStyle": "standard", "panelDepth": "medium" },
-    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.18, "materialIntensity": 0.38 },
-    "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "glow" }
+    "chrome": { "borderStyle": "hairline", "borderWeight": 0.5, "borderOpacity": 0.5, "cornerStyle": "standard", "panelDepth": "low" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0, "texture": "none", "textureOpacity": 0.0 },
+    "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "neutral", "chartSeries": "themed" }
   }
 }

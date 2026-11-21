@@ -42,6 +42,8 @@ public enum GeminiUserTierId: String, Sendable {
     case free = "free-tier"
     case legacy = "legacy-tier"
     case standard = "standard-tier"
+    case g1Pro = "g1-pro-tier"
+    case g1Ultra = "g1-ultra-tier"
 }
 
 public struct GeminiStatusProbe: Sendable {

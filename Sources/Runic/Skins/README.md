@@ -55,15 +55,12 @@ view's state.
 
 ## Kits today
 
-- `Standard` — the default; every slot nil. System, Dark, Glass, Terminal,
-  Relief and Yantra draw with it until they get a kit.
-- `Gazette` — the printed edition (`RunicGazetteChrome.swift`,
-  `GazetteMenuCardViews.swift`). Pages and footer are on the kit; its chip,
-  tab and action-row styling still live inside the standard views under
-  `isGazette` and move here next.
+- `Standard` — the default; every slot nil. System, Dark and Terminal draw with it.
+- `LiquidGlass` — translucent layered glass surfaces, specular bevels, and capillary gauges (default theme).
+- `Meridian` — adaptive Swiss astronomical chronometer (Porcelain Enamel light / Grand Feu Midnight dark) with a 200° power-reserve arc, tapered Dauphine hand, railway gauges, and faceted ruby indicators.
+- `Relief` — sculpted neomorphic paper with tactile recessed wells and embossed dials.
+- `Gazette` — the printed edition (`RunicGazetteChrome.swift`, `GazetteMenuCardViews.swift`).
 - `Sumi` — ink on washi. The reference implementation: read it first.
 - `Drafting` — blueprint as an engineering sheet: dimensioned bars, hatching, callouts, title block.
-- `Instrument` — retro as a bench instrument: VU meters, LCDs, keycaps, lamps, screws. Adds the `stageOverlay` slot.
 - `Departures` — a split-flap board; resets are departures.
 - `FlightDeck` — a primary flight display; pace is the attitude indicator.
-- `Receipt` — thermal paper; every ping prints one.

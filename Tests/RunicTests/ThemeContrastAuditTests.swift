@@ -14,12 +14,14 @@ struct ThemeContrastAuditTests {
     @Test
     func `body text tones clear 4point5 on every menu fill`() {
         for theme in Theme.allCases {
-            let palette = theme.palette
-            for (name, fill) in self.menuFills(palette) {
-                for (tone, color) in self.readableTones(palette) {
-                    #expect(
-                        self.contrast(color, against: fill, palette: palette) >= 4.5,
-                        "\(theme.rawValue): \(tone) on \(name) must hit 4.5:1")
+            self.forResolvedAppearances(theme) {
+                let palette = theme.palette
+                for (name, fill) in self.menuFills(palette) {
+                    for (tone, color) in self.readableTones(palette) {
+                        #expect(
+                            self.contrast(color, against: fill, palette: palette) >= 4.5,
+                            "\(theme.rawValue): \(tone) on \(name) must hit 4.5:1")
+                    }
                 }
             }
         }
@@ -28,14 +30,9 @@ struct ThemeContrastAuditTests {
     @MainActor
     @Test
     func `accent and status tones read on every menu fill`() {
-        for theme in Theme.allCases where theme != .system {
-            self.expectEmphasisTonesRead(theme)
-        }
-        // System follows the OS, so pin each appearance instead of inheriting
-        // whichever one the machine running the tests happens to be in.
-        for name in [NSAppearance.Name.darkAqua, .aqua] {
-            NSAppearance(named: name)?.performAsCurrentDrawingAppearance {
-                self.expectEmphasisTonesRead(.system)
+        for theme in Theme.allCases {
+            self.forResolvedAppearances(theme) {
+                self.expectEmphasisTonesRead(theme)
             }
         }
     }
@@ -56,12 +53,27 @@ struct ThemeContrastAuditTests {
     @Test
     func `selected chip text reads on the selected wash`() {
         for theme in Theme.allCases {
-            let palette = theme.palette
-            let wash = palette.accent.opacity(0.22)
-            // Chips draw their selected foreground in the accent itself.
-            #expect(
-                self.contrast(palette.accent, against: wash, palette: palette) >= 3.0,
-                "\(theme.rawValue): accent on its own selected wash must hit 3:1")
+            self.forResolvedAppearances(theme) {
+                let palette = theme.palette
+                let wash = palette.accent.opacity(0.22)
+                // Chips draw their selected foreground in the accent itself.
+                #expect(
+                    self.contrast(palette.accent, against: wash, palette: palette) >= 3.0,
+                    "\(theme.rawValue): accent on its own selected wash must hit 3:1")
+            }
+        }
+    }
+
+    @MainActor
+    private func forResolvedAppearances(_ theme: Theme, check: () -> Void) {
+        guard theme.palette.prefersDarkAppearance == nil else {
+            check()
+            return
+        }
+        for name in [NSAppearance.Name.darkAqua, .aqua] {
+            NSAppearance(named: name)?.performAsCurrentDrawingAppearance {
+                check()
+            }
         }
     }
 

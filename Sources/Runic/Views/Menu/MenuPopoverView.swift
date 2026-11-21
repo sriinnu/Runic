@@ -133,13 +133,6 @@ struct MenuPopoverView: View {
                     let footer = skin.footer(RunicSkinFooterContext(
                         width: self.contentWidth,
                         openAbout: self.actions.openAbout))
-                    // The pixel tagline is Retro's standard closing line; a
-                    // kit with its own footer carries the imprint itself.
-                    if palette.id == "retro", footer == nil {
-                        RetroTaglineFooter()
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, RunicSpacing.xs)
-                    }
                     if let footer {
                         footer
                     }
@@ -170,9 +163,9 @@ struct MenuPopoverView: View {
         }
         .retroBevel(baseRadius: popoverRadius)
         .shadow(
-            color: Color.black.opacity(palette.id == "retro" ? 0.22 : 0.24 + palette.style.effects.glowStrength * 0.12),
-            radius: palette.shape.separator == .glow ? 22 : (palette.id == "retro" ? 12 : 20),
-            y: palette.shape.separator == .glow ? 14 : (palette.id == "retro" ? 6 : 10))
+            color: Color.black.opacity(0.24 + palette.style.effects.glowStrength * 0.12),
+            radius: palette.shape.separator == .glow ? 22 : 20,
+            y: palette.shape.separator == .glow ? 14 : 10)
         .onAppear {
             withAnimation(palette.motion.curve) {
                 self.hasAppeared = true

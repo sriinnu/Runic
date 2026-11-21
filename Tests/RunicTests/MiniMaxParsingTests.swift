@@ -244,4 +244,25 @@ struct MiniMaxParsingTests {
         let quota = MiniMaxModelQuota(total: 0, used: 0, modelName: "general")
         #expect(quota.usedPercent == 0)
     }
+
+    @Test
+    func `legacy used and total computes used percent directly and ms remains time converts`() throws {
+        let json = """
+        {
+          "base_resp": { "status_code": 0, "status_msg": "success" },
+          "data": {
+            "model_remains": {
+              "used": 25,
+              "total": 100,
+              "model_name": "MiniMax-Text-01"
+            },
+            "remains_time": 14400000
+          }
+        }
+        """
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let parsed = try MiniMaxWebParsing.parseRemainsResponse(Data(json.utf8), now: now)
+        #expect(parsed.usedPercent == 25)
+        #expect(parsed.resetsAt == now.addingTimeInterval(14400))
+    }
 }

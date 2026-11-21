@@ -42,7 +42,8 @@ extension ProviderSidebarDetailView {
                     Text(self.historyMonthTitle)
                         .font(self.fonts.caption.weight(.semibold))
                         .foregroundStyle(self.runicTheme.secondaryText)
-                        .frame(minWidth: 130, alignment: .leading)
+                        .lineLimit(1)
+                        .frame(minWidth: 108, alignment: .leading)
 
                     ProviderHistoryNavigationButton(
                         systemName: "chevron.right",
@@ -52,13 +53,13 @@ extension ProviderSidebarDetailView {
                         self.shiftHistoryMonth(by: 1)
                     }
 
-                    Spacer()
+                    Spacer(minLength: RunicSpacing.xs)
 
                     RunicSegmentedPicker(
                         selection: self.$historyMetricMode,
                         cases: ProviderHistoryMetricMode.allCases,
                         label: \.rawValue)
-                        .frame(width: 220)
+                        .frame(maxWidth: 196)
                 }
 
                 if self.historyIsLoading, self.historySnapshot == nil {

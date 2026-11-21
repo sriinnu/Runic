@@ -8,24 +8,35 @@ struct TeamManagementView: View {
     @Environment(\.runicTheme) private var runicTheme
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
+
+    enum TeamSheet: Identifiable {
+        case createTeam
+        case editTeam(Team)
+        case invite(Team)
+        case quota(member: TeamMember, teamID: String)
+        case role(member: TeamMember, teamID: String)
+
+        var id: String {
+            switch self {
+            case .createTeam: "create"
+            case let .editTeam(team): "edit-\(team.id)"
+            case let .invite(team): "invite-\(team.id)"
+            case let .quota(member, teamID): "quota-\(teamID)-\(member.id)"
+            case let .role(member, teamID): "role-\(teamID)-\(member.id)"
+            }
+        }
+    }
+
     @State var teams: [Team] = []
     @State var selectedTeam: Team?
-    @State var showingCreateTeam = false
-    @State var showingEditTeam = false
+    @State var activeSheet: TeamSheet?
     @State var showingDeleteConfirmation = false
-    @State var showingInviteSheet = false
     @State var teamToDelete: Team?
     @State var newTeamName = ""
     @State var editTeamName = ""
-    @State var editingMember: TeamMember?
-    @State var editingMemberTeamID: String?
     @State var memberQuotaHasLimit = false
     @State var memberQuotaLimit = 10000
-    @State var changingRoleMember: TeamMember?
-    @State var changingRoleTeamID: String?
     @State var memberRoleSelection: TeamRole = .member
-    @State var showingQuotaSheet = false
-    @State var showingRoleSheet = false
     @State var dashboardWindow: NSWindow?
 
     var body: some View {
@@ -48,11 +59,11 @@ struct TeamManagementView: View {
                             .font(self.fonts.subheadline.weight(.semibold))
                         Spacer()
                         Button {
-                            self.showingCreateTeam = true
+                            self.activeSheet = .createTeam
                         } label: {
                             Label("Create Team", systemImage: "plus.circle.fill")
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.runicProminent)
                         .controlSize(.small)
                     }
 
@@ -80,7 +91,7 @@ struct TeamManagementView: View {
                                     onEdit: {
                                         self.selectedTeam = team
                                         self.editTeamName = team.name
-                                        self.showingEditTeam = true
+                                        self.activeSheet = .editTeam(team)
                                     },
                                     onDelete: {
                                         self.teamToDelete = team
@@ -88,7 +99,7 @@ struct TeamManagementView: View {
                                     },
                                     onInvite: {
                                         self.selectedTeam = team
-                                        self.showingInviteSheet = true
+                                        self.activeSheet = .invite(team)
                                     })
                             }
                         }
@@ -111,11 +122,11 @@ struct TeamManagementView: View {
                                 .foregroundStyle(self.runicTheme.secondaryText)
                             Spacer()
                             Button {
-                                self.showingInviteSheet = true
+                                self.activeSheet = .invite(team)
                             } label: {
                                 Label("Add Member", systemImage: "person.badge.plus")
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.runicBordered)
                             .controlSize(.mini)
                         }
 
@@ -175,89 +186,70 @@ struct TeamManagementView: View {
             }
         }
         .runicTypography()
-        .sheet(isPresented: self.$showingCreateTeam) {
-            CreateTeamSheet(
-                teamName: self.$newTeamName,
-                onCreate: {
-                    self.createTeam(name: self.newTeamName)
-                    self.showingCreateTeam = false
-                    self.newTeamName = ""
-                },
-                onCancel: {
-                    self.showingCreateTeam = false
-                    self.newTeamName = ""
-                })
-        }
-        .sheet(isPresented: self.$showingEditTeam) {
-            if let team = self.selectedTeam {
+        .sheet(item: self.$activeSheet) { sheet in
+            switch sheet {
+            case .createTeam:
+                CreateTeamSheet(
+                    teamName: self.$newTeamName,
+                    onCreate: {
+                        self.createTeam(name: self.newTeamName)
+                        self.activeSheet = nil
+                        self.newTeamName = ""
+                    },
+                    onCancel: {
+                        self.activeSheet = nil
+                        self.newTeamName = ""
+                    })
+            case let .editTeam(team):
                 EditTeamSheet(
                     team: team,
                     teamName: self.$editTeamName,
                     onSave: {
                         self.updateTeamName(team: team, newName: self.editTeamName)
-                        self.showingEditTeam = false
+                        self.activeSheet = nil
                     },
                     onCancel: {
-                        self.showingEditTeam = false
+                        self.activeSheet = nil
                     })
-            }
-        }
-        .sheet(isPresented: self.$showingInviteSheet) {
-            if let team = self.selectedTeam {
+            case let .invite(team):
                 TeamInviteSheet(
                     team: team,
                     onInvite: { invitation in
                         self.sendInvitation(invitation, to: team)
-                        self.showingInviteSheet = false
+                        self.activeSheet = nil
                     },
                     onCancel: {
-                        self.showingInviteSheet = false
+                        self.activeSheet = nil
                     })
-            }
-        }
-        .sheet(isPresented: self.$showingQuotaSheet) {
-            if let member = self.editingMember {
+            case let .quota(member, teamID):
                 MemberQuotaSheet(
                     memberName: member.name,
                     hasLimit: self.$memberQuotaHasLimit,
                     quotaLimit: self.$memberQuotaLimit,
                     onSave: {
-                        guard let teamID = self.editingMemberTeamID else { return }
                         self.updateMemberQuota(
                             memberID: member.id,
                             teamID: teamID,
                             hasLimit: self.memberQuotaHasLimit,
                             limit: self.memberQuotaLimit)
-                        self.showingQuotaSheet = false
-                        self.editingMember = nil
-                        self.editingMemberTeamID = nil
+                        self.activeSheet = nil
                     },
                     onCancel: {
-                        self.showingQuotaSheet = false
-                        self.editingMember = nil
-                        self.editingMemberTeamID = nil
+                        self.activeSheet = nil
                     })
-            }
-        }
-        .sheet(isPresented: self.$showingRoleSheet) {
-            if let member = self.changingRoleMember {
+            case let .role(member, teamID):
                 MemberRoleSheet(
                     memberName: member.name,
                     role: self.$memberRoleSelection,
                     onSave: {
-                        guard let teamID = self.changingRoleTeamID else { return }
                         self.updateMemberRole(
                             memberID: member.id,
                             teamID: teamID,
                             role: self.memberRoleSelection)
-                        self.showingRoleSheet = false
-                        self.changingRoleMember = nil
-                        self.changingRoleTeamID = nil
+                        self.activeSheet = nil
                     },
                     onCancel: {
-                        self.showingRoleSheet = false
-                        self.changingRoleMember = nil
-                        self.changingRoleTeamID = nil
+                        self.activeSheet = nil
                     })
             }
         }

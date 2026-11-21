@@ -18,10 +18,12 @@ enum SettingsWindowBridge {
         self.select(tab, in: selection)
 
         let opened = NSApp.openRunicSettingsWindow()
-        NotificationCenter.default.post(
-            name: .runicOpenSettings,
-            object: nil,
-            userInfo: [Self.tabUserInfoKey: tab.rawValue])
+        if !opened {
+            NotificationCenter.default.post(
+                name: .runicOpenSettings,
+                object: nil,
+                userInfo: [Self.tabUserInfoKey: tab.rawValue])
+        }
 
         // SwiftUI creates the Settings window asynchronously in response to the
         // action above, so activating/foregrounding here (before it exists) is a
@@ -33,13 +35,30 @@ enum SettingsWindowBridge {
 
     private static func foregroundSettingsWindow(attemptsRemaining: Int) {
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.level == .normal && $0.isVisible }) {
+        if let window = settingsWindow() {
             window.makeKeyAndOrderFront(nil)
             return
         }
         guard attemptsRemaining > 0 else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             Self.foregroundSettingsWindow(attemptsRemaining: attemptsRemaining - 1)
+        }
+    }
+
+    private static func settingsWindow() -> NSWindow? {
+        let normalVisible = NSApp.windows.filter { $0.level == .normal && $0.isVisible }
+        if let exact = normalVisible.first(where: {
+            let identifier = $0.identifier?.rawValue.lowercased() ?? ""
+            let title = $0.title.lowercased()
+            return identifier.contains("settings")
+                || title.contains("settings")
+                || title.contains("preferences")
+        }) {
+            return exact
+        }
+        return normalVisible.first { window in
+            let title = window.title.lowercased()
+            return !title.contains("sign in") && !title.contains("keepalive")
         }
     }
 }

@@ -15,6 +15,8 @@ struct ProviderListView: View {
     let settingsFields: (UsageProvider) -> [ProviderSettingsFieldDescriptor]
     let errorDisplay: (UsageProvider) -> ProviderErrorDisplay?
     let isErrorExpanded: (UsageProvider) -> Binding<Bool>
+    let supportsLoginFlow: (UsageProvider) -> Bool
+    let onSignIn: (UsageProvider) -> Void
     let onCopyError: (String) -> Void
     /// Nil while the list is filtered: offsets into a filtered list would move
     /// the wrong providers in the full order.
@@ -45,6 +47,8 @@ struct ProviderListView: View {
                     statusLabel: self.statusLabel(provider),
                     errorDisplay: self.isEnabled(provider).wrappedValue ? self.errorDisplay(provider) : nil,
                     isErrorExpanded: self.isErrorExpanded(provider),
+                    supportsLoginFlow: self.supportsLoginFlow(provider),
+                    onSignIn: { self.onSignIn(provider) },
                     onCopyError: self.onCopyError)
                     .padding(.bottom, showDividerOnProviderRow ? ProviderListMetrics.dividerBottomInset : 0)
                     .listRowInsets(self.rowInsets(
@@ -148,6 +152,8 @@ struct ProviderListView: View {
                 statusLabel: self.statusLabel(sibling),
                 errorDisplay: self.errorDisplay(sibling),
                 isErrorExpanded: self.isErrorExpanded(sibling),
+                supportsLoginFlow: self.supportsLoginFlow(sibling),
+                onSignIn: { self.onSignIn(sibling) },
                 onCopyError: self.onCopyError)
                 .padding(.leading, ProviderListMetrics.regionalSiblingIndent)
                 .listRowInsets(self.rowInsets(withDivider: false, addTopPadding: false, addBottomPadding: false))

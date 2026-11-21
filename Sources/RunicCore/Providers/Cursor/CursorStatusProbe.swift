@@ -38,14 +38,18 @@ public struct CursorStatusProbe: Sendable {
     /// Fetch Cursor usage using browser cookies with fallback to stored session.
     public func fetch(logger: ((String) -> Void)? = nil) async throws -> CursorStatusSnapshot {
         let log: (String) -> Void = { msg in logger?("[cursor] \(msg)") }
+        var lastError: Error?
 
         // Try importing cookies from the configured browser order first.
         do {
             let session = try CursorCookieImporter.importSession(logger: log)
             log("Using cookies from \(session.sourceLabel)")
             return try await self.fetchWithCookieHeader(session.cookieHeader)
+        } catch CursorStatusProbeError.noSessionCookie {
+            log("No Cursor session cookie found in browsers")
         } catch {
-            log("Browser cookie import failed: \(error.localizedDescription)")
+            lastError = error
+            log("Browser session fetch failed: \(error.localizedDescription)")
         }
 
         // Fall back to stored session cookies (from "Add Account" login flow)
@@ -56,6 +60,7 @@ public struct CursorStatusProbe: Sendable {
             do {
                 return try await self.fetchWithCookieHeader(cookieHeader)
             } catch {
+                lastError = error
                 if case CursorStatusProbeError.notLoggedIn = error {
                     // Clear only when auth is invalid; keep for transient failures.
                     await CursorSessionStore.shared.clearCookies()
@@ -66,6 +71,7 @@ public struct CursorStatusProbe: Sendable {
             }
         }
 
+        if let lastError { throw lastError }
         throw CursorStatusProbeError.noSessionCookie
     }
 }

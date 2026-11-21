@@ -194,4 +194,73 @@ struct ResetCreditsTests {
         #expect(OverviewMenuView.bankedResetsPill(for: credits) == "2 resets")
         #expect(OverviewMenuView.bankedResetsPill(for: UsageResetCredits(availableCount: 1)) == "1 reset")
     }
+
+    @MainActor
+    @Test
+    func `expired banked resets drop out of counts, summary lines, and overview pills`() throws {
+        let expired = UsageResetCredits(
+            availableCount: 2,
+            credits: [
+                UsageResetCredit(
+                    id: "expired-1",
+                    status: "available",
+                    expiresAt: self.now.addingTimeInterval(-60)),
+                UsageResetCredit(
+                    id: "expired-2",
+                    status: "available",
+                    expiresAt: self.now),
+            ])
+        #expect(expired.effectiveAvailableCount(now: self.now) == 0)
+        #expect(expired.hasAny(now: self.now) == false)
+        #expect(ResetCreditEntry.summaryLine(for: expired, now: self.now) == nil)
+        #expect(OverviewMenuView.bankedResetsPill(for: expired, now: self.now) == nil)
+
+        let mixed = UsageResetCredits(
+            availableCount: 2,
+            credits: [
+                UsageResetCredit(
+                    id: "expired",
+                    status: "available",
+                    expiresAt: self.now.addingTimeInterval(-1)),
+                UsageResetCredit(
+                    id: "active",
+                    status: "available",
+                    expiresAt: self.now.addingTimeInterval(3600)),
+            ])
+        #expect(mixed.effectiveAvailableCount(now: self.now) == 1)
+        #expect(mixed.hasAny(now: self.now))
+        let line = ResetCreditEntry.summaryLine(for: mixed, now: self.now)
+        #expect(line?.hasPrefix("1 banked reset · usable until ") == true)
+        #expect(OverviewMenuView.bankedResetsPill(for: mixed, now: self.now) == "1 reset")
+
+        let claudeMeta = try #require(ProviderDefaults.metadata[.claude])
+        let snapshot = UsageSnapshot(
+            primary: RateWindow(usedPercent: 10, windowMinutes: 300, resetsAt: nil, resetDescription: nil),
+            secondary: nil,
+            resetCredits: expired,
+            updatedAt: self.now)
+        #expect(ResetScheduleBuilder.credits([
+            .init(provider: .claude, metadata: claudeMeta, snapshot: snapshot),
+        ], now: self.now).isEmpty)
+    }
+
+    @Test
+    func `future starting claude limit reset grants are excluded`() throws {
+        let iso = ISO8601DateFormatter()
+        let json = """
+        {
+          "grants": [
+            {
+              "id": "future-grant",
+              "resets_left": 2,
+              "starts_at": "\(iso.string(from: self.now.addingTimeInterval(3600)))",
+              "ends_at": "\(iso.string(from: self.now.addingTimeInterval(86400)))",
+              "paused": false
+            }
+          ]
+        }
+        """
+        let status = try JSONDecoder().decode(ClaudeLimitResetStatus.self, from: Data(json.utf8))
+        #expect(status.resetCredits(now: self.now) == nil)
+    }
 }

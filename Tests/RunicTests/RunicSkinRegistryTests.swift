@@ -24,10 +24,11 @@ struct RunicSkinRegistryTests {
         #expect(ids.contains(GazetteSkin.skinID))
         #expect(ids.contains(SumiSkin.skinID))
         #expect(ids.contains(DraftingSkin.skinID))
-        #expect(ids.contains(ReceiptSkin.skinID))
+        #expect(ids.contains(MeridianSkin.skinID))
         #expect(ids.contains(FlightDeckSkin.skinID))
         #expect(ids.contains(DeparturesSkin.skinID))
-        #expect(ids.contains(InstrumentSkin.skinID))
+        #expect(ids.contains(LiquidGlassSkin.skinID))
+        #expect(ids.contains(ReliefSkin.skinID))
     }
 
     @MainActor
@@ -36,10 +37,11 @@ struct RunicSkinRegistryTests {
         #expect(Theme.gazette.palette.skinID == GazetteSkin.skinID)
         #expect(Theme.sumi.palette.skinID == SumiSkin.skinID)
         #expect(Theme.blueprint.palette.skinID == DraftingSkin.skinID)
-        #expect(Theme.receipt.palette.skinID == ReceiptSkin.skinID)
+        #expect(Theme.meridian.palette.skinID == MeridianSkin.skinID)
         #expect(Theme.flightdeck.palette.skinID == FlightDeckSkin.skinID)
         #expect(Theme.departures.palette.skinID == DeparturesSkin.skinID)
-        #expect(Theme.retro.palette.skinID == InstrumentSkin.skinID)
+        #expect(Theme.glass.palette.skinID == LiquidGlassSkin.skinID)
+        #expect(Theme.relief.palette.skinID == ReliefSkin.skinID)
         #expect(Theme.system.palette.skinID == StandardSkin.skinID)
         #expect(Theme.terminal.palette.skinID == StandardSkin.skinID)
     }

@@ -353,9 +353,7 @@ public struct QwenUsageFetcher: Sendable {
     static func fetchUsageOrEmpty(apiKey: String, baseURL: String? = nil) async throws -> QwenUsageSnapshot {
         do {
             return try await self.fetchUsage(apiKey: apiKey, baseURL: baseURL)
-        } catch QwenUsageError.invalidCredentials {
-            throw QwenUsageError.invalidCredentials
-        } catch {
+        } catch let QwenUsageError.apiError(message) where message.hasPrefix("HTTP 404:") {
             return QwenUsageSnapshot(
                 modelEntries: [],
                 totalInputTokens: 0,

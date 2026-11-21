@@ -15,8 +15,9 @@ struct ProvidersPane: View {
     @State private var sidebarRegion: ProviderRegion = .international
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
-    /// Provider to focus on first appearance (sidebar layout). See `PreferencesSelection.provider`.
+    /// Provider to focus on first appearance or deep link. See `PreferencesSelection.provider`.
     var initialProvider: UsageProvider?
+    var onConsumeInitialProvider: (() -> Void)?
     @Environment(\.runicTheme) private var runicTheme
 
     /// One entry per brand. A brand with a China platform (Kimi, GLM, MiniMax,
@@ -71,7 +72,9 @@ struct ProvidersPane: View {
                         active.onConfirm()
                         self.activeConfirmation = nil
                     }
-                    Button("Cancel", role: .cancel) { self.activeConfirmation = nil }
+                    if active.confirmTitle.caseInsensitiveCompare("OK") != .orderedSame {
+                        Button("Cancel", role: .cancel) { self.activeConfirmation = nil }
+                    }
                 }
             },
             message: {
@@ -107,6 +110,8 @@ struct ProvidersPane: View {
                     settingsFields: { provider in self.extraSettingsFields(for: provider) },
                     errorDisplay: { provider in self.providerErrorDisplay(provider) },
                     isErrorExpanded: { provider in self.expandedBinding(for: provider) },
+                    supportsLoginFlow: { provider in self.supportsLoginFlow(provider) },
+                    onSignIn: { provider in self.triggerLoginFlow(for: provider) },
                     onCopyError: { text in self.copyToPasteboard(text) },
                     moveProviders: self.isSearching ? nil : { fromOffsets, toOffset in
                         self.settings.moveProvider(fromOffsets: fromOffsets, toOffset: toOffset)
@@ -219,7 +224,8 @@ struct ProvidersPane: View {
                 }
             }
             .listStyle(.sidebar)
-            .frame(minWidth: 160, idealWidth: 180)
+            .navigationSplitViewColumnWidth(min: 184, ideal: 198, max: 224)
+            .frame(minWidth: 184, idealWidth: 198)
             .scrollContentBackground(.hidden)
             .background {
                 ZStack {
@@ -231,6 +237,11 @@ struct ProvidersPane: View {
                 .opacity(0.55)
             }
             .onAppear {
+                self.applyInitialProviderSelectionIfNeeded()
+                self.normalizeSidebarSelection()
+            }
+            .onChange(of: self.initialProvider) { _, _ in
+                self.applyInitialProviderSelectionIfNeeded()
                 self.normalizeSidebarSelection()
             }
             .onChange(of: self.visibleProviders) { _, _ in
@@ -258,6 +269,8 @@ struct ProvidersPane: View {
                         settingsFields: self.extraSettingsFields(for: detailProvider),
                         errorDisplay: self.providerErrorDisplay(detailProvider),
                         isErrorExpanded: self.expandedBinding(for: detailProvider),
+                        supportsLoginFlow: self.supportsLoginFlow(detailProvider),
+                        onSignIn: { self.triggerLoginFlow(for: detailProvider) },
                         onCopyError: { text in self.copyToPasteboard(text) })
                         .id(detailProvider)
                 }
@@ -268,6 +281,18 @@ struct ProvidersPane: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+    }
+
+    private func applyInitialProviderSelectionIfNeeded() {
+        guard let initial = self.initialProvider else { return }
+        if !self.searchText.isEmpty, !self.visibleProviders.contains(initial.brandRoot) {
+            self.searchText = ""
+        }
+        if self.providers.contains(initial.brandRoot) {
+            self.sidebarSelection = initial.brandRoot
+            self.sidebarRegion = initial.region
+        }
+        self.onConsumeInitialProvider?()
     }
 
     /// Keeps the selection inside the visible (possibly filtered) list. A search
@@ -283,11 +308,6 @@ struct ProvidersPane: View {
             return
         }
 
-        if !self.isSearching, let initial = self.initialProvider, visible.contains(initial.brandRoot) {
-            self.sidebarSelection = initial.brandRoot
-            self.sidebarRegion = initial.region
-            return
-        }
         self.sidebarSelection = visible.first
     }
 
@@ -406,33 +426,18 @@ struct ProvidersPane: View {
         let context = self.makeSettingsContext(provider: provider)
         let providerFields = ProviderCatalog.implementation(for: provider)?
             .settingsFields(context: context) ?? []
-        return (providerFields + [self.otelUsageLogField(provider: provider, context: context)])
-            .filter { $0.isVisible?() ?? true }
+        return providerFields.filter { $0.isVisible?() ?? true }
     }
 
-    private func otelUsageLogField(
-        provider: UsageProvider,
-        context: ProviderSettingsContext) -> ProviderSettingsFieldDescriptor
-    {
-        ProviderSettingsFieldDescriptor(
-            id: "\(provider.rawValue)-otel-genai-log-paths",
-            title: "Usage log paths",
-            subtitle: "JSON/JSONL OpenTelemetry GenAI files or folders. " +
-                "The local collector ledger is read automatically.",
-            kind: .plain,
-            placeholder: "~/Library/Logs/ai-usage.jsonl, /path/to/otel-logs",
-            binding: context.stringBinding(\.otelGenAILogPaths),
-            actions: [
-                ProviderSettingsActionDescriptor(
-                    id: "\(provider.rawValue)-refresh-otel-usage",
-                    title: "Refresh usage",
-                    style: .bordered,
-                    isVisible: nil,
-                    perform: {
-                        await context.store.refresh(trigger: .manual, forceTokenUsage: true)
-                    }),
-            ],
-            isVisible: nil)
+    private func supportsLoginFlow(_ provider: UsageProvider) -> Bool {
+        ProviderCatalog.implementation(for: provider)?.supportsLoginFlow == true
+    }
+
+    private func triggerLoginFlow(for provider: UsageProvider) {
+        NotificationCenter.default.post(
+            name: .runicTriggerProviderLogin,
+            object: nil,
+            userInfo: ["provider": provider.rawValue])
     }
 
     private func makeSettingsContext(provider: UsageProvider) -> ProviderSettingsContext {

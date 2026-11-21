@@ -128,4 +128,16 @@ struct UsageFormatterTests {
             costUSD: nil)
         #expect(UsageFormatter.tokenSummaryString(totals) == "1.6K tok (in 1K, out 200, cache 350)")
     }
+
+    @Test
+    func `plan tier badge normalizes subscription levels`() {
+        #expect(UsageFormatter.planTierBadge("Google AI Ultra") == "Ultra")
+        #expect(UsageFormatter.planTierBadge("Google AI Pro") == "Pro")
+        #expect(UsageFormatter.planTierBadge("Claude Max 20x") == "Max 20x")
+        #expect(UsageFormatter.planTierBadge("Claude Max 5x") == "Max 5x")
+        #expect(UsageFormatter.planTierBadge("Claude Max") == "Max")
+        #expect(UsageFormatter.planTierBadge("chatgpt plus") == "Plus")
+        #expect(UsageFormatter.planTierBadge("api-key") == "API")
+        #expect(UsageFormatter.planTierBadge("   ") == nil)
+    }
 }

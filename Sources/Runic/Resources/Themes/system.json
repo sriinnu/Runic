@@ -7,15 +7,15 @@
   "prefersDarkAppearance": null,
   "colors": {
     "primary":       "$controlAccentColor",
-    "secondary":     "#4288F5",
+    "secondary":     "#2F6FDB|#5E9BFF",
     "accent":        "$controlAccentColor",
     "highlight":     "#B85A00|#F0872E",
-    "warm":          "#9B3BC4|#CC73EB",
-    "tertiary":      "#0F7F96|#42C7DB",
+    "warm":          "#C42B3A|#FF7A85",
+    "tertiary":      "#0F7F5C|#3DD68C",
     "surface":       "$windowBackgroundColor",
     "surfaceAlt":    "$controlBackgroundColor",
-    "cardFill":      "$controlBackgroundColor@0.34",
-    "cardStroke":    "$separatorColor@0.35",
+    "cardFill":      "$controlBackgroundColor@0.55",
+    "cardStroke":    "$separatorColor",
     "primaryText":   "$controlTextColor",
     "secondaryText": "$secondaryLabelColor"
   },
@@ -25,8 +25,8 @@
   "density": { "preset": "normal" },
   "style": {
     "typography": { "bodyFamily": "__sf_pro__", "numericFamily": "__sf_mono__", "scale": 1.0, "tracking": 0.0, "contrast": "strong" },
-    "chrome": { "borderStyle": "native", "borderWeight": 0.7, "borderOpacity": 0.52, "cornerStyle": "standard", "panelDepth": "medium" },
-    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.12, "materialIntensity": 0.34 },
+    "chrome": { "borderStyle": "native", "borderWeight": 0.5, "borderOpacity": 0.6, "cornerStyle": "standard", "panelDepth": "low" },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.34 },
     "controls": { "selectedFillStyle": "accentSoft", "progressStyle": "softBar", "hoverStyle": "accent" }
   }
 }

@@ -28,7 +28,7 @@ struct CustomProvidersPane: View {
     }
 
     var body: some View {
-        PreferencesListPane {
+        PreferencesPane {
             VStack(alignment: .leading, spacing: RunicSpacing.lg) {
                 // Header with add button
                 HStack {
@@ -44,7 +44,6 @@ struct CustomProvidersPane: View {
                     }
                     .buttonStyle(.runicProminent)
                 }
-                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
 
                 if self.providers.isEmpty {
                     RunicEmptyStateView(
@@ -61,16 +60,14 @@ struct CustomProvidersPane: View {
                             onToggle: { enabled in self.toggleProvider(provider, enabled: enabled) },
                             onEdit: { self.editorSheet = .edit(provider) },
                             onDelete: { self.confirmDelete = provider })
-                            .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
 
                         if provider.id != self.providers.last?.id {
                             Divider()
-                                .padding(.leading, PreferencesLayoutMetrics.paneHorizontal + 44)
+                                .padding(.leading, 44)
                         }
                     }
                 }
             }
-            .padding(.vertical, RunicSpacing.md)
         }
         .onAppear {
             self.loadProviders()
@@ -211,10 +208,10 @@ private struct CustomProviderRow: View {
                                 Text("\(percent)% used")
                                     .font(self.fonts.caption)
                                     .foregroundStyle(self.runicTheme.secondaryText)
+                                Text("•")
+                                    .font(self.fonts.caption)
+                                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             }
-                            Text("•")
-                                .font(self.fonts.caption)
-                                .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
                             Text("Updated \(snapshot.updatedAt.relativeDescription())")
                                 .font(self.fonts.caption)
                                 .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
@@ -356,20 +353,27 @@ private struct CustomProviderEditorView: View {
     private func save() {
         let id = self.provider?.id ?? UUID().uuidString
         let account = self.provider?.auth.tokenKeychain ?? "custom-\(id)-api-token"
+        let trimmedToken = self.apiToken.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            try self.tokenStore.storeToken(self.apiToken, account: account)
+            if !trimmedToken.isEmpty {
+                try self.tokenStore.storeToken(trimmedToken, account: account)
+            }
+            let auth = AuthConfig(
+                type: self.provider?.auth.type ?? .bearer,
+                headerName: self.provider?.auth.headerName ?? "Authorization",
+                tokenKeychain: account)
+            let mapping = self.provider?.endpoints.usage?.mapping ?? ResponseMapping()
             let error = self.onSave(CustomProviderConfig(
                 id: id,
                 name: self.name.trimmingCharacters(in: .whitespacesAndNewlines),
                 icon: self.icon.trimmingCharacters(in: .whitespacesAndNewlines),
                 enabled: self.provider?.enabled ?? true,
-                auth: AuthConfig(
-                    type: .bearer,
-                    headerName: "Authorization",
-                    tokenKeychain: account),
+                auth: auth,
                 endpoints: EndpointConfig(usage: UsageEndpoint(
                     url: self.usageEndpointURL.trimmingCharacters(in: .whitespacesAndNewlines),
-                    mapping: ResponseMapping()))))
+                    mapping: mapping)),
+                colorHex: self.provider?.colorHex,
+                createdAt: self.provider?.createdAt ?? Date()))
             self.saveError = error
         } catch {
             self.saveError = "Could not save API token: \(error.localizedDescription)"

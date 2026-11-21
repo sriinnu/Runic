@@ -69,7 +69,14 @@ extension AntigravityStatusProbe {
     }
 
     private static func parseDate(_ value: String) -> Date? {
-        if let date = ISO8601DateFormatter().date(from: value) {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: value) {
+            return date
+        }
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        if let date = standard.date(from: value) {
             return date
         }
         if let seconds = Double(value) {
@@ -116,11 +123,21 @@ private struct PlanInfo: Decodable {
             planName,
             planShortName,
         ]
-        for candidate in candidates {
-            guard let value = candidate?.trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
-            if !value.isEmpty { return value }
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if let specific = candidates.first(where: { candidate in
+            let lower = candidate.lowercased()
+            return lower.contains("ultra")
+                || lower.contains("max")
+                || lower.contains("enterprise")
+                || lower.contains("pro")
+                || lower.contains("team")
+                || lower.contains("plus")
+                || lower.contains("workspace")
+        }) {
+            return specific
         }
-        return nil
+        return candidates.first
     }
 }
 

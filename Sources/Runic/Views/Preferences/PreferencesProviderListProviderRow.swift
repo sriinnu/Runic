@@ -13,6 +13,8 @@ struct ProviderListProviderRowView: View {
     let statusLabel: String
     let errorDisplay: ProviderErrorDisplay?
     @Binding var isErrorExpanded: Bool
+    let supportsLoginFlow: Bool
+    let onSignIn: () -> Void
     let onCopyError: (String) -> Void
     @State private var isHovering = false
     @FocusState private var isToggleFocused: Bool
@@ -37,9 +39,26 @@ struct ProviderListProviderRowView: View {
                     HStack(alignment: .top, spacing: RunicSpacing.sm) {
                         ProviderListBrandIcon(provider: self.provider)
                         VStack(alignment: .leading, spacing: RunicSpacing.xxs) {
-                            Text(metadata.displayName)
-                                .font(self.fonts.headline.weight(.semibold))
-                                .foregroundStyle(.primary)
+                            HStack(alignment: .firstTextBaseline, spacing: RunicSpacing.xs) {
+                                Text(metadata.displayName)
+                                    .font(self.fonts.headline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                if let plan = UsageFormatter.planTierBadge(
+                                    self.store.snapshot(for: self.provider)?.loginMethod(for: self.provider))
+                                {
+                                    Text(plan.uppercased())
+                                        .font(self.fonts.caption2.weight(.bold))
+                                        .foregroundStyle(self.runicTheme.accent)
+                                        .lineLimit(1)
+                                        .fixedSize(horizontal: true, vertical: false)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1.5)
+                                        .background(Capsule().fill(self.runicTheme.accent.opacity(0.14)))
+                                        .overlay(Capsule().strokeBorder(
+                                            self.runicTheme.accent.opacity(0.45),
+                                            lineWidth: 0.5))
+                                }
+                            }
                             Text(self.subtitle)
                                 .font(self.fonts.footnote)
                                 .foregroundStyle(self.runicTheme.secondaryText)
@@ -66,8 +85,8 @@ struct ProviderListProviderRowView: View {
                     }
                     .padding(.leading, ProviderListMetrics.textColumnInset)
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { self.isEnabled.toggle() }
+                // Intentionally no row-wide tap-to-toggle so clicking to inspect
+                // or copy card details cannot accidentally disable the provider.
 
                 if !insightLines.isEmpty {
                     ProviderInsightsView(lines: insightLines)
@@ -87,10 +106,22 @@ struct ProviderListProviderRowView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Outside the header's tap-to-toggle region: a click on ↻ (or on
+            // Outside the header's tap region: a click on ↻ (or on
             // the greyed-out ↻ while a fetch is running, which SwiftUI passes
             // through a disabled button) must never flip the provider off.
-            ProviderReloadButton(provider: self.provider, store: self.store, isEnabled: self.isEnabled)
+            HStack(spacing: RunicSpacing.xs) {
+                if self.isEnabled, self.supportsLoginFlow {
+                    Button {
+                        self.onSignIn()
+                    } label: {
+                        Label("Sign In", systemImage: "person.badge.key")
+                    }
+                    .buttonStyle(.runicBordered)
+                    .controlSize(.small)
+                    .help("Sign in or reconnect \(metadata.displayName)")
+                }
+                ProviderReloadButton(provider: self.provider, store: self.store, isEnabled: self.isEnabled)
+            }
         }
         .padding(ProviderListMetrics.providerCardPadding)
         .background(self.cardBackground)

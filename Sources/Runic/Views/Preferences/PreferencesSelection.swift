@@ -10,10 +10,16 @@ final class PreferencesSelection {
     /// (deep links, screenshot renders). A China slot selects its brand row and
     /// flips the region switch to China.
     var provider: UsageProvider?
+
+    func openProvider(_ provider: UsageProvider) {
+        self.provider = provider
+        self.tab = .providers
+    }
 }
 
 enum PreferencesTab: String, Hashable, CaseIterable, Identifiable {
     case general
+    case appearance
     case providers
     case analytics
     case sync
@@ -25,8 +31,8 @@ enum PreferencesTab: String, Hashable, CaseIterable, Identifiable {
         self.rawValue
     }
 
-    static let windowWidth: CGFloat = 560
-    static let windowHeight: CGFloat = 726
+    static let windowWidth: CGFloat = 820
+    static let windowHeight: CGFloat = 680
 
     var preferredHeight: CGFloat {
         PreferencesTab.windowHeight

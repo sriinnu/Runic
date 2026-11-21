@@ -77,7 +77,27 @@ public struct UsageResetCredits: Codable, Sendable, Hashable {
         self.available(now: now).compactMap(\.expiresAt).max()
     }
 
+    public func hasAny(now: Date = .init()) -> Bool {
+        self.effectiveAvailableCount(now: now) > 0
+    }
+
+    /// Usable count after dropping detailed grants that have already expired,
+    /// while preserving `availableCount` when no detailed list was returned or
+    /// when summary count exceeds the subset still active.
+    public func effectiveAvailableCount(now: Date = .init()) -> Int {
+        guard self.availableCount > 0 else { return 0 }
+        guard !self.credits.isEmpty else { return self.availableCount }
+        let usable = self.available(now: now).count
+        let activeOrFuture = self.credits.count { credit in
+            credit.status.lowercased() == "available" && (credit.expiresAt.map { $0 > now } ?? true)
+        }
+        guard activeOrFuture < self.credits.count || usable < self.credits.count else {
+            return self.availableCount
+        }
+        return usable
+    }
+
     public var hasAny: Bool {
-        self.availableCount > 0
+        self.hasAny()
     }
 }

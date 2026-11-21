@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.16.0 — 2026-11-21
+
+### Skins & UI
+
+- **New Meridian skin**: An adaptive Swiss astronomical chronometer skin (Porcelain Enamel light / Grand Feu Midnight dark) with a 200° power-reserve sub-dial, tapered Dauphine hand, ruby cabochon pivot, calibrated railway gauges, and faceted status jewels. Replaces retired `Yantra`, `Receipt`, and `Retro` themes with automatic preference migration (`yantra` → `meridian`, `receipt` → `gazette`, `retro` → `relief`).
+- **Liquid Glass MK II, Relief MK II & Flight Deck MK II**: Liquid Glass is now the default theme, with refined capillary gauges, tactile neomorphic wells on Relief, and upgraded PFD cockpit attitude/burn indicators on Flight Deck.
+- **Redesigned Settings window**: Cleaner 820×680 split layout with updated Appearance theme previews, clearer General/Integrations structure, and updated CLI/MCP install paths (`Settings → General → Install CLI`, `Settings → Integrations → Runic MCP`).
+
+### Providers, Plan Tiers & Quotas
+
+- **Plan tier badges everywhere**: Overview cards, skin headers, and `runic usage` CLI output now surface live provider tiers including `Google AI Ultra` (Antigravity) and Claude `Ultra` / `Max 5x` / `Max 20x` with preserved acronyms.
+- **Antigravity CLI (`agy /usage`)**: Live quota scraping across all 4 model windows with ANSI stream plan-label capture (`Plan: Google AI Ultra`) and desktop fallback when the CLI is unavailable.
+- **Claude & Gemini fixes**: `ClaudeStatusProbe` dismisses startup prompts and captures identity/plan banners reliably (`Plan: Ultra`); Gemini CLI `0.68.0` OAuth refreshes cleanly from `bundle/chunk-*.js` (respecting `GEMINI_CLI_PATH`) and explains Google's personal-OAuth deprecation with guidance toward Antigravity for Pro/Ultra quotas.
+
 ## 2.15.4 — 2026-11-18
 - Claude and Codex: 2.15.3's one-time re-pricing of past days could be skipped. Running the `runic` command-line tool before the app marked it done without re-pricing anything, so past days stayed at $0. It now counts as done only after a full rescan. This update runs it again.
 

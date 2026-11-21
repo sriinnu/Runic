@@ -77,6 +77,7 @@ struct RunicApp: App {
             }
         }
         .defaultSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight)
+        .windowResizability(.contentMinSize)
     }
 
     static func applyTheme(_ theme: Theme) {

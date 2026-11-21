@@ -34,23 +34,17 @@ struct SyncPane: View {
     }
 
     var body: some View {
-        ZStack {
-            LiquidMeshBackground()
-                .ignoresSafeArea()
-                .opacity(0.3)
+        VStack(spacing: 0) {
+            RunicSegmentedPicker(selection: self.$selectedSection, cases: SyncSection.allCases, label: \.label)
+                .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
+                .padding(.top, PreferencesLayoutMetrics.paneVertical)
+                .padding(.bottom, RunicSpacing.sm)
 
-            VStack(spacing: 0) {
-                RunicSegmentedPicker(selection: self.$selectedSection, cases: SyncSection.allCases, label: \.label)
-                    .padding(.horizontal, PreferencesLayoutMetrics.paneHorizontal)
-                    .padding(.top, PreferencesLayoutMetrics.paneVertical)
-                    .padding(.bottom, RunicSpacing.sm)
-
-                switch self.selectedSection {
-                case .integrations:
-                    IntegrationsPane(settings: self.settings, store: self.store)
-                case .teams:
-                    TeamManagementView(settings: self.settings, store: self.store)
-                }
+            switch self.selectedSection {
+            case .integrations:
+                IntegrationsPane(settings: self.settings, store: self.store)
+            case .teams:
+                TeamManagementView(settings: self.settings, store: self.store)
             }
         }
     }

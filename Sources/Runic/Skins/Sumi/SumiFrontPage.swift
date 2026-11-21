@@ -77,10 +77,11 @@ struct SumiFrontPage: View {
                 if let onAddRegion = self.view.onAddRegion {
                     ForEach(OverviewMenuView.brandGroups(self.view.summaries)) { group in
                         if let missing = group.missingSlot {
+                            let label = OverviewMenuView.addRegionLabel(for: missing)
                             Button {
                                 onAddRegion(missing)
                             } label: {
-                                Text("Add \(missing.region.displayName) account \u{2192}")
+                                Text("\(label) \u{2192}")
                                     .font(RunicSumi.strong(11.5))
                                     .skinFace()
                                     .foregroundStyle(self.runicTheme.accent)
@@ -89,7 +90,7 @@ struct SumiFrontPage: View {
                             .buttonStyle(.plain)
                             .padding(.top, 10)
                             .padding(.leading, 44)
-                            .accessibilityLabel("Add \(missing.region.displayName) account")
+                            .accessibilityLabel(label)
                         }
                     }
                 }
@@ -147,6 +148,10 @@ struct SumiProviderRow: View {
                         .skinFace()
                         .lineLimit(1)
                         .layoutPriority(1)
+                    if let plan = self.summary.planBadge {
+                        SumiLabel(text: plan)
+                            .fixedSize(horizontal: true, vertical: false)
+                    }
                     Spacer(minLength: 8)
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text(self.summary.hasQuota ? "\(Int(self.summary.usedPercent))" : "\u{2014}")

@@ -89,11 +89,16 @@ struct ProviderTabBarView: View {
                         .frame(height: self.runicTheme.isGazette ? 18 : nil)
                         .padding(.horizontal, self.runicTheme.isPaperCutout ? RunicSpacing.xs : RunicSpacing.compact)
                         .padding(.vertical, RunicSpacing.xxs + 2)
-                        .background(self.tabShape
-                            .fill(self.tabBackgroundFill(
-                                selectedColor: selectedColor,
-                                isSelected: tab.isSelected,
-                                index: index)))
+                        .background(
+                            self.tabShape
+                                .fill(self.tabBackgroundFill(
+                                    selectedColor: selectedColor,
+                                    isSelected: tab.isSelected,
+                                    index: index))
+                                .shadow(
+                                    color: self.tabGlowColor(selectedColor: selectedColor, isSelected: tab.isSelected),
+                                    radius: self.tabGlowRadius(isSelected: tab.isSelected),
+                                    y: 1))
                         .overlay(self.tabShape
                             .stroke(
                                 self.tabStrokeColor(selectedColor: selectedColor, isSelected: tab.isSelected),
@@ -101,10 +106,6 @@ struct ProviderTabBarView: View {
                         .foregroundStyle(self.runicTheme.isTerminalHUD
                             ? self.terminalForegroundStyle(for: tab)
                             : self.standardForegroundStyle(for: tab))
-                        .shadow(
-                            color: self.tabGlowColor(selectedColor: selectedColor, isSelected: tab.isSelected),
-                            radius: self.tabGlowRadius(isSelected: tab.isSelected),
-                            y: 1)
                         // Folder tabs: each a sticker, the selected one sits
                         // flat and the rest lean a degree either way.
                         .runicCutout(

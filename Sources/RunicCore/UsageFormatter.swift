@@ -507,4 +507,35 @@ public enum UsageFormatter {
         }
         return cleaned
     }
+
+    /// Compact tier badge for Overview rows and Settings cards ("Ultra", "Max", "Pro", "Plus", ...).
+    public static func planTierBadge(_ rawPlan: String?) -> String? {
+        guard let rawPlan else { return nil }
+        let stripped = TextParsing.stripANSICodes(rawPlan)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !stripped.isEmpty else { return nil }
+        let lower = stripped.lowercased()
+        if lower.contains("ultra") || lower.contains("g1-ultra") { return "Ultra" }
+        if lower.contains("max 20x") || lower.contains("max_20x") || lower.contains("max20x") { return "Max 20x" }
+        if lower.contains("max 5x") || lower.contains("max_5x") || lower.contains("max5x") { return "Max 5x" }
+        if lower.contains("max") { return "Max" }
+        if lower.contains("enterprise") { return "Enterprise" }
+        if lower.contains("business") { return "Business" }
+        if lower.contains("team") { return "Team" }
+        if lower.contains("plus") { return "Plus" }
+        if lower.contains("g1-pro") || lower.range(of: #"\bpro\b"#, options: .regularExpression) != nil {
+            return "Pro"
+        }
+        if lower.contains("workspace") { return "Workspace" }
+        if lower.contains("hobby") { return "Hobby" }
+        if lower.contains("free") { return "Free" }
+        if lower.contains("paid") { return "Paid" }
+        if lower.contains("api-key") || lower.contains("api key") { return "API" }
+        let cleaned = Self.cleanPlanName(stripped)
+        if !cleaned.isEmpty, cleaned.count <= 16, !cleaned.contains("@"), !cleaned.contains("://") {
+            return cleaned
+        }
+        return nil
+    }
 }

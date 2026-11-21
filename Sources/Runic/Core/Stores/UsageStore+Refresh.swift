@@ -401,6 +401,8 @@ extension UsageStore {
                     } else {
                         self.providerCredits[accountID] = credits
                     }
+                } else if !(provider == .codex && accountID.isDefault) {
+                    self.providerCredits.removeValue(forKey: accountID)
                 }
                 self.lastSourceLabels[accountID] = result.sourceLabel
                 self.errors[accountID] = nil

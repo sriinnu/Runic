@@ -46,6 +46,11 @@ enum UsageLedgerSourceFactory {
              .bedrock,
              .vertexai,
              .qwen,
+             .qwenCN,
+             .typesafe,
+             .cline,
+             .muse,
+             .ollamacloud,
              .localLLM:
             return self.otelHistorySource(provider: provider, now: now, maxAgeDays: maxAgeDays)
         @unknown default:

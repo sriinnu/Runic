@@ -137,15 +137,17 @@ struct RunicTests {
         let semanticIntents: [RunicIconIntent] = [.data, .destructive, .info, .statusGood, .statusWarning]
 
         for theme in Theme.allCases {
-            let palette = theme.palette
-            for intent in semanticIntents {
-                let color = palette.iconColor(for: intent)
-                #expect(
-                    self.contrast(color, against: palette.surface, palette: palette) >= 3.0,
-                    "\(theme.rawValue) \(intent) should read on surface")
-                #expect(
-                    self.contrast(color, against: palette.menuSubtleFill, palette: palette) >= 3.0,
-                    "\(theme.rawValue) \(intent) should read on subtle panel fill")
+            self.forResolvedAppearances(theme) {
+                let palette = theme.palette
+                for intent in semanticIntents {
+                    let color = palette.iconColor(for: intent)
+                    #expect(
+                        self.contrast(color, against: palette.surface, palette: palette) >= 3.0,
+                        "\(theme.rawValue) \(intent) should read on surface")
+                    #expect(
+                        self.contrast(color, against: palette.menuSubtleFill, palette: palette) >= 3.0,
+                        "\(theme.rawValue) \(intent) should read on subtle panel fill")
+                }
             }
         }
     }
@@ -154,27 +156,29 @@ struct RunicTests {
     @Test
     func `theme text colors keep 4point5 contrast on themed surfaces`() {
         for theme in Theme.allCases {
-            let palette = theme.palette
-            let surfaces: [(String, Color)] = [
-                ("surface", palette.surface),
-                ("surfaceAlt", palette.surfaceAlt),
-                ("cardFill", palette.cardFill),
-                ("menuSubtleFill", palette.menuSubtleFill),
-            ]
-            for (name, background) in surfaces {
-                #expect(
-                    self.contrast(palette.primaryText, against: background, palette: palette) >= 4.5,
-                    "\(theme.rawValue) primaryText should hit 4.5:1 on \(name)")
-                #expect(
-                    self.contrast(palette.readableSecondaryText, against: background, palette: palette) >= 4.5,
-                    "\(theme.rawValue) readableSecondaryText should hit 4.5:1 on \(name)")
-                // The plain secondary tone mirrors macOS's secondaryLabelColor
-                // on the System theme, which Apple ships below 4.5:1 by
-                // design; opinionated bundled themes must clear it outright.
-                if theme != .system {
+            self.forResolvedAppearances(theme) {
+                let palette = theme.palette
+                let surfaces: [(String, Color)] = [
+                    ("surface", palette.surface),
+                    ("surfaceAlt", palette.surfaceAlt),
+                    ("cardFill", palette.cardFill),
+                    ("menuSubtleFill", palette.menuSubtleFill),
+                ]
+                for (name, background) in surfaces {
                     #expect(
-                        self.contrast(palette.secondaryText, against: background, palette: palette) >= 4.5,
-                        "\(theme.rawValue) secondaryText should hit 4.5:1 on \(name)")
+                        self.contrast(palette.primaryText, against: background, palette: palette) >= 4.5,
+                        "\(theme.rawValue) primaryText should hit 4.5:1 on \(name)")
+                    #expect(
+                        self.contrast(palette.readableSecondaryText, against: background, palette: palette) >= 4.5,
+                        "\(theme.rawValue) readableSecondaryText should hit 4.5:1 on \(name)")
+                    // The plain secondary tone mirrors macOS's secondaryLabelColor
+                    // on the System theme, which Apple ships below 4.5:1 by
+                    // design; opinionated bundled themes must clear it outright.
+                    if theme != .system {
+                        #expect(
+                            self.contrast(palette.secondaryText, against: background, palette: palette) >= 4.5,
+                            "\(theme.rawValue) secondaryText should hit 4.5:1 on \(name)")
+                    }
                 }
             }
         }
@@ -198,12 +202,14 @@ struct RunicTests {
     @Test
     func `selected icon colors keep contrast against selected fills`() {
         for theme in Theme.allCases {
-            let palette = theme.palette
-            let selectedFill = self.selectedFill(for: palette)
-            let selectedColor = palette.iconColor(for: .navigation, selected: true)
-            #expect(
-                self.contrast(selectedColor, against: selectedFill, palette: palette) >= 3.0,
-                "\(theme.rawValue) selected icon should read over selected fill")
+            self.forResolvedAppearances(theme) {
+                let palette = theme.palette
+                let selectedFill = self.selectedFill(for: palette)
+                let selectedColor = palette.iconColor(for: .navigation, selected: true)
+                #expect(
+                    self.contrast(selectedColor, against: selectedFill, palette: palette) >= 3.0,
+                    "\(theme.rawValue) selected icon should read over selected fill")
+            }
         }
     }
 
@@ -211,22 +217,43 @@ struct RunicTests {
     @Test
     func `icon colors keep contrast on actual menu control fills`() {
         for theme in Theme.allCases {
-            let palette = theme.palette
-            let selectedIcon = palette.iconColor(for: .navigation, selected: true)
-            let hoveredIcon = palette.iconColor(for: .navigation, hovered: true)
+            self.forResolvedAppearances(theme) {
+                let palette = theme.palette
+                let selectedIcon = palette.iconColor(for: .navigation, selected: true)
+                let hoveredIcon = palette.iconColor(for: .navigation, hovered: true)
 
-            #expect(
-                self.contrast(
-                    selectedIcon,
-                    against: self.providerTabSelectedFill(for: palette),
-                    palette: palette) >= 3.0,
-                "\(theme.rawValue) selected provider tab icon should read over selected tab fill")
-            #expect(
-                self.contrast(hoveredIcon, against: self.popoverChipHoverFill(for: palette), palette: palette) >= 3.0,
-                "\(theme.rawValue) hovered chip icon should read over chip hover fill")
-            #expect(
-                self.contrast(hoveredIcon, against: self.popoverActionHoverFill(for: palette), palette: palette) >= 3.0,
-                "\(theme.rawValue) hovered action icon should read over action hover fill")
+                #expect(
+                    self.contrast(
+                        selectedIcon,
+                        against: self.providerTabSelectedFill(for: palette),
+                        palette: palette) >= 3.0,
+                    "\(theme.rawValue) selected provider tab icon should read over selected tab fill")
+                #expect(
+                    self.contrast(
+                        hoveredIcon,
+                        against: self.popoverChipHoverFill(for: palette),
+                        palette: palette) >= 3.0,
+                    "\(theme.rawValue) hovered chip icon should read over chip hover fill")
+                #expect(
+                    self.contrast(
+                        hoveredIcon,
+                        against: self.popoverActionHoverFill(for: palette),
+                        palette: palette) >= 3.0,
+                    "\(theme.rawValue) hovered action icon should read over action hover fill")
+            }
+        }
+    }
+
+    @MainActor
+    private func forResolvedAppearances(_ theme: Theme, check: () -> Void) {
+        guard theme.palette.prefersDarkAppearance == nil else {
+            check()
+            return
+        }
+        for name in [NSAppearance.Name.darkAqua, .aqua] {
+            NSAppearance(named: name)?.performAsCurrentDrawingAppearance {
+                check()
+            }
         }
     }
 

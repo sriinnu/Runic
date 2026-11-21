@@ -7,40 +7,50 @@ struct AnalyticsPane: View {
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
 
+    enum ActiveSheet: Identifiable {
+        case addRule
+        case editRule(AlertRuleStore.AlertRule)
+        case addBudget
+
+        var id: String {
+            switch self {
+            case .addRule: "add-rule"
+            case let .editRule(rule): "edit-rule-\(rule.id)"
+            case .addBudget: "add-budget"
+            }
+        }
+    }
+
     // MARK: - Disclosure state
 
-    @State var displayExpanded = true
-    @State var insightsExpanded = false
+    @State var insightsExpanded = true
+    @State var budgetsExpanded = true
     @State var alertsExpanded = false
-    @State var budgetsExpanded = false
 
     // MARK: - Alerts state
 
     @State var alertsData: AlertRuleStore.AlertsData = AlertRuleStore.load()
-    @State var showingAddRule = false
-    @State var editingRule: AlertRuleStore.AlertRule?
     @State var guardrailStatus: String?
 
     // MARK: - Budgets state
 
     @State var budgets: [ProjectBudgetStore.ProjectBudget] = []
-    @State var showingAddBudget = false
     @State var newProjectID = ""
     @State var newProjectName = ""
     @State var newMonthlyLimit = ""
     @State var newAlertThreshold = "80"
     @State var budgetErrorMessage: String?
 
+    @State var activeSheet: ActiveSheet?
     @State var appeared = false
     @Environment(\.runicTheme) var runicTheme
     @Environment(\.accessibilityReduceMotion) var reduceMotion
 
     var body: some View {
         LiquidPreferencesPane {
-            self.displaySection
             self.insightsSection
-            self.alertsSection
             self.budgetsSection
+            self.alertsSection
         }
         .onAppear {
             self.alertsData = AlertRuleStore.load()
@@ -51,41 +61,43 @@ struct AnalyticsPane: View {
                 }
             }
         }
-        .sheet(isPresented: self.$showingAddRule) {
-            AnalyticsRuleEditorSheet(
-                rule: nil,
-                onSave: { newRule in
-                    do {
-                        try AlertRuleStore.addRule(newRule)
-                        self.alertsData = AlertRuleStore.load()
-                    } catch {
-                        print("Failed to add rule: \(error)")
-                    }
-                })
-        }
-        .sheet(item: self.$editingRule) { rule in
-            AnalyticsRuleEditorSheet(
-                rule: rule,
-                onSave: { updatedRule in
-                    do {
-                        try AlertRuleStore.updateRule(updatedRule)
-                        self.alertsData = AlertRuleStore.load()
-                    } catch {
-                        print("Failed to update rule: \(error)")
-                    }
-                })
-        }
-        .sheet(isPresented: self.$showingAddBudget) {
-            AnalyticsAddBudgetSheet(
-                projectID: self.$newProjectID,
-                projectName: self.$newProjectName,
-                monthlyLimit: self.$newMonthlyLimit,
-                alertThreshold: self.$newAlertThreshold,
-                onAdd: { self.addBudget() },
-                onCancel: {
-                    self.showingAddBudget = false
-                    self.resetNewBudgetFields()
-                })
+        .sheet(item: self.$activeSheet) { sheet in
+            switch sheet {
+            case .addRule:
+                AnalyticsRuleEditorSheet(
+                    rule: nil,
+                    onSave: { newRule in
+                        do {
+                            try AlertRuleStore.addRule(newRule)
+                            self.alertsData = AlertRuleStore.load()
+                        } catch {
+                            self.guardrailStatus = "Failed to add rule: \(error.localizedDescription)"
+                        }
+                    })
+            case let .editRule(rule):
+                AnalyticsRuleEditorSheet(
+                    rule: rule,
+                    onSave: { updatedRule in
+                        do {
+                            try AlertRuleStore.updateRule(updatedRule)
+                            self.alertsData = AlertRuleStore.load()
+                        } catch {
+                            self.guardrailStatus = "Failed to update rule: \(error.localizedDescription)"
+                        }
+                    })
+            case .addBudget:
+                AnalyticsAddBudgetSheet(
+                    projectID: self.$newProjectID,
+                    projectName: self.$newProjectName,
+                    monthlyLimit: self.$newMonthlyLimit,
+                    alertThreshold: self.$newAlertThreshold,
+                    errorMessage: self.budgetErrorMessage,
+                    onAdd: { self.addBudget() },
+                    onCancel: {
+                        self.activeSheet = nil
+                        self.resetNewBudgetFields()
+                    })
+            }
         }
     }
 }

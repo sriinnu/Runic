@@ -138,27 +138,36 @@ extension GeminiStatusProbe {
         let env = ProcessInfo.processInfo.environment
         let fm = FileManager.default
 
-        // Collect every candidate Gemini binary — PATH may find a wrapper
-        // before the real CLI (e.g. a Python script shadowing the Homebrew
-        // Node.js binary). Use a Set so duplicates don't cause redundant I/O.
-        var candidateSet = Set<String>()
-        if let path = BinaryLocator.resolveGeminiBinary(
-            env: env,
-            loginPATH: LoginShellPathCache.shared.current)
-            ?? TTYCommandRunner.which("gemini")
+        let candidates: [String]
+        if let override = env["GEMINI_CLI_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !override.isEmpty
         {
-            candidateSet.insert(path)
-        }
-        // Homebrew (ARM Mac).
-        if fm.isExecutableFile(atPath: "/opt/homebrew/bin/gemini") {
-            candidateSet.insert("/opt/homebrew/bin/gemini")
-        }
-        // Homebrew (Intel Mac).
-        if fm.isExecutableFile(atPath: "/usr/local/bin/gemini") {
-            candidateSet.insert("/usr/local/bin/gemini")
+            candidates = fm.isExecutableFile(atPath: override) ? [override] : []
+        } else {
+            // Collect every candidate Gemini binary in priority order — PATH may
+            // find a wrapper before the real CLI (e.g. a Python script shadowing
+            // the Homebrew Node.js binary).
+            var rawCandidates: [String] = []
+            if let path = BinaryLocator.resolveGeminiBinary(
+                env: env,
+                loginPATH: LoginShellPathCache.shared.current)
+                ?? TTYCommandRunner.which("gemini")
+            {
+                rawCandidates.append(path)
+            }
+            // Homebrew (ARM Mac).
+            if fm.isExecutableFile(atPath: "/opt/homebrew/bin/gemini") {
+                rawCandidates.append("/opt/homebrew/bin/gemini")
+            }
+            // Homebrew (Intel Mac).
+            if fm.isExecutableFile(atPath: "/usr/local/bin/gemini") {
+                rawCandidates.append("/usr/local/bin/gemini")
+            }
+            var seen = Set<String>()
+            candidates = rawCandidates.filter { seen.insert($0).inserted }
         }
 
-        for geminiPath in candidateSet {
+        for geminiPath in candidates {
             // Resolve all symlink hops, not just the first one.
             let realPath = (geminiPath as NSString).resolvingSymlinksInPath
 
@@ -176,12 +185,12 @@ extension GeminiStatusProbe {
         }
 
         self.oauthLog.error("No OAuth credentials in any Gemini candidate", metadata: [
-            "count": "\(candidateSet.count)",
+            "count": "\(candidates.count)",
         ])
         return nil
     }
 
-    private static func searchOAuthFile(realPath: String, fm: FileManager) -> GeminiOAuthClientCredentials? {
+    static func searchOAuthFile(realPath: String, fm: FileManager) -> GeminiOAuthClientCredentials? {
         let binDir = (realPath as NSString).deletingLastPathComponent
         let baseDir = (binDir as NSString).deletingLastPathComponent
 
@@ -197,31 +206,52 @@ extension GeminiStatusProbe {
         ]
 
         for path in possiblePaths {
-            if let content = try? String(contentsOfFile: path, encoding: .utf8) {
-                return self.parseOAuthCredentials(from: content)
+            if let content = try? String(contentsOfFile: path, encoding: .utf8),
+               let creds = self.parseOAuthCredentials(from: content)
+            {
+                return creds
             }
         }
 
-        // Gemini CLI 0.43+ bundles OAuth into a single file with a hash suffix.
-        let bundleBase = "\(baseDir)/libexec/lib/node_modules/@google/gemini-cli/bundle"
-        if let bundleFiles = try? fm.contentsOfDirectory(atPath: bundleBase) {
-            for file in bundleFiles where file.hasPrefix("oauth2") && file.hasSuffix(".js") {
+        // Gemini CLI 0.43+ bundles OAuth into oauth2*.js; 0.68+ resolves directly into
+        // .../bundle/gemini.js and stores OAuth config in bundle/chunk-*.js or bundle/gemini*.js.
+        let rawBundleDirs = [
+            binDir,
+            "\(baseDir)/bundle",
+            "\(baseDir)/libexec/lib/node_modules/@google/gemini-cli/bundle",
+            "\(baseDir)/lib/node_modules/@google/gemini-cli/bundle",
+        ]
+        var seenDirs = Set<String>()
+        let bundleDirs = rawBundleDirs.filter { seenDirs.insert($0).inserted }
+        let marker = Data("OAUTH_CLIENT_ID".utf8)
+
+        for bundleBase in bundleDirs {
+            guard let bundleFiles = try? fm.contentsOfDirectory(atPath: bundleBase) else { continue }
+            let jsFiles = bundleFiles.filter { $0.hasSuffix(".js") }
+            let prioritized =
+                jsFiles.filter { $0.hasPrefix("oauth2") }.sorted() +
+                jsFiles.filter { $0.hasPrefix("chunk-") || $0.hasPrefix("gemini") }.sorted()
+
+            for file in prioritized {
                 let path = "\(bundleBase)/\(file)"
-                if let content = try? String(contentsOfFile: path, encoding: .utf8) {
-                    if let creds = self.parseOAuthCredentials(from: content) {
-                        return creds
-                    }
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe]),
+                      data.range(of: marker) != nil,
+                      let content = String(data: data, encoding: .utf8),
+                      let creds = self.parseOAuthCredentials(from: content)
+                else {
+                    continue
                 }
+                return creds
             }
         }
 
         return nil
     }
 
-    private static func parseOAuthCredentials(from content: String) -> GeminiOAuthClientCredentials? {
-        let clientIdPattern = #"OAUTH_CLIENT_ID\s*=\s*['"]([\w\-\.]+)['"]\s*;"#
+    static func parseOAuthCredentials(from content: String) -> GeminiOAuthClientCredentials? {
+        let clientIdPattern = #"OAUTH_CLIENT_ID\s*=\s*['"]([\w\-\.]+)['"]"#
         let clientCredentialName = "OAUTH_CLIENT_" + "SEC" + "RET"
-        let credentialPattern = #"\#(clientCredentialName)\s*=\s*['"]([\w\-]+)['"]\s*;"#
+        let credentialPattern = #"\#(clientCredentialName)\s*=\s*['"]([\w\-]+)['"]"#
 
         guard let clientIdRegex = try? NSRegularExpression(pattern: clientIdPattern),
               let credentialRegex = try? NSRegularExpression(pattern: credentialPattern)

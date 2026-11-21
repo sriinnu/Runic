@@ -51,11 +51,11 @@ struct ZaiAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveToken(environment: context.env) != nil
+        context.credential(for: .zai) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let apiKey = Self.resolveToken(environment: context.env) else {
+        guard let apiKey = context.credential(for: .zai)?.token else {
             throw ZaiSettingsError.missingToken
         }
         let usage = try await ZaiUsageFetcher.fetchUsage(apiKey: apiKey)
@@ -66,9 +66,5 @@ struct ZaiAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveToken(environment: [String: String]) -> String? {
-        ProviderTokenResolver.zaiToken(environment: environment)
     }
 }

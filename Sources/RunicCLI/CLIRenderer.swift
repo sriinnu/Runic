@@ -39,7 +39,7 @@ enum CLIRenderer {
             lines.append("Account: \(email)")
         }
         if let plan = snapshot.loginMethod(for: provider), !plan.isEmpty {
-            lines.append("Plan: \(plan.capitalized)")
+            lines.append("Plan: \(UsageFormatter.cleanPlanName(plan))")
         }
 
         return lines.joined(separator: "\n")

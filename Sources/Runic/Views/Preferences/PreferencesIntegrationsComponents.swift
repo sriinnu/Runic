@@ -287,7 +287,7 @@ struct AddMCPServerSheet: View {
             VStack(alignment: .leading, spacing: RunicSpacing.xs) {
                 Text("Port")
                     .font(self.fonts.subheadline.weight(.medium))
-                TextField("", value: self.$port, format: .number)
+                TextField("", value: self.$port, format: .number.grouping(.never))
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 140)
             }

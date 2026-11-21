@@ -1,4 +1,5 @@
 import Foundation
+import RunicCore
 import Testing
 @testable import Runic
 
@@ -33,5 +34,31 @@ struct SettingsWindowBridgeTests {
 
         SettingsWindowBridge.select(.general, in: selection)
         #expect(selection.tab == .general)
+    }
+
+    @Test
+    func `preferences redesign exposes appearance tab wide shell and openProvider deep link`() {
+        #expect(PreferencesTab.allCases.contains(.appearance))
+        #expect(PreferencesTab.windowWidth == 820)
+
+        let selection = PreferencesSelection()
+        selection.openProvider(.codex)
+        #expect(selection.tab == .providers)
+        #expect(selection.provider == .codex)
+    }
+
+    @Test
+    func `overview add region labels distinguish china variants`() {
+        #expect(OverviewMenuView.addRegionLabel(for: .zaiCN) == "Add z.ai (China)")
+        #expect(OverviewMenuView.addRegionLabel(for: .minimaxCN) == "Add MiniMax (China)")
+    }
+
+    @Test
+    func `font choices cache returns non empty stable list`() {
+        let first = RunicFontChoice.availableChoices()
+        let second = RunicFontChoice.availableChoices()
+
+        #expect(!first.isEmpty)
+        #expect(first == second)
     }
 }

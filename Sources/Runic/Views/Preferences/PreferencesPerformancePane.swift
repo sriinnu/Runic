@@ -7,6 +7,7 @@ struct PerformancePane: View {
     @Environment(\.runicFonts) private var fonts
     @Bindable var settings: SettingsStore
     @Bindable var store: UsageStore
+    var onSelectProvider: ((UsageProvider) -> Void)?
     @Environment(\.runicTheme) private var runicTheme
 
     @AppStorage("performanceTrackingEnabled") private var performanceTrackingEnabled = true
@@ -18,11 +19,26 @@ struct PerformancePane: View {
     @State private var isClearingData = false
     @State private var vacuumStatus: String?
     @State private var clearDataStatus: String?
-    @State private var appeared = false
+    @State private var diagnosticsStatus: String?
+    @State private var guardrailStatus: String?
 
     var body: some View {
         LiquidPreferencesPane {
-            LiquidSection(title: "Performance Monitoring") {
+            SettingsGroupCard(
+                title: "Provider Health & Diagnostics",
+                caption: "Inspect active credentials, install default guardrails, or copy redacted diagnostics.")
+            {
+                RunicOperationsCenterView(
+                    settings: self.settings,
+                    store: self.store,
+                    diagnosticsStatus: self.diagnosticsStatus,
+                    guardrailStatus: self.guardrailStatus,
+                    onCopyDiagnostics: self.copyDiagnostics,
+                    onInstallGuardrails: self.installGuardrails,
+                    onSelectProvider: self.onSelectProvider)
+            }
+
+            SettingsGroupCard(title: "Performance Monitoring") {
                 PreferenceToggleRow(
                     title: "Enable local performance notes",
                     subtitle: "Stores latency, quality ratings, and error events locally on this Mac.",
@@ -34,138 +50,142 @@ struct PerformancePane: View {
                             "but new metrics won't be collected.")
                         .font(self.fonts.footnote)
                         .foregroundStyle(.orange)
-                        .padding(.vertical, RunicSpacing.xs)
                 }
             }
-            .liquidEntrance(appeared: self.appeared, index: 0)
 
-            LiquidSection(title: "Local Cache & Retention") {
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    Text("Provider JSONL logs are never deleted by Runic. Historical usage is " +
-                        "summarized into a local ledger cache so old logs do not need to be rescanned every time.")
+            SettingsGroupCard(title: "Local Cache & Retention") {
+                Text("Provider JSONL logs are never deleted by Runic. Historical usage is " +
+                    "summarized into a local ledger cache so old logs do not need to be rescanned every time.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Raw metrics retention")
+                        .font(self.fonts.callout.weight(.medium))
+
+                    RunicSegmentedPicker(
+                        selection: self.$rawMetricsRetentionDays,
+                        options: [(30, "30 days"), (60, "60 days"), (90, "90 days")])
+                        .frame(maxWidth: 300)
+
+                    Text("How long to keep detailed latency and error records.")
                         .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
-                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Raw metrics retention")
-                            .font(self.fonts.body)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Aggregated stats retention")
+                        .font(self.fonts.callout.weight(.medium))
 
-                        RunicSegmentedPicker(
-                            selection: self.$rawMetricsRetentionDays,
-                            options: [(30, "30 days"), (60, "60 days"), (90, "90 days")])
-                            .frame(maxWidth: 300)
+                    RunicSegmentedPicker(
+                        selection: self.$aggregatedStatsRetentionYears,
+                        options: [(1, "1 year"), (2, "2 years"), (5, "5 years")])
+                        .frame(maxWidth: 300)
 
-                        Text("How long to keep detailed latency and error records.")
+                    Text("How long to keep daily performance summaries.")
+                        .font(self.fonts.footnote)
+                        .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                }
+
+                Text("Retention is applied automatically once a day; \"Clear Old Data\" below " +
+                    "runs the same cleanup immediately.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            SettingsGroupCard(title: "Database Management") {
+                HStack {
+                    Text("Current database size:")
+                        .font(self.fonts.callout.weight(.medium))
+                    Text(self.databaseSize)
+                        .font(self.fonts.callout.weight(.semibold))
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                }
+
+                HStack(spacing: RunicSpacing.sm) {
+                    Button {
+                        self.vacuumDatabase()
+                    } label: {
+                        if self.isVacuuming {
+                            ProgressView()
+                                .controlSize(.small)
+                                .padding(.trailing, RunicSpacing.xxs)
+                        }
+                        Text("Vacuum Database")
+                    }
+                    .buttonStyle(.runicBordered)
+                    .disabled(self.isVacuuming || self.isClearingData)
+
+                    if let status = self.vacuumStatus {
+                        Text(status)
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.statusColor(for: status))
                     }
+                }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Aggregated stats retention")
-                            .font(self.fonts.body)
+                Text("Optimizes database file by reclaiming unused space.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
 
-                        RunicSegmentedPicker(
-                            selection: self.$aggregatedStatsRetentionYears,
-                            options: [(1, "1 year"), (2, "2 years"), (5, "5 years")])
-                            .frame(maxWidth: 300)
+                Divider()
 
-                        Text("How long to keep daily performance summaries.")
+                HStack(spacing: RunicSpacing.sm) {
+                    Button {
+                        self.clearOldData()
+                    } label: {
+                        if self.isClearingData {
+                            ProgressView()
+                                .controlSize(.small)
+                                .padding(.trailing, RunicSpacing.xxs)
+                        }
+                        Text("Clear Old Data")
+                    }
+                    .buttonStyle(.runicBordered)
+                    .disabled(self.isVacuuming || self.isClearingData)
+
+                    if let status = self.clearDataStatus {
+                        Text(status)
                             .font(self.fonts.footnote)
-                            .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
+                            .foregroundStyle(self.statusColor(for: status))
                     }
-
-                    Text("Retention is applied automatically once a day; \"Clear Old Data\" below " +
-                        "runs the same cleanup immediately.")
-                        .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
-                        .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Text("Removes old local performance notes only. Provider JSONL logs and token ledgers are left alone.")
+                    .font(self.fonts.footnote)
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .liquidEntrance(appeared: self.appeared, index: 1)
 
-            LiquidSection(title: "Database Management") {
-                VStack(alignment: .leading, spacing: RunicSpacing.sm) {
-                    HStack {
-                        Text("Current database size:")
-                            .font(self.fonts.body)
-                        Text(self.databaseSize)
-                            .font(self.fonts.body.weight(.semibold))
-                            .foregroundStyle(self.runicTheme.secondaryText)
-                    }
-
-                    HStack(spacing: RunicSpacing.sm) {
-                        Button {
-                            self.vacuumDatabase()
-                        } label: {
-                            if self.isVacuuming {
-                                ProgressView()
-                                    .controlSize(.small)
-                                    .padding(.trailing, RunicSpacing.xxs)
-                            }
-                            Text("Vacuum Database")
-                        }
-                        .buttonStyle(.runicBordered)
-                        .disabled(self.isVacuuming || self.isClearingData)
-
-                        if let status = self.vacuumStatus {
-                            Text(status)
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(status.contains("Success") ? .green : .red)
-                        }
-                    }
-
-                    Text("Optimizes database file by reclaiming unused space.")
-                        .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-
-                    Divider()
-                        .padding(.vertical, RunicSpacing.xs)
-
-                    HStack(spacing: RunicSpacing.sm) {
-                        Button {
-                            self.clearOldData()
-                        } label: {
-                            if self.isClearingData {
-                                ProgressView()
-                                    .controlSize(.small)
-                                    .padding(.trailing, RunicSpacing.xxs)
-                            }
-                            Text("Clear Old Data")
-                        }
-                        .buttonStyle(.runicBordered)
-                        .disabled(self.isVacuuming || self.isClearingData)
-
-                        if let status = self.clearDataStatus {
-                            Text(status)
-                                .font(self.fonts.footnote)
-                                .foregroundStyle(status.contains("Success") ? .green : .red)
-                        }
-                    }
-
-                    Text("Removes old local performance notes only. Provider JSONL logs and token " +
-                        "ledgers are left alone.")
-                        .font(self.fonts.footnote)
-                        .foregroundStyle(self.runicTheme.secondaryText.opacity(0.7))
-                }
-            }
-            .liquidEntrance(appeared: self.appeared, index: 2)
-
-            LiquidSection(title: "Privacy") {
+            SettingsGroupCard(title: "Privacy") {
                 Text("Runic does not collect analytics, crash reports, or anonymous usage stats.")
-                    .font(self.fonts.body.weight(.semibold))
+                    .font(self.fonts.callout.weight(.semibold))
                 Text("Usage and performance history stay on this machine unless you export it, " +
                     "copy diagnostics, or configure a webhook. Your data, your tokens, your cost.")
                     .font(self.fonts.footnote)
-                    .foregroundStyle(self.runicTheme.secondaryText.opacity(0.76))
+                    .foregroundStyle(self.runicTheme.subduedSecondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .liquidEntrance(appeared: self.appeared, index: 3)
         }
         .onAppear {
             self.calculateDatabaseSize()
-            guard !self.appeared else { return }
-            withAnimation(.easeOut(duration: 0.6)) { self.appeared = true }
+        }
+    }
+
+    private func copyDiagnostics() {
+        let report = RunicDiagnosticsReport.makeText(settings: self.settings, store: self.store)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report, forType: .string)
+        self.diagnosticsStatus = "Copied redacted diagnostics"
+    }
+
+    private func installGuardrails() {
+        do {
+            let count = try RunicDiagnosticsReport.installDefaultGuardrails()
+            self.guardrailStatus = count == 0 ? "Guardrails already installed" : "Installed \(count) guardrails"
+        } catch {
+            self.guardrailStatus = "Failed: \(error.localizedDescription)"
         }
     }
 
@@ -235,5 +255,11 @@ struct PerformancePane: View {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             self.clearDataStatus = nil
         }
+    }
+
+    private func statusColor(for status: String) -> Color {
+        if status.contains("Success") { return .green }
+        if status.hasSuffix("...") { return self.runicTheme.secondaryText }
+        return .red
     }
 }

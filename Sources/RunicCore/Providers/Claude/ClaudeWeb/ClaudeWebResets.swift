@@ -97,7 +97,9 @@ public enum ClaudeWebResets {
             guard let extras = try await self.fetchExtras() else { return snapshot }
             self.setLastFailure(nil)
             var updated = snapshot
-            if updated.resetCredits == nil { updated = updated.with(resetCredits: extras.resetCredits) }
+            if !(updated.resetCredits?.hasAny ?? false) {
+                updated = updated.with(resetCredits: extras.resetCredits)
+            }
             if let balance = extras.creditBalance { updated = updated.with(creditBalance: balance) }
             // The next API credit lands with the next charge; only a plan
             // that carries a grant shows it.
@@ -127,9 +129,9 @@ public enum ClaudeWebResets {
             let usage = try await ClaudeWebAPIFetcher.fetchUsageData(
                 orgId: organization.id,
                 sessionKey: sessionKey)
-            let balance = await Self.fetchCreditBalance(orgId: organization.id, sessionKey: sessionKey)
-            let nextCharge = await Self.fetchNextChargeDate(orgId: organization.id, sessionKey: sessionKey)
-            return Extras(resetCredits: usage.resetCredits, creditBalance: balance, nextChargeAt: nextCharge)
+            async let balance = Self.fetchCreditBalance(orgId: organization.id, sessionKey: sessionKey)
+            async let nextCharge = Self.fetchNextChargeDate(orgId: organization.id, sessionKey: sessionKey)
+            return await Extras(resetCredits: usage.resetCredits, creditBalance: balance, nextChargeAt: nextCharge)
         } catch ClaudeWebAPIFetcher.FetchError.unauthorized {
             throw Failure.sessionExpired
         }
@@ -144,7 +146,7 @@ public enum ClaudeWebResets {
         var request = URLRequest(url: url)
         request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 15
+        request.timeoutInterval = 10
         guard let (data, response) = try? await ProviderRequestSession.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return ClaudeAPICreditGrant.parseNextChargeDate(data)
@@ -157,7 +159,7 @@ public enum ClaudeWebResets {
         var request = URLRequest(url: url)
         request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 15
+        request.timeoutInterval = 10
         guard let (data, response) = try? await ProviderRequestSession.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return Self.parseCreditBalance(data)

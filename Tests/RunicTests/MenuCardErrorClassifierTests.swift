@@ -17,5 +17,15 @@ struct MenuCardErrorClassifierTests {
     func `parse and network failures are not auth errors`() {
         #expect(!MenuCardErrorClassifier.isAuthLike("Could not parse Claude usage: Missing Current session"))
         #expect(!MenuCardErrorClassifier.isAuthLike("The request timed out."))
+        #expect(!MenuCardErrorClassifier.isAuthLike("Unknown author field in response"))
+    }
+
+    @Test(arguments: [
+        "HTTP 401 Unauthorized",
+        "Authentication failed for workspace",
+        "OAuth token expired",
+    ])
+    func `explicit auth failures remain classified as auth errors`(message: String) {
+        #expect(MenuCardErrorClassifier.isAuthLike(message))
     }
 }

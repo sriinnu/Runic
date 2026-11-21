@@ -294,7 +294,7 @@ private func drawSettingsThemes(_ c: Canvas) {
     c.text("Appearance", 70, 74, 300, 40, size: 34, color: palette.text, weight: .bold)
     c.text("Themes and fonts preview live before you close settings.", 70, 118, 540, 26, size: 17, color: palette.secondary)
     let themes: [(String, NSColor, NSColor)] = [
-        ("Retro", NSColor.hex(0x3B5BA5), NSColor.hex(0xF2E9D4)),
+        ("Meridian", NSColor.hex(0xE2BC76), NSColor.hex(0x0B1019)),
         ("System", NSColor.hex(0x5B7CFA), NSColor.hex(0xF4F6F8)),
         ("Dark", NSColor.hex(0x8CCCFF), NSColor.hex(0x06080B)),
         ("Sumi", sumi.accent, sumi.surface),

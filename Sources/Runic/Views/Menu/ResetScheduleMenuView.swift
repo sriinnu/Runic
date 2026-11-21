@@ -284,10 +284,11 @@ private struct ResetCreditRow: View {
             Spacer(minLength: RunicSpacing.xs)
 
             VStack(alignment: .trailing, spacing: RunicSpacing.xxxs) {
-                if let latest = self.entry.latestExpiry {
-                    Text(ResetScheduleMenuView.compactDuration(max(0, latest.timeIntervalSince(self.now))))
+                if let deadline = self.entry.nearestExpiry ?? self.entry.latestExpiry {
+                    let remaining = deadline.timeIntervalSince(self.now)
+                    Text(remaining <= 0 ? "now" : ResetScheduleMenuView.compactDuration(remaining))
                         .font(self.fonts.numericFootnote.weight(.semibold))
-                        .foregroundStyle(self.expiryColor(latest))
+                        .foregroundStyle(self.expiryColor(deadline))
                         .monospacedDigit()
                 } else {
                     Text("no expiry")

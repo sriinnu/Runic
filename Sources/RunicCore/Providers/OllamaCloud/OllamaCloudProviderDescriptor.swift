@@ -84,11 +84,11 @@ struct OllamaCloudAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .apiToken
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        Self.resolveToken(environment: context.env) != nil
+        context.credential(for: .ollamacloud) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let apiKey = Self.resolveToken(environment: context.env) else {
+        guard let apiKey = context.credential(for: .ollamacloud)?.token else {
             throw OllamaCloudSettingsError.missingToken
         }
         let usage = try await OllamaCloudUsageFetcher.fetchUsage(apiKey: apiKey)
@@ -99,10 +99,6 @@ struct OllamaCloudAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
-    }
-
-    private static func resolveToken(environment: [String: String]) -> String? {
-        ProviderTokenResolver.ollamaCloudToken(environment: environment)
     }
 }
 

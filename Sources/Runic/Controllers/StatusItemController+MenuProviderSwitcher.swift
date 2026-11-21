@@ -161,6 +161,12 @@ extension StatusItemController {
                 activeIDs.insert(provider.rawValue)
             }
 
+            let planBadge = OverviewMenuView.planBadge(
+                for: provider,
+                snapshot: snapshot,
+                account: self.account,
+                metadata: meta)
+
             summaries.append(OverviewMenuView.ProviderSummary(
                 id: provider.rawValue,
                 provider: provider,
@@ -173,7 +179,8 @@ extension StatusItemController {
                 windowLabel: windowLabel,
                 topModelContext: topModelContext,
                 hasQuota: hasQuota,
-                bankedResetsText: OverviewMenuView.bankedResetsPill(for: snapshot?.resetCredits)))
+                bankedResetsText: OverviewMenuView.bankedResetsPill(for: snapshot?.resetCredits),
+                planBadge: planBadge))
 
             let dailySummaries = self.store.ledgerAllDailySummary(for: provider)
             for summary in dailySummaries where summary.dayStart >= weekAgo {

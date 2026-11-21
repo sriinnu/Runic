@@ -47,6 +47,7 @@ struct ClaudeLimitResetStatus: Decodable {
             let endsAt = ClaudeOAuthUsageFetcher.parseISO8601Date(grant.endsAt)
             if let endsAt, endsAt <= now { continue }
             let startsAt = ClaudeOAuthUsageFetcher.parseISO8601Date(grant.startsAt)
+            if let startsAt, startsAt > now { continue }
             for index in 0..<left {
                 credits.append(UsageResetCredit(
                     id: left == 1 ? grant.id : "\(grant.id)#\(index + 1)",

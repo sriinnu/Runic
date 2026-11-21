@@ -23,7 +23,10 @@ public struct AntigravityStatusProbe: Sendable {
         var lastError: Error = AntigravityStatusProbeError.notRunning
 
         for processInfo in processes {
-            guard Date() < deadline else { break }
+            guard Date() < deadline else {
+                lastError = AntigravityStatusProbeError.timedOut
+                break
+            }
 
             let ports: [Int]
             do {
@@ -42,13 +45,16 @@ public struct AntigravityStatusProbe: Sendable {
                 continue
             }
 
-            guard Date() < deadline else { break }
+            guard Date() < deadline else {
+                lastError = AntigravityStatusProbeError.timedOut
+                break
+            }
 
             let context = RequestContext(
                 httpsPort: connectPort,
                 httpPort: processInfo.extensionPort,
                 csrfToken: processInfo.csrfToken,
-                timeout: min(self.timeout, deadline.timeIntervalSinceNow))
+                timeout: max(0.5, min(self.timeout, deadline.timeIntervalSinceNow)))
 
             do {
                 let response = try await Self.makeRequest(
@@ -58,6 +64,7 @@ public struct AntigravityStatusProbe: Sendable {
                     context: context)
                 return try Self.parseUserStatusResponse(response)
             } catch {
+                lastError = error
                 // On 401/403 the CSRF token may have rotated — try the next
                 // process instead of falling through to the command-config
                 // fallback which uses the same stale token.
@@ -96,7 +103,10 @@ public struct AntigravityStatusProbe: Sendable {
         var lastError: Error = AntigravityStatusProbeError.notRunning
 
         for processInfo in processes {
-            guard Date() < deadline else { break }
+            guard Date() < deadline else {
+                lastError = AntigravityStatusProbeError.timedOut
+                break
+            }
 
             let ports: [Int]
             do {
@@ -111,7 +121,10 @@ public struct AntigravityStatusProbe: Sendable {
                 continue
             }
 
-            guard Date() < deadline else { break }
+            guard Date() < deadline else {
+                lastError = AntigravityStatusProbeError.timedOut
+                break
+            }
 
             do {
                 let response = try await Self.makeRequest(
@@ -122,7 +135,7 @@ public struct AntigravityStatusProbe: Sendable {
                         httpsPort: connectPort,
                         httpPort: processInfo.extensionPort,
                         csrfToken: processInfo.csrfToken,
-                        timeout: min(self.timeout, deadline.timeIntervalSinceNow)))
+                        timeout: max(0.5, min(self.timeout, deadline.timeIntervalSinceNow))))
                 return try Self.parsePlanInfoSummary(response)
             } catch {
                 lastError = error
@@ -144,7 +157,7 @@ public struct AntigravityStatusProbe: Sendable {
 
     // MARK: - Port detection
 
-    private struct ProcessInfoResult {
+    struct ProcessInfoResult: Equatable {
         let pid: Int
         let extensionPort: Int?
         let csrfToken: String
@@ -162,33 +175,51 @@ public struct AntigravityStatusProbe: Sendable {
             timeout: timeout,
             label: "antigravity-ps")
 
+        return try self.classifyProcessLines(result.stdout, logDetections: true)
+    }
+
+    static func classifyProcessLines(_ stdout: String, logDetections: Bool = false) throws -> [ProcessInfoResult] {
         var matches: [ProcessInfoResult] = []
-        var sawAntigravity = false
-        for line in result.stdout.split(separator: "\n") {
+        var sawLegacyWithoutCSRF = false
+        var sawStandaloneStdin = false
+        var standaloneVersion: String?
+        for line in stdout.split(separator: "\n") {
             let text = String(line)
             guard let match = Self.matchProcessLine(text) else { continue }
             let lower = match.command.lowercased()
             guard lower.contains(Self.processName) else { continue }
             guard Self.isAntigravityCommandLine(lower) else { continue }
-            sawAntigravity = true
-            guard let token = Self.extractFlag("--csrf_token", from: match.command) else { continue }
-            let port = Self.extractPort("--extension_server_port", from: match.command)
-                ?? Self.extractPort("--https_server_port", from: match.command)
-            let effectivePort = port.flatMap { $0 > 0 ? $0 : nil }
-            let info = ProcessInfoResult(
-                pid: match.pid,
-                extensionPort: effectivePort,
-                csrfToken: token,
-                commandLine: match.command)
-            self.log.info("Antigravity process detected", metadata: [
-                "pid": "\(info.pid)",
-                "httpPort": info.extensionPort.map(String.init) ?? "none",
-            ])
-            matches.append(info)
+            if let token = Self.extractFlag("--csrf_token", from: match.command) {
+                let port = Self.extractPort("--extension_server_port", from: match.command)
+                    ?? Self.extractPort("--https_server_port", from: match.command)
+                let effectivePort = port.flatMap { $0 > 0 ? $0 : nil }
+                let info = ProcessInfoResult(
+                    pid: match.pid,
+                    extensionPort: effectivePort,
+                    csrfToken: token,
+                    commandLine: match.command)
+                if logDetections {
+                    self.log.info("Antigravity process detected", metadata: [
+                        "pid": "\(info.pid)",
+                        "httpPort": info.extensionPort.map(String.init) ?? "none",
+                    ])
+                }
+                matches.append(info)
+            } else if lower.contains("--read_host_bridge_token_from_stdin") || lower.contains("--standalone") {
+                sawStandaloneStdin = true
+                if standaloneVersion == nil {
+                    standaloneVersion = Self.extractFlag("--override_ide_version", from: match.command)
+                }
+            } else {
+                sawLegacyWithoutCSRF = true
+            }
         }
 
-        if matches.isEmpty, sawAntigravity {
+        if matches.isEmpty, sawLegacyWithoutCSRF {
             throw AntigravityStatusProbeError.missingCSRFToken
+        }
+        if matches.isEmpty, sawStandaloneStdin {
+            throw AntigravityStatusProbeError.standaloneTokenUnavailable(version: standaloneVersion)
         }
         if matches.isEmpty {
             throw AntigravityStatusProbeError.notRunning

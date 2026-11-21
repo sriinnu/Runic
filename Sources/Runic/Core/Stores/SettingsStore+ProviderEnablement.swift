@@ -184,13 +184,15 @@ extension SettingsStore {
         let claudeInstalled = BinaryLocator.resolveClaudeBinary() != nil
         let geminiInstalled = BinaryLocator.resolveGeminiBinary() != nil
         let antigravityRunning = await AntigravityStatusProbe.isRunning()
+        let antigravityCLIInstalled = AntigravityCLIProbe.resolveBinary() != nil
+        let antigravityAvailable = antigravityRunning || antigravityCLIInstalled
 
         // If none installed, keep Codex enabled to match previous behavior.
-        let noneInstalled = !codexInstalled && !claudeInstalled && !geminiInstalled && !antigravityRunning
+        let noneInstalled = !codexInstalled && !claudeInstalled && !geminiInstalled && !antigravityAvailable
         let enableCodex = codexInstalled || noneInstalled
         let enableClaude = claudeInstalled
         let enableGemini = geminiInstalled
-        let enableAntigravity = antigravityRunning
+        let enableAntigravity = antigravityAvailable
 
         self.providerToggleRevision &+= 1
         self.toggleStore.setEnabled(enableCodex, metadata: codexMeta)

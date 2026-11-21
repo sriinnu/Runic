@@ -115,6 +115,12 @@ extension MenuPopoverView {
                 activeIDs.insert(provider.rawValue)
             }
 
+            let planBadge = OverviewMenuView.planBadge(
+                for: provider,
+                snapshot: snapshot,
+                account: self.account,
+                metadata: meta)
+
             summaries.append(OverviewMenuView.ProviderSummary(
                 id: provider.rawValue,
                 provider: provider,
@@ -127,7 +133,8 @@ extension MenuPopoverView {
                 windowLabel: snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines),
                 topModelContext: context,
                 hasQuota: hasQuota,
-                bankedResetsText: OverviewMenuView.bankedResetsPill(for: snapshot?.resetCredits)))
+                bankedResetsText: OverviewMenuView.bankedResetsPill(for: snapshot?.resetCredits),
+                planBadge: planBadge))
 
             for summary in self.store.ledgerAllDailySummary(for: provider) where summary.dayStart >= weekAgo {
                 chartPoints.append(OverviewMenuView.DailyPoint(

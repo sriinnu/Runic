@@ -34,10 +34,11 @@ struct FlightDeckFrontPage: View {
                 if let onAddRegion = self.view.onAddRegion {
                     ForEach(OverviewMenuView.brandGroups(self.view.summaries)) { group in
                         if let missing = group.missingSlot {
-                            FlightDeckButton(title: "Add \(missing.region.displayName) account") {
+                            let label = OverviewMenuView.addRegionLabel(for: missing)
+                            FlightDeckButton(title: label) {
                                 onAddRegion(missing)
                             }
-                            .accessibilityLabel("Add \(missing.region.displayName) account")
+                            .accessibilityLabel(label)
                         }
                     }
                 }
@@ -57,7 +58,7 @@ struct FlightDeckFrontPage: View {
     // MARK: Annunciators
 
     private var annunciators: some View {
-        let exhausted = self.view.summaries.filter { $0.hasQuota && $0.usedPercent >= 99.5 }
+        let exhausted = self.view.summaries.filter { Self.isExhausted($0, showsUsed: self.view.showsUsed) }
         let held = self.view.summaries.filter { $0.bankedResetsText != nil }
         return FlightDeckWrap(spacing: 5) {
             if !exhausted.isEmpty {
@@ -135,6 +136,10 @@ struct FlightDeckFrontPage: View {
         .overlay(alignment: .bottomLeading) { self.cornerTick.rotationEffect(.degrees(270)) }
     }
 
+    static func isExhausted(_ summary: OverviewMenuView.ProviderSummary, showsUsed: Bool) -> Bool {
+        summary.hasQuota && (showsUsed ? summary.usedPercent >= 99.5 : summary.usedPercent <= 0.5)
+    }
+
     private var cornerTick: some View {
         Path { path in
             path.move(to: CGPoint(x: 0, y: 8))
@@ -164,7 +169,7 @@ struct FlightDeckProviderTapeRow: View {
                     if let icon = self.summary.icon {
                         Image(nsImage: icon)
                             .resizable()
-                            .aspectRatio(contentMode: .fit)
+                            .scaledToFit()
                             .frame(width: 12, height: 12)
                             .accessibilityHidden(true)
                     }
@@ -175,6 +180,18 @@ struct FlightDeckProviderTapeRow: View {
                         .foregroundStyle(self.isExhausted ? self.runicTheme.warm : self.runicTheme.primaryText)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                }
+                if let plan = self.summary.planBadge {
+                    Text(plan.uppercased())
+                        .font(RunicFlightDeck.mono(8, .bold))
+                        .skinFace()
+                        .foregroundStyle(OverviewMenuView.isElevatedPlanBadge(plan)
+                            ? self.runicTheme.accent
+                            : self.runicTheme.secondaryText)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Rectangle().fill(self.runicTheme.surfaceAlt))
+                        .overlay(Rectangle().stroke(self.runicTheme.cardStroke, lineWidth: 0.7))
                 }
                 if let byline = self.byline {
                     Text(byline)
@@ -208,6 +225,6 @@ struct FlightDeckProviderTapeRow: View {
     }
 
     private var isExhausted: Bool {
-        self.summary.hasQuota && (self.showsUsed ? self.summary.usedPercent >= 99.5 : self.summary.usedPercent <= 0.5)
+        FlightDeckFrontPage.isExhausted(self.summary, showsUsed: self.showsUsed)
     }
 }

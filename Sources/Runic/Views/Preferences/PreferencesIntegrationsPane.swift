@@ -590,10 +590,11 @@ struct IntegrationsPane: View {
             do {
                 let (_, response) = try await URLSession.shared.data(for: request)
                 let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                let ok = (200..<300).contains(status)
                 await MainActor.run {
                     self.testWebhookResult = WebhookTestResult(
-                        message: "Success: \(status)",
-                        isSuccess: (200..<300).contains(status))
+                        message: ok ? "Success: \(status)" : "HTTP \(status)",
+                        isSuccess: ok)
                 }
             } catch {
                 await MainActor.run {
@@ -608,8 +609,6 @@ struct IntegrationsPane: View {
     private func autoDetectRepository() {
         let candidates = [
             FileManager.default.currentDirectoryPath,
-            NSString(string: "~/Sriinnu/AI/Runic").expandingTildeInPath,
-            NSString(string: "~/Sriinnu").expandingTildeInPath,
         ]
 
         for candidate in candidates {

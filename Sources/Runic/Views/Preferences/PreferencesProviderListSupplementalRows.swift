@@ -25,28 +25,28 @@ struct ProviderListToggleRowView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                if self.toggle.binding.wrappedValue {
-                    if let status = self.toggle.statusText?(), !status.isEmpty {
-                        Text(status)
-                            .font(self.fonts.caption)
-                            .foregroundStyle(self.runicTheme.secondaryText)
-                            .lineLimit(4)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(RunicSpacing.xs)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(
-                                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
-                                    style: .continuous)
-                                    .fill(self.runicTheme.menuSubtleFill))
-                            .overlay {
-                                RoundedRectangle(
-                                    cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
-                                    style: .continuous)
-                                    .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.38), lineWidth: 1)
-                            }
-                    }
+                if let status = self.toggle.statusText?(), !status.isEmpty {
+                    Text(status)
+                        .font(self.fonts.caption)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(RunicSpacing.xs)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                style: .continuous)
+                                .fill(self.runicTheme.menuSubtleFill))
+                        .overlay {
+                            RoundedRectangle(
+                                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                style: .continuous)
+                                .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.38), lineWidth: 1)
+                        }
+                }
 
+                if self.toggle.binding.wrappedValue {
                     let actions = self.toggle.actions.filter { $0.isVisible?() ?? true }
                     if !actions.isEmpty {
                         HStack(spacing: RunicSpacing.xs) {
@@ -117,13 +117,37 @@ struct ProviderListFieldRowView: View {
                 switch self.field.kind {
                 case .plain:
                     TextField(self.field.placeholder ?? "", text: self.field.binding)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
                         .font(self.fonts.callout)
+                        .padding(.horizontal, RunicSpacing.xs)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                style: .continuous)
+                                .fill(self.runicTheme.surfaceAlt.opacity(0.75)))
+                        .overlay(
+                            RoundedRectangle(
+                                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                style: .continuous)
+                                .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.55), lineWidth: 0.8))
                         .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
                 case .secure:
                     SecureField(self.field.placeholder ?? "", text: self.field.binding)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
                         .font(self.fonts.callout)
+                        .padding(.horizontal, RunicSpacing.xs)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                style: .continuous)
+                                .fill(self.runicTheme.surfaceAlt.opacity(0.75)))
+                        .overlay(
+                            RoundedRectangle(
+                                cornerRadius: self.runicTheme.shape.cornerRadius(RunicCornerRadius.sm),
+                                style: .continuous)
+                                .strokeBorder(self.runicTheme.menuSeparatorColor.opacity(0.55), lineWidth: 0.8))
                         .frame(maxWidth: ProviderListMetrics.fieldMaxWidth, alignment: .leading)
                 }
 

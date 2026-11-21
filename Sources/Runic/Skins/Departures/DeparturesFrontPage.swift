@@ -52,10 +52,11 @@ struct DeparturesFrontPage: View {
                 if let onAddRegion = self.view.onAddRegion {
                     ForEach(OverviewMenuView.brandGroups(self.view.summaries)) { group in
                         if let missing = group.missingSlot {
+                            let label = OverviewMenuView.addRegionLabel(for: missing)
                             Button {
                                 onAddRegion(missing)
                             } label: {
-                                Text("Add \(missing.region.displayName) account \u{2192}".uppercased())
+                                Text("\(label) \u{2192}".uppercased())
                                     .font(RunicDepartures.caps(11.5))
                                     .skinFace()
                                     .tracking(1.4)
@@ -64,7 +65,7 @@ struct DeparturesFrontPage: View {
                             }
                             .buttonStyle(.plain)
                             .padding(.top, 10)
-                            .accessibilityLabel("Add \(missing.region.displayName) account")
+                            .accessibilityLabel(label)
                         }
                     }
                 }
@@ -173,6 +174,7 @@ struct DeparturesFrontPage: View {
         let used = self.view.showsUsed ? summary.usedPercent : 100 - summary.usedPercent
         let percentText = summary.hasQuota ? "\(Int(summary.usedPercent.rounded()))%" : "\u{2014}"
         var detail: [String] = []
+        if let plan = summary.planBadge, !plan.isEmpty { detail.append(plan.uppercased()) }
         if let window = summary.windowLabel, !window.isEmpty { detail.append(window) }
         if let reset = summary.resetDescription, !reset.isEmpty {
             detail.append(RunicDepartures.boardCopy(reset).replacingOccurrences(of: "IN ", with: "FLIPS IN "))

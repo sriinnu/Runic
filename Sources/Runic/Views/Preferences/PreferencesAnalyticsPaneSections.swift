@@ -2,48 +2,6 @@ import RunicCore
 import SwiftUI
 
 extension AnalyticsPane {
-    var displaySection: some View {
-        DisclosureGroup("Display", isExpanded: self.$displayExpanded) {
-            VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionSpacing) {
-                PreferenceToggleRow(
-                    title: "Show usage as used",
-                    subtitle: "Progress bars fill as you consume quota (instead of showing remaining).",
-                    binding: self.$settings.usageBarsShowUsed)
-                self.usageMetricsPicker
-                self.menuModePicker
-                PreferenceToggleRow(
-                    title: "Show credit + extra usage sections",
-                    subtitle: "Show detailed credit and extra-usage sections in every menu mode. " +
-                        "Balances and on-demand spend stay in usage.",
-                    binding: self.$settings.showOptionalCreditsAndExtraUsage)
-                PreferenceToggleRow(
-                    title: "Merge Icons",
-                    subtitle: "Use a single menu bar icon with a provider switcher.",
-                    binding: self.$settings.mergeIcons)
-                self.providerSwitcherLayoutPicker
-                self.providerSwitcherIconSizePicker
-                PreferenceToggleRow(
-                    title: "Switcher shows icons",
-                    subtitle: "Show provider icons in the switcher (otherwise show a weekly progress line).",
-                    binding: self.$settings.switcherShowsIcons)
-                    .disabled(!self.settings.mergeIcons || self.settings.providerSwitcherLayout == .sidebar)
-                    .opacity(self.settings.mergeIcons && self.settings.providerSwitcherLayout != .sidebar ? 1 : 0.5)
-                PreferenceToggleRow(
-                    title: "Menu bar shows percent",
-                    subtitle: "Replace critter bars with provider branding icons and a percentage.",
-                    binding: self.$settings.menuBarShowsBrandIconWithPercent)
-                PreferenceToggleRow(
-                    title: "Surprise me",
-                    subtitle: "Check if you like your agents having some fun up there.",
-                    binding: self.$settings.randomBlinkEnabled)
-            }
-            .padding(.top, RunicSpacing.xs)
-        }
-        .disclosureGroupStyle(AnalyticsSectionDisclosureStyle())
-        .liquidGlass()
-        .liquidEntrance(appeared: self.appeared, index: 0)
-    }
-
     var insightsSection: some View {
         DisclosureGroup("Insights", isExpanded: self.$insightsExpanded) {
             VStack(alignment: .leading, spacing: PreferencesLayoutMetrics.sectionSpacing) {
@@ -138,69 +96,6 @@ extension AnalyticsPane {
 }
 
 extension AnalyticsPane {
-    private var usageMetricsPicker: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-            Text("Usage metrics")
-                .font(self.fonts.body)
-            RunicSegmentedPicker(
-                selection: self.$settings.usageMetricDisplayMode,
-                cases: UsageMetricDisplayMode.allCases,
-                label: \.label)
-            Text("Pick bars, percent, or both in the menu card.")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.subduedSecondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var menuModePicker: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-            Text("Menu mode")
-                .font(self.fonts.body)
-            RunicSegmentedPicker(selection: self.$settings.menuMode, cases: MenuMode.allCases, label: \.label)
-            Text(
-                "Glance: usage and optional credits/extra usage. " +
-                    "Analyst: adds token cost. Operator: insights and actions.")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.subduedSecondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var providerSwitcherLayoutPicker: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-            Text("Provider switcher layout")
-                .font(self.fonts.body)
-            RunicSegmentedPicker(
-                selection: self.$settings.providerSwitcherLayout,
-                cases: ProviderSwitcherLayout.allCases,
-                label: \.label)
-                .disabled(!self.settings.mergeIcons)
-                .opacity(self.settings.mergeIcons ? 1 : 0.5)
-            Text("Choose whether providers appear on top or in a left sidebar.")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.subduedSecondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var providerSwitcherIconSizePicker: some View {
-        VStack(alignment: .leading, spacing: RunicSpacing.xs) {
-            Text("Switcher icon size")
-                .font(self.fonts.body)
-            RunicSegmentedPicker(
-                selection: self.$settings.providerSwitcherIconSize,
-                cases: ProviderSwitcherIconSize.allCases,
-                label: \.label)
-                .disabled(!self.settings.mergeIcons)
-                .opacity(self.settings.mergeIcons ? 1 : 0.5)
-            Text("Small or medium icons for the provider switcher.")
-                .font(self.fonts.footnote)
-                .foregroundStyle(self.runicTheme.subduedSecondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
     private var alertsHeader: some View {
         HStack {
             Text(self.alertStatusLine)
@@ -220,7 +115,7 @@ extension AnalyticsPane {
             }
 
             Button {
-                self.showingAddRule = true
+                self.activeSheet = .addRule
             } label: {
                 Label("Add Rule", systemImage: "plus")
             }
@@ -256,7 +151,8 @@ extension AnalyticsPane {
             Spacer()
 
             Button {
-                self.showingAddBudget = true
+                self.budgetErrorMessage = nil
+                self.activeSheet = .addBudget
             } label: {
                 Label("Add Budget", systemImage: "plus")
             }

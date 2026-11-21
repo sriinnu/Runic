@@ -76,11 +76,11 @@ struct MiniMaxAPIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .api
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        ProviderTokenResolver.minimaxApiKeyResolution(environment: context.env) != nil
+        Self.resolveAPIKey(context) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
-        guard let tokenRes = ProviderTokenResolver.minimaxApiKeyResolution(environment: context.env) else {
+        guard let tokenRes = Self.resolveAPIKey(context) else {
             throw ProviderFetchError.missingCredentials
         }
 
@@ -91,7 +91,17 @@ struct MiniMaxAPIFetchStrategy: ProviderFetchStrategy {
             sourceLabel: "API")
     }
 
-    func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
-        true
+    func shouldFallback(on error: Error, context _: ProviderFetchContext) -> Bool {
+        if case MiniMaxUsageError.invalidCredentials = error {
+            return false
+        }
+        return true
+    }
+
+    private static func resolveAPIKey(_ context: ProviderFetchContext) -> ProviderTokenResolution? {
+        if let account = context.account, !account.isDefault {
+            return context.credential(for: .minimax)
+        }
+        return ProviderTokenResolver.minimaxApiKeyResolution(environment: context.env)
     }
 }

@@ -188,6 +188,9 @@ struct ThemeMigrationTests {
         #expect(Theme.migrated(fromRetired: "nocturne") == .blueprint)
         #expect(Theme.migrated(fromRetired: "noir") == .blueprint)
         #expect(Theme.migrated(fromRetired: "prism") == .glass)
+        #expect(Theme.migrated(fromRetired: "retro") == .relief)
+        #expect(Theme.migrated(fromRetired: "receipt") == .gazette)
+        #expect(Theme.migrated(fromRetired: "yantra") == .meridian)
         #expect(Theme.migrated(fromRetired: "pine") == .default)
         for raw in Theme.retiredRawValues {
             #expect(Theme(rawValue: raw) == nil, "\(raw) must not still be a live theme")

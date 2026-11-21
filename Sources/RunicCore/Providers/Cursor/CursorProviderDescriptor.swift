@@ -14,7 +14,7 @@ public enum CursorProviderDescriptor {
                 weeklyLabel: "On-Demand",
                 opusLabel: nil,
                 supportsOpus: false,
-                supportsCredits: true,
+                supportsCredits: false,
                 creditsHint: "On-demand usage beyond included plan limits.",
                 toggleTitle: "Show Cursor usage",
                 cliName: "cursor",

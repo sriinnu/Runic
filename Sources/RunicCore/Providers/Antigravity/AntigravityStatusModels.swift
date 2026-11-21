@@ -6,6 +6,23 @@ public struct AntigravityModelQuota: Sendable {
     public let remainingFraction: Double?
     public let resetTime: Date?
     public let resetDescription: String?
+    public let windowMinutes: Int?
+
+    public init(
+        label: String,
+        modelId: String,
+        remainingFraction: Double?,
+        resetTime: Date?,
+        resetDescription: String?,
+        windowMinutes: Int? = nil)
+    {
+        self.label = label
+        self.modelId = modelId
+        self.remainingFraction = remainingFraction
+        self.resetTime = resetTime
+        self.resetDescription = resetDescription
+        self.windowMinutes = windowMinutes
+    }
 
     public var remainingPercent: Double {
         guard let remainingFraction else { return 0 }
@@ -44,7 +61,7 @@ public struct AntigravityStatusSnapshot: Sendable {
     private static func rateWindow(for quota: AntigravityModelQuota) -> RateWindow {
         RateWindow(
             usedPercent: 100 - quota.remainingPercent,
-            windowMinutes: nil,
+            windowMinutes: quota.windowMinutes,
             resetsAt: quota.resetTime,
             resetDescription: quota.resetDescription,
             label: self.formattedModelLabel(quota))
@@ -52,9 +69,14 @@ public struct AntigravityStatusSnapshot: Sendable {
 
     /// Sorts all models by most-constrained first so the top 3 slots
     /// (primary/secondary/tertiary) show what's closest to running out.
-    /// No hand-picked selection — every model Antigravity reports is surfaced.
+    /// Shorter windows sort first when headroom is tied.
     private static func selectModels(_ models: [AntigravityModelQuota]) -> [AntigravityModelQuota] {
-        models.sorted { $0.remainingPercent < $1.remainingPercent }
+        models.sorted { lhs, rhs in
+            if lhs.remainingPercent != rhs.remainingPercent {
+                return lhs.remainingPercent < rhs.remainingPercent
+            }
+            return (lhs.windowMinutes ?? Int.max) < (rhs.windowMinutes ?? Int.max)
+        }
     }
 
     private static func formattedModelLabel(_ quota: AntigravityModelQuota) -> String {
@@ -83,6 +105,7 @@ public struct AntigravityPlanInfoSummary: Sendable, Codable, Equatable {
 public enum AntigravityStatusProbeError: LocalizedError, Sendable, Equatable {
     case notRunning
     case missingCSRFToken
+    case standaloneTokenUnavailable(version: String?)
     case portDetectionFailed(String)
     case apiError(String)
     case parseFailed(String)
@@ -94,6 +117,12 @@ public enum AntigravityStatusProbeError: LocalizedError, Sendable, Equatable {
             "Antigravity language server not detected. Launch Antigravity and retry."
         case .missingCSRFToken:
             "Antigravity CSRF token not found. Restart Antigravity and retry."
+        case let .standaloneTokenUnavailable(version):
+            if let version, !version.isEmpty {
+                "Antigravity \(version) hides its local token. Install Antigravity CLI (agy) to read live quota."
+            } else {
+                "Antigravity 2.x hides its local token. Install Antigravity CLI (agy) to read live quota."
+            }
         case let .portDetectionFailed(message):
             Self.portDetectionDescription(message)
         case let .apiError(message):

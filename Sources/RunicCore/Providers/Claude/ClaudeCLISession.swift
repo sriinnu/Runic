@@ -43,6 +43,7 @@ actor ClaudeCLISession {
     }
 
     private(set) var lastCapture = CaptureTrace()
+    private(set) var startupBanner = ""
     /// Claude Code 2.1 drops keystrokes typed before its prompt is up (about a
     /// second after launch), so the first command waits for it.
     private var promptSeen = false
@@ -89,7 +90,8 @@ actor ClaudeCLISession {
         stopOnSubstrings: [String] = [],
         settleAfterStop: TimeInterval = 0.25,
         sendEnterEvery: TimeInterval? = nil,
-        resendsWithoutStopText: Int = 0) async throws -> String
+        resendsWithoutStopText: Int = 0,
+        dismissBeforeSend: Bool = false) async throws -> String
     {
         try self.ensureStarted(binary: binary)
         self.lastCapture = CaptureTrace()
@@ -104,6 +106,12 @@ actor ClaudeCLISession {
             // Cold start on a busy machine (app launch refreshing every
             // provider at once) has taken well over 8s to show the prompt.
             try await self.waitForPrompt(timeout: 20)
+        }
+        if dismissBeforeSend {
+            // Close any modal left open by a preceding command (e.g. /usage)
+            // before submitting the next slash command.
+            try self.send("\u{1B}")
+            try await Task.sleep(nanoseconds: 200_000_000)
         }
         self.drainOutput()
 
@@ -221,13 +229,22 @@ actor ClaudeCLISession {
         let cursorQuery = Data([0x1B, 0x5B, 0x36, 0x6E])
         let sendNeedles = self.sendOnSubstrings.map { (needle: Data($0.key.utf8), keys: Data($0.value.utf8)) }
         var seen = Data()
+        var bannerData = Data()
+        let maxBannerBytes = 16 * 1024
         var lastOutputAt: Date?
         let deadline = Date().addingTimeInterval(timeout)
         self.lastCapture.promptSeenBy = "deadline"
+        defer {
+            // swiftlint:disable:next optional_data_string_conversion
+            self.startupBanner = bannerData.isEmpty ? "" : String(decoding: bannerData, as: UTF8.self)
+        }
         while Date() < deadline {
             let chunk = self.readChunk()
             if !chunk.isEmpty {
                 seen.append(chunk)
+                if bannerData.count < maxBannerBytes {
+                    bannerData.append(chunk.prefix(maxBannerBytes - bannerData.count))
+                }
                 lastOutputAt = Date()
                 if seen.range(of: cursorQuery) != nil {
                     try? self.send("\u{1b}[1;1R")
@@ -358,6 +375,7 @@ actor ClaudeCLISession {
         self.lastActivityAt = nil
         self.isCapturing = false
         self.promptSeen = false
+        self.startupBanner = ""
     }
 
     private func readChunk() -> Data {

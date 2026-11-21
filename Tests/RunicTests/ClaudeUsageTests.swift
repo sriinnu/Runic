@@ -307,7 +307,7 @@ struct ClaudeUsageTests {
         let data = Data(json.utf8)
         let info = ClaudeWebAPIFetcher._parseAccountInfoForTesting(data, orgId: "org-123")
         #expect(info?.email == "claude-user@example.com")
-        #expect(info?.loginMethod == "Claude Max")
+        #expect(info?.loginMethod == "Claude Max 20x")
     }
 
     @Test
@@ -383,5 +383,27 @@ struct ClaudeUsageTests {
         #expect(defaultVersion?.isEmpty != true)
         #expect(webVersion?.isEmpty != true)
         #expect(cliVersion?.isEmpty != true)
+    }
+
+    @Test
+    func `parses claude web API account info resolves claude ultra before stripe fallback`() {
+        let json = """
+        {
+          "email_address": "claude-user@example.com",
+          "memberships": [
+            {
+              "organization": {
+                "uuid": "org-ultra",
+                "name": "Personal",
+                "rate_limit_tier": "default_claude_ultra",
+                "billing_type": "stripe_subscription"
+              }
+            }
+          ]
+        }
+        """
+        let data = Data(json.utf8)
+        let info = ClaudeWebAPIFetcher._parseAccountInfoForTesting(data, orgId: "org-ultra")
+        #expect(info?.loginMethod == "Claude Ultra")
     }
 }

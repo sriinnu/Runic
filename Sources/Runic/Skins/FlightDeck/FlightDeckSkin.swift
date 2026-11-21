@@ -2,11 +2,12 @@ import AppKit
 import RunicCore
 import SwiftUI
 
-/// A primary flight display. Pages: `FlightDeckProviderPage`,
-/// `FlightDeckFrontPage`, `FlightDeckResetsPage`. Kit:
-/// `RunicFlightDeckKit.swift`. Every section is a bordered display area
-/// on a near-black stage inside a 5pt frame; tabs are outlined mono
-/// rectangles with a Zulu clock at the end of the strip.
+/// A glass-cockpit primary flight display (MK II). Pages:
+/// `FlightDeckProviderPage`, `FlightDeckFrontPage`, `FlightDeckResetsPage`.
+/// Kit: `RunicFlightDeckKit.swift`. Every section is a display unit in a
+/// machined dual-hairline bezel with corner calibration reticles, on an
+/// OLED stage inside a 5pt frame; tabs are mono keys with a lit mode bar
+/// and a Zulu clock at the end of the strip.
 struct FlightDeckSkin: RunicSkin {
     static let skinID = "flightdeck"
     var id: String {
@@ -64,7 +65,13 @@ struct FlightDeckSkin: RunicSkin {
     func popoverChrome(for palette: RunicThemePalette) -> RunicSkinPopoverChrome? {
         // The stroke straddles the clip, so 10pt draws as the 5pt inner
         // frame of the display bezel.
-        RunicSkinPopoverChrome(cornerRadius: 8, strokeWidth: 10, strokeColor: palette.surfaceAlt)
+        RunicSkinPopoverChrome(cornerRadius: 10, strokeWidth: 10, strokeColor: palette.surfaceAlt)
+    }
+
+    /// The frame's machined inner edge: a lit hairline where the 5pt
+    /// bezel meets the glass.
+    @MainActor func stageOverlay() -> AnyView? {
+        AnyView(FlightDeckStageEdge())
     }
 
     func panelInset(for _: RunicThemePalette) -> CGFloat? {
@@ -78,17 +85,33 @@ struct FlightDeckSkin: RunicSkin {
 
 // MARK: - Panel
 
-/// A display area: a hairline-bordered rectangle on the stage.
+/// A display unit: the machined dual-hairline bezel with calibration
+/// reticles in its corners.
 private struct FlightDeckPanel: View {
     let content: AnyView
-    @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         self.content
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Rectangle().fill(self.runicTheme.cardFill))
-            .overlay(Rectangle().stroke(self.runicTheme.cardStroke, lineWidth: 1))
+            .flightDeckBezel()
+    }
+}
+
+/// The lit inner edge of the popover frame, and a dark shadow line just
+/// inside it so the glass reads as set back into the bezel.
+private struct FlightDeckStageEdge: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .strokeBorder(Color.black.opacity(0.55), lineWidth: 1)
+                .padding(6)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .strokeBorder(RunicFlightDeck.bezelLight, lineWidth: 1)
+                .padding(5)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
@@ -156,8 +179,16 @@ private struct FlightDeckTab: View {
                 .foregroundStyle(lit ? cyan : self.runicTheme.secondaryText)
                 .padding(.horizontal, 11)
                 .frame(height: 28)
-                .background(Rectangle().fill(self.item.isSelected ? cyan.opacity(0.08) : Color.clear))
-                .overlay(Rectangle().stroke(lit ? cyan : self.runicTheme.cardStroke, lineWidth: 1))
+                .background(Rectangle().fill(self.item.isSelected ? cyan.opacity(0.1) : self.runicTheme.cardFill))
+                .overlay(Rectangle().strokeBorder(
+                    lit ? cyan.opacity(self.item.isSelected ? 1 : 0.7) : self.runicTheme.cardStroke,
+                    lineWidth: 1))
+                .overlay(alignment: .bottom) {
+                    // The engaged mode bar.
+                    if self.item.isSelected {
+                        Rectangle().fill(cyan).frame(height: 2)
+                    }
+                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -185,6 +216,11 @@ private struct FlightDeckChip: View {
         let lit = self.chip.isSelected || self.isHovered
         Button(action: self.chip.action) {
             HStack(spacing: 6) {
+                // The status lamp: lit when the panel is engaged.
+                Rectangle()
+                    .fill(self.chip.isSelected ? cyan : RunicFlightDeck.dim.opacity(0.45))
+                    .frame(width: 4, height: 4)
+                    .accessibilityHidden(true)
                 Image(systemName: self.chip.systemImage)
                     .font(.system(size: 9, weight: .semibold))
                     .frame(width: RunicSpacing.menuIconColumnWidth)
@@ -199,8 +235,8 @@ private struct FlightDeckChip: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .foregroundStyle(lit ? cyan : self.runicTheme.primaryText)
-            .background(Rectangle().fill(self.chip.isSelected ? cyan.opacity(0.08) : Color.clear))
-            .overlay(Rectangle().stroke(lit ? cyan : self.runicTheme.cardStroke, lineWidth: 1))
+            .background(Rectangle().fill(self.chip.isSelected ? cyan.opacity(0.1) : self.runicTheme.surface))
+            .overlay(Rectangle().strokeBorder(lit ? cyan : self.runicTheme.cardStroke, lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -244,7 +280,7 @@ private struct FlightDeckActionRow: View {
                 .frame(height: 30)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Rectangle().fill(primary ? (self.isHovered ? cyan.opacity(0.85) : cyan) : Color.clear))
-                .overlay(Rectangle().stroke(
+                .overlay(Rectangle().strokeBorder(
                     primary || self.isHovered ? cyan : self.runicTheme.cardStroke,
                     lineWidth: 1))
                 .contentShape(Rectangle())

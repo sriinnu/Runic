@@ -329,7 +329,14 @@ struct DeparturesProviderPage: View {
         }
         if let cost = self.model.providerCost {
             let used = cost.percentUsed.map { String(format: " \u{00B7} %.0f%% of limit", min(100, max(0, $0))) } ?? ""
-            rows.append(AccountRow(key: cost.title, value: cost.spendLine + used))
+            if let primary = cost.primarySpendLine {
+                rows.append(AccountRow(key: cost.title, value: primary + used))
+                if let apiCredits = cost.apiCreditsLine {
+                    rows.append(AccountRow(key: "API credits", value: apiCredits))
+                }
+            } else {
+                rows.append(AccountRow(key: cost.title, value: cost.spendLine + used))
+            }
         }
         if self.model.menuMode != .glance, let ledger = self.model.tokenUsage {
             rows.append(AccountRow(key: "Session cost", value: ledger.sessionLine))
