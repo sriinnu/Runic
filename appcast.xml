@@ -3,18 +3,43 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.16.0</title>
+            <pubDate>Sat, 21 Nov 2026 22:41:05 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>219</sparkle:version>
+            <sparkle:shortVersionString>2.16.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.16.0</h2>
+<h3>Skins & UI</h3>
+<ul>
+<li><strong>New Meridian skin</strong>: An adaptive Swiss astronomical chronometer skin (Porcelain Enamel light / Grand Feu Midnight dark) with a 200° power-reserve sub-dial, tapered Dauphine hand, ruby cabochon pivot, calibrated railway gauges, and faceted status jewels. Replaces retired <code>Yantra</code>, <code>Receipt</code>, and <code>Retro</code> themes with automatic preference migration (<code>yantra</code> → <code>meridian</code>, <code>receipt</code> → <code>gazette</code>, <code>retro</code> → <code>relief</code>).</li>
+<li><strong>Liquid Glass MK II, Relief MK II & Flight Deck MK II</strong>: Liquid Glass is now the default theme, with refined capillary gauges, tactile neomorphic wells on Relief, and upgraded PFD cockpit attitude/burn indicators on Flight Deck.</li>
+<li><strong>Redesigned Settings window</strong>: Cleaner 820×680 split layout with updated Appearance theme previews, clearer General/Integrations structure, and updated CLI/MCP install paths (<code>Settings → General → Install CLI</code>, <code>Settings → Integrations → Runic MCP</code>).</li>
+</ul>
+<h3>Providers, Plan Tiers & Quotas</h3>
+<ul>
+<li><strong>Plan tier badges everywhere</strong>: Overview cards, skin headers, and <code>runic usage</code> CLI output now surface live provider tiers including <code>Google AI Ultra</code> (Antigravity) and Claude <code>Ultra</code> / <code>Max 5x</code> / <code>Max 20x</code> with preserved acronyms.</li>
+<li><strong>Antigravity CLI (<code>agy /usage</code>)</strong>: Live quota scraping across all 4 model windows with ANSI stream plan-label capture (<code>Plan: Google AI Ultra</code>) and desktop fallback when the CLI is unavailable.</li>
+<li><strong>Claude & Gemini fixes</strong>: <code>ClaudeStatusProbe</code> dismisses startup prompts and captures identity/plan banners reliably (<code>Plan: Ultra</code>); Gemini CLI <code>0.68.0</code> OAuth refreshes cleanly from <code>bundle/chunk-*.js</code> (respecting <code>GEMINI_CLI_PATH</code>) and explains Google's personal-OAuth deprecation with guidance toward Antigravity for Pro/Ultra quotas.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic-2.16.0.zip" length="50821994" type="application/octet-stream" sparkle:edSignature="FHiExjeh3pJ+Y+giDsCzBdCj0Z5MZ4xN7a3Zuw7csAZUVB96WD7x7CkiaEIFMs/WlPTY18L9fnejHxpTMa1kBA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-211.delta" sparkle:deltaFrom="211" length="9938722" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4P15B6ZG2NA2sis+vW1y9zPJWSk9iuXBUvN4LMjD6bcm5FPsRdcqWGvNRKmsFvKKjvW323GyMNaIbq/NyBkeAg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-210.delta" sparkle:deltaFrom="210" length="9942626" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Yp7+7jPd3/juQS4bbKNg9ngHskVzZ/mB591PSeneZlCg9gk6J6lJrr/rnt1lJp+DiXmWm5vPKuDbDPl4e94DCg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-209.delta" sparkle:deltaFrom="209" length="10614670" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="979KDvUaRxTAdLLnH4nJ3cPIeV7CdfHw0wfBX7tTWqI9s6zHk2622pbr+rd24nyR4oS5FydO6zVPpClxu/NTBQ=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-207.delta" sparkle:deltaFrom="207" length="10655986" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="8i/Z/CK7dOfKsNwYaE1faxh7iwh4mjScyLImGJUpOIikeH2Ww9zUEME6aBp4sPC3RISx0kmFa1uSdCaNg0F5DA=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-192.delta" sparkle:deltaFrom="192" length="12893754" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="jaE9JG8CQeiAkDeOX6Y3eQxQjIxk+scWgJUj3mStObLQYWO74jVms+4CCnZ6bWyy7h3SuTcFWQavSuTuezRLCw=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.15.4</title>
             <pubDate>Wed, 18 Nov 2026 08:21:39 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
             <sparkle:version>211</sparkle:version>
             <sparkle:shortVersionString>2.15.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.15.4</h2>
-<ul>
-<li>Claude and Codex: 2.15.3's one-time re-pricing of past days could be skipped. Running the <code>runic</code> command-line tool before the app marked it done without re-pricing anything, so past days stayed at $0. It now counts as done only after a full rescan. This update runs it again.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
             <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.4/Runic-2.15.4.zip" length="49767128" type="application/octet-stream" sparkle:edSignature="RBUlkJdvEjUAy/2y3Yb7y3WF+GgHQgdZmpzoal3cQhFgWLpVyHVaE4rRzutUqNrx2jWxyAlsirp/BijWOAKuBg=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.4/Runic211-210.delta" sparkle:deltaFrom="210" length="2338550" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hgmQuYHDacbzeYHoTD9ppZ2xgR6xlGrFU0wf9YB2gZGpKifCRe7jBZ0kf3yGbIk2/CqGEdKUtSxMYRN5xYENAw=="/>
@@ -35,19 +60,6 @@
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.3/Runic210-209.delta" sparkle:deltaFrom="209" length="6116386" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="99qwR6XE+DHy6Z4fARP9PAOGZAATR1OZE/AMOhegyl17pc1NLRJynoZcz38Pu6QG/hnjLR2jW/5Yxa79kgJdDQ=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.3/Runic210-207.delta" sparkle:deltaFrom="207" length="6583334" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="fQOML3hXTL3k79F6ImNvqKNEcGNEgQRDNAKU6qffImp1LtmCaMoT/o0RNA/1CTlgybNFqoJPhEkRU+XrRL0CCQ=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.3/Runic210-192.delta" sparkle:deltaFrom="192" length="10269782" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="GLT2lq011RZbuIU4EZv0+IAo4lNqNtd/Yzs8flKwMQn2my7kvki5MGaTRkHoHVrgkffUJbLC3sIJtuA1PHjKAA=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.15.2</title>
-            <pubDate>Wed, 04 Nov 2026 15:01:09 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>209</sparkle:version>
-            <sparkle:shortVersionString>2.15.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic-2.15.2.zip" length="49679560" type="application/octet-stream" sparkle:edSignature="MT55FeWA9iVsZDrrXUTzwW5y3VJqlwPcgVQ17HzybTR0SNI8YQIA6+SNlAeYbEwcxwSEANOXqWgLVpW4b9HiCQ=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic209-207.delta" sparkle:deltaFrom="207" length="4287530" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="umqBBOkxacbi5ysjULl3FyBpVJSvfcybnZEBqEB9vEJ27zsOxhBMhKaJnQcFN5/gJmtsLQ0lyzcLiCYD8EQ6BA=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.15.2/Runic209-192.delta" sparkle:deltaFrom="192" length="10160694" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="VSI+ChT3RDhFm8HY63/CaZOlxYLdUIBKPxj2JpuQiFC0MbnhjjChWlLW2a1Bpmir3OhODPpzV4ZMGOv+MaugCA=="/>
             </sparkle:deltas>
         </item>
     </channel>
