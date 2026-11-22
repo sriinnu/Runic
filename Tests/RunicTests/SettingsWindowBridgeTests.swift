@@ -1,5 +1,6 @@
 import Foundation
 import RunicCore
+import SwiftUI
 import Testing
 @testable import Runic
 
@@ -34,6 +35,26 @@ struct SettingsWindowBridgeTests {
 
         SettingsWindowBridge.select(.general, in: selection)
         #expect(selection.tab == .general)
+    }
+
+    @Test
+    func `configured bridge opens and reuses single visible settings window and routes nil selection`() throws {
+        defer { SettingsWindowBridge.resetForTesting() }
+        let selection = PreferencesSelection()
+        SettingsWindowBridge.configure(selection: selection) { AnyView(EmptyView()) }
+
+        let opened = SettingsWindowBridge.open(tab: .appearance, selection: nil)
+        #expect(opened)
+        #expect(selection.tab == .appearance)
+
+        let window = try #require(SettingsWindowBridge.activeManagedWindowForTesting)
+        #expect(window.isReleasedWhenClosed == false)
+        #expect(window.frame.width >= 740)
+        #expect(window.frame.height >= 600)
+
+        SettingsWindowBridge.open(tab: .providers, selection: nil)
+        #expect(selection.tab == .providers)
+        #expect(SettingsWindowBridge.activeManagedWindowForTesting === window)
     }
 
     @Test

@@ -178,6 +178,7 @@ enum RunicSkinRegistry {
         case GazetteSkin.skinID: GazetteSkin()
         case SumiSkin.skinID: SumiSkin()
         case DraftingSkin.skinID: DraftingSkin()
+        case AtelierSkin.skinID: AtelierSkin()
         case MeridianSkin.skinID: MeridianSkin()
         case FlightDeckSkin.skinID: FlightDeckSkin()
         case DeparturesSkin.skinID: DeparturesSkin()
@@ -194,6 +195,7 @@ enum RunicSkinRegistry {
             GazetteSkin(),
             SumiSkin(),
             DraftingSkin(),
+            AtelierSkin(),
             MeridianSkin(),
             FlightDeckSkin(),
             DeparturesSkin(),

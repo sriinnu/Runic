@@ -57,6 +57,7 @@ view's state.
 
 - `Standard` — the default; every slot nil. System, Dark and Terminal draw with it.
 - `LiquidGlass` — translucent layered glass surfaces, specular bevels, and capillary gauges (default theme).
+- `Atelier` — adaptive Swiss-Nordic architectural studio (dot-grid drafting paper light / `#121212` night elevation) with a live Quota Skyline, sharp `0px` spec sheets vs `9999px` pill tabs, blueprint crop-marks, and surgical cobalt accents.
 - `Meridian` — adaptive Swiss astronomical chronometer (Porcelain Enamel light / Grand Feu Midnight dark) with a 200° power-reserve arc, tapered Dauphine hand, railway gauges, and faceted ruby indicators.
 - `Relief` — sculpted neomorphic paper with tactile recessed wells and embossed dials.
 - `Gazette` — the printed edition (`RunicGazetteChrome.swift`, `GazetteMenuCardViews.swift`).

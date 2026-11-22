@@ -1,8 +1,32 @@
 import AppKit
+import SwiftUI
 
 @MainActor
 enum SettingsWindowBridge {
     static let tabUserInfoKey = "tab"
+    private static let autosaveName = "RunicSettingsWindow"
+
+    private static var rootViewFactory: (@MainActor () -> AnyView)?
+    private static var defaultSelection: PreferencesSelection?
+    private static var managedWindow: NSWindow?
+
+    static var activeManagedWindowForTesting: NSWindow? {
+        self.managedWindow
+    }
+
+    static func configure(selection: PreferencesSelection, makeRootView: @escaping @MainActor () -> AnyView) {
+        self.defaultSelection = selection
+        self.rootViewFactory = makeRootView
+        self.managedWindow?.close()
+        self.managedWindow = nil
+    }
+
+    static func resetForTesting() {
+        self.managedWindow?.close()
+        self.managedWindow = nil
+        self.rootViewFactory = nil
+        self.defaultSelection = nil
+    }
 
     static func tab(from notification: Notification) -> PreferencesTab? {
         guard let raw = notification.userInfo?[tabUserInfoKey] as? String else { return nil }
@@ -15,15 +39,26 @@ enum SettingsWindowBridge {
 
     @discardableResult
     static func open(tab: PreferencesTab, selection: PreferencesSelection?) -> Bool {
-        self.select(tab, in: selection)
+        let activeSelection = selection ?? self.defaultSelection
+        self.select(tab, in: activeSelection)
 
-        let opened = NSApp.openRunicSettingsWindow()
-        if !opened {
-            NotificationCenter.default.post(
-                name: .runicOpenSettings,
-                object: nil,
-                userInfo: [Self.tabUserInfoKey: tab.rawValue])
+        if let factory = self.rootViewFactory {
+            let window = self.resolveManagedWindow(makeRootView: factory)
+            if window.isMiniaturized {
+                window.deminiaturize(nil)
+            }
+            NSApp?.activate(ignoringOtherApps: true)
+            window.orderFrontRegardless()
+            window.makeKeyAndOrderFront(nil)
+            return true
         }
+
+        NSApp?.activate(ignoringOtherApps: true)
+        let opened = NSApp?.openRunicSettingsWindow() ?? false
+        NotificationCenter.default.post(
+            name: .runicOpenSettings,
+            object: nil,
+            userInfo: [Self.tabUserInfoKey: tab.rawValue])
 
         // SwiftUI creates the Settings window asynchronously in response to the
         // action above, so activating/foregrounding here (before it exists) is a
@@ -33,8 +68,46 @@ enum SettingsWindowBridge {
         return opened
     }
 
+    private static func resolveManagedWindow(makeRootView: @MainActor () -> AnyView) -> NSWindow {
+        if let existing = self.managedWindow {
+            return existing
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: PreferencesTab.windowWidth,
+                height: PreferencesTab.windowHeight),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false)
+        window.title = "Runic Settings"
+        window.identifier = NSUserInterfaceItemIdentifier("com.sriinnu.athena.runic.settings")
+        window.isReleasedWhenClosed = false
+        window.minSize = NSSize(width: 740, height: 600)
+        window.maxSize = NSSize(width: 1120, height: CGFloat.greatestFiniteMagnitude)
+        window.collectionBehavior.insert(.moveToActiveSpace)
+
+        let hosting = NSHostingController(rootView: makeRootView())
+        hosting.sizingOptions = []
+        window.contentViewController = hosting
+        window.setContentSize(NSSize(width: PreferencesTab.windowWidth, height: PreferencesTab.windowHeight))
+
+        if !window.setFrameUsingName(Self.autosaveName) {
+            window.center()
+        }
+        window.setFrameAutosaveName(Self.autosaveName)
+        if !NSScreen.screens.contains(where: { $0.visibleFrame.intersects(window.frame) }) {
+            window.center()
+        }
+
+        self.managedWindow = window
+        return window
+    }
+
     private static func foregroundSettingsWindow(attemptsRemaining: Int) {
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp?.activate(ignoringOtherApps: true)
         if let window = settingsWindow() {
             window.makeKeyAndOrderFront(nil)
             return
@@ -46,7 +119,7 @@ enum SettingsWindowBridge {
     }
 
     private static func settingsWindow() -> NSWindow? {
-        let normalVisible = NSApp.windows.filter { $0.level == .normal && $0.isVisible }
+        let normalVisible = (NSApp?.windows ?? []).filter { $0.level == .normal && $0.isVisible }
         if let exact = normalVisible.first(where: {
             let identifier = $0.identifier?.rawValue.lowercased() ?? ""
             let title = $0.title.lowercased()

@@ -1,0 +1,50 @@
+{
+  "id": "atelier",
+  "displayName": "Atelier",
+  "tagline": "Architectural studio",
+  "symbolName": "square.dashed",
+  "isCustom": true,
+  "prefersDarkAppearance": null,
+  "colors": {
+    "primary":       "#121212|#F8F8F5",
+    "secondary":     "#595952|#A3A39B",
+    "accent":        "#3848F0|#7C8AFF",
+    "highlight":     "#8A5A00|#E5B454",
+    "warm":          "#C80E1F|#FF6B73",
+    "tertiary":      "#156A48|#47C992",
+    "surface":       "#F5F5F1|#121212",
+    "surfaceAlt":    "#EBEBE5|#1F1F1D",
+    "cardFill":      "#FFFFFF|#1A1A19",
+    "cardStroke":    "#DCDCD5|#2D2D2A",
+    "primaryText":   "#121212|#F8F8F5",
+    "secondaryText": "#595952|#A3A39B"
+  },
+  "fonts":   { "body": "system", "numeric": "tabular" },
+  "shape":   { "cornerMultiplier": 0.45, "separator": "hairline" },
+  "motion":  { "preset": "snappy" },
+  "density": { "preset": "normal" },
+  "style": {
+    "skin": "atelier",
+    "typography": {
+      "bodyFamily": "Geist",
+      "numericFamily": "Geist Mono",
+      "scale": 1.0,
+      "tracking": 0.0,
+      "contrast": "strong"
+    },
+    "chrome": {
+      "borderStyle": "hairline",
+      "borderWeight": 1.0,
+      "borderOpacity": 1.0,
+      "cornerStyle": "sharp",
+      "panelDepth": "flat"
+    },
+    "effects": { "scanlineOpacity": 0.0, "glowStrength": 0.0, "materialIntensity": 0.0 },
+    "controls": {
+      "selectedFillStyle": "accentSolid",
+      "progressStyle": "flatBar",
+      "hoverStyle": "neutral",
+      "chartSeries": "themed"
+    }
+  }
+}

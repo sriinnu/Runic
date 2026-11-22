@@ -77,7 +77,8 @@ extension MenuPopoverView {
             width: self.contentWidth,
             showsUsed: self.settings.usageBarsShowUsed,
             numberStyle: self.settings.numberFormat.formatterStyle,
-            onAddRegion: { slot in self.actions.openProviderSettings(slot) })
+            onAddRegion: { slot in self.actions.openProviderSettings(slot) },
+            onSelectProvider: { target in self.selectProvider(target) })
     }
 
     func overviewModel(providers: [UsageProvider])
