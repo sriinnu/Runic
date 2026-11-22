@@ -2,126 +2,191 @@ import AppKit
 import RunicCore
 import SwiftUI
 
-// MARK: - Editorial kit
+// MARK: - Editorial Kit
 
-/// The Gazette's printed-edition kit: the fixed inks that are not palette
-/// slots and the two faces of the page, addressed by PostScript name so a
-/// weight never depends on family matching. The composition rules (folio,
-/// nameplate, category pill, dotted leader, double rule) live here too, the
-/// way `RunicPaperStage` keeps the paper theme's pastels.
+/// The Gazette's WSJ / NY Times broadsheet kit: adaptive Morning (light) and
+/// Evening (dark) inks derived from `runicTheme`, classic transitional serif
+/// (`Baskerville` nameplate), crisp digital broadsheet (`Georgia` headlines,
+/// numerals, body, and italic decks/status), and condensed grotesque
+/// (`Archivo Narrow` datelines, kickers, hairline tags, and tabular metadata).
 enum RunicGazette {
-    /// Body copy sits a shade off full ink, like printed text.
-    static let inkSoft = Color(red: 0.165, green: 0.165, blue: 0.165)
-    /// Money column green.
-    static let green = Color(red: 0.122, green: 0.478, blue: 0.247)
-    /// Brief-bullet violet and amber.
-    static let violet = Color(red: 0.608, green: 0.365, blue: 0.898)
-    static let amber = Color(red: 0.722, green: 0.416, blue: 0.0)
+    static let pageHorizontalInset: CGFloat = RunicSpacing.xxs
+    static let labelTracking: CGFloat = 0.8
 
-    /// Section tag colours, cycling the way a paper's category labels do:
-    /// rose, blue, gold, green, violet.
-    static func sectionColor(_ index: Int, theme: RunicThemePalette) -> Color {
-        let cycle = [theme.warm, theme.tertiary, theme.highlight, self.green, self.violet]
+    // MARK: Adaptive Inks
+
+    static func bodyInk(_ theme: RunicThemePalette) -> Color {
+        theme.primaryText.opacity(0.88)
+    }
+
+    static func trackFill(_ theme: RunicThemePalette, dark: Bool) -> Color {
+        theme.primaryText.opacity(dark ? 0.18 : 0.12)
+    }
+
+    static func gaugeTint(used: Double?, exhausted: Bool, theme: RunicThemePalette) -> Color {
+        if exhausted { return theme.warm }
+        if let used, used >= 80 { return theme.highlight }
+        return theme.primaryText
+    }
+
+    static func bulletColor(_ index: Int, theme: RunicThemePalette) -> Color {
+        let cycle = [theme.primaryText, theme.warm, theme.tertiary, theme.highlight, theme.secondaryText]
         return cycle[((index % cycle.count) + cycle.count) % cycle.count]
     }
 
-    /// Bullet squares for the In-brief column.
-    static func bulletColor(_ index: Int, theme: RunicThemePalette) -> Color {
-        let cycle = [theme.warm, self.violet, self.amber, self.green, theme.tertiary]
-        return cycle[((index % cycle.count) + cycle.count) % cycle.count]
+    // MARK: Metric Helpers
+
+    static func usedShare(_ metric: UsageMenuCardView.Model.Metric) -> Double? {
+        guard let percent = metric.percent else { return nil }
+        switch metric.percentStyle {
+        case .used: return percent
+        case .left: return 100 - percent
+        }
+    }
+
+    static func isExhausted(_ metric: UsageMenuCardView.Model.Metric) -> Bool {
+        guard let used = self.usedShare(metric) else { return false }
+        return used >= 99.5
+    }
+
+    static func paceMarker(for metric: UsageMenuCardView.Model.Metric) -> Double? {
+        guard let percent = metric.percent, let detail = metric.detailText else { return nil }
+        guard let open = detail.range(of: "("),
+              let close = detail.range(of: "%)"),
+              open.upperBound < close.lowerBound
+        else { return nil }
+        let raw = detail[open.upperBound..<close.lowerBound].replacingOccurrences(of: "+", with: "")
+        let delta = Double(raw) ?? 0
+        guard delta != 0 else { return nil }
+        let target = switch metric.percentStyle {
+        case .used: percent - delta
+        case .left: percent + delta
+        }
+        return min(100, max(0, target))
     }
 
     // MARK: Faces
 
-    enum SerifWeight { case regular, semibold, bold, black, italic }
+    enum SerifWeight { case regular, semibold, bold, black, italic, boldItalic }
     enum SansWeight { case regular, medium, semibold, bold }
 
-    /// Fraunces 9pt, static instances. Headlines, numerals, the nameplate.
+    /// Georgia + Baskerville editorial serifs. Crisp at every size.
     static func serif(_ size: CGFloat, _ weight: SerifWeight = .regular) -> Font {
         let name = switch weight {
-        case .regular: "Fraunces9pt-Regular"
-        case .semibold: "Fraunces9pt-SemiBold"
-        case .bold: "Fraunces9pt-Bold"
-        case .black: "Fraunces9pt-Black"
-        case .italic: "Fraunces9pt-Italic"
+        case .regular: "Georgia"
+        case .semibold: "Baskerville-SemiBold"
+        case .bold: "Georgia-Bold"
+        case .black: "Baskerville-Bold"
+        case .italic: "Georgia-Italic"
+        case .boldItalic: "Georgia-BoldItalic"
         }
         return Font.custom(name, fixedSize: size)
     }
 
-    /// Manrope, static instances. Labels, metadata, secondary copy.
+    /// Archivo Narrow condensed static instances. Datelines, kickers, tabs,
+    /// badges, and tabular metadata.
     static func sans(_ size: CGFloat, _ weight: SansWeight = .regular) -> Font {
         let name = switch weight {
-        case .regular: "Manrope-Regular"
-        case .medium: "Manrope-Medium"
-        case .semibold: "Manrope-SemiBold"
-        case .bold: "Manrope-Bold"
+        case .regular: "ArchivoNarrow-Regular"
+        case .medium: "ArchivoNarrow-Medium"
+        case .semibold: "ArchivoNarrow-SemiBold"
+        case .bold: "ArchivoNarrow-Bold"
         }
         return Font.custom(name, fixedSize: size)
     }
 
     // MARK: Roles
 
-    static let labelTracking: CGFloat = 1.4
-
-    /// Tiny tracked caps: folio line, bylines, section tags.
-    static func label(_ size: CGFloat = 9) -> Font {
+    /// Condensed tracked uppercase labels: folio dateline, metadata, tab labels.
+    static func label(_ size: CGFloat = 9.5) -> Font {
         self.sans(size, .bold)
     }
 
-    /// Story headline.
+    /// Flush-left section kickers (`QUOTA LEDGER`, `SESSION`, `WEEKLY`, `RESETS`).
+    static func kicker(_ size: CGFloat = 10) -> Font {
+        self.sans(size, .bold)
+    }
+
+    /// Story & provider row headline (`Georgia-Bold`).
     static func headline(_ size: CGFloat) -> Font {
         self.serif(size, .bold)
     }
 
-    /// Amounts and the big percentage.
+    /// Upright broadsheet numerals (`100%`, `48%`). Pair with `.monospacedDigit()`.
     static func numeral(_ size: CGFloat) -> Font {
-        self.serif(size, .black)
+        self.serif(size, .bold)
     }
 
-    /// The nameplate.
-    static func nameplate(_ size: CGFloat = 30) -> Font {
-        self.serif(size, .black)
+    /// Italic editorial status word (*exhausted*, *used*).
+    static func statusItalic(_ size: CGFloat) -> Font {
+        self.serif(size, .italic)
     }
 
-    /// Lead-story copy.
-    static func body(_ size: CGFloat = 12.5) -> Font {
+    /// Classical broadsheet masthead (`Baskerville-Bold`).
+    static func nameplate(_ size: CGFloat = 29) -> Font {
+        .custom("Baskerville-Bold", fixedSize: size)
+    }
+
+    /// Editorial deck or pull-quote italic (`Georgia-Italic`).
+    static func deckItalic(_ size: CGFloat = 11.5) -> Font {
+        self.serif(size, .italic)
+    }
+
+    /// Lead-story prose (`Georgia`).
+    static func body(_ size: CGFloat = 12) -> Font {
         self.serif(size, .regular)
     }
 
-    /// Secondary copy.
-    static func copy(_ size: CGFloat = 10.5) -> Font {
-        self.sans(size, .regular)
+    /// Secondary condensed metadata copy (`ArchivoNarrow-Medium`).
+    static func copy(_ size: CGFloat = 10) -> Font {
+        self.sans(size, .medium)
     }
 
-    /// Pull quote.
-    static func quote(_ size: CGFloat = 13) -> Font {
+    /// Pull quote (`Georgia-Italic`).
+    static func quote(_ size: CGFloat = 12.5) -> Font {
         self.serif(size, .italic)
     }
 
     // MARK: Folio
 
-    /// "Vol. 2 · No. 154" — the marketing major as the volume, the build as
-    /// the issue number, so every build is its own edition. Read once.
+    /// "Vol. II · No. 221" — the marketing major in Roman numerals as the
+    /// volume, the build as the issue number. Read once.
     static let edition: String = {
-        let major = RunicVersion.marketing.split(separator: ".").first.map(String.init) ?? RunicVersion.marketing
+        let majorText = RunicVersion.marketing.split(separator: ".").first.map(String.init) ?? RunicVersion.marketing
+        let volume = Self.romanNumeral(for: Int(majorText)) ?? majorText
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         if let build, !build.isEmpty {
-            return "Vol. \(major) · No. \(build)"
+            return "Vol. \(volume) \u{00B7} No. \(build)"
         }
-        return "Vol. \(major)"
+        return "Vol. \(volume)"
     }()
 
-    /// Fixed en_GB order so the folio reads the same in every locale; it is
-    /// typography, not a localised date. One formatter for the process —
-    /// `DateFormatter` formatting is thread-safe on current macOS.
-    private nonisolated(unsafe) static let folioFormatter: DateFormatter = {
+    private static func romanNumeral(for value: Int?) -> String? {
+        guard let value else { return nil }
+        switch value {
+        case 1: return "I"
+        case 2: return "II"
+        case 3: return "III"
+        case 4: return "IV"
+        case 5: return "V"
+        case 6: return "VI"
+        case 7: return "VII"
+        case 8: return "VIII"
+        case 9: return "IX"
+        case 10: return "X"
+        default: return nil
+        }
+    }
+
+    /// Fixed POSIX/US broadsheet dateline ("Sunday, Nov. 22, 2026").
+    /// Condensed typography allows the full weekday + abbreviated month to fit cleanly.
+    private static let folioFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_GB")
-        formatter.dateFormat = "EEEE, d MMM yyyy"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "EEEE, MMM. d, yyyy"
         return formatter
     }()
 
-    /// "Friday, 10 Oct 2026".
     static func folioDate(_ date: Date = .init()) -> String {
         self.folioFormatter.string(from: date)
     }
@@ -136,9 +201,20 @@ enum RunicGazette {
     }
 }
 
-// MARK: - Labels and tags
+// MARK: - Typography Protection
 
-/// Tracked uppercase caption in Manrope Bold: the folio, bylines, metadata.
+extension View {
+    /// Clears any inherited `.monospaced` font design so custom PostScript
+    /// fonts (`Baskerville`, `Georgia`, `Archivo Narrow`) never fall back to
+    /// the generic user body font.
+    func gazetteFace() -> some View {
+        self.fontDesign(nil)
+    }
+}
+
+// MARK: - Labels, Kickers and Hairline Tags
+
+/// Condensed tracked uppercase caption in Archivo Narrow Bold: folio, metadata.
 struct GazetteLabel: View {
     let text: String
     var size: CGFloat = 9
@@ -156,43 +232,72 @@ struct GazetteLabel: View {
     }
 }
 
-extension View {
-    /// Pins the editorial faces against the environment's font design. A
-    /// user whose body font is SF Mono carries `.fontDesign(.monospaced)`
-    /// through the panel, and SwiftUI would re-resolve `Font.custom` through
-    /// it — Fraunces and Manrope have no monospaced cut and fall back to the
-    /// body font. Every Gazette text sits under one of these.
-    func gazetteFace() -> some View {
-        self.fontDesign(.default)
-    }
-}
-
-/// Solid category tag: caps knocked out of a hard-cornered brand block.
-struct GazettePill: View {
+/// Flush-left broadsheet section kicker (`QUOTA LEDGER`, `SESSION`, `WEEKLY`).
+/// Monochrome uppercase typography — no solid category ribbons.
+struct GazetteKicker: View {
     let text: String
-    let color: Color
-    var size: CGFloat = 9
+    var size: CGFloat = 10
+    var color: Color?
+    var tracking: CGFloat = 1.0
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Text(self.text.uppercased())
-            .font(RunicGazette.label(self.size))
+            .font(RunicGazette.kicker(self.size))
             .gazetteFace()
-            .tracking(RunicGazette.labelTracking)
-            .foregroundStyle(self.runicTheme.surface)
-            .lineLimit(1)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Rectangle().fill(self.color))
-            .fixedSize()
+            .tracking(self.tracking)
+            .foregroundStyle(self.color ?? self.runicTheme.primaryText)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
     }
 }
 
-// MARK: - Rules
+/// Legacy source-compatible section header alias rendered as a flat editorial
+/// kicker so any external call site stays consistent with the print grid.
+struct GazettePill: View {
+    let text: String
+    var color: Color?
+    var size: CGFloat = 10
 
-/// Ink rules. `single` divides stories, `double` closes the masthead,
-/// `heavy` frames a pull quote, `hair` separates columns.
+    var body: some View {
+        GazetteKicker(text: self.text, size: self.size, color: self.color)
+    }
+}
+
+/// Crisp 1px rectangular broadsheet tag (`PRO`, `ULTRA`, `EXHAUSTED`, `[2]`).
+struct GazetteHairlineBadge: View {
+    let text: String
+    var textColor: Color?
+    var borderColor: Color?
+    var fillColor: Color = .clear
+    var size: CGFloat = 8.5
+
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 2, style: .continuous)
+        Text(self.text.uppercased())
+            .font(RunicGazette.sans(self.size, .semibold))
+            .gazetteFace()
+            .tracking(0.6)
+            .foregroundStyle(self.textColor ?? self.runicTheme.secondaryText)
+            .lineLimit(1)
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 1)
+            .background(shape.fill(self.fillColor))
+            .overlay(shape.strokeBorder(self.borderColor ?? self.runicTheme.cardStroke, lineWidth: 0.9))
+            .fixedSize()
+    }
+}
+
+// MARK: - Rules and Leaders
+
+/// Broadsheet horizontal ink rules:
+/// - `hair`: 0.5pt row divider inside a ledger
+/// - `single`: 1pt section / folio rule
+/// - `heavy`: 2pt section topper rule
+/// - `double`: classic WSJ / NYT masthead rule (2pt heavy over 0.5pt hair)
 struct GazetteRule: View {
     enum Weight { case hair, single, double, heavy }
 
@@ -204,15 +309,15 @@ struct GazetteRule: View {
         Group {
             switch self.weight {
             case .hair:
-                Rectangle().fill(ink.opacity(0.28)).frame(height: 1)
+                Rectangle().fill(ink.opacity(0.22)).frame(height: 0.75)
             case .single:
-                Rectangle().fill(ink).frame(height: 1)
+                Rectangle().fill(ink.opacity(0.85)).frame(height: 1)
             case .heavy:
-                Rectangle().fill(ink).frame(height: 3)
+                Rectangle().fill(ink).frame(height: 2)
             case .double:
-                VStack(spacing: 1) {
-                    Rectangle().fill(ink).frame(height: 1)
-                    Rectangle().fill(ink).frame(height: 1)
+                VStack(spacing: 2) {
+                    Rectangle().fill(ink).frame(height: 2)
+                    Rectangle().fill(ink.opacity(0.75)).frame(height: 0.75)
                 }
             }
         }
@@ -220,20 +325,19 @@ struct GazetteRule: View {
     }
 }
 
-/// Vertical hairline between two columns of a row.
+/// Vertical hairline between two broadsheet columns.
 struct GazetteColumnRule: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         Rectangle()
-            .fill(self.runicTheme.primaryText.opacity(0.28))
-            .frame(width: 1)
+            .fill(self.runicTheme.primaryText.opacity(0.26))
+            .frame(width: 0.75)
             .accessibilityHidden(true)
     }
 }
 
-/// Dotted leader between a label and its amount, sitting just above the
-/// baseline. Place it in an `HStack(alignment: .firstTextBaseline)`.
+/// Crisp baseline dotted leader between a row headline and its tabular numeral.
 struct GazetteLeader: View {
     @Environment(\.runicTheme) private var runicTheme
 
@@ -244,8 +348,8 @@ struct GazetteLeader: View {
                 path.addLine(to: CGPoint(x: proxy.size.width, y: 0.5))
             }
             .stroke(
-                self.runicTheme.secondaryText,
-                style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [0.1, 3]))
+                self.runicTheme.secondaryText.opacity(0.65),
+                style: StrokeStyle(lineWidth: 1.0, lineCap: .round, dash: [0.2, 3.2]))
         }
         .frame(height: 1)
         .frame(minWidth: 10, maxWidth: .infinity)
@@ -256,12 +360,12 @@ struct GazetteLeader: View {
 
 // MARK: - Controls
 
-/// 22pt editorial button: ink outline, or ink block with the paper knocked
-/// out when `filled`. Hover inverts it.
+/// Crisp 1px rectangular broadsheet button with clean paper/ink hover inversion.
 struct GazetteButton: View {
     let title: String
     var filled = false
     var size: CGFloat = 9.5
+    var height: CGFloat = 22
     let action: () -> Void
 
     @State private var isHovered = false
@@ -271,54 +375,58 @@ struct GazetteButton: View {
         let ink = self.runicTheme.primaryText
         let paper = self.runicTheme.surface
         let inverted = self.filled != self.isHovered
+        let shape = RoundedRectangle(cornerRadius: 2, style: .continuous)
         Button(action: self.action) {
             Text(self.title.uppercased())
                 .font(RunicGazette.label(self.size))
                 .gazetteFace()
-                .tracking(1)
+                .tracking(0.8)
                 .lineLimit(1)
                 .foregroundStyle(inverted ? paper : ink)
                 .padding(.horizontal, 10)
-                .frame(height: 22)
-                .background(Rectangle().fill(inverted ? ink : Color.clear))
-                .overlay(Rectangle().stroke(ink, lineWidth: 1))
-                .contentShape(Rectangle())
+                .frame(height: self.height)
+                .background(shape.fill(inverted ? ink : paper))
+                .overlay(shape.strokeBorder(ink.opacity(inverted ? 1 : 0.45), lineWidth: 1))
+                .contentShape(shape)
         }
         .buttonStyle(.plain)
         .onHover { self.isHovered = $0 }
     }
 }
 
-/// "↩ Reply wanted" — a tracked caps link in the accent with a 2pt
-/// underline. Decorative when `action` is nil.
+/// Understated broadsheet inline link in ink with a crisp 1pt underline.
 struct GazetteLink: View {
     let text: String
     var action: (() -> Void)?
+    @State private var isHovered = false
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         let label = Text(self.text.uppercased())
-            .font(RunicGazette.label(9.5))
+            .font(RunicGazette.sans(9.5, .semibold))
             .gazetteFace()
-            .tracking(1)
-            .foregroundStyle(self.runicTheme.accent)
+            .tracking(0.8)
+            .foregroundStyle(self.isHovered ? self.runicTheme.secondaryText : self.runicTheme.primaryText)
             .lineLimit(1)
             .padding(.bottom, 1)
             .overlay(alignment: .bottom) {
-                Rectangle().fill(self.runicTheme.accent).frame(height: 2)
+                Rectangle()
+                    .fill((self.isHovered ? self.runicTheme.secondaryText : self.runicTheme.primaryText).opacity(0.65))
+                    .frame(height: 1)
             }
         if let action {
             Button(action: action) { label.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
+                .onHover { self.isHovered = $0 }
         } else {
             label
         }
     }
 }
 
-// MARK: - Copy
+// MARK: - Editorial Copy
 
-/// One In-brief item: a coloured square, an optional bold lead, the line.
+/// One In-brief item: a square marker, bold serif lead, and adaptive body ink.
 struct GazetteBullet: View {
     let color: Color
     let lead: String?
@@ -329,16 +437,16 @@ struct GazetteBullet: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text("\u{25AA}")
-                .font(RunicGazette.sans(10.5, .bold))
+                .font(RunicGazette.sans(10, .bold))
                 .foregroundStyle(self.color)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 self.line
                     .lineSpacing(1.5)
                     .fixedSize(horizontal: false, vertical: true)
                 if let detail = self.detail, !detail.isEmpty {
                     Text(detail)
-                        .font(RunicGazette.copy(10))
+                        .font(RunicGazette.copy(9.5))
                         .foregroundStyle(self.runicTheme.secondaryText)
                         .lineSpacing(1)
                         .fixedSize(horizontal: false, vertical: true)
@@ -348,24 +456,22 @@ struct GazetteBullet: View {
         .gazetteFace()
     }
 
-    /// Runs of a concatenated `Text` resolve their own design, so the pin
-    /// goes on each run, not just the container.
     private var line: Text {
         let body = Text(self.text)
-            .font(RunicGazette.copy())
-            .fontDesign(.default)
-            .foregroundStyle(RunicGazette.inkSoft)
+            .font(RunicGazette.body(11))
+            .fontDesign(nil)
+            .foregroundStyle(RunicGazette.bodyInk(self.runicTheme))
         guard let lead = self.lead, !lead.isEmpty else { return body }
-        return Text(lead)
-            .font(RunicGazette.sans(10.5, .bold))
-            .fontDesign(.default)
+        return Text("\(lead):")
+            .font(RunicGazette.headline(11))
+            .fontDesign(nil)
             .foregroundStyle(self.runicTheme.primaryText)
             + Text(" ")
             + body
     }
 }
 
-/// Pull quote: italic serif framed by heavy rules above and below.
+/// Pull quote: Georgia Italic framed by heavy top & bottom ink rules.
 struct GazetteQuote: View {
     let text: String
     var attribution: String?
@@ -374,46 +480,55 @@ struct GazetteQuote: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("\u{201C}\(self.text)\u{201D}")
-                .font(RunicGazette.quote())
+                .font(RunicGazette.quote(12))
                 .foregroundStyle(self.runicTheme.primaryText)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
             if let attribution = self.attribution, !attribution.isEmpty {
-                GazetteLabel(text: "\u{2014} \(attribution)", color: self.runicTheme.secondaryText, tracking: 1)
+                GazetteLabel(text: "\u{2014} \(attribution)", size: 8.5, color: self.runicTheme.secondaryText)
             }
         }
         .gazetteFace()
         .padding(.vertical, 8)
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .top) { GazetteRule(weight: .heavy) }
         .overlay(alignment: .bottom) { GazetteRule(weight: .heavy) }
     }
 }
 
-/// Flat printed gauge: a hairline track on the paper, a solid fill.
+/// Razor-thin flat newsprint gauge with optional vertical pace marker tick.
 struct GazetteBar: View {
     let percent: Double
     let tint: Color
     let accessibilityLabel: String
-    var height: CGFloat = 6
+    var marker: Double?
+    var height: CGFloat = 4
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let clamped = min(100, max(0, self.percent))
+        let dark = self.colorScheme == .dark
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Rectangle()
-                    .fill(self.runicTheme.surface)
-                    .overlay(Rectangle().strokeBorder(self.runicTheme.primaryText.opacity(0.35), lineWidth: 1))
+                    .fill(RunicGazette.trackFill(self.runicTheme, dark: dark))
+                    .frame(height: self.height)
                 if clamped > 0 {
-                    // Inside the 1pt stroke on both ends.
                     Rectangle()
                         .fill(self.tint)
-                        .frame(width: max(2, (proxy.size.width - 2) * clamped / 100))
-                        .padding(1)
+                        .frame(width: max(2, proxy.size.width * clamped / 100), height: self.height)
+                }
+                if let marker = self.marker {
+                    let x = max(0, min(proxy.size.width - 1.5, proxy.size.width * marker / 100))
+                    Rectangle()
+                        .fill(self.runicTheme.primaryText.opacity(0.85))
+                        .frame(width: 1.5, height: self.height + 4)
+                        .offset(x: x)
                 }
             }
+            .frame(height: self.height)
         }
         .frame(height: self.height)
         .accessibilityElement(children: .ignore)
@@ -422,56 +537,89 @@ struct GazetteBar: View {
     }
 }
 
-/// The folio line: edition on the left, the date centred, a note on the
-/// right, a rule beneath.
+/// Top dateline bar framed by 1pt rules: Edition | Date | Freshness or Active count.
 struct GazetteFolio: View {
     var trailing: String?
     var trailingColor: Color?
+    var showsTopRule = false
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
         VStack(spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                GazetteLabel(text: RunicGazette.edition)
-                Spacer(minLength: 4)
-                GazetteLabel(text: RunicGazette.folioDate())
-                    .minimumScaleFactor(0.85)
-                Spacer(minLength: 4)
+            if self.showsTopRule {
+                GazetteRule(weight: .single)
+            }
+            HStack(alignment: .center, spacing: 6) {
+                GazetteLabel(
+                    text: RunicGazette.edition,
+                    size: 8.5,
+                    color: self.runicTheme.secondaryText,
+                    tracking: 0.6)
+                GazetteColumnRule().frame(height: 9)
+                Spacer(minLength: 2)
+                GazetteLabel(
+                    text: RunicGazette.folioDate(),
+                    size: 8.5,
+                    color: self.runicTheme.secondaryText,
+                    tracking: 0.6)
+                    .minimumScaleFactor(0.78)
                 if let trailing = self.trailing, !trailing.isEmpty {
-                    GazetteLabel(text: trailing, color: self.trailingColor)
-                        .minimumScaleFactor(0.85)
+                    Spacer(minLength: 2)
+                    GazetteColumnRule().frame(height: 9)
+                    GazetteLabel(
+                        text: trailing,
+                        size: 8.5,
+                        color: self.trailingColor ?? self.runicTheme.secondaryText,
+                        tracking: 0.6)
+                        .minimumScaleFactor(0.78)
                 }
             }
-            GazetteRule()
+            GazetteRule(weight: .single)
         }
     }
 }
 
-/// Page footer: the byline as a link, the imprint beside it, an outlined
-/// button on the right.
+/// Broadsheet colophon footer: 1pt rule, version + issue + author link, About button.
 struct GazetteFooter: View {
-    /// "By Sriinnu" — opens `bylineURL`.
     let byline: String
     let bylineURL: URL
     let imprint: String
     let buttonTitle: String
     let action: () -> Void
+
+    @State private var isBylineHovered = false
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        VStack(spacing: 8) {
-            GazetteRule()
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                GazetteLink(text: self.byline) {
-                    NSWorkspace.shared.open(self.bylineURL)
-                }
-                .accessibilityLabel("\(self.byline), opens \(self.bylineURL.host ?? "link")")
-                GazetteLabel(text: "\u{00B7}", color: self.runicTheme.secondaryText)
-                GazetteLabel(text: self.imprint, color: self.runicTheme.secondaryText, tracking: 1.2)
+        VStack(spacing: 6) {
+            GazetteRule(weight: .single)
+            HStack(alignment: .center, spacing: 6) {
+                GazetteLabel(
+                    text: self.imprint,
+                    size: 8.5,
+                    color: self.runicTheme.secondaryText,
+                    tracking: 0.6)
                     .minimumScaleFactor(0.8)
+                GazetteColumnRule().frame(height: 9)
+                Button {
+                    NSWorkspace.shared.open(self.bylineURL)
+                } label: {
+                    Text(self.byline.uppercased())
+                        .font(RunicGazette.sans(8.5, .semibold))
+                        .gazetteFace()
+                        .tracking(0.6)
+                        .foregroundStyle(
+                            self.isBylineHovered ? self.runicTheme.primaryText : self.runicTheme.secondaryText)
+                        .lineLimit(1)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { self.isBylineHovered = $0 }
+                .accessibilityLabel("\(self.byline), opens \(self.bylineURL.host ?? "link")")
                 Spacer(minLength: 8)
-                GazetteButton(title: self.buttonTitle, size: 9, action: self.action)
+                GazetteButton(title: self.buttonTitle, size: 8.5, height: 20, action: self.action)
             }
+            .padding(.horizontal, RunicGazette.pageHorizontalInset)
         }
         .gazetteFace()
     }

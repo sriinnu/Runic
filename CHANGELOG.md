@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.18.0 — 2026-11-22
+
+### Skins & UI
+
+- **Gazette MK II (WSJ / NY Times broadsheet redesign)**: Rebuilt Gazette as an adaptive Morning Edition (`#FAF8F3` warm newsprint) and Evening Edition (`#141311` dark newsprint) broadsheet with `Baskerville` mastheads, `Georgia` bold numerals and italic status decks, and condensed `Archivo Narrow` datelines, kickers, and tabular metadata.
+- **Full Gazette skin chrome & readability fixes**: Migrated tabs, panels, chips, action rows, section kickers, and the Resets schedule into `GazetteSkin` — eliminating rainbow ribbons, indented black headers, clipped folio dates, and the hidden icon on the selected Overview tab, while adding click-to-provider navigation on Overview rows, regional `INTL`/`CN` stacking, inverted-contrast tab icons, and deduplicated `Next reset | Banked` columns.
+
 ## 2.17.0 — 2026-11-22
 
 ### Skins & UI
