@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.17.0 — 2026-11-22
+
+### Skins & UI
+
+- **New Atelier skin**: An adaptive Swiss-Nordic architectural studio skin (`#F5F5F1` warm `18px` dot-grid paper in light / `#121212` night elevation in dark) with a monochrome **Quota Skyline** elevation hero, inline active-tower callout pill, flat `0px` `1px`-ruled spec sheets contrasted against `9999px` pill tabs, blueprint cobalt (`#3848F0` / `#7C8AFF`) focal accents and corner crop-marks (`┌ ┐ └ ┘`), and click-to-provider navigation from overview towers and rows.
+- **Settings window reliability on macOS 27**: `SettingsWindowBridge` now hosts `PreferencesView` in a dedicated reusable AppKit `NSWindow` (`Runic Settings`, `.moveToActiveSpace`, off-screen frame recovery) so clicking **Settings…**, **About Runic**, or provider deep-links reliably opens and raises the Settings window on macOS 14–27.
+
 ## 2.16.0 — 2026-11-21
 
 ### Skins & UI

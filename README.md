@@ -45,7 +45,7 @@ Its job is not to make provider usage look cleaner than it is. Its job is to rep
 - Tracks China and international platforms as separate accounts where a vendor runs both (Kimi, z.ai, MiniMax, Qwen, StepFun), so both subscriptions can be watched at once.
 - Hot-reloads `~/Library/Application Support/Runic/config.json` for endpoint overrides, extra log paths, and rolling-window quota gauges — edit the file, no restart.
 - Reads capability metadata from Kosha-discovery when present, then falls back to bundled context metadata.
-- Comes in 11 themes, eight of them full skins that redraw the whole menu (Liquid Glass, Meridian, Relief, Flight Deck, Departures, Gazette, Sumi, Drafting). See [Themes and Skins](https://runic.srinivas.dev/themes-and-skins).
+- Comes in 12 themes, nine of them full skins that redraw the whole menu (Liquid Glass, Atelier, Meridian, Relief, Flight Deck, Departures, Gazette, Sumi, Drafting). See [Themes and Skins](https://runic.srinivas.dev/themes-and-skins).
 - Exports scoped usage data as CSV or JSON with provenance fields where known.
 - Provides a CLI for scripts and diagnostics.
 

@@ -365,6 +365,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if self.statusController != nil { return }
 
         if let store, let settings, let account, let selection = self.preferencesSelection {
+            let updater = self.updaterController
+            SettingsWindowBridge.configure(selection: selection) {
+                AnyView(
+                    PreferencesView(
+                        settings: settings,
+                        store: store,
+                        updater: updater,
+                        selection: selection)
+                        .environment(\.runicFonts, RunicFontStore.shared))
+            }
             self.statusController = StatusItemController.factory(
                 store,
                 settings,
@@ -379,12 +389,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let fetcher = UsageFetcher()
         let fallbackAccount = fetcher.loadAccountInfo()
         let fallbackStore = UsageStore(fetcher: fetcher, settings: fallbackSettings)
+        let fallbackSelection = PreferencesSelection()
+        let updater = self.updaterController
+        SettingsWindowBridge.configure(selection: fallbackSelection) {
+            AnyView(
+                PreferencesView(
+                    settings: fallbackSettings,
+                    store: fallbackStore,
+                    updater: updater,
+                    selection: fallbackSelection)
+                    .environment(\.runicFonts, RunicFontStore.shared))
+        }
         self.statusController = StatusItemController.factory(
             fallbackStore,
             fallbackSettings,
             fallbackAccount,
             self.updaterController,
-            PreferencesSelection())
+            fallbackSelection)
     }
 
     private func installAutoRefreshLifecycleObservers() {

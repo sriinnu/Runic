@@ -101,6 +101,7 @@ struct OverviewMenuView: View {
     /// "Add China" / "Add International" for a two-region brand with one
     /// side unconfigured. Nil hides the offer.
     var onAddRegion: ((UsageProvider) -> Void)?
+    var onSelectProvider: ((UsageProvider) -> Void)?
     @Environment(\.runicTheme) private var runicTheme
     @Environment(\.runicSkin) private var skin
 

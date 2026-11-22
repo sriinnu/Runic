@@ -143,6 +143,7 @@ enum Theme: String, CaseIterable, Identifiable {
     case system
     case dark
     case glass
+    case atelier
     case meridian
     case relief
     case sumi
@@ -195,6 +196,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .system: "System"
         case .dark: "Dark"
         case .glass: "Glass"
+        case .atelier: "Atelier"
         case .meridian: "Meridian"
         case .relief: "Relief"
         case .sumi: "Sumi"

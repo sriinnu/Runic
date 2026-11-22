@@ -391,6 +391,83 @@ extension Theme {
                         selectedFillStyle: .terminalSolid,
                         progressStyle: .flatBar,
                         hoverStyle: .neutral)))
+        case .atelier:
+            // Swiss-Nordic architectural drafting studio — warm dot-grid paper & crisp white sheets
+            // in daylight; deep charcoal #121212 studio night in dark appearance; electric blueprint
+            // cobalt highlights throughout.
+            RunicThemePalette(
+                id: self.rawValue,
+                displayName: self.label,
+                tagline: "Architectural studio",
+                symbolName: "square.dashed",
+                isCustom: true,
+                prefersDarkAppearance: nil,
+                primary: Color.appearanceColor(
+                    light: Color(red: 18 / 255, green: 18 / 255, blue: 18 / 255),
+                    dark: Color(red: 248 / 255, green: 248 / 255, blue: 245 / 255)),
+                secondary: Color.appearanceColor(
+                    light: Color(red: 89 / 255, green: 89 / 255, blue: 82 / 255),
+                    dark: Color(red: 163 / 255, green: 163 / 255, blue: 155 / 255)),
+                accent: Color.appearanceColor(
+                    light: Color(red: 56 / 255, green: 72 / 255, blue: 240 / 255),
+                    dark: Color(red: 124 / 255, green: 138 / 255, blue: 255 / 255)),
+                highlight: Color.appearanceColor(
+                    light: Color(red: 138 / 255, green: 90 / 255, blue: 0 / 255),
+                    dark: Color(red: 229 / 255, green: 180 / 255, blue: 84 / 255)),
+                warm: Color.appearanceColor(
+                    light: Color(red: 200 / 255, green: 14 / 255, blue: 31 / 255),
+                    dark: Color(red: 255 / 255, green: 107 / 255, blue: 115 / 255)),
+                tertiary: Color.appearanceColor(
+                    light: Color(red: 21 / 255, green: 106 / 255, blue: 72 / 255),
+                    dark: Color(red: 71 / 255, green: 201 / 255, blue: 146 / 255)),
+                surface: Color.appearanceColor(
+                    light: Color(red: 245 / 255, green: 245 / 255, blue: 241 / 255),
+                    dark: Color(red: 18 / 255, green: 18 / 255, blue: 18 / 255)),
+                surfaceAlt: Color.appearanceColor(
+                    light: Color(red: 235 / 255, green: 235 / 255, blue: 229 / 255),
+                    dark: Color(red: 31 / 255, green: 31 / 255, blue: 29 / 255)),
+                cardFill: Color.appearanceColor(
+                    light: Color(red: 1, green: 1, blue: 1),
+                    dark: Color(red: 26 / 255, green: 26 / 255, blue: 25 / 255)),
+                cardStroke: Color.appearanceColor(
+                    light: Color(red: 220 / 255, green: 220 / 255, blue: 213 / 255),
+                    dark: Color(red: 45 / 255, green: 45 / 255, blue: 42 / 255)),
+                primaryText: Color.appearanceColor(
+                    light: Color(red: 18 / 255, green: 18 / 255, blue: 18 / 255),
+                    dark: Color(red: 248 / 255, green: 248 / 255, blue: 245 / 255)),
+                secondaryText: Color.appearanceColor(
+                    light: Color(red: 89 / 255, green: 89 / 255, blue: 82 / 255),
+                    dark: Color(red: 163 / 255, green: 163 / 255, blue: 155 / 255)),
+                fonts: RunicThemeFonts(body: .system, numeric: .tabular),
+                shape: RunicThemeShape(cornerMultiplier: 0.45, separator: .hairline),
+                motion: .snappy,
+                density: .normal,
+                style: RunicThemeStyle(
+                    typography: RunicThemeTypographyStyle(
+                        bodyFamily: RunicFontChoice.geist.id,
+                        numericFamily: RunicFontChoice.geistMono.id,
+                        scale: 1.0,
+                        tracking: 0.0,
+                        lineSpacing: nil,
+                        contrast: .strong),
+                    chrome: RunicThemeChromeStyle(
+                        borderStyle: .hairline,
+                        borderWeight: 1.0,
+                        borderOpacity: 1.0,
+                        cornerStyle: .sharp,
+                        panelDepth: .flat),
+                    effects: RunicThemeEffectsStyle(
+                        scanlineOpacity: 0,
+                        glowStrength: 0,
+                        materialIntensity: 0,
+                        texture: .none,
+                        textureOpacity: 0),
+                    controls: RunicThemeControlStyle(
+                        selectedFillStyle: .accentSolid,
+                        progressStyle: .flatBar,
+                        hoverStyle: .neutral,
+                        chartSeries: .themed),
+                    skin: AtelierSkin.skinID))
         case .meridian:
             // Fine Horology chronometer — Porcelain Enamel (light) / Grand Feu Midnight (dark).
             RunicThemePalette(
