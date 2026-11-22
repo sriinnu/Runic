@@ -544,33 +544,57 @@ extension Theme {
                         chartSeries: .themed),
                     skin: MeridianSkin.skinID))
         case .gazette:
-            // A warm editorial broadsheet. Cream newsprint, black ink, ruled
-            // separators; a deep-teal accent for links and "reply wanted",
-            // gold-leaf emphasis, crimson for alerts, editorial blue in the
-            // series. Manrope sets the body, Fraunces the serif headings.
+            // WSJ / NYT editorial broadsheet — adaptive Morning Edition
+            // (#FAF8F3 warm newsprint) and Evening Edition (#141311 dark newsprint).
+            // Baskerville nameplate, Georgia editorial numerals & italics,
+            // Archivo Narrow condensed datelines and tabular metadata.
             RunicThemePalette(
                 id: self.rawValue,
                 displayName: self.label,
-                tagline: "The daily edition",
+                tagline: "Broadsheet, day & night",
                 symbolName: "newspaper.fill",
                 isCustom: true,
-                prefersDarkAppearance: false,
-                primary: Color(red: 0.078, green: 0.078, blue: 0.078), // ink
-                secondary: Color(red: 0.333, green: 0.333, blue: 0.333), // grey rule
-                accent: Color(red: 0.043, green: 0.431, blue: 0.471), // deep teal
-                highlight: Color(red: 0.561, green: 0.337, blue: 0.000), // deep ochre — reads on the hover wash
-                warm: Color(red: 0.784, green: 0.196, blue: 0.369), // crimson — alert
-                tertiary: Color(red: 0.114, green: 0.373, blue: 0.800), // editorial blue
-                surface: Color(red: 0.965, green: 0.945, blue: 0.906), // newsprint cream
-                surfaceAlt: Color(red: 0.937, green: 0.910, blue: 0.855),
-                cardFill: Color(red: 0.984, green: 0.973, blue: 0.945).opacity(0.97),
-                cardStroke: Color(red: 0.078, green: 0.078, blue: 0.078).opacity(0.30),
-                primaryText: Color(red: 0.078, green: 0.078, blue: 0.078),
-                secondaryText: Color(red: 0.333, green: 0.333, blue: 0.333),
+                prefersDarkAppearance: nil,
+                primary: Color.appearanceColor(
+                    light: Color(red: 20 / 255, green: 20 / 255, blue: 20 / 255),
+                    dark: Color(red: 242 / 255, green: 237 / 255, blue: 228 / 255)),
+                secondary: Color.appearanceColor(
+                    light: Color(red: 87 / 255, green: 82 / 255, blue: 73 / 255),
+                    dark: Color(red: 184 / 255, green: 176 / 255, blue: 163 / 255)),
+                accent: Color.appearanceColor(
+                    light: Color(red: 20 / 255, green: 20 / 255, blue: 20 / 255),
+                    dark: Color(red: 242 / 255, green: 237 / 255, blue: 228 / 255)),
+                highlight: Color.appearanceColor(
+                    light: Color(red: 122 / 255, green: 79 / 255, blue: 0 / 255),
+                    dark: Color(red: 214 / 255, green: 166 / 255, blue: 84 / 255)),
+                warm: Color.appearanceColor(
+                    light: Color(red: 168 / 255, green: 30 / 255, blue: 30 / 255),
+                    dark: Color(red: 234 / 255, green: 106 / 255, blue: 106 / 255)),
+                tertiary: Color.appearanceColor(
+                    light: Color(red: 27 / 255, green: 102 / 255, blue: 56 / 255),
+                    dark: Color(red: 99 / 255, green: 185 / 255, blue: 131 / 255)),
+                surface: Color.appearanceColor(
+                    light: Color(red: 250 / 255, green: 248 / 255, blue: 243 / 255),
+                    dark: Color(red: 20 / 255, green: 19 / 255, blue: 17 / 255)),
+                surfaceAlt: Color.appearanceColor(
+                    light: Color(red: 242 / 255, green: 239 / 255, blue: 231 / 255),
+                    dark: Color(red: 29 / 255, green: 27 / 255, blue: 24 / 255)),
+                cardFill: Color.appearanceColor(
+                    light: Color(red: 250 / 255, green: 248 / 255, blue: 243 / 255),
+                    dark: Color(red: 20 / 255, green: 19 / 255, blue: 17 / 255)),
+                cardStroke: Color.appearanceColor(
+                    light: Color(red: 20 / 255, green: 20 / 255, blue: 20 / 255).opacity(0.22),
+                    dark: Color(red: 242 / 255, green: 237 / 255, blue: 228 / 255).opacity(0.20)),
+                primaryText: Color.appearanceColor(
+                    light: Color(red: 20 / 255, green: 20 / 255, blue: 20 / 255),
+                    dark: Color(red: 242 / 255, green: 237 / 255, blue: 228 / 255)),
+                secondaryText: Color.appearanceColor(
+                    light: Color(red: 87 / 255, green: 82 / 255, blue: 73 / 255),
+                    dark: Color(red: 184 / 255, green: 176 / 255, blue: 163 / 255)),
                 fonts: RunicThemeFonts(body: .system, numeric: .tabular),
-                shape: RunicThemeShape(cornerMultiplier: 0.18, separator: .rule),
+                shape: RunicThemeShape(cornerMultiplier: 0.12, separator: .rule),
                 motion: .snappy,
-                density: .generous,
+                density: .normal,
                 style: RunicThemeStyle(
                     typography: RunicThemeTypographyStyle(
                         bodyFamily: RunicFontChoice.manrope.id,
@@ -583,9 +607,9 @@ extension Theme {
                     chrome: RunicThemeChromeStyle(
                         borderStyle: .hairline,
                         borderWeight: 1.0,
-                        borderOpacity: 0.9,
-                        cornerStyle: .soft,
-                        panelDepth: .low),
+                        borderOpacity: 1.0,
+                        cornerStyle: .sharp,
+                        panelDepth: .flat),
                     effects: RunicThemeEffectsStyle(
                         scanlineOpacity: 0,
                         glowStrength: 0,
@@ -597,7 +621,8 @@ extension Theme {
                         selectedFillStyle: .accentSolid,
                         progressStyle: .flatBar,
                         hoverStyle: .neutral,
-                        chartSeries: .themed)))
+                        chartSeries: .themed),
+                    skin: GazetteSkin.skinID))
         case .flightdeck:
             // An avionics primary flight display. Near-black stage, a 5pt
             // inner frame, cyan-green symbology for the live readings, amber

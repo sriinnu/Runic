@@ -4,59 +4,64 @@ import SwiftUI
 
 // MARK: - Masthead
 
-/// The provider header set as a newspaper masthead: a folio line (edition,
-/// date, freshness), the provider's name as the nameplate, a deck of the
-/// headline numbers, and the double rule that closes a masthead. Account
-/// notes and recovery actions sit under the deck. Gazette only.
+/// The provider header set as a newspaper masthead: folio dateline, brand mark +
+/// Baskerville nameplate, condensed uppercase summary deck, Georgia Italic
+/// account line, advisory/recovery banner when needed, and a classic heavy-over-
+/// hairline double rule closing the masthead.
 struct GazetteMasthead: View {
     let model: UsageMenuCardView.Model
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let dark = self.colorScheme == .dark
         VStack(alignment: .leading, spacing: 0) {
             GazetteFolio(trailing: self.folioNote, trailingColor: self.folioNoteColor)
 
             HStack(alignment: .center, spacing: 8) {
                 Spacer(minLength: 0)
-                if let icon = ProviderBrandIcon.image(for: self.model.provider, size: 22) {
+                if let icon = ProviderBrandIcon.image(for: self.model.provider, size: 22, prefersDark: dark) {
                     Image(nsImage: icon)
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
-                        .frame(width: 22, height: 22)
+                        .frame(width: 20, height: 20)
                         .accessibilityHidden(true)
                 }
                 Text(self.model.providerName)
-                    .font(RunicGazette.nameplate(30))
-                    .tracking(-0.8)
+                    .font(RunicGazette.nameplate(28))
+                    .tracking(-0.4)
+                    .foregroundStyle(self.runicTheme.primaryText)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.75)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
             }
-            .padding(.top, 6)
-            .padding(.bottom, 4)
+            .padding(.top, 7)
+            .padding(.bottom, 3)
 
             if !self.deckItems.isEmpty {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Spacer(minLength: 0)
                     ForEach(Array(self.deckItems.enumerated()), id: \.offset) { index, item in
                         if index > 0 {
-                            GazetteLabel(text: "\u{00B7}", color: self.runicTheme.secondaryText)
+                            GazetteLabel(text: "\u{00B7}", size: 9, color: self.runicTheme.secondaryText)
                         }
                         GazetteLabel(
                             text: item,
-                            color: index == 0 ? self.runicTheme.primaryText : self.runicTheme.secondaryText)
+                            size: 9.5,
+                            color: index == 0 ? self.runicTheme.primaryText : self.runicTheme.secondaryText,
+                            tracking: 0.7)
                             .minimumScaleFactor(0.8)
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, 3)
             }
 
             if !self.model.email.isEmpty {
                 Text(self.model.email)
-                    .font(RunicGazette.copy(9.5))
+                    .font(RunicGazette.deckItalic(11))
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -64,10 +69,10 @@ struct GazetteMasthead: View {
                     .padding(.bottom, 2)
             }
 
-            if let topModelLine = self.model.topModelLine {
+            if let topModelLine = self.model.topModelLine, !topModelLine.isEmpty {
                 Text(topModelLine)
-                    .font(RunicGazette.copy(10))
-                    .foregroundStyle(RunicGazette.inkSoft)
+                    .font(RunicGazette.copy(9.5))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -77,22 +82,32 @@ struct GazetteMasthead: View {
 
             if self.model.menuMode != .glance, let peak = self.model.peakHoursText {
                 Text("Peak hours: \(peak)")
-                    .font(RunicGazette.copy(10))
-                    .foregroundStyle(RunicGazette.inkSoft)
+                    .font(RunicGazette.copy(9.5))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .multilineTextAlignment(.center)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity)
+                    .padding(.top, 1)
             }
 
             if self.model.subtitleStyle == .error, !self.model.subtitleText.isEmpty {
                 Text(self.model.subtitleText)
-                    .font(RunicGazette.copy())
+                    .font(RunicGazette.body(11))
                     .foregroundStyle(self.runicTheme.warm)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 6)
                     .overlay { ClickToCopyOverlay(copyText: self.model.subtitleText) }
+            } else if self.model.isServedByCLIFallback {
+                Text("Reading through Claude CLI fallback — cost and reset credits unavailable until reconnected.")
+                    .font(RunicGazette.copy(9.5))
+                    .foregroundStyle(self.runicTheme.highlight)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
             }
 
             if self.isAuthError || self.model.isServedByCLIFallback {
@@ -127,7 +142,6 @@ struct GazetteMasthead: View {
         }
     }
 
-    /// The folio's right-hand note: how fresh the numbers are.
     private var folioNote: String? {
         switch self.model.subtitleStyle {
         case .error:
@@ -146,8 +160,6 @@ struct GazetteMasthead: View {
         self.model.subtitleStyle == .error ? self.runicTheme.warm : self.runicTheme.secondaryText
     }
 
-    /// "62% session · 20% weekly · Pro" — the numbers worth a glance before
-    /// the stories.
     private var deckItems: [String] {
         var items: [String] = []
         for metric in self.model.metrics {
@@ -166,27 +178,21 @@ struct GazetteMasthead: View {
 
 // MARK: - Page
 
-/// The provider card as a page: masthead, the primary window as the lead
-/// story, the remaining windows and the balance as two-column briefs with
-/// a hairline between them, the cost ledger, and the insights as an
-/// In-brief column with a pull quote. Rules divide every section; nothing
-/// is boxed. Gazette only — `UsageMenuCardView` switches to this body.
+/// Broadsheet provider page: masthead, primary lead story with upright bold
+/// numeral + italic status word + 2-column stat band, full-width secondary
+/// quota stories, Money / Cost columns, Token Ledger, and In-brief digest with
+/// pull quote. Mounted by `GazetteSkin`.
 struct GazetteUsageCard: View {
     let model: UsageMenuCardView.Model
     let width: CGFloat
     @Environment(\.runicTheme) private var runicTheme
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
-    private enum Column {
-        case story(UsageMenuCardView.Model.Metric, Int)
-        case money
-        case cost(UsageMenuCardView.Model.ProviderCostSection)
-    }
-
     private enum Section {
         case empty(String)
         case lead(UsageMenuCardView.Model.Metric)
-        case row([Column])
+        case story(UsageMenuCardView.Model.Metric)
+        case finance(hasMoney: Bool, cost: UsageMenuCardView.Model.ProviderCostSection?)
         case ledger(UsageMenuCardView.Model.TokenUsageSection)
         case briefs(UsageMenuCardView.Model.InsightsSection)
     }
@@ -197,45 +203,42 @@ struct GazetteUsageCard: View {
             GazetteMasthead(model: self.model)
             ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
                 if index > 0 {
-                    GazetteRule()
+                    GazetteRule(weight: .hair)
                 }
                 self.view(for: section)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 9)
             }
         }
         .gazetteFace()
-        .padding(.horizontal, 2)
+        .foregroundStyle(self.runicTheme.primaryText)
+        .padding(.horizontal, RunicGazette.pageHorizontalInset)
         .padding(.bottom, 2)
         .frame(width: self.width, alignment: .leading)
     }
 
     private var sections: [Section] {
-        var sections: [Section] = []
+        var list: [Section] = []
         if self.model.metrics.isEmpty, let placeholder = self.model.placeholder {
-            sections.append(.empty(placeholder))
+            list.append(.empty(placeholder))
         }
         if let lead = self.model.metrics.first {
-            sections.append(.lead(lead))
+            list.append(.lead(lead))
         }
-        var columns: [Column] = []
-        for (index, metric) in self.model.metrics.dropFirst().enumerated() {
-            columns.append(.story(metric, index + 1))
+        for metric in self.model.metrics.dropFirst() {
+            list.append(.story(metric))
         }
-        if self.model.creditsText != nil { columns.append(.money) }
-        if let cost = self.model.providerCost { columns.append(.cost(cost)) }
-        var start = 0
-        while start < columns.count {
-            let end = min(start + 2, columns.count)
-            sections.append(.row(Array(columns[start..<end])))
-            start = end
+        let hasMoney = self.model.creditsText != nil
+        let cost = self.model.providerCost
+        if hasMoney || cost != nil {
+            list.append(.finance(hasMoney: hasMoney, cost: cost))
         }
         if self.model.menuMode != .glance, let tokenUsage = self.model.tokenUsage {
-            sections.append(.ledger(tokenUsage))
+            list.append(.ledger(tokenUsage))
         }
         if self.model.menuMode == .operator, let insights = self.model.insights {
-            sections.append(.briefs(insights))
+            list.append(.briefs(insights))
         }
-        return sections
+        return list
     }
 
     @ViewBuilder
@@ -248,21 +251,33 @@ struct GazetteUsageCard: View {
                 needsCredentials: self.model.needsCredentials,
                 isHighlighted: self.isHighlighted)
         case let .lead(metric):
-            GazetteStory(
+            GazetteLeadStory(
                 metric: metric,
-                index: 0,
-                tint: self.model.progressColor,
                 displayMode: self.model.usageMetricDisplayMode,
-                isLead: true)
-        case let .row(columns):
-            HStack(alignment: .top, spacing: 14) {
-                ForEach(Array(columns.enumerated()), id: \.offset) { index, column in
-                    if index > 0 {
-                        GazetteColumnRule()
-                    }
-                    self.view(for: column)
+                bankedResetsText: self.model.bankedResetsText)
+        case let .story(metric):
+            GazetteSecondaryStory(
+                metric: metric,
+                displayMode: self.model.usageMetricDisplayMode)
+        case let .finance(hasMoney, cost):
+            if hasMoney, let cost {
+                HStack(alignment: .top, spacing: 12) {
+                    GazetteMoney(
+                        creditsText: self.model.creditsText ?? "",
+                        hintText: self.model.creditsHintText,
+                        hintCopyText: self.model.creditsHintCopyText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    GazetteColumnRule()
+                    GazetteCostColumn(section: cost)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
+            } else if hasMoney {
+                GazetteMoney(
+                    creditsText: self.model.creditsText ?? "",
+                    hintText: self.model.creditsHintText,
+                    hintCopyText: self.model.creditsHintCopyText)
+            } else if let cost {
+                GazetteCostColumn(section: cost)
             }
         case let .ledger(section):
             GazetteLedger(section: section)
@@ -270,107 +285,219 @@ struct GazetteUsageCard: View {
             GazetteBriefs(section: section)
         }
     }
-
-    @ViewBuilder
-    private func view(for column: Column) -> some View {
-        switch column {
-        case let .story(metric, index):
-            GazetteStory(
-                metric: metric,
-                index: index,
-                tint: self.model.progressColor,
-                displayMode: self.model.usageMetricDisplayMode)
-        case .money:
-            GazetteMoney(
-                creditsText: self.model.creditsText ?? "",
-                hintText: self.model.creditsHintText,
-                hintCopyText: self.model.creditsHintCopyText)
-        case let .cost(section):
-            GazetteCostColumn(section: section, tint: self.model.progressColor)
-        }
-    }
 }
 
-// MARK: - Stories
+// MARK: - Lead & Secondary Quota Stories
 
-/// One quota window as a story: category tag and reset byline, the
-/// percentage as the headline numeral, a flat gauge, the pace as the deck.
-struct GazetteStory: View {
+/// Primary quota window as the lead newspaper story: kicker, hero upright bold
+/// numeral paired with italic status word, flat broadsheet rule bar, and 2-column
+/// metadata strip (`NEXT RESET` | `BANKED` or `PACE`).
+struct GazetteLeadStory: View {
     let metric: UsageMenuCardView.Model.Metric
-    let index: Int
-    let tint: Color
     let displayMode: UsageMetricDisplayMode
-    var isLead = false
+    let bankedResetsText: String?
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: self.isLead ? 6 : 4) {
-            // The lead runs its byline beside the tag; a column is too narrow
-            // for that, so the byline drops under the tag.
-            if self.isLead {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    self.tag
-                    self.byline
+        let exhausted = RunicGazette.isExhausted(self.metric)
+        let used = RunicGazette.usedShare(self.metric)
+        let tint = RunicGazette.gaugeTint(used: used, exhausted: exhausted, theme: self.runicTheme)
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                GazetteKicker(text: self.metric.title)
+                Spacer(minLength: 8)
+                if exhausted {
+                    GazetteKicker(
+                        text: "Exhausted",
+                        size: 9.5,
+                        color: self.runicTheme.warm,
+                        tracking: 0.8)
+                } else if self.metric.percent != nil, let reset = self.metric.resetText, !reset.isEmpty {
+                    GazetteLabel(
+                        text: reset,
+                        size: 8.5,
+                        color: self.runicTheme.secondaryText,
+                        tracking: 0.7)
+                        .minimumScaleFactor(0.8)
                 }
-            } else {
-                self.tag
-                self.byline
             }
 
             if let percent = self.metric.percent, self.displayMode.showsPercent {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("\(Int(percent.rounded()))%")
-                        .font(RunicGazette.numeral(self.isLead ? 30 : 20))
-                        .tracking(self.isLead ? -0.8 : -0.3)
-                        .foregroundStyle(self.isExhausted ? self.runicTheme.warm : self.runicTheme.primaryText)
-                    GazetteLabel(
-                        text: self.metric.percentStyle.labelSuffix,
-                        size: self.isLead ? 9.5 : 9,
-                        color: self.runicTheme.secondaryText)
+                        .font(RunicGazette.numeral(30))
+                        .monospacedDigit()
+                        .tracking(-0.6)
+                        .foregroundStyle(self.runicTheme.primaryText)
+                    Text(exhausted ? "exhausted" : self.metric.percentStyle.labelSuffix)
+                        .font(RunicGazette.statusItalic(22))
+                        .foregroundStyle(exhausted ? self.runicTheme.warm : self.runicTheme.secondaryText)
+                        .lineLimit(1)
                 }
+                .accessibilityElement(children: .combine)
+            } else if self.metric.percent == nil, let reset = self.metric.resetText, !reset.isEmpty {
+                Text(reset)
+                    .font(RunicGazette.headline(20))
+                    .foregroundStyle(self.runicTheme.primaryText)
+                    .lineLimit(1)
             }
 
             if let percent = self.metric.percent, self.displayMode.showsBars {
                 GazetteBar(
                     percent: percent,
-                    tint: self.isExhausted ? self.runicTheme.warm : self.tint,
-                    accessibilityLabel: self.metric.percentStyle.accessibilityLabel,
-                    height: self.isLead ? 6 : 5)
+                    tint: tint,
+                    accessibilityLabel: "\(self.metric.title), \(self.metric.percentStyle.accessibilityLabel)",
+                    marker: RunicGazette.paceMarker(for: self.metric),
+                    height: 4.5)
             }
 
-            if let detail = self.metric.detailText, !detail.isEmpty {
+            if self.metric.percent != nil {
+                let cells = self.statCells
+                if !cells.isEmpty {
+                    HStack(alignment: .top, spacing: 0) {
+                        ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
+                            if index > 0 {
+                                GazetteColumnRule()
+                                    .padding(.vertical, 1)
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                GazetteLabel(
+                                    text: cell.label,
+                                    size: 8.5,
+                                    color: self.runicTheme.primaryText,
+                                    tracking: 0.7)
+                                Text(cell.value)
+                                    .font(RunicGazette.copy(10.5))
+                                    .foregroundStyle(cell.accent ?? self.runicTheme.secondaryText)
+                                    .lineLimit(3)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.leading, index == 0 ? 0 : 10)
+                            .padding(.trailing, index == cells.count - 1 ? 0 : 10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+            } else if let detail = self.metric.detailText, !detail.isEmpty {
                 Text(detail)
-                    .font(self.isLead ? RunicGazette.body() : RunicGazette.copy())
-                    .foregroundStyle(RunicGazette.inkSoft)
-                    .lineSpacing(self.isLead ? 3 : 1.5)
+                    .font(RunicGazette.copy(10.5))
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
-    private var tag: some View {
-        GazettePill(text: self.metric.title, color: RunicGazette.sectionColor(self.index, theme: self.runicTheme))
-    }
-
-    @ViewBuilder
-    private var byline: some View {
-        if let reset = self.metric.resetText {
-            GazetteLabel(text: reset, color: self.runicTheme.secondaryText)
-                .minimumScaleFactor(0.75)
+    private var statCells: [(label: String, value: String, accent: Color?)] {
+        var list: [(String, String, Color?)] = []
+        if let reset = self.metric.resetText, !reset.isEmpty {
+            let trimmed = reset
+                .replacingOccurrences(of: "Resets in ", with: "")
+                .replacingOccurrences(of: "Resets ", with: "")
+            list.append(("Next reset", trimmed, nil))
         }
+        let hasBanked = !(self.bankedResetsText?.isEmpty ?? true)
+        if let detail = self.metric.detailText, !detail.isEmpty {
+            let duplicatesBanked = hasBanked && (
+                detail == self.bankedResetsText
+                    || detail.localizedCaseInsensitiveContains("banked reset"))
+            if !duplicatesBanked {
+                if detail.hasPrefix("Pace: ") {
+                    list.append(("Pace", String(detail.dropFirst("Pace: ".count)), nil))
+                } else {
+                    list.append(("Detail", detail, nil))
+                }
+            }
+        }
+        if let banked = self.bankedResetsText, !banked.isEmpty {
+            let compact = banked.replacingOccurrences(of: "usable until ", with: "until ")
+            list.append(("Banked", compact, self.runicTheme.tertiary))
+        }
+        return list
     }
+}
 
-    private var isExhausted: Bool {
-        guard let percent = self.metric.percent else { return false }
-        switch self.metric.percentStyle {
-        case .used: return percent >= 99.5
-        case .left: return percent <= 0.5
+/// Secondary quota window set full-width beneath a hairline rule: flush-left
+/// kicker, right-aligned reset schedule, upright numeral + italic suffix,
+/// flat rule bar with pace marker, and pace / detail line.
+struct GazetteSecondaryStory: View {
+    let metric: UsageMenuCardView.Model.Metric
+    let displayMode: UsageMetricDisplayMode
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        let exhausted = RunicGazette.isExhausted(self.metric)
+        let used = RunicGazette.usedShare(self.metric)
+        let tint = RunicGazette.gaugeTint(used: used, exhausted: exhausted, theme: self.runicTheme)
+
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                GazetteKicker(text: self.metric.title)
+                Spacer(minLength: 8)
+                if self.metric.percent != nil, let reset = self.metric.resetText, !reset.isEmpty {
+                    GazetteLabel(
+                        text: reset,
+                        size: 8.5,
+                        color: self.runicTheme.secondaryText,
+                        tracking: 0.7)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+
+            if let percent = self.metric.percent, self.displayMode.showsPercent {
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text("\(Int(percent.rounded()))%")
+                        .font(RunicGazette.numeral(21))
+                        .monospacedDigit()
+                        .tracking(-0.3)
+                        .foregroundStyle(self.runicTheme.primaryText)
+                    Text(exhausted ? "exhausted" : self.metric.percentStyle.labelSuffix)
+                        .font(RunicGazette.statusItalic(16))
+                        .foregroundStyle(exhausted ? self.runicTheme.warm : self.runicTheme.secondaryText)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if exhausted {
+                        GazetteKicker(
+                            text: "Exhausted",
+                            size: 8.5,
+                            color: self.runicTheme.warm,
+                            tracking: 0.7)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            } else if self.metric.percent == nil, let reset = self.metric.resetText, !reset.isEmpty {
+                Text(reset)
+                    .font(RunicGazette.headline(16))
+                    .foregroundStyle(self.runicTheme.primaryText)
+                    .lineLimit(1)
+            }
+
+            if let percent = self.metric.percent, self.displayMode.showsBars {
+                GazetteBar(
+                    percent: percent,
+                    tint: tint,
+                    accessibilityLabel: "\(self.metric.title), \(self.metric.percentStyle.accessibilityLabel)",
+                    marker: RunicGazette.paceMarker(for: self.metric),
+                    height: 4)
+            }
+
+            if let detail = self.metric.detailText, !detail.isEmpty {
+                Text(detail)
+                    .font(RunicGazette.copy(10))
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineSpacing(1.5)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
 
-/// The balance as the Money column: a dotted leader from the label to the
-/// amount, the note beneath.
+// MARK: - Finance, Ledger & Briefs
+
+/// Balance / Credits block: flush-left kicker, dotted leader to numeral.
 struct GazetteMoney: View {
     let creditsText: String
     let hintText: String?
@@ -378,24 +505,27 @@ struct GazetteMoney: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            GazettePill(text: "Money", color: RunicGazette.green)
+        VStack(alignment: .leading, spacing: 5) {
+            GazetteKicker(text: "Credits", color: self.runicTheme.tertiary)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("Balance")
-                    .font(RunicGazette.headline(14))
+                    .font(RunicGazette.headline(13.5))
+                    .foregroundStyle(self.runicTheme.primaryText)
                     .lineLimit(1)
                     .layoutPriority(1)
                 GazetteLeader()
                 Text(self.creditsText)
-                    .font(RunicGazette.numeral(14))
+                    .font(RunicGazette.numeral(13.5))
+                    .monospacedDigit()
+                    .foregroundStyle(self.runicTheme.primaryText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .layoutPriority(1)
             }
             if let hint = self.hintText, !hint.isEmpty {
                 Text(hint)
-                    .font(RunicGazette.copy())
-                    .foregroundStyle(RunicGazette.inkSoft)
+                    .font(RunicGazette.copy(9.5))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .lineSpacing(1.5)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -405,53 +535,72 @@ struct GazetteMoney: View {
     }
 }
 
-/// Extra-usage spend as a column: tag, the spend line as a headline, a
-/// gauge against the limit when there is one.
+/// Extra-usage spend block: kicker, spend headline, gauge against limit.
 struct GazetteCostColumn: View {
     let section: UsageMenuCardView.Model.ProviderCostSection
-    let tint: Color
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            GazettePill(text: self.section.title, color: RunicGazette.amber)
-            Text(self.section.spendLine)
+        let percent = self.section.percentUsed
+        let exhausted = (percent ?? 0) >= 99.5
+        let tint = RunicGazette.gaugeTint(used: percent, exhausted: exhausted, theme: self.runicTheme)
+
+        VStack(alignment: .leading, spacing: 5) {
+            GazetteKicker(text: self.section.title, color: self.runicTheme.highlight)
+            Text(self.section.primarySpendLine ?? self.section.spendLine)
                 .font(RunicGazette.headline(13))
+                .foregroundStyle(self.runicTheme.primaryText)
                 .lineSpacing(1)
                 .fixedSize(horizontal: false, vertical: true)
-            if let percentUsed = self.section.percentUsed {
-                GazetteBar(percent: percentUsed, tint: self.tint, accessibilityLabel: "Extra usage spent", height: 5)
+            if let apiCredits = self.section.apiCreditsLine, !apiCredits.isEmpty, self.section.primarySpendLine != nil {
+                Text(apiCredits)
+                    .font(RunicGazette.copy(9.5))
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(2)
+            }
+            if let percentUsed = percent {
+                GazetteBar(
+                    percent: percentUsed,
+                    tint: tint,
+                    accessibilityLabel: "Extra usage spent",
+                    height: 4)
                 GazetteLabel(
                     text: String(format: "%.0f%% used", min(100, max(0, percentUsed))),
+                    size: 8.5,
                     color: self.runicTheme.secondaryText)
             }
         }
     }
 }
 
-/// The token-cost section as a ledger: session and month lines in the
-/// headline face, their details beneath, the timestamp as a byline.
+/// Local token ledger section.
 struct GazetteLedger: View {
     let section: UsageMenuCardView.Model.TokenUsageSection
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            GazettePill(text: "Ledger", color: self.runicTheme.primaryText)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                GazetteKicker(text: "Local ledger")
+                Spacer(minLength: 6)
+                GazetteLabel(
+                    text: self.section.updatedLine,
+                    size: 8.5,
+                    color: self.runicTheme.secondaryText,
+                    tracking: 0.7)
+            }
             self.entry(self.section.sessionLine, detail: self.section.sessionDetailLine)
             self.entry(self.section.monthLine, detail: self.section.monthDetailLine)
-            GazetteLabel(text: self.section.updatedLine, color: self.runicTheme.secondaryText, tracking: 1)
-                .padding(.top, 2)
             if let hint = self.section.hintLine, !hint.isEmpty {
                 Text(hint)
-                    .font(RunicGazette.copy())
-                    .foregroundStyle(RunicGazette.inkSoft)
+                    .font(RunicGazette.copy(9.5))
+                    .foregroundStyle(self.runicTheme.secondaryText)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let error = self.section.errorLine, !error.isEmpty {
                 Text(error)
-                    .font(RunicGazette.copy())
+                    .font(RunicGazette.copy(9.5))
                     .foregroundStyle(self.runicTheme.warm)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -463,19 +612,19 @@ struct GazetteLedger: View {
     @ViewBuilder
     private func entry(_ line: String, detail: String?) -> some View {
         Text(line)
-            .font(RunicGazette.headline(12.5))
+            .font(RunicGazette.headline(12))
+            .foregroundStyle(self.runicTheme.primaryText)
             .fixedSize(horizontal: false, vertical: true)
         if let detail, !detail.isEmpty {
             Text(detail)
-                .font(RunicGazette.copy())
+                .font(RunicGazette.copy(9.5))
                 .foregroundStyle(self.runicTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
-/// Insights as the In-brief column: coloured bullets with a bold lead, and
-/// the forecast pulled out as a quote beside them.
+/// Operator insights digest with pull quote.
 struct GazetteBriefs: View {
     let section: UsageMenuCardView.Model.InsightsSection
     @Environment(\.runicTheme) private var runicTheme
@@ -484,8 +633,18 @@ struct GazetteBriefs: View {
         let lines = self.lines
         let quote = self.quote
         VStack(alignment: .leading, spacing: 6) {
-            GazettePill(text: "In brief", color: self.runicTheme.primaryText)
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                GazetteKicker(text: self.section.title)
+                Spacer(minLength: 6)
+                if let updated = self.section.updatedLine, !updated.isEmpty {
+                    GazetteLabel(
+                        text: updated,
+                        size: 8.5,
+                        color: self.runicTheme.secondaryText,
+                        tracking: 0.7)
+                }
+            }
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                         let parts = RunicGazette.briefParts(line.text)
@@ -499,16 +658,12 @@ struct GazetteBriefs: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let quote {
                     GazetteQuote(text: quote.text, attribution: quote.attribution)
-                        .frame(width: 120)
+                        .frame(width: 122)
                 }
-            }
-            if let updated = self.section.updatedLine, !updated.isEmpty {
-                GazetteLabel(text: updated, size: 8.5, color: self.runicTheme.secondaryText, tracking: 1)
-                    .padding(.top, 2)
             }
             if let error = self.section.errorLine, !error.isEmpty {
                 Text(error)
-                    .font(RunicGazette.copy())
+                    .font(RunicGazette.copy(9.5))
                     .foregroundStyle(self.runicTheme.warm)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -534,8 +689,6 @@ struct GazetteBriefs: View {
         }
     }
 
-    /// The forecast (or an anomaly) is the line worth pulling out. Kept to
-    /// a quote's length so the column stays a column.
     private var quote: (text: String, attribution: String)? {
         if let forecast = self.section.forecastLine, !forecast.isEmpty, forecast.count <= 120 {
             return (forecast, "Forecast")

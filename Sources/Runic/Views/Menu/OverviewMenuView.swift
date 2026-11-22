@@ -571,82 +571,93 @@ private struct InfoPill: View {
     }
 }
 
-// MARK: - Newsprint
+// MARK: - Newsprint Broadsheet
 
-/// The overview as the Gazette's front page: folio, "The Runic Gazette"
-/// nameplate, a deck of today's totals, then every provider as a leader
-/// row (name … percent) over a flat gauge, and the week's activity as a
-/// tagged chart. Mounted by `GazetteSkin`.
+/// The overview as the Gazette's front page: folio dateline, "The Runic Gazette"
+/// Baskerville nameplate, centered Georgia Italic editorial deck, classic heavy-
+/// over-hairline double rule, Quota Ledger dotted-leader rows with regional
+/// brand stacking and click-to-select, and 7-day activity chart. Mounted by `GazetteSkin`.
 struct GazetteOverviewBody: View {
     let view: OverviewMenuView
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
+        let groups = OverviewMenuView.brandGroups(self.view.summaries)
+
         VStack(alignment: .leading, spacing: 0) {
             GazetteFolio(trailing: "\(self.view.summaries.count) of \(self.view.totalProviders) active")
 
-            HStack {
-                Spacer(minLength: 0)
-                Text("The Runic Gazette")
-                    .font(RunicGazette.nameplate(28))
-                    .tracking(-0.8)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 0)
-            }
-            .padding(.top, 6)
-            .padding(.bottom, 4)
+            Text("The Runic Gazette")
+                .font(RunicGazette.nameplate(29))
+                .tracking(-0.4)
+                .foregroundStyle(self.runicTheme.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 7)
+                .padding(.bottom, 3)
+                .accessibilityAddTraits(.isHeader)
 
-            HStack(spacing: 8) {
-                Spacer(minLength: 0)
-                let todayTokens = UsageFormatter.tokenCountString(
-                    self.view.totalTodayTokens,
-                    style: self.view.numberStyle)
-                GazetteLabel(text: "\(todayTokens) today")
-                GazetteLabel(text: "\u{00B7}", color: self.runicTheme.secondaryText)
-                GazetteLabel(text: self.view.averagePercentText, color: self.runicTheme.secondaryText)
-                Spacer(minLength: 0)
-            }
-            .padding(.bottom, 6)
+            Text(self.editorialDeck)
+                .font(RunicGazette.deckItalic(11.5))
+                .foregroundStyle(self.runicTheme.secondaryText)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 8)
+                .padding(.bottom, 7)
 
             GazetteRule(weight: .double)
 
-            if self.view.summaries.isEmpty {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                GazetteKicker(text: "Quota ledger")
+                Spacer(minLength: 6)
+                Text(self.ledgerRightLabel.uppercased())
+                    .font(RunicGazette.sans(9, .medium))
+                    .tracking(0.6)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .padding(.top, 7)
+            .padding(.bottom, 5)
+
+            GazetteRule(weight: .single)
+
+            if groups.isEmpty {
                 Text("No active providers.")
                     .font(RunicGazette.body())
                     .foregroundStyle(self.runicTheme.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, RunicSpacing.md)
             } else {
-                ForEach(Array(self.view.summaries.enumerated()), id: \.element.id) { index, summary in
+                ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
                     if index > 0 {
                         GazetteRule(weight: .hair)
                     }
-                    GazetteOverviewRow(
-                        summary: summary,
-                        showsUsed: self.view.showsUsed,
-                        numberStyle: self.view.numberStyle)
-                        .padding(.vertical, 8)
-                }
-                if let onAddRegion = self.view.onAddRegion {
-                    ForEach(OverviewMenuView.brandGroups(self.view.summaries)) { group in
-                        if let missing = group.missingSlot {
-                            let label = OverviewMenuView.addRegionLabel(for: missing)
-                            GazetteLink(text: "\(label) \u{2192}") {
-                                onAddRegion(missing)
-                            }
-                            .padding(.bottom, 6)
-                            .accessibilityLabel(label)
-                        }
+                    if group.isStacked {
+                        GazetteBrandGroupRow(
+                            group: group,
+                            showsUsed: self.view.showsUsed,
+                            numberStyle: self.view.numberStyle,
+                            onAddRegion: self.view.onAddRegion,
+                            onSelect: self.view.onSelectProvider)
+                    } else if let summary = group.rows.first {
+                        GazetteOverviewRow(
+                            summary: summary,
+                            showsUsed: self.view.showsUsed,
+                            numberStyle: self.view.numberStyle,
+                            onSelect: self.view.onSelectProvider)
                     }
                 }
             }
 
             if !self.view.chartPoints.isEmpty {
-                GazetteRule()
+                GazetteRule(weight: .heavy)
+                    .padding(.top, 2)
                 HStack(alignment: .center) {
-                    GazettePill(text: "7-day activity", color: self.runicTheme.primaryText)
+                    GazetteKicker(text: "7-day activity")
                     Spacer()
                     HStack(spacing: 4) {
                         ForEach(self.view.chartLegendEntries.prefix(5), id: \.name) { entry in
@@ -657,21 +668,61 @@ struct GazetteOverviewBody: View {
                     }
                     .accessibilityHidden(true)
                 }
-                .padding(.vertical, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 6)
                 self.view.activityChart
             }
         }
         .gazetteFace()
         .foregroundStyle(self.runicTheme.primaryText)
-        .padding(.horizontal, 2)
-        .padding(.vertical, 4)
-        .frame(minWidth: self.view.width, maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, RunicGazette.pageHorizontalInset)
+        .padding(.bottom, 4)
+        .frame(width: self.view.width, alignment: .leading)
+    }
+
+    private var editorialDeck: String {
+        let average = OverviewMenuView.averagePercent(self.view.summaries)
+        let exhausted = self.view.summaries.count(where: { summary in
+            guard summary.hasQuota else { return false }
+            return self.view.showsUsed ? summary.usedPercent >= 99.5 : summary.usedPercent <= 0.5
+        })
+        let banked = self.view.summaries.count(where: { $0.bankedResetsText != nil })
+        if let average {
+            let count = self.view.summaries.count
+            let unit = count == 1 ? "provider" : "providers"
+            let direction = self.view.showsUsed ? "used" : "left"
+            var sentence = "\(Int(average.rounded()))% average \(direction) across \(count) \(unit)"
+            var notes: [String] = []
+            if exhausted > 0 { notes.append("\(exhausted) exhausted") }
+            if banked > 0 { notes.append("\(banked) banked") }
+            if !notes.isEmpty {
+                sentence += " \u{2014} " + notes.joined(separator: ", ")
+            }
+            return sentence
+        }
+        if self.view.totalTodayTokens > 0 {
+            let today = UsageFormatter.tokenCountString(self.view.totalTodayTokens, style: self.view.numberStyle)
+            return "\(today) used today across \(self.view.summaries.count) providers"
+        }
+        return self.view.averagePercentText
+    }
+
+    private var ledgerRightLabel: String {
+        var parts: [String] = []
+        if self.view.totalTodayTokens > 0 {
+            let today = UsageFormatter.tokenCountString(self.view.totalTodayTokens, style: self.view.numberStyle)
+            parts.append("\(today) today")
+        }
+        if let average = OverviewMenuView.averagePercent(self.view.summaries) {
+            parts.append("SESSION \u{00B7} AVG \(Int(average.rounded()))%")
+        } else {
+            parts.append(self.view.averagePercentText)
+        }
+        return parts.joined(separator: " \u{00B7} ")
     }
 }
 
-/// One provider on the front page: brand mark and name, a dotted leader to
-/// the percentage (and today's tokens), a thin gauge, the window and reset
-/// as a tracked byline.
+/// Shared helpers for overview provider rows across skins.
 extension OverviewMenuView {
     static func addRegionLabel(for slot: UsageProvider) -> String {
         let displayName = ProviderDefaults.metadata[slot]?.displayName ?? slot.rawValue
@@ -714,63 +765,276 @@ private struct GazetteOverviewRow: View {
     let summary: OverviewMenuView.ProviderSummary
     let showsUsed: Bool
     let numberStyle: UsageFormatter.NumberStyle
+    var onSelect: ((UsageProvider) -> Void)?
+    @State private var isHovered = false
     @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let dark = self.colorScheme == .dark
+        let icon = ProviderBrandIcon.image(for: self.summary.provider, size: 14, prefersDark: dark)
+            ?? self.summary.icon
+
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                if let icon = self.summary.icon {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                if let icon {
                     Image(nsImage: icon)
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .interpolation(.high)
+                        .scaledToFit()
                         .frame(width: 13, height: 13)
+                        .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1.5 }
                         .accessibilityHidden(true)
                 }
                 Text(self.summary.name)
-                    .font(RunicGazette.headline(14))
+                    .font(RunicGazette.headline(13.5))
+                    .foregroundStyle(self.runicTheme.primaryText)
                     .lineLimit(1)
                     .layoutPriority(1)
                 if let plan = self.summary.planBadge {
-                    GazetteLabel(text: plan, size: 8.5, color: self.runicTheme.accent, tracking: 0.8)
-                        .fixedSize(horizontal: true, vertical: false)
+                    GazetteHairlineBadge(text: plan, size: 8)
                 }
                 GazetteLeader()
-                Text(self.summary.hasQuota ? "\(Int(self.summary.usedPercent))%" : "\u{2014}")
-                    .font(RunicGazette.numeral(14))
-                    .foregroundStyle(self.emphasizesPercent ? self.runicTheme.warm : self.runicTheme.primaryText)
-                    .layoutPriority(1)
                 if self.summary.todayTokens > 0 {
                     Text(UsageFormatter.tokenCountString(self.summary.todayTokens, style: self.numberStyle))
-                        .font(RunicGazette.copy())
+                        .font(RunicGazette.copy(9.5))
+                        .monospacedDigit()
                         .foregroundStyle(self.runicTheme.secondaryText)
+                        .lineLimit(1)
                 }
+                Text(self.summary.hasQuota ? "\(Int(self.summary.usedPercent.rounded()))%" : "\u{2014}")
+                    .font(RunicGazette.numeral(13.5))
+                    .monospacedDigit()
+                    .foregroundStyle(self.percentColor)
+                    .layoutPriority(1)
             }
+
             if self.summary.hasQuota {
                 GazetteBar(
                     percent: self.summary.usedPercent,
-                    tint: self.summary.brandColor,
+                    tint: self.barTint,
                     accessibilityLabel: self.showsUsed ? "Usage used" : "Usage remaining",
-                    height: 4)
+                    height: 3.5)
             }
-            let byline = [
-                self.summary.windowLabel,
-                self.summary.resetDescription,
-                self.summary.bankedResetsText,
-                self.summary.topModelContext,
-            ].compactMap(\.self)
-            if !byline.isEmpty {
-                GazetteLabel(
-                    text: byline.joined(separator: " \u{00B7} "),
-                    size: 8.5,
-                    color: self.runicTheme.secondaryText,
-                    tracking: 1)
-                    .minimumScaleFactor(0.8)
+
+            GazetteRowByline(summary: self.summary)
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 2)
+        .background(self.isHovered ? self.runicTheme.surfaceAlt.opacity(0.65) : Color.clear)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(self.runicTheme.motion.curve) {
+                self.isHovered = hovering
             }
         }
+        .onTapGesture {
+            self.onSelect?(self.summary.provider)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(self.onSelect != nil ? .isButton : [])
     }
 
-    private var emphasizesPercent: Bool {
+    private var isExhausted: Bool {
+        guard self.summary.hasQuota else { return false }
+        return self.showsUsed ? self.summary.usedPercent >= 99.5 : self.summary.usedPercent <= 0.5
+    }
+
+    private var isElevated: Bool {
         guard self.summary.hasQuota else { return false }
         return self.showsUsed ? self.summary.usedPercent > 80 : self.summary.usedPercent < 20
+    }
+
+    private var percentColor: Color {
+        if self.isExhausted { return self.runicTheme.warm }
+        if self.isElevated { return self.runicTheme.highlight }
+        return self.runicTheme.primaryText
+    }
+
+    private var barTint: Color {
+        if self.isExhausted { return self.runicTheme.warm }
+        if self.isElevated { return self.runicTheme.highlight }
+        return self.runicTheme.primaryText
+    }
+}
+
+private struct GazetteBrandGroupRow: View {
+    let group: OverviewMenuView.BrandGroup
+    let showsUsed: Bool
+    let numberStyle: UsageFormatter.NumberStyle
+    let onAddRegion: ((UsageProvider) -> Void)?
+    var onSelect: ((UsageProvider) -> Void)?
+    @Environment(\.runicTheme) private var runicTheme
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let dark = self.colorScheme == .dark
+        let brandName = UsageProvider.compactDisplayName(self.group.rows.first?.name ?? self.group.root.rawValue)
+        let icon = self.group.rows.first.flatMap {
+            ProviderBrandIcon.image(for: $0.provider, size: 14, prefersDark: dark) ?? $0.icon
+        }
+
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                if let icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFit()
+                        .frame(width: 13, height: 13)
+                        .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 1.5 }
+                        .accessibilityHidden(true)
+                }
+                Text(brandName)
+                    .font(RunicGazette.headline(13.5))
+                    .foregroundStyle(self.runicTheme.primaryText)
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                Text(self.group.rows.count == 2 ? "2 REGIONS" : "1 OF 2 REGIONS")
+                    .font(RunicGazette.sans(8.5, .medium))
+                    .tracking(0.6)
+                    .foregroundStyle(self.runicTheme.secondaryText)
+            }
+
+            ForEach(self.group.rows) { summary in
+                GazetteRegionSubRow(
+                    summary: summary,
+                    showsUsed: self.showsUsed,
+                    numberStyle: self.numberStyle,
+                    onSelect: self.onSelect)
+                    .padding(.leading, 18)
+            }
+
+            if let missing = self.group.missingSlot, let onAddRegion = self.onAddRegion {
+                let label = OverviewMenuView.addRegionLabel(for: missing)
+                HStack {
+                    GazetteLink(text: "\(label) \u{2192}") {
+                        onAddRegion(missing)
+                    }
+                    .padding(.leading, 18)
+                    .accessibilityLabel(label)
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 2)
+    }
+}
+
+private struct GazetteRegionSubRow: View {
+    let summary: OverviewMenuView.ProviderSummary
+    let showsUsed: Bool
+    let numberStyle: UsageFormatter.NumberStyle
+    var onSelect: ((UsageProvider) -> Void)?
+    @State private var isHovered = false
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                GazetteHairlineBadge(text: self.summary.region == .china ? "CN" : "INTL", size: 8)
+                if let plan = self.summary.planBadge {
+                    GazetteHairlineBadge(text: plan, size: 8)
+                }
+                GazetteLeader()
+                if self.summary.todayTokens > 0 {
+                    Text(UsageFormatter.tokenCountString(self.summary.todayTokens, style: self.numberStyle))
+                        .font(RunicGazette.copy(9.5))
+                        .monospacedDigit()
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                        .lineLimit(1)
+                }
+                Text(self.summary.hasQuota ? "\(Int(self.summary.usedPercent.rounded()))%" : "\u{2014}")
+                    .font(RunicGazette.numeral(12.5))
+                    .monospacedDigit()
+                    .foregroundStyle(self.percentColor)
+                    .layoutPriority(1)
+            }
+
+            if self.summary.hasQuota {
+                GazetteBar(
+                    percent: self.summary.usedPercent,
+                    tint: self.barTint,
+                    accessibilityLabel: "\(self.summary.name) usage",
+                    height: 3.5)
+            }
+
+            GazetteRowByline(summary: self.summary)
+        }
+        .padding(.vertical, 2)
+        .background(self.isHovered ? self.runicTheme.surfaceAlt.opacity(0.65) : Color.clear)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(self.runicTheme.motion.curve) {
+                self.isHovered = hovering
+            }
+        }
+        .onTapGesture {
+            self.onSelect?(self.summary.provider)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(self.onSelect != nil ? .isButton : [])
+    }
+
+    private var isExhausted: Bool {
+        guard self.summary.hasQuota else { return false }
+        return self.showsUsed ? self.summary.usedPercent >= 99.5 : self.summary.usedPercent <= 0.5
+    }
+
+    private var isElevated: Bool {
+        guard self.summary.hasQuota else { return false }
+        return self.showsUsed ? self.summary.usedPercent > 80 : self.summary.usedPercent < 20
+    }
+
+    private var percentColor: Color {
+        if self.isExhausted { return self.runicTheme.warm }
+        if self.isElevated { return self.runicTheme.highlight }
+        return self.runicTheme.primaryText
+    }
+
+    private var barTint: Color {
+        if self.isExhausted { return self.runicTheme.warm }
+        if self.isElevated { return self.runicTheme.highlight }
+        return self.runicTheme.primaryText
+    }
+}
+
+private struct GazetteRowByline: View {
+    let summary: OverviewMenuView.ProviderSummary
+    @Environment(\.runicTheme) private var runicTheme
+
+    var body: some View {
+        let leftParts = [
+            self.summary.resetDescription,
+            self.summary.topModelContext,
+        ].compactMap(\.self).filter { !$0.isEmpty }
+        let banked = self.summary.bankedResetsText
+        if !leftParts.isEmpty || banked != nil {
+            HStack(spacing: 4) {
+                Spacer(minLength: 0)
+                if !leftParts.isEmpty {
+                    Text(leftParts.joined(separator: " \u{00B7} ").uppercased())
+                        .font(RunicGazette.sans(8.5, .medium))
+                        .tracking(0.5)
+                        .foregroundStyle(self.runicTheme.secondaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                if let banked, !banked.isEmpty {
+                    if !leftParts.isEmpty {
+                        Text("\u{00B7}")
+                            .font(RunicGazette.sans(8.5, .bold))
+                            .foregroundStyle(self.runicTheme.secondaryText)
+                    }
+                    Text(banked.uppercased())
+                        .font(RunicGazette.sans(8.5, .bold))
+                        .tracking(0.5)
+                        .foregroundStyle(self.runicTheme.tertiary)
+                        .lineLimit(1)
+                }
+            }
+        }
     }
 }
