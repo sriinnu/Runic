@@ -538,4 +538,55 @@ public enum UsageFormatter {
         }
         return nil
     }
+
+    /// Resolves a window's display title, honoring its own explicit label before
+    /// falling back to a provider-slot default.
+    public static func windowTitle(for window: RateWindow, fallback: String) -> String {
+        guard let own = window.label?.trimmingCharacters(in: .whitespacesAndNewlines), !own.isEmpty else {
+            return fallback
+        }
+        return own
+    }
+
+    /// Formats a `RateWindow.resetDescription` for CLI/menu display without
+    /// prepending `"Resets "` to balances, status lines, or activity summaries.
+    public static func formattedWindowDescription(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+        let nonResetPrefixes = [
+            "resets",
+            "reset ",
+            "balance:",
+            "$",
+            "quota available",
+            "signed in",
+            "spent ",
+            "models",
+            "foundation models",
+            "key active",
+            "most requests:",
+            "connected",
+            "unlimited",
+            "deployments:",
+            "requests:",
+            "online",
+        ]
+        let nonResetSubstrings = [
+            "balance:",
+            "quota available",
+            "signed in",
+            "no usage",
+            "requests (",
+            " req",
+            "tokens",
+            "models available",
+            "unlimited",
+        ]
+        if nonResetPrefixes.contains(where: { lower.hasPrefix($0) })
+            || nonResetSubstrings.contains(where: { lower.contains($0) })
+        {
+            return trimmed
+        }
+        return "Resets \(trimmed)"
+    }
 }

@@ -51,7 +51,11 @@ struct AzureOpenAIDeploymentsResponse: Decodable {
             self.deployments = deployments
             return
         }
-        self.deployments = []
+        throw DecodingError.keyNotFound(
+            CodingKeys.data,
+            DecodingError.Context(
+                codingPath: container.codingPath,
+                debugDescription: "Expected either 'data' or 'value' array in Azure deployments response."))
     }
 }
 
@@ -89,7 +93,7 @@ struct AzureUsageFetcher {
         return try decoder.decode(AzureOpenAIDeploymentsResponse.self, from: data)
     }
 
-    private static func deploymentsURL(endpoint: String, apiVersion: String) -> URL? {
+    static func deploymentsURL(endpoint: String, apiVersion: String) -> URL? {
         guard var normalized = self.cleaned(endpoint), !normalized.isEmpty else { return nil }
         if !normalized.contains("://") {
             normalized = "https://\(normalized)"
@@ -105,6 +109,10 @@ struct AzureUsageFetcher {
         let trimmedPath = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         if trimmedPath.isEmpty {
             components.path = "/openai/deployments"
+        } else if trimmedPath.hasSuffix("/openai/deployments") || trimmedPath == "openai/deployments" {
+            components.path = "/\(trimmedPath)"
+        } else if trimmedPath.hasSuffix("/openai") || trimmedPath == "openai" {
+            components.path = "/\(trimmedPath)/deployments"
         } else {
             components.path = "/\(trimmedPath)/openai/deployments"
         }

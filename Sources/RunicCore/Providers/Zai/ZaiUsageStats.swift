@@ -29,13 +29,14 @@ public struct ZaiUsageFetcher: Sendable {
         async let modelTask = self.fetchModelUsageBestEffort(apiKey: apiKey, modelUsageAPIURL: modelUsageAPIURL)
         async let toolTask = self.fetchToolUsageBestEffort(apiKey: apiKey, toolUsageAPIURL: toolUsageAPIURL)
 
-        let (tokenLimit, timeLimit, planName) = try await quotaTask
+        let (tokenLimit, timeLimit, extraLimits, planName) = try await quotaTask
         let modelUsage = await modelTask
         let toolUsage = await toolTask
 
         return ZaiUsageSnapshot(
             tokenLimit: tokenLimit,
             timeLimit: timeLimit,
+            extraLimits: extraLimits,
             planName: planName,
             modelUsage: modelUsage,
             toolUsage: toolUsage,
@@ -46,7 +47,7 @@ public struct ZaiUsageFetcher: Sendable {
 
     private static func fetchQuota(
         apiKey: String,
-        quotaAPIURL: String) async throws -> (ZaiLimitEntry?, ZaiLimitEntry?, String?)
+        quotaAPIURL: String) async throws -> (ZaiLimitEntry?, ZaiLimitEntry?, [ZaiLimitEntry], String?)
     {
         let request = try self.makeRequest(url: quotaAPIURL, apiKey: apiKey)
         let (data, response) = try await ProviderRequestSession.data(for: request)
@@ -77,17 +78,17 @@ public struct ZaiUsageFetcher: Sendable {
             throw ZaiUsageError.apiError("API returned success but no data")
         }
 
-        var tokenLimit: ZaiLimitEntry?
-        var timeLimit: ZaiLimitEntry?
-        for limit in quotaData.limits {
-            if let entry = limit.toLimitEntry() {
-                switch entry.type {
-                case .tokensLimit: tokenLimit = entry
-                case .timeLimit: timeLimit = entry
-                }
-            }
-        }
-        return (tokenLimit, timeLimit, quotaData.planName)
+        let entries = quotaData.limits.compactMap { $0.toLimitEntry() }
+        let tokenLimits = entries
+            .filter { $0.type == .tokensLimit }
+            .sorted { ($0.windowMinutes ?? Int.max) < ($1.windowMinutes ?? Int.max) }
+        let timeLimits = entries
+            .filter { $0.type == .timeLimit }
+            .sorted { ($0.windowMinutes ?? Int.max) < ($1.windowMinutes ?? Int.max) }
+        let tokenLimit = tokenLimits.first
+        let timeLimit = timeLimits.first
+        let extraLimits = Array(tokenLimits.dropFirst() + timeLimits.dropFirst())
+        return (tokenLimit, timeLimit, extraLimits, quotaData.planName)
     }
 
     // MARK: - Model usage endpoint (best-effort)
@@ -119,6 +120,9 @@ public struct ZaiUsageFetcher: Sendable {
         Self.log.debug("z.ai model-usage response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         let raw = try JSONDecoder().decode(ZaiModelUsageResponse.self, from: data)
+        guard raw.isSuccess else {
+            throw ZaiUsageError.apiError(raw.msg ?? "model-usage endpoint returned API error")
+        }
         let models = raw.data?.models ?? []
 
         var entries: [ZaiModelUsageEntry] = []
@@ -182,6 +186,9 @@ public struct ZaiUsageFetcher: Sendable {
         Self.log.debug("z.ai tool-usage response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
         let raw = try JSONDecoder().decode(ZaiToolUsageResponse.self, from: data)
+        guard raw.isSuccess else {
+            throw ZaiUsageError.apiError(raw.msg ?? "tool-usage endpoint returned API error")
+        }
         let tools = raw.data?.tools ?? []
 
         var entries: [ZaiToolUsageEntry] = []

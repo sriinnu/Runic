@@ -92,34 +92,49 @@ struct AuggieUsageFetcher {
     }
 
     private static func sumMetric(in value: Any, keys: Set<String>) -> Double {
-        var total: Double = 0
-
         if let dict = value as? [String: Any] {
-            for (key, child) in dict {
-                let normalizedKey = key.lowercased()
-                if keys.contains(normalizedKey), let metric = self.number(from: child) {
-                    total += metric
+            // Check scalar metrics at this level before recursing so a summary object paired with a
+            // breakdown array does not double-count.
+            for key in dict.keys.sorted() {
+                if keys.contains(key.lowercased()), let metric = self.number(from: dict[key]!) {
+                    return metric
                 }
-                total += self.sumMetric(in: child, keys: keys)
+            }
+            for summaryKey in ["totals", "summary", "total", "usage", "metrics"] {
+                if let child = dict[summaryKey] {
+                    let sub = self.sumMetric(in: child, keys: keys)
+                    if sub > 0 { return sub }
+                }
+            }
+            var total: Double = 0
+            for key in dict.keys.sorted() {
+                total += self.sumMetric(in: dict[key]!, keys: keys)
             }
             return total
         }
 
         if let list = value as? [Any] {
+            var total: Double = 0
             for child in list {
                 total += self.sumMetric(in: child, keys: keys)
             }
+            return total
         }
 
-        return total
+        return 0
     }
 
     private static func number(from value: Any) -> Double? {
         if let value = value as? NSNumber {
-            return value.doubleValue
+            guard CFGetTypeID(value) != CFBooleanGetTypeID() else { return nil }
+            let double = value.doubleValue
+            return double.isFinite ? double : nil
         }
         if let value = value as? String {
-            return Double(value.trimmingCharacters(in: .whitespacesAndNewlines))
+            guard let double = Double(value.trimmingCharacters(in: .whitespacesAndNewlines)),
+                  double.isFinite
+            else { return nil }
+            return double
         }
         return nil
     }

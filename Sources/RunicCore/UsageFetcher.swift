@@ -23,9 +23,9 @@ public struct UsageFetcher: Sendable {
         let limits = try await rpc.fetchRateLimits().rateLimits
         let account = try? await rpc.fetchAccount()
 
-        guard let primary = Self.makeWindow(from: limits.primary),
-              let secondary = Self.makeWindow(from: limits.secondary)
-        else {
+        let primary = Self.makeWindow(from: limits.primary)
+        let secondary = Self.makeWindow(from: limits.secondary)
+        guard primary != nil || secondary != nil else {
             throw UsageError.noRateLimitsFound
         }
 
@@ -39,8 +39,8 @@ public struct UsageFetcher: Sendable {
                 if case let .chatgpt(_, plan) = details { plan } else { nil }
             })
         return UsageSnapshot(
-            primary: primary,
-            secondary: secondary,
+            primary: primary ?? secondary ?? .noLimitsReported,
+            secondary: primary == nil ? nil : secondary,
             tertiary: nil,
             updatedAt: Date(),
             identity: identity)
@@ -48,24 +48,27 @@ public struct UsageFetcher: Sendable {
 
     private func loadTTYUsage() async throws -> UsageSnapshot {
         let status = try await CodexStatusProbe().fetch()
-        guard let fiveLeft = status.fiveHourPercentLeft, let weekLeft = status.weeklyPercentLeft else {
+        let session = status.fiveHourPercentLeft.map { fiveLeft in
+            RateWindow(
+                usedPercent: max(0, 100 - Double(fiveLeft)),
+                windowMinutes: 300,
+                resetsAt: nil,
+                resetDescription: status.fiveHourResetDescription)
+        }
+        let weekly = status.weeklyPercentLeft.map { weekLeft in
+            RateWindow(
+                usedPercent: max(0, 100 - Double(weekLeft)),
+                windowMinutes: 10080,
+                resetsAt: nil,
+                resetDescription: status.weeklyResetDescription)
+        }
+        guard session != nil || weekly != nil else {
             throw UsageError.noRateLimitsFound
         }
 
-        let primary = RateWindow(
-            usedPercent: max(0, 100 - Double(fiveLeft)),
-            windowMinutes: 300,
-            resetsAt: nil,
-            resetDescription: status.fiveHourResetDescription)
-        let secondary = RateWindow(
-            usedPercent: max(0, 100 - Double(weekLeft)),
-            windowMinutes: 10080,
-            resetsAt: nil,
-            resetDescription: status.weeklyResetDescription)
-
         return UsageSnapshot(
-            primary: primary,
-            secondary: secondary,
+            primary: session ?? weekly ?? .noLimitsReported,
+            secondary: session == nil ? nil : weekly,
             tertiary: nil,
             updatedAt: Date(),
             identity: nil)

@@ -38,7 +38,7 @@ final class AntigravityCLIProbeTests: XCTestCase {
         XCTAssertEqual(snapshot.modelQuotas.count, 4)
 
         let usage = try snapshot.toUsageSnapshot()
-        // Most constrained first: Gemini 5h (30.61% left = 69.39% used)
+        // Native Gemini group first, shortest window (5h) ahead of Weekly.
         XCTAssertEqual(usage.primary.label, "Gemini 5h")
         XCTAssertEqual(usage.primary.remainingPercent, 30.61, accuracy: 0.01)
         XCTAssertEqual(usage.primary.windowMinutes, 300)
@@ -51,11 +51,55 @@ final class AntigravityCLIProbeTests: XCTestCase {
         XCTAssertEqual(usage.secondary?.windowMinutes, 10080)
         XCTAssertEqual(usage.secondary?.resetsAt?.timeIntervalSince(now) ?? 0, 165 * 3600 + 24 * 60, accuracy: 0.5)
 
-        // Third: tied 100% — 5h window sorts ahead of Weekly
+        // Third: Claude & GPT 5h, with Claude & GPT Weekly preserved in additionalWindows.
         XCTAssertEqual(usage.tertiary?.label, "Claude & GPT 5h")
         XCTAssertEqual(usage.tertiary?.remainingPercent ?? 0, 100.0, accuracy: 0.01)
         XCTAssertEqual(usage.tertiary?.windowMinutes, 300)
         XCTAssertEqual(usage.tertiary?.resetDescription, "Quota available")
+        XCTAssertEqual(usage.additionalWindows?.count, 1)
+        XCTAssertEqual(usage.additionalWindows?.first?.label, "Claude & GPT Weekly")
+        XCTAssertEqual(usage.additionalWindows?.first?.remainingPercent ?? 0, 100.0, accuracy: 0.01)
+        XCTAssertEqual(usage.additionalWindows?.first?.windowMinutes, 10080)
+    }
+
+    func test_gemini5hLeadsEvenWhenClaudeWeeklyHasLowerRemainingPercent() throws {
+        let now = Date(timeIntervalSince1970: 1_795_590_000)
+        let raw = """
+        user@example.com (Google AI Ultra)
+        GEMINI MODELS
+        Weekly Limit Remaining
+        [████████████████████████████████████████████████░░] 96.22%
+        Refreshes in 140h 10m
+        Five Hour Limit Remaining
+        [█████████████████████████████████████████████████░] 97.76%
+        Refreshes in 4h 30m
+        CLAUDE AND GPT MODELS
+        Weekly Limit Remaining
+        [███████████████████████████░░░░░░░░░░░░░░░░░░░░░░░] 54.59%
+        Refreshes in 90h 00m
+        Five Hour Limit Remaining
+        [██████████████████████████████████████████████████] 100.00%
+        Quota available
+        """
+
+        let snapshot = try AntigravityCLIProbe.parse(rawText: raw, now: now)
+        XCTAssertEqual(snapshot.modelQuotas.count, 4)
+
+        let usage = try snapshot.toUsageSnapshot()
+        XCTAssertEqual(usage.primary.label, "Gemini 5h")
+        XCTAssertEqual(usage.primary.remainingPercent, 97.76, accuracy: 0.01)
+        XCTAssertEqual(usage.secondary?.label, "Gemini Weekly")
+        XCTAssertEqual(usage.secondary?.remainingPercent ?? 0, 96.22, accuracy: 0.01)
+        XCTAssertEqual(usage.tertiary?.label, "Claude & GPT 5h")
+        XCTAssertEqual(usage.tertiary?.remainingPercent ?? 0, 100.0, accuracy: 0.01)
+        XCTAssertEqual(usage.additionalWindows?.count, 1)
+        XCTAssertEqual(usage.additionalWindows?.first?.label, "Claude & GPT Weekly")
+        XCTAssertEqual(usage.additionalWindows?.first?.remainingPercent ?? 0, 54.59, accuracy: 0.01)
+
+        // Ensure menu bar primary prefers Gemini 5h over Claude & GPT Weekly
+        let preferred = usage.preferredQuotaWindow(for: .antigravity)
+        XCTAssertEqual(preferred?.label, "Gemini 5h")
+        XCTAssertEqual(preferred?.remainingPercent ?? 0, 97.76, accuracy: 0.01)
     }
 
     func test_parsesNotSignedInErrorWhenNoQuotaRendered() {

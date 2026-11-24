@@ -62,7 +62,9 @@ extension EnhancedUsageCommand {
         var windows: [WindowData] = []
 
         windows.append(WindowData(
-            name: metadata.sessionLabel,
+            name: UsageFormatter.windowTitle(
+                for: snapshot.primary,
+                fallback: metadata.primaryWindowTitle(for: snapshot.primary)),
             used: nil,
             limit: nil,
             usedPercent: snapshot.primary.usedPercent,
@@ -72,13 +74,37 @@ extension EnhancedUsageCommand {
 
         if let secondary = snapshot.secondary {
             windows.append(WindowData(
-                name: metadata.weeklyLabel,
+                name: UsageFormatter.windowTitle(for: secondary, fallback: metadata.weeklyLabel),
                 used: nil,
                 limit: nil,
                 usedPercent: secondary.usedPercent,
                 remainingPercent: secondary.remainingPercent,
                 resetDescription: secondary.resetDescription,
                 hasKnownLimit: secondary.hasKnownLimit))
+        }
+
+        if let tertiary = snapshot.tertiary {
+            windows.append(WindowData(
+                name: UsageFormatter.windowTitle(for: tertiary, fallback: metadata.opusLabel ?? "Sonnet"),
+                used: nil,
+                limit: nil,
+                usedPercent: tertiary.usedPercent,
+                remainingPercent: tertiary.remainingPercent,
+                resetDescription: tertiary.resetDescription,
+                hasKnownLimit: tertiary.hasKnownLimit))
+        }
+
+        if let additional = snapshot.additionalWindows {
+            for (index, extra) in additional.enumerated() {
+                windows.append(WindowData(
+                    name: UsageFormatter.windowTitle(for: extra, fallback: "Quota \(index + 4)"),
+                    used: nil,
+                    limit: nil,
+                    usedPercent: extra.usedPercent,
+                    remainingPercent: extra.remainingPercent,
+                    resetDescription: extra.resetDescription,
+                    hasKnownLimit: extra.hasKnownLimit))
+            }
         }
 
         return ProviderUsageData(

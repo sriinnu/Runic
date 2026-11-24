@@ -128,12 +128,16 @@ struct MenuDescriptor {
         entries.append(.text(headlineText, .headline))
 
         if let snap = store.snapshot(for: provider) {
+            let primaryTitle = UsageFormatter.windowTitle(
+                for: snap.primary,
+                fallback: meta.primaryWindowTitle(for: snap.primary))
             Self.appendRateWindow(
                 entries: &entries,
-                title: meta.primaryWindowTitle(for: snap.primary),
+                title: primaryTitle,
                 window: snap.primary)
             if let weekly = snap.secondary {
-                Self.appendRateWindow(entries: &entries, title: meta.weeklyLabel, window: weekly)
+                let secondaryTitle = UsageFormatter.windowTitle(for: weekly, fallback: meta.weeklyLabel)
+                Self.appendRateWindow(entries: &entries, title: secondaryTitle, window: weekly)
                 if let paceText = UsagePaceText.weekly(provider: provider, window: weekly) {
                     entries.append(.text(paceText, .secondary))
                 }
@@ -145,8 +149,17 @@ struct MenuDescriptor {
             } else if provider == .claude {
                 supplementalEntries.append(.text("Weekly usage unavailable for this account.", .secondary))
             }
-            if meta.supportsOpus, let opus = snap.tertiary {
-                Self.appendRateWindow(entries: &entries, title: meta.opusLabel ?? "Sonnet", window: opus)
+            if let tertiary = snap.tertiary {
+                let tertiaryTitle = UsageFormatter.windowTitle(
+                    for: tertiary,
+                    fallback: meta.opusLabel ?? "Sonnet")
+                Self.appendRateWindow(entries: &entries, title: tertiaryTitle, window: tertiary)
+            }
+            if let additional = snap.additionalWindows {
+                for (index, extra) in additional.enumerated() {
+                    let extraTitle = UsageFormatter.windowTitle(for: extra, fallback: "Quota \(index + 4)")
+                    Self.appendRateWindow(entries: &entries, title: extraTitle, window: extra)
+                }
             }
             if let credits = snap.resetCredits, let line = ResetCreditEntry.summaryLine(for: credits) {
                 entries.append(.text(line, .secondary))
@@ -382,9 +395,7 @@ struct MenuDescriptor {
     }
 
     private static func resetLine(_ reset: String) -> String {
-        let trimmed = reset.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.lowercased().hasPrefix("resets") { return trimmed }
-        return "Resets \(trimmed)"
+        UsageFormatter.formattedWindowDescription(reset)
     }
 
     private static func versionNumber(for provider: UsageProvider, store: UsageStore) -> String? {

@@ -123,10 +123,16 @@ struct QuotaRows: View {
     var body: some View {
         let metadata = ProviderDefaults.metadata[self.entry.provider]
         let color = WidgetColors.color(for: self.entry.provider)
-        let primaryTitle = metadata?.primaryWindowTitle(for: self.entry.primary) ?? "Session"
-        let weeklyTitle = metadata?.weeklyLabel ?? "Weekly"
+        let fallbackPrimary = metadata?.primaryWindowTitle(for: self.entry.primary) ?? "Session"
+        let primaryTitle = self.entry.primary.map {
+            UsageFormatter.windowTitle(for: $0, fallback: fallbackPrimary)
+        } ?? fallbackPrimary
+        let fallbackWeekly = metadata?.weeklyLabel ?? "Weekly"
+        let weeklyTitle = self.entry.secondary.map {
+            UsageFormatter.windowTitle(for: $0, fallback: fallbackWeekly)
+        } ?? fallbackWeekly
         WindowUsageRow(title: primaryTitle, window: self.entry.primary, color: color)
-        if self.entry.secondary != nil || primaryTitle != weeklyTitle {
+        if self.entry.secondary != nil || (!weeklyTitle.isEmpty && primaryTitle != weeklyTitle) {
             WindowUsageRow(title: weeklyTitle, window: self.entry.secondary, color: color)
         }
     }

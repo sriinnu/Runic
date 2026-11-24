@@ -4,11 +4,11 @@ import Foundation
 /// by opening an interactive TTY session, waiting for the prompt to settle, and
 /// invoking `/usage` (`Models & Quota`).
 public struct AntigravityCLIProbe: Sendable {
-    public var timeout: TimeInterval = 15.0
+    public var timeout: TimeInterval = 20.0
     public var agyBinary: String?
     private static let log = RunicLog.logger("antigravity-cli")
 
-    public init(timeout: TimeInterval = 15.0, agyBinary: String? = nil) {
+    public init(timeout: TimeInterval = 20.0, agyBinary: String? = nil) {
         self.timeout = timeout
         self.agyBinary = agyBinary
     }
@@ -87,7 +87,7 @@ public struct AntigravityCLIProbe: Sendable {
                 rows: 45,
                 cols: 140,
                 timeout: timeout,
-                idleTimeout: 3.5,
+                idleTimeout: 10.0,
                 workingDirectory: workDir,
                 extraArgs: launchArgs,
                 initialDelay: 0.3,
@@ -97,7 +97,7 @@ public struct AntigravityCLIProbe: Sendable {
                     "? for shortcuts": "/usage\r",
                 ],
                 stopOnURL: false,
-                stopOnSubstrings: ["Within each group", "CLAUDE AND GPT MODELS", "Refreshes in", "Quota available"],
+                stopOnSubstrings: ["Within each group"],
                 settleAfterStop: 1.5)
             let result = try TTYCommandRunner().run(binary: launchBinary, send: "", options: options)
             return result.text

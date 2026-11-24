@@ -57,7 +57,7 @@ struct ZaiLimitRaw: Codable {
     let usage: Int?
     let currentValue: Int?
     let remaining: Int?
-    let percentage: Int?
+    let percentage: Double?
     let usageDetails: [ZaiUsageDetail]?
     let nextResetTime: Int?
 
@@ -75,7 +75,7 @@ struct ZaiLimitRaw: Codable {
             usage: resolvedUsage,
             currentValue: resolvedCurrent,
             remaining: resolvedRemaining,
-            percentage: Double(self.percentage ?? 0),
+            percentage: self.percentage ?? 0,
             usageDetails: self.usageDetails ?? [],
             nextResetTime: nextReset)
     }
@@ -84,8 +84,13 @@ struct ZaiLimitRaw: Codable {
 /// Flexible model-usage API response (best-effort decoding).
 struct ZaiModelUsageResponse: Decodable {
     let code: Int?
+    let msg: String?
     let success: Bool?
     let data: ZaiModelUsageData?
+
+    var isSuccess: Bool {
+        (self.success ?? true) && (self.code == nil || self.code == 200)
+    }
 
     struct ZaiModelUsageData: Decodable {
         let models: [ZaiModelUsageRaw]?
@@ -129,8 +134,13 @@ struct ZaiModelUsageResponse: Decodable {
 /// Flexible tool-usage API response (best-effort decoding).
 struct ZaiToolUsageResponse: Decodable {
     let code: Int?
+    let msg: String?
     let success: Bool?
     let data: ZaiToolUsageData?
+
+    var isSuccess: Bool {
+        (self.success ?? true) && (self.code == nil || self.code == 200)
+    }
 
     struct ZaiToolUsageData: Decodable {
         let tools: [ZaiToolUsageRaw]?

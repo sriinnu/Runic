@@ -98,6 +98,8 @@ final class UsageStore {
     var antigravityVersion: String?
     var cursorVersion: String?
     var isRefreshing = false
+    var isGlobalRefreshing = false
+    var activeSingleRefreshes: Set<UsageProvider> = []
     var refreshingProviders: Set<AccountID> = []
     var debugForceAnimation = false
     var pathDebugInfo: PathDebugSnapshot = .empty

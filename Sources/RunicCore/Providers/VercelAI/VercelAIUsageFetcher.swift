@@ -170,7 +170,8 @@ extension VercelAICreditsResponse {
                 usedPercent: self.usedPercent,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: resetDesc),
+                resetDescription: resetDesc,
+                hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,
             // Gateway credits: the API names no currency, so none is shown.

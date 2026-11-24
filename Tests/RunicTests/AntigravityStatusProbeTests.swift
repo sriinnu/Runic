@@ -43,9 +43,12 @@ final class AntigravityStatusProbeTests: XCTestCase {
         XCTAssertEqual(snapshot.modelQuotas.count, 3)
 
         let usage = try snapshot.toUsageSnapshot()
+        XCTAssertEqual(usage.primary.label, "Gemini Flash")
         XCTAssertEqual(usage.primary.remainingPercent.rounded(), 20)
-        XCTAssertEqual(usage.secondary?.remainingPercent.rounded(), 50)
-        XCTAssertEqual(usage.tertiary?.remainingPercent.rounded(), 80)
+        XCTAssertEqual(usage.secondary?.label, "Gemini Pro Low")
+        XCTAssertEqual(usage.secondary?.remainingPercent.rounded(), 80)
+        XCTAssertEqual(usage.tertiary?.label, "Claude 3.5 Sonnet")
+        XCTAssertEqual(usage.tertiary?.remainingPercent.rounded(), 50)
     }
 
     /// A quota whose remainingFraction is absent is UNKNOWN, not depleted: it must

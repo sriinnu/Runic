@@ -49,8 +49,8 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
     let id: String = "azure.api"
     let kind: ProviderFetchKind = .apiToken
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
-        true
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        Self.resolveToken(context: context) != nil && Self.resolveEndpoint(context: context) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
@@ -78,10 +78,13 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
     }
 
     private static func resolveToken(context: ProviderFetchContext) -> ProviderTokenResolution? {
+        if let credential = context.credential(for: .azure) {
+            return credential
+        }
         if let token = cleaned(context.settings?.azure?.apiToken) {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
-        return context.credential(for: .azure)
+        return nil
     }
 
     private static func resolveEndpoint(context: ProviderFetchContext) -> String? {

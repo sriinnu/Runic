@@ -56,8 +56,8 @@ struct MuseCodeCLIFetchStrategy: ProviderFetchStrategy {
     let id: String = "muse.code-cli"
     let kind: ProviderFetchKind = .cli
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
-        TTYCommandRunner.which("muse") != nil
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        BinaryLocator.resolveMuseBinary(env: context.env) != nil || TTYCommandRunner.which("muse") != nil
     }
 
     func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
@@ -65,8 +65,8 @@ struct MuseCodeCLIFetchStrategy: ProviderFetchStrategy {
         return self.makeResult(usage: usage, sourceLabel: "muse-code-cli")
     }
 
-    func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
-        false
+    func shouldFallback(on _: Error, context: ProviderFetchContext) -> Bool {
+        context.credential(for: .muse) != nil
     }
 }
 

@@ -59,7 +59,7 @@ struct KimiCNAPIFetchStrategy: ProviderFetchStrategy {
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
         guard let tokenRes = context.credential(for: .kimiCN) else {
-            throw KimiSettingsError.missingToken
+            throw KimiCNSettingsError.missingToken
         }
         let usage = try await KimiUsageFetcher.fetchSnapshot(
             apiKey: tokenRes.token, baseURL: Self.baseURL, environment: context.env)
@@ -70,5 +70,17 @@ struct KimiCNAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
+    }
+}
+
+enum KimiCNSettingsError: LocalizedError {
+    case missingToken
+
+    var errorDescription: String? {
+        switch self {
+        case .missingToken:
+            "Kimi (China) API key not found. Set it in Preferences → Providers → Kimi (China) or " +
+                "export KIMI_CN_API_KEY."
+        }
     }
 }

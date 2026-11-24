@@ -188,12 +188,18 @@ public enum LocalLLMUsageFetcher {
 
     static func parseOllamaModels(_ data: Data) throws -> [String] {
         let decoded = try JSONDecoder().decode(OllamaTagsResponse.self, from: data)
-        return Self.uniqueModels(decoded.models?.compactMap { $0.name ?? $0.model } ?? [])
+        guard let models = decoded.models else {
+            throw LocalLLMUsageError.invalidResponse("Ollama")
+        }
+        return Self.uniqueModels(models.compactMap { $0.name ?? $0.model })
     }
 
     static func parseOpenAIModels(_ data: Data) throws -> [String] {
         let decoded = try JSONDecoder().decode(OpenAIModelsResponse.self, from: data)
-        return Self.uniqueModels(decoded.data?.compactMap { $0.id ?? $0.name } ?? [])
+        guard let models = decoded.data else {
+            throw LocalLLMUsageError.invalidResponse("OpenAI-compatible")
+        }
+        return Self.uniqueModels(models.compactMap { $0.id ?? $0.name })
     }
 
     private static func fetch(_ endpoint: Endpoint) async throws -> LocalLLMStatusSnapshot {

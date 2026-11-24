@@ -91,10 +91,32 @@ struct OllamaCloudAPIFetchStrategy: ProviderFetchStrategy {
         guard let apiKey = context.credential(for: .ollamacloud)?.token else {
             throw OllamaCloudSettingsError.missingToken
         }
-        let usage = try await OllamaCloudUsageFetcher.fetchUsage(apiKey: apiKey)
+        var usage = try await OllamaCloudUsageFetcher.fetchUsage(apiKey: apiKey)
+        var sourceLabel = "api"
+        #if os(macOS)
+        if context.runtime == .app,
+           usage.monthlyUsage == nil,
+           usage.sessionUsage == nil,
+           usage.weeklyUsage == nil,
+           let webUsage = try? await OllamaCloudWebUsageFetcher.fetchUsage(),
+           webUsage.monthlyUsage != nil || webUsage.sessionUsage != nil || webUsage.weeklyUsage != nil
+        {
+            usage = OllamaCloudUsage(
+                monthlyUsage: webUsage.monthlyUsage,
+                sessionUsage: webUsage.sessionUsage,
+                weeklyUsage: webUsage.weeklyUsage,
+                models: usage.models,
+                cost: usage.cost ?? webUsage.cost,
+                totalRequests: usage.totalRequests,
+                rangeLabel: usage.rangeLabel,
+                sessionResetsAt: webUsage.sessionResetsAt,
+                weeklyResetsAt: webUsage.weeklyResetsAt)
+            sourceLabel = "api + web"
+        }
+        #endif
         return self.makeResult(
             usage: usage.toUsageSnapshot(),
-            sourceLabel: "api")
+            sourceLabel: sourceLabel)
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {

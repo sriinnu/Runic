@@ -21,6 +21,7 @@ extension ClaudeStatusProbe {
     private static let sessionLabelNeedle = Data("current session".utf8)
     private static let weeklyLabelNeedle = Data("current week".utf8)
     private static let opusLabelNeedle = Data("opus".utf8)
+    private static let fableLabelNeedle = Data("fable".utf8)
     private static let sonnetLabelNeedle = Data("sonnet".utf8)
 
     public static func parse(text: String, statusText: String? = nil) throws -> ClaudeStatusSnapshot {
@@ -43,7 +44,7 @@ extension ClaudeStatusProbe {
 
         var sessionPct = self.extractPercent(labelSubstring: "Current session", context: labelContext)
         var weeklyPct = self.extractPercent(labelSubstring: "Current week (all models)", context: labelContext)
-        var opusPct = self.extractPercent(
+        let opusMatch = self.extractPercentMatch(
             labelSubstrings: [
                 "Current week (Opus)",
                 "Current week (Fable)",
@@ -51,6 +52,7 @@ extension ClaudeStatusProbe {
                 "Current week (Sonnet)",
             ],
             context: labelContext)
+        var opusPct = opusMatch?.value
 
         // Fallback: order-based percent scraping when labels are present but the surrounding layout moved.
         // Only apply the fallback when the corresponding label exists in the rendered panel; enterprise accounts
@@ -58,7 +60,9 @@ extension ClaudeStatusProbe {
         // The same goes for the session row: without it, the panel's first percent is the weekly limit.
         let hasSessionLabel = labelContext.contains(Self.sessionLabelNeedle)
         let hasWeeklyLabel = labelContext.contains(Self.weeklyLabelNeedle)
-        let hasOpusLabel = labelContext.contains(Self.opusLabelNeedle) || labelContext.contains(Self.sonnetLabelNeedle)
+        let hasOpusLabel = labelContext.contains(Self.opusLabelNeedle)
+            || labelContext.contains(Self.fableLabelNeedle)
+            || labelContext.contains(Self.sonnetLabelNeedle)
 
         if sessionPct == nil || (hasWeeklyLabel && weeklyPct == nil) || (hasOpusLabel && opusPct == nil) {
             let ordered = self.allPercents(clean)
@@ -71,6 +75,8 @@ extension ClaudeStatusProbe {
             }
             if hasOpusLabel, opusPct == nil, ordered.indices.contains(opusIndex) { opusPct = ordered[opusIndex] }
         }
+
+        let opusLabel = Self.resolveOpusLabel(matchedLabel: opusMatch?.matchedLabel, context: labelContext)
 
         let identity = Self.parseIdentity(usageText: clean, statusText: statusClean)
 
@@ -110,7 +116,21 @@ extension ClaudeStatusProbe {
             primaryResetDescription: sessionReset,
             secondaryResetDescription: weeklyReset,
             opusResetDescription: opusReset,
-            rawText: text + (statusText ?? ""))
+            rawText: text + (statusText ?? ""),
+            opusLabel: opusLabel)
+    }
+
+    private static func resolveOpusLabel(matchedLabel: String?, context: LabelSearchContext) -> String? {
+        if let matchedLabel {
+            let lower = matchedLabel.lowercased()
+            if lower.contains("opus") { return "Opus" }
+            if lower.contains("fable") { return "Fable" }
+            if lower.contains("sonnet") { return "Sonnet" }
+        }
+        if context.contains(Self.opusLabelNeedle) { return "Opus" }
+        if context.contains(Self.fableLabelNeedle) { return "Fable" }
+        if context.contains(Self.sonnetLabelNeedle) { return "Sonnet" }
+        return nil
     }
 
     private static func extractPercent(labelSubstring: String, context: LabelSearchContext) -> Int? {
@@ -127,9 +147,14 @@ extension ClaudeStatusProbe {
         return nil
     }
 
-    private static func extractPercent(labelSubstrings: [String], context: LabelSearchContext) -> Int? {
+    private static func extractPercentMatch(
+        labelSubstrings: [String],
+        context: LabelSearchContext) -> (value: Int, matchedLabel: String)?
+    {
         for label in labelSubstrings {
-            if let value = self.extractPercent(labelSubstring: label, context: context) { return value }
+            if let value = self.extractPercent(labelSubstring: label, context: context) {
+                return (value, label)
+            }
         }
         return nil
     }

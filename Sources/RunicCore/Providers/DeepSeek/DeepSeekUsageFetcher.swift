@@ -11,9 +11,15 @@ struct DeepSeekBalanceResponse: Decodable {
         let topped_up_balance: String?
 
         var totalBalanceValue: Double? {
-            Self.parse(self.total_balance) ??
-                Self.parse(self.topped_up_balance) ??
-                Self.parse(self.granted_balance)
+            if let total = Self.parse(self.total_balance) {
+                return total
+            }
+            let toppedUp = Self.parse(self.topped_up_balance)
+            let granted = Self.parse(self.granted_balance)
+            if toppedUp != nil || granted != nil {
+                return (toppedUp ?? 0) + (granted ?? 0)
+            }
+            return nil
         }
 
         private static func parse(_ raw: String?) -> Double? {
@@ -65,8 +71,25 @@ extension DeepSeekBalanceResponse {
         self.preferredBalanceInfo?.totalBalanceValue ?? 0
     }
 
-    private var currencyCode: String {
-        self.preferredBalanceInfo?.currency?.uppercased() ?? "USD"
+    private var currencyCode: String? {
+        guard let raw = self.preferredBalanceInfo?.currency?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased(),
+            !raw.isEmpty
+        else { return nil }
+        return raw
+    }
+
+    private var additionalCurrencySummary: String? {
+        let preferredCurrency = self.currencyCode
+        let extras = (self.balance_infos ?? []).compactMap { info -> String? in
+            guard let value = info.totalBalanceValue, value > 0 else { return nil }
+            let code = info.currency?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard code != preferredCurrency else { return nil }
+            let formatted = String(format: "%.2f", value)
+            return code.map { "\(formatted) \($0)" } ?? formatted
+        }
+        return extras.isEmpty ? nil : extras.joined(separator: " · ")
     }
 
     func toUsageSnapshot() -> UsageSnapshot {
@@ -74,12 +97,19 @@ extension DeepSeekBalanceResponse {
         // percentage — mark the window as limit-less so UIs show the balance
         // text instead of a fake 0% gauge. The live balance itself flows to
         // the UI through `toCreditsSnapshot()`.
-        UsageSnapshot(
+        let primaryAmount = String(format: "%.2f", self.remainingBalance)
+        let baseDescription = self.currencyCode.map { "Balance: \(primaryAmount) \($0)" }
+            ?? "Balance: \(primaryAmount)"
+        let resetDescription = [baseDescription, self.additionalCurrencySummary]
+            .compactMap(\.self)
+            .joined(separator: " · ")
+
+        return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: "Balance: \(String(format: "%.2f", self.remainingBalance)) \(self.currencyCode)",
+                resetDescription: resetDescription,
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,

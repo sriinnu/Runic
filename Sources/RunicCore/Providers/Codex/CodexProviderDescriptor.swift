@@ -67,7 +67,7 @@ public enum CodexProviderDescriptor {
             let debugMenuEnabled = settings?.debugMenuEnabled ?? false
             let codexSettings = settings?.codex
             let selected = codexSettings?.usageDataSource ?? .oauth
-            let hasOAuthCredentials = (try? CodexOAuthCredentialsStore.load()) != nil
+            let hasOAuthCredentials = (try? CodexOAuthCredentialsStore.load(environment: context.env)) != nil
             let strategy = Self.resolveUsageStrategy(
                 debugMenuEnabled: debugMenuEnabled,
                 selectedDataSource: selected,
@@ -195,7 +195,9 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
     {
         let primary = Self.makeWindow(response.rateLimit?.primaryWindow)
         let secondary = Self.makeWindow(response.rateLimit?.secondaryWindow)
-        let tertiary = Self.additionalWindow(response.additionalRateLimits)
+        let extras = Self.additionalWindows(response.additionalRateLimits)
+        let tertiary = extras.first
+        let overflow = extras.count > 1 ? Array(extras.dropFirst()) : nil
 
         let identity = ProviderIdentitySnapshot(
             providerID: .codex,
@@ -207,30 +209,38 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
             primary: primary ?? secondary ?? .noLimitsReported,
             secondary: primary == nil ? nil : secondary,
             tertiary: tertiary,
+            additionalWindows: overflow,
             resetCredits: resetCredits,
             updatedAt: Date(),
             identity: identity)
     }
 
-    /// A promotional / extra metered feature gets its own windows. Surface
-    /// the tighter of its two as the card's third window, labelled with the
-    /// provider's own limit name so "each one" of the resets is visible.
-    private static func additionalWindow(_ limits: [CodexUsageResponse.AdditionalRateLimit]?) -> RateWindow? {
-        guard let extra = limits?.first(where: { $0.rateLimit?.primaryWindow != nil }),
-              let details = extra.rateLimit else { return nil }
-        let candidates = [details.primaryWindow, details.secondaryWindow].compactMap(\.self)
-        guard let tightest = candidates.max(by: { $0.usedPercent < $1.usedPercent }),
-              let window = Self.makeWindow(tightest) else { return nil }
-        let name = (extra.limitName ?? extra.meteredFeature ?? "Extra limit")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let hours = max(1, tightest.limitWindowSeconds / 3600)
-        let span = tightest.limitWindowSeconds >= 6 * 86400 ? "weekly" : "\(hours)h"
-        return RateWindow(
-            usedPercent: window.usedPercent,
-            windowMinutes: window.windowMinutes,
-            resetsAt: window.resetsAt,
-            resetDescription: window.resetDescription,
-            label: "\(name) \(span)")
+    /// Promotional / extra metered features get their own windows. Surface all
+    /// extra limits cleanly so none are dropped: first lands in `tertiary`,
+    /// any remaining in `additionalWindows`.
+    static func additionalWindows(_ limits: [CodexUsageResponse.AdditionalRateLimit]?) -> [RateWindow] {
+        guard let limits, !limits.isEmpty else { return [] }
+        var windows: [RateWindow] = []
+        for extra in limits {
+            guard let details = extra.rateLimit else { continue }
+            let candidates = [details.primaryWindow, details.secondaryWindow].compactMap(\.self)
+            guard let tightest = candidates.max(by: { $0.usedPercent < $1.usedPercent }),
+                  let window = Self.makeWindow(tightest)
+            else {
+                continue
+            }
+            let name = (extra.limitName ?? extra.meteredFeature ?? "Extra limit")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let hours = max(1, tightest.limitWindowSeconds / 3600)
+            let span = tightest.limitWindowSeconds >= 6 * 86400 ? "weekly" : "\(hours)h"
+            windows.append(RateWindow(
+                usedPercent: window.usedPercent,
+                windowMinutes: window.windowMinutes,
+                resetsAt: window.resetsAt,
+                resetDescription: window.resetDescription,
+                label: "\(name) \(span)"))
+        }
+        return windows
     }
 
     private static func mapCredits(_ credits: CodexUsageResponse.CreditDetails?) -> CreditsSnapshot? {
@@ -243,7 +253,7 @@ struct CodexOAuthFetchStrategy: ProviderFetchStrategy {
         let resetDate = Date(timeIntervalSince1970: TimeInterval(window.resetAt))
         let resetDescription = UsageFormatter.resetDescription(from: resetDate)
         return RateWindow(
-            usedPercent: Double(window.usedPercent),
+            usedPercent: window.usedPercent,
             windowMinutes: window.limitWindowSeconds / 60,
             resetsAt: resetDate,
             resetDescription: resetDescription)

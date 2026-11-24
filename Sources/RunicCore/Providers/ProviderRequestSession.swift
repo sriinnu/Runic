@@ -3,7 +3,9 @@ import Foundation
 /// Keeps provider credentials on the endpoint that the caller selected.
 public enum ProviderRequestSession {
     public static func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-        try await URLSession.shared.data(for: request, delegate: NoRedirectDelegate())
+        var freshRequest = request
+        freshRequest.cachePolicy = .reloadIgnoringLocalCacheData
+        return try await URLSession.shared.data(for: freshRequest, delegate: NoRedirectDelegate())
     }
 
     /// Where a rejected 3xx pointed, resolved against the request URL. Session-cookie fetchers use it

@@ -26,16 +26,19 @@ extension StatusItemController {
         return self.store.menuLeadSlot(for: preferred)
     }
 
-    /// True when a refresh is already running (global or single-provider — both
-    /// set `isRefreshing`). Callers use this to surface feedback instead of the
-    /// silent no-op inside `UsageStore.refresh()`.
+    /// True when a refresh is already running for the target provider (or globally when target is nil).
+    /// Callers use this to surface feedback instead of a silent no-op.
     var isRefreshInFlight: Bool {
-        self.store.isRefreshing
+        self.isRefreshInFlight(for: self.refreshTargetProvider())
+    }
+
+    func isRefreshInFlight(for target: UsageProvider?) -> Bool {
+        self.store.isRefreshing(provider: target)
     }
 
     @objc func refreshNow() {
-        guard !self.isRefreshInFlight else { return }
         let provider = self.refreshTargetProvider()
+        guard !self.isRefreshInFlight(for: provider) else { return }
         if let provider {
             Task {
                 await self.store.refreshSingleProvider(provider)

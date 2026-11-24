@@ -2,6 +2,15 @@ import Foundation
 import Helix
 import RunicCore
 
+private struct CLIUsageJSONEntry: Encodable {
+    let provider: UsageProvider
+    let displayName: String
+    let source: String?
+    let snapshot: UsageSnapshot?
+    let credits: CreditsSnapshot?
+    let error: String?
+}
+
 extension RunicCLI {
     static func runUsage(_ invocation: CommandInvocation) async {
         let providerArg = invocation.parsedValues.options["provider"]?.first
@@ -11,6 +20,7 @@ extension RunicCLI {
         let noColor = invocation.parsedValues.flags.contains("noColor")
         let useColor = !noColor
 
+        let explicitFilter = providerArg != nil
         let providers: [UsageProvider] = if let providerName = providerArg?.lowercased() {
             Self.resolveProviderList(
                 providerName,
@@ -20,11 +30,30 @@ extension RunicCLI {
         }
 
         let fetcher = UsageFetcher()
-        var output = ""
+        var textBlocks: [String] = []
+        var jsonEntries: [CLIUsageJSONEntry] = []
 
         for provider in providers {
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            if !descriptor.metadata.providesLiveSnapshot {
+                if explicitFilter {
+                    let note = "Provider uses local logs only (no live snapshot)."
+                    if isJson {
+                        jsonEntries.append(CLIUsageJSONEntry(
+                            provider: provider,
+                            displayName: descriptor.metadata.displayName,
+                            source: "ledger-only",
+                            snapshot: nil,
+                            credits: nil,
+                            error: nil))
+                    } else {
+                        textBlocks.append("\(descriptor.metadata.displayName)\n\(note)")
+                    }
+                }
+                continue
+            }
+
             do {
-                let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
                 let context = ProviderFetchContext(
                     runtime: .cli,
                     sourceMode: .cli,
@@ -40,37 +69,54 @@ extension RunicCLI {
                 let outcome = await descriptor.fetchOutcome(context: context)
                 let result = try outcome.result.get()
 
-                let header = "\(descriptor.metadata.sessionLabel)"
-                let text = Self.renderUsageText(
-                    provider: provider,
-                    snapshot: result.usage,
-                    credits: result.credits,
-                    header: header,
-                    useColor: useColor)
-
-                if !output.isEmpty { output += "\n" }
-                output += text
+                if isJson {
+                    jsonEntries.append(CLIUsageJSONEntry(
+                        provider: provider,
+                        displayName: descriptor.metadata.displayName,
+                        source: result.sourceLabel,
+                        snapshot: result.usage.scoped(to: provider),
+                        credits: result.credits,
+                        error: nil))
+                } else {
+                    let header = descriptor.metadata.displayName
+                    let text = Self.renderUsageText(
+                        provider: provider,
+                        snapshot: result.usage,
+                        credits: result.credits,
+                        header: header,
+                        useColor: useColor)
+                    textBlocks.append(text)
+                }
             } catch {
-                let errorMsg = "Error fetching \(provider.rawValue): \(error.localizedDescription)"
-                if !output.isEmpty { output += "\n" }
-                output += errorMsg
+                if isJson {
+                    jsonEntries.append(CLIUsageJSONEntry(
+                        provider: provider,
+                        displayName: descriptor.metadata.displayName,
+                        source: nil,
+                        snapshot: nil,
+                        credits: nil,
+                        error: error.localizedDescription))
+                } else {
+                    textBlocks.append("Error fetching \(provider.rawValue): \(error.localizedDescription)")
+                }
             }
         }
 
-        if isPretty, isJson {
-            if let data = output.data(using: .utf8),
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let prettyData = try? JSONSerialization.data(
-                   withJSONObject: json,
-                   options: [.prettyPrinted, .sortedKeys]),
-               let pretty = String(data: prettyData, encoding: .utf8)
+        if isJson {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            if isPretty {
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            }
+            if let data = try? encoder.encode(jsonEntries),
+               let encoded = String(data: data, encoding: .utf8)
             {
-                print(pretty)
+                print(encoded)
             } else {
-                print(output)
+                print("[]")
             }
         } else {
-            print(output)
+            print(textBlocks.joined(separator: "\n"))
         }
     }
 

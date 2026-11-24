@@ -195,6 +195,10 @@ final class SiliconFlowConsoleTrace: @unchecked Sendable {
     static func lastFailure(china: Bool) -> String? {
         self.lock.withLock { self.lastFailureByRegion[china] }
     }
+
+    static func clearFailure(china: Bool) {
+        self.lock.withLock { _ = self.lastFailureByRegion.removeValue(forKey: china) }
+    }
 }
 
 #if os(macOS)
@@ -218,7 +222,11 @@ public enum SiliconFlowConsoleFetcher {
                 china: china,
                 environment: environment,
                 trace: trace)
-            self.savedSession(china: china).store(session.cookieHeader)
+            guard self.savedSession(china: china).store(session.cookieHeader) else {
+                let error = SiliconFlowConsoleError.notSignedIn(china: china)
+                trace.finish(china: china, isConnect: true, failure: error.localizedDescription)
+                throw error
+            }
             trace.finish(china: china, isConnect: true, failure: nil)
             return session.sourceLabel
         } catch {
@@ -293,6 +301,7 @@ public enum SiliconFlowConsoleFetcher {
 
     public static func disconnect(china: Bool) {
         self.savedSession(china: china).clear()
+        SiliconFlowConsoleTrace.clearFailure(china: china)
     }
 
     public static func isConnected(china: Bool) -> Bool {

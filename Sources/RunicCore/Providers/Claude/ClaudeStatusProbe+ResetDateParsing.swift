@@ -68,7 +68,7 @@ extension ClaudeStatusProbe {
 
     private static func normalizeResetInput(_ text: String?) -> (String, TimeZone?)? {
         guard var raw = text?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
-        raw = raw.replacingOccurrences(of: #"(?i)^resets?:?\s*"#, with: "", options: .regularExpression)
+        raw = raw.replacingOccurrences(of: #"(?i)^resets?:?\s*(?:at\s+)?"#, with: "", options: .regularExpression)
         raw = raw.replacingOccurrences(of: " at ", with: " ", options: .caseInsensitive)
         raw = raw.replacingOccurrences(
             of: #"(?<=\d)\.(\d{2})\b"#,

@@ -185,10 +185,29 @@ extension UsageStore {
         return true
     }
 
+    private func syncRefreshingFlag() {
+        self.isRefreshing = self.isGlobalRefreshing
+            || !self.activeSingleRefreshes.isEmpty
+            || !self.refreshingProviders.isEmpty
+    }
+
+    func isRefreshing(provider: UsageProvider?) -> Bool {
+        guard let provider else { return self.isGlobalRefreshing }
+        if self.activeSingleRefreshes.contains(provider) { return true }
+        return self.refreshSlots(for: provider).contains { slot in
+            self.accounts(for: slot).contains { self.refreshingProviders.contains($0.id) }
+        }
+    }
+
     func refreshSingleProvider(_ provider: UsageProvider) async {
+        guard !self.isRefreshing(provider: provider) else { return }
         let startedAt = Date()
-        self.isRefreshing = true
-        defer { self.isRefreshing = false }
+        self.activeSingleRefreshes.insert(provider)
+        self.syncRefreshingFlag()
+        defer {
+            self.activeSingleRefreshes.remove(provider)
+            self.syncRefreshingFlag()
+        }
         await withTaskGroup(of: Void.self) { group in
             for slot in self.refreshSlots(for: provider) {
                 group.addTask { await self.refreshProvider(slot, trigger: .manual) }
@@ -206,7 +225,7 @@ extension UsageStore {
     }
 
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
-        guard !self.isRefreshing else { return }
+        guard !self.isGlobalRefreshing else { return }
         let now = Date()
         if trigger == .menuOpen {
             self.resetMenuOpenRefreshBudgetIfNeeded(now: now)
@@ -220,8 +239,12 @@ extension UsageStore {
 
         self.lastRefreshTrigger = trigger
         self.lastRefreshAt = now
-        self.isRefreshing = true
-        defer { self.isRefreshing = false }
+        self.isGlobalRefreshing = true
+        self.syncRefreshingFlag()
+        defer {
+            self.isGlobalRefreshing = false
+            self.syncRefreshingFlag()
+        }
 
         let inactiveProviders = trigger.isAuto ? self.inactiveProviders(now: now) : []
         let skipCodexExtras = trigger.isAuto && inactiveProviders.contains(.codex)
@@ -360,12 +383,16 @@ extension UsageStore {
         _ account: ProviderAccount,
         credential: CredentialRef?,
         spec: ProviderSpec,
-        trigger _: RefreshTrigger) async
+        trigger: RefreshTrigger) async
     {
         let provider = account.id.kind
         let accountID = account.id
         self.refreshingProviders.insert(accountID)
-        defer { self.refreshingProviders.remove(accountID) }
+        self.syncRefreshingFlag()
+        defer {
+            self.refreshingProviders.remove(accountID)
+            self.syncRefreshingFlag()
+        }
 
         let previousSnapshot = self.snapshots[accountID]
         let outcome = await spec.fetch(accountID, credential)
@@ -419,7 +446,10 @@ extension UsageStore {
             }
         case let .failure(error):
             await MainActor.run {
-                self.recordProviderFetchFailure(accountID, message: error.localizedDescription)
+                self.recordProviderFetchFailure(
+                    accountID,
+                    message: error.localizedDescription,
+                    forceSurface: trigger == .manual)
             }
         }
     }
@@ -430,43 +460,51 @@ extension UsageStore {
     /// snapshot's `updatedAt`) with the error header surfaced alongside once the
     /// failure gate lets it through. Wiping the snapshot here used to flip the
     /// card from usage bars to error-text-only on the first surfaced failure.
-    func recordProviderFetchFailure(_ provider: UsageProvider, message: String) {
-        self.recordProviderFetchFailure(provider.defaultAccount, message: message)
+    func recordProviderFetchFailure(_ provider: UsageProvider, message: String, forceSurface: Bool = false) {
+        self.recordProviderFetchFailure(provider.defaultAccount, message: message, forceSurface: forceSurface)
     }
 
-    func recordProviderFetchFailure(_ account: AccountID, message: String) {
+    func recordProviderFetchFailure(_ account: AccountID, message: String, forceSurface: Bool = false) {
         let hadPriorData = self.snapshots[account] != nil
         if self.failureGates[account] == nil {
             self.failureGates[account] = ConsecutiveFailureGate()
         }
         let shouldSurface = self.failureGates[account]?
             .shouldSurfaceError(onFailureWithPriorData: hadPriorData) ?? true
-        self.errors[account] = shouldSurface ? message : nil
+        self.errors[account] = (forceSurface || shouldSurface) ? message : nil
     }
 
-    private func handleSessionQuotaTransition(provider: UsageProvider, snapshot: UsageSnapshot) {
-        let currentRemaining = snapshot.primary.remainingPercent
+    func handleSessionQuotaTransition(provider: UsageProvider, snapshot: UsageSnapshot) {
+        let currentRemaining: Double
+        let quotaKind: SessionQuotaKind
+        if snapshot.primary.hasKnownLimit == false,
+           let balance = snapshot.balance,
+           self.metadata(for: provider).supportsCredits
+        {
+            currentRemaining = balance.blocksAPICalls ? 0 : 100
+            quotaKind = .credits
+        } else {
+            currentRemaining = snapshot.primary.remainingPercent
+            // A 0%-remaining window with no real quota evidence (no window duration,
+            // no reset time, no reset/balance text) is a hardcoded stub, not a
+            // measurement. Bail before recording it: posting would spam a phantom
+            // depletion alert, and remembering it as "previous = 0" would fire a
+            // phantom "restored" alert once real data arrives.
+            if SessionQuotaNotificationLogic.isDepleted(currentRemaining),
+               !SessionQuotaNotificationLogic.hasRealQuota(snapshot.primary)
+            {
+                let providerText = provider.rawValue
+                self.sessionQuotaLogger.debug("ignoring stub depleted window: provider=\(providerText)")
+                return
+            }
+            quotaKind = SessionQuotaNotificationLogic.quotaKind(
+                windowMinutes: snapshot.primary.windowMinutes,
+                resetsAt: snapshot.primary.resetsAt,
+                supportsCredits: self.metadata(for: provider).supportsCredits)
+        }
         let previousRemaining = self.lastKnownSessionRemaining[provider]
 
-        // A 0%-remaining window with no real quota evidence (no window duration,
-        // no reset time, no reset/balance text) is a hardcoded stub, not a
-        // measurement. Bail before recording it: posting would spam a phantom
-        // depletion alert, and remembering it as "previous = 0" would fire a
-        // phantom "restored" alert once real data arrives.
-        if SessionQuotaNotificationLogic.isDepleted(currentRemaining),
-           !SessionQuotaNotificationLogic.hasRealQuota(snapshot.primary)
-        {
-            let providerText = provider.rawValue
-            self.sessionQuotaLogger.debug("ignoring stub depleted window: provider=\(providerText)")
-            return
-        }
-
         defer { self.lastKnownSessionRemaining[provider] = currentRemaining }
-
-        let quotaKind = SessionQuotaNotificationLogic.quotaKind(
-            windowMinutes: snapshot.primary.windowMinutes,
-            resetsAt: snapshot.primary.resetsAt,
-            supportsCredits: self.metadata(for: provider).supportsCredits)
 
         guard self.settings.sessionQuotaNotificationsEnabled else {
             if SessionQuotaNotificationLogic.isDepleted(currentRemaining) ||

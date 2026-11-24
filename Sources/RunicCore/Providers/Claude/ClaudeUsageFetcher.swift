@@ -10,6 +10,7 @@ public struct ClaudeUsageSnapshot: Sendable {
     public let primary: RateWindow
     public let secondary: RateWindow?
     public let opus: RateWindow?
+    public let additionalWindows: [RateWindow]?
     public let providerCost: ProviderCostSnapshot?
     public let updatedAt: Date
     public let accountEmail: String?
@@ -26,6 +27,7 @@ public struct ClaudeUsageSnapshot: Sendable {
         primary: RateWindow,
         secondary: RateWindow?,
         opus: RateWindow?,
+        additionalWindows: [RateWindow]? = nil,
         providerCost: ProviderCostSnapshot? = nil,
         updatedAt: Date,
         accountEmail: String?,
@@ -38,6 +40,7 @@ public struct ClaudeUsageSnapshot: Sendable {
         self.primary = primary
         self.secondary = secondary
         self.opus = opus
+        self.additionalWindows = additionalWindows?.isEmpty == true ? nil : additionalWindows
         self.providerCost = providerCost
         self.updatedAt = updatedAt
         self.accountEmail = accountEmail
@@ -75,6 +78,7 @@ extension ClaudeUsageSnapshot {
             primary: self.primary,
             secondary: self.secondary,
             opus: self.opus,
+            additionalWindows: self.additionalWindows,
             providerCost: cost,
             updatedAt: self.updatedAt,
             accountEmail: self.accountEmail,
@@ -91,6 +95,7 @@ extension ClaudeUsageSnapshot {
             primary: self.primary,
             secondary: self.secondary,
             opus: self.opus,
+            additionalWindows: self.additionalWindows,
             providerCost: self.providerCost,
             updatedAt: self.updatedAt,
             accountEmail: self.accountEmail,
@@ -143,6 +148,7 @@ extension ClaudeUsageSnapshot {
             primary: self.primary,
             secondary: self.secondary,
             opus: self.opus,
+            additionalWindows: self.additionalWindows,
             providerCost: cost,
             updatedAt: self.updatedAt,
             accountEmail: self.accountEmail,
@@ -451,7 +457,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         _ usage: OAuthUsageResponse,
         credentials: ClaudeOAuthCredentials) throws -> ClaudeUsageSnapshot
     {
-        func makeWindow(_ window: OAuthUsageWindow?, windowMinutes: Int?) -> RateWindow? {
+        func makeWindow(_ window: OAuthUsageWindow?, windowMinutes: Int?, label: String? = nil) -> RateWindow? {
             guard let window,
                   let utilization = window.utilization
             else { return nil }
@@ -461,7 +467,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 usedPercent: utilization,
                 windowMinutes: windowMinutes,
                 resetsAt: resetDate,
-                resetDescription: resetDescription)
+                resetDescription: resetDescription,
+                label: label)
         }
 
         // The flat keys and the `limits` list carry the same windows, and a reply
@@ -477,24 +484,29 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         // reply still carries a model limit, spend or resets worth showing.
         let primary = session ?? sevenDay ?? .noLimitsReported
         let weekly = session == nil ? nil : sevenDay
-        let modelSpecific = makeWindow(
-            usage.sevenDaySonnet ?? usage.sevenDayOpus,
-            windowMinutes: 7 * 24 * 60)
-            .map { win in
-                guard usage.sevenDaySonnet == nil, usage.sevenDayOpus != nil else { return win }
-                return RateWindow(
-                    usedPercent: win.usedPercent,
-                    windowMinutes: win.windowMinutes,
-                    resetsAt: win.resetsAt,
-                    resetDescription: win.resetDescription,
-                    label: "Opus")
+        var modelWindows: [RateWindow] = []
+        if let sonnet = makeWindow(usage.sevenDaySonnet, windowMinutes: 7 * 24 * 60, label: "Sonnet") {
+            modelWindows.append(sonnet)
+        }
+        if let opus = makeWindow(usage.sevenDayOpus, windowMinutes: 7 * 24 * 60, label: "Opus") {
+            modelWindows.append(opus)
+        }
+        for scoped in Self.scopedLimitWindows(usage.limits) {
+            let duplicate = modelWindows.contains { existing in
+                existing.label?.caseInsensitiveCompare(scoped.label ?? "") == .orderedSame
             }
-            ?? Self.scopedLimitWindow(usage.limits)
+            if !duplicate {
+                modelWindows.append(scoped)
+            }
+        }
+        let modelSpecific = modelWindows.first
+        let overflowModels = modelWindows.count > 1 ? Array(modelWindows.dropFirst()) : nil
 
         return ClaudeUsageSnapshot(
             primary: primary,
             secondary: weekly,
             opus: modelSpecific,
+            additionalWindows: overflowModels,
             providerCost: usage.spend?.costSnapshot ?? Self.oauthExtraUsageCost(usage.extraUsage),
             updatedAt: Date(),
             accountEmail: nil,
@@ -526,19 +538,24 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     /// model's own allowance), labelled with the model name so the card and
     /// the Resets panel show it as its own window.
     static func scopedLimitWindow(_ limits: [OAuthLimitEntry]?) -> RateWindow? {
-        guard let limits else { return nil }
+        self.scopedLimitWindows(limits).first
+    }
+
+    static func scopedLimitWindows(_ limits: [OAuthLimitEntry]?) -> [RateWindow] {
+        guard let limits else { return [] }
         let scoped = limits.filter { $0.scopedModelName != nil && $0.percent != nil }
-        guard let entry = scoped.first(where: { $0.isActive == true }) ?? scoped.first,
-              let percent = entry.percent,
-              let model = entry.scopedModelName else { return nil }
-        let resetDate = ClaudeOAuthUsageFetcher.parseISO8601Date(entry.resetsAt)
-        let isWeekly = (entry.group ?? entry.kind ?? "").lowercased().contains("week")
-        return RateWindow(
-            usedPercent: percent,
-            windowMinutes: isWeekly ? 7 * 24 * 60 : nil,
-            resetsAt: resetDate,
-            resetDescription: resetDate.map(Self.formatResetDate),
-            label: isWeekly ? "\(model) weekly" : model)
+        let ordered = scoped.filter { $0.isActive == true } + scoped.filter { $0.isActive != true }
+        return ordered.compactMap { entry in
+            guard let percent = entry.percent, let model = entry.scopedModelName else { return nil }
+            let resetDate = ClaudeOAuthUsageFetcher.parseISO8601Date(entry.resetsAt)
+            let isWeekly = (entry.group ?? entry.kind ?? "").lowercased().contains("week")
+            return RateWindow(
+                usedPercent: percent,
+                windowMinutes: isWeekly ? 7 * 24 * 60 : nil,
+                resetsAt: resetDate,
+                resetDescription: resetDate.map(Self.formatResetDate),
+                label: isWeekly ? "\(model) weekly" : model)
+        }
     }
 
     private static func oauthExtraUsageCost(_ extra: OAuthExtraUsage?) -> ProviderCostSnapshot? {
@@ -595,19 +612,31 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 resetDescription: webData.weeklyResetsAt.map { Self.formatResetDate($0) })
         }
 
-        let opus: RateWindow? = webData.opusPercentUsed.map { opusPct in
-            RateWindow(
+        var webModelWindows: [RateWindow] = []
+        if let sonnetPct = webData.sonnetPercentUsed {
+            let resetsAt = webData.sonnetResetsAt ?? webData.weeklyResetsAt
+            webModelWindows.append(RateWindow(
+                usedPercent: sonnetPct,
+                windowMinutes: 7 * 24 * 60,
+                resetsAt: resetsAt,
+                resetDescription: resetsAt.map { Self.formatResetDate($0) },
+                label: "Sonnet"))
+        }
+        if let opusPct = webData.opusPercentUsed {
+            let resetsAt = webData.opusResetsAt ?? webData.weeklyResetsAt
+            webModelWindows.append(RateWindow(
                 usedPercent: opusPct,
                 windowMinutes: 7 * 24 * 60,
-                resetsAt: webData.weeklyResetsAt,
-                resetDescription: webData.weeklyResetsAt.map { Self.formatResetDate($0) },
-                label: "Opus")
+                resetsAt: resetsAt,
+                resetDescription: resetsAt.map { Self.formatResetDate($0) },
+                label: "Opus"))
         }
 
         return ClaudeUsageSnapshot(
             primary: session ?? weekly ?? .noLimitsReported,
             secondary: session == nil ? nil : weekly,
-            opus: opus,
+            opus: webModelWindows.first,
+            additionalWindows: webModelWindows.count > 1 ? Array(webModelWindows.dropFirst()) : nil,
             providerCost: webData.extraUsageCost,
             updatedAt: Date(),
             accountEmail: webData.accountEmail,
@@ -631,7 +660,12 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         let probe = ClaudeStatusProbe(claudeBinary: "claude", timeout: timeout)
         let snap = try await probe.fetch()
 
-        func makeWindow(pctLeft: Int?, reset: String?, windowMinutes: Int? = nil) -> RateWindow? {
+        func makeWindow(
+            pctLeft: Int?,
+            reset: String?,
+            windowMinutes: Int? = nil,
+            label: String? = nil) -> RateWindow?
+        {
             guard let left = pctLeft else { return nil }
             let used = max(0, min(100, 100 - Double(left)))
             let resetClean = reset?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -639,15 +673,23 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 usedPercent: used,
                 windowMinutes: windowMinutes,
                 resetsAt: ClaudeStatusProbe.parseResetDate(from: resetClean),
-                resetDescription: resetClean)
+                resetDescription: resetClean,
+                label: label)
         }
 
-        let session = makeWindow(pctLeft: snap.sessionPercentLeft, reset: snap.primaryResetDescription)
+        let session = makeWindow(
+            pctLeft: snap.sessionPercentLeft,
+            reset: snap.primaryResetDescription,
+            windowMinutes: 5 * 60)
         let weekly = makeWindow(
             pctLeft: snap.weeklyPercentLeft,
             reset: snap.secondaryResetDescription,
             windowMinutes: 7 * 24 * 60)
-        let opus = makeWindow(pctLeft: snap.opusPercentLeft, reset: snap.opusResetDescription)
+        let opus = makeWindow(
+            pctLeft: snap.opusPercentLeft,
+            reset: snap.opusResetDescription,
+            windowMinutes: 7 * 24 * 60,
+            label: snap.opusLabel)
 
         let resolvedLoginMethod = snap.loginMethod ?? Self.inferPlan(
             rateLimitTier: (try? ClaudeOAuthCredentialsStore.load(environment: self.environment))?.rateLimitTier)
@@ -678,10 +720,11 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             }
             // Only merge cost extras; keep identity fields from the primary data source.
             if snapshot.providerCost == nil, let extra = webData.extraUsageCost {
-                return ClaudeUsageSnapshot(
+                var copy = ClaudeUsageSnapshot(
                     primary: snapshot.primary,
                     secondary: snapshot.secondary,
                     opus: snapshot.opus,
+                    additionalWindows: snapshot.additionalWindows,
                     providerCost: extra,
                     updatedAt: snapshot.updatedAt,
                     accountEmail: snapshot.accountEmail,
@@ -689,6 +732,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                     loginMethod: snapshot.loginMethod,
                     rawText: snapshot.rawText,
                     resetCredits: snapshot.resetCredits)
+                copy.servedByCLIFallback = snapshot.servedByCLIFallback
+                return copy
             }
         } catch {
             Self.log.debug("Claude web extras fetch failed: \(error.localizedDescription)")

@@ -38,24 +38,31 @@ public enum StepFunUsageFetcher {
                 body: body?.isEmpty == false ? body : nil)
         }
 
-        let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-        let payload = (object?["data"] as? [String: Any]) ?? object ?? [:]
-        let balance = Self.findBalance(in: payload)
-        return StepFunAccountSnapshot(availableBalance: balance, updatedAt: Date())
+        return try Self.parseAccount(data: data)
     }
 
-    /// Recursively looks (one level deep, since payloads are typically flat or
-    /// single-nested) for the first numeric value under a recognized key name.
+    static func parseAccount(data: Data, now: Date = Date()) throws -> StepFunAccountSnapshot {
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw StepFunAPIError.invalidResponse
+        }
+        let payload = (object["data"] as? [String: Any]) ?? object
+        let balance = Self.findBalance(in: payload)
+        return StepFunAccountSnapshot(availableBalance: balance, updatedAt: now)
+    }
+
+    /// Recursively looks (sorted keys for determinism) for the first numeric value
+    /// under a recognized key name.
     private static func findBalance(in payload: [String: Any]) -> Double? {
         for key in self.balanceKeys {
             if let value = payload[key] {
-                if let number = value as? Double { return number }
-                if let number = value as? Int { return Double(number) }
+                if let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() {
+                    return number.doubleValue
+                }
                 if let string = value as? String, let number = Double(string) { return number }
             }
         }
-        for value in payload.values {
-            if let nested = value as? [String: Any], let found = findBalance(in: nested) {
+        for key in payload.keys.sorted() {
+            if let nested = payload[key] as? [String: Any], let found = findBalance(in: nested) {
                 return found
             }
         }

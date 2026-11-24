@@ -80,9 +80,25 @@ extension ClaudeWebAPIFetcher {
 
         // Parse seven_day_opus (Opus-specific weekly) usage
         var opusPercent: Double?
+        var opusResets: Date?
         if let sevenDayOpus = json["seven_day_opus"] as? [String: Any] {
             if let utilization = Self.utilizationPercent(sevenDayOpus["utilization"]) {
                 opusPercent = utilization
+            }
+            if let resetsAt = sevenDayOpus["resets_at"] as? String {
+                opusResets = self.parseISO8601Date(resetsAt)
+            }
+        }
+
+        // Parse seven_day_sonnet (Sonnet-specific weekly) usage
+        var sonnetPercent: Double?
+        var sonnetResets: Date?
+        if let sevenDaySonnet = json["seven_day_sonnet"] as? [String: Any] {
+            if let utilization = Self.utilizationPercent(sevenDaySonnet["utilization"]) {
+                sonnetPercent = utilization
+            }
+            if let resetsAt = sevenDaySonnet["resets_at"] as? String {
+                sonnetResets = self.parseISO8601Date(resetsAt)
             }
         }
 
@@ -92,6 +108,9 @@ extension ClaudeWebAPIFetcher {
             weeklyPercentUsed: weeklyPercent,
             weeklyResetsAt: weeklyResets,
             opusPercentUsed: opusPercent,
+            opusResetsAt: opusResets,
+            sonnetPercentUsed: sonnetPercent,
+            sonnetResetsAt: sonnetResets,
             extraUsageCost: nil,
             accountOrganization: nil,
             accountEmail: nil,

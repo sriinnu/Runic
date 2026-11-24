@@ -63,8 +63,11 @@ struct SiliconFlowCNAPIFetchStrategy: ProviderFetchStrategy {
             throw SiliconFlowCNSettingsError.missingToken
         }
         let usage = try await SiliconFlowUsageFetcher.fetchModels(apiKey: tokenRes.token, china: true)
+        let balanceIssue = (context.account?.isDefault != false)
+            ? SiliconFlowConsoleTrace.lastFailure(china: true)
+            : nil
         return self.makeResult(
-            usage: usage.toUsageSnapshot(balanceIssue: SiliconFlowConsoleTrace.lastFailure(china: true)),
+            usage: usage.toUsageSnapshot(balanceIssue: balanceIssue),
             sourceLabel: tokenRes.source.rawValue)
     }
 

@@ -49,8 +49,8 @@ struct BedrockCLIFetchStrategy: ProviderFetchStrategy {
     let id: String = "bedrock.cli"
     let kind: ProviderFetchKind = .cli
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
-        true
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        Self.resolveRegion(context: context) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
@@ -62,7 +62,8 @@ struct BedrockCLIFetchStrategy: ProviderFetchStrategy {
         let usage = try await BedrockUsageFetcher.fetchModels(
             region: region,
             profile: profile,
-            modelFilter: modelFilter)
+            modelFilter: modelFilter,
+            env: context.env)
 
         return self.makeResult(
             usage: usage.toUsageSnapshot(region: region, profile: profile, modelFilter: modelFilter),

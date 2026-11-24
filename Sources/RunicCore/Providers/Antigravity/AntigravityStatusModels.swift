@@ -44,6 +44,7 @@ public struct AntigravityStatusSnapshot: Sendable {
         let primary = ordered.first.map { Self.rateWindow(for: $0) } ?? .noLimitsReported
         let secondary = ordered.count > 1 ? Self.rateWindow(for: ordered[1]) : nil
         let tertiary = ordered.count > 2 ? Self.rateWindow(for: ordered[2]) : nil
+        let additional = ordered.count > 3 ? ordered.dropFirst(3).map { Self.rateWindow(for: $0) } : nil
 
         let identity = ProviderIdentitySnapshot(
             providerID: .antigravity,
@@ -54,6 +55,7 @@ public struct AntigravityStatusSnapshot: Sendable {
             primary: primary,
             secondary: secondary,
             tertiary: tertiary,
+            additionalWindows: additional,
             updatedAt: Date(),
             identity: identity)
     }
@@ -67,15 +69,36 @@ public struct AntigravityStatusSnapshot: Sendable {
             label: self.formattedModelLabel(quota))
     }
 
-    /// Sorts all models by most-constrained first so the top 3 slots
-    /// (primary/secondary/tertiary) show what's closest to running out.
-    /// Shorter windows sort first when headroom is tied.
+    private static func groupRank(_ quota: AntigravityModelQuota) -> Int {
+        let model = quota.modelId.lowercased()
+        let label = quota.label.lowercased()
+        if model.contains("gemini") || label.contains("gemini") { return 0 }
+        if model.contains("claude") || model.contains("gpt") || label.contains("claude") || label.contains("gpt") {
+            return 1
+        }
+        return 2
+    }
+
+    /// Deterministic ordering: Antigravity's native Gemini group leads so external
+    /// model groups (e.g. Claude & GPT Weekly) never hijack the primary slot or
+    /// menubar percentage, followed by shortest reset window (5h ahead of Weekly),
+    /// then most-constrained remaining headroom within the same group and span.
     private static func selectModels(_ models: [AntigravityModelQuota]) -> [AntigravityModelQuota] {
         models.sorted { lhs, rhs in
+            let lhsGroup = Self.groupRank(lhs)
+            let rhsGroup = Self.groupRank(rhs)
+            if lhsGroup != rhsGroup {
+                return lhsGroup < rhsGroup
+            }
+            let lhsMinutes = lhs.windowMinutes ?? Int.max
+            let rhsMinutes = rhs.windowMinutes ?? Int.max
+            if lhsMinutes != rhsMinutes {
+                return lhsMinutes < rhsMinutes
+            }
             if lhs.remainingPercent != rhs.remainingPercent {
                 return lhs.remainingPercent < rhs.remainingPercent
             }
-            return (lhs.windowMinutes ?? Int.max) < (rhs.windowMinutes ?? Int.max)
+            return lhs.label.localizedCaseInsensitiveCompare(rhs.label) == .orderedAscending
         }
     }
 

@@ -54,6 +54,10 @@ extension FactoryStatusProbe {
         do {
             return try await .success(self.fetchWithBearerToken(bearerToken, logger: logger))
         } catch {
+            if case FactoryStatusProbeError.notLoggedIn = error {
+                await FactorySessionStore.shared.setBearerToken(nil)
+                logger("Stored bearer token invalid, cleared")
+            }
             return .failure(error)
         }
     }

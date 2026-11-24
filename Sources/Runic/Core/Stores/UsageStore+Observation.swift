@@ -44,6 +44,8 @@ extension UsageStore {
         _ = self.zaiVersion
         _ = self.antigravityVersion
         _ = self.isRefreshing
+        _ = self.isGlobalRefreshing
+        _ = self.activeSingleRefreshes
         _ = self.refreshingProviders
         _ = self.pathDebugInfo
         _ = self.statuses

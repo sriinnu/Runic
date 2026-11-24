@@ -111,7 +111,7 @@ public struct CodexUsageResponse: Decodable, Sendable {
     }
 
     public struct WindowSnapshot: Decodable, Sendable {
-        public let usedPercent: Int
+        public let usedPercent: Double
         public let resetAt: Int
         public let limitWindowSeconds: Int
 

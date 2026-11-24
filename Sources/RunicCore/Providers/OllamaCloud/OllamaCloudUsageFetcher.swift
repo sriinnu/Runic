@@ -24,6 +24,9 @@ struct OllamaCloudUsage: Equatable {
     let models: [ModelRequests]
     /// `activity.cost`, in dollars.
     let cost: Double?
+    /// Bucketed endpoint (`/api/usage`) totals when limit percentages are absent.
+    var totalRequests: Double?
+    var rangeLabel: String?
     /// Only the web settings page reports when a window resets.
     var sessionResetsAt: Date?
     var weeklyResetsAt: Date?
@@ -41,6 +44,17 @@ struct OllamaCloudUsage: Equatable {
         let session = limits?["session"] as? [String: Any]
         let weekly = limits?["weekly"] as? [String: Any]
         let activity = root["activity"] as? [String: Any]
+        let totals = root["totals"] as? [String: Any]
+
+        var totalRequests = self.number(totals?["request_count"] ?? totals?["requests"])
+        if totalRequests == nil, let buckets = root["buckets"] as? [[String: Any]], !buckets.isEmpty {
+            let bucketSum = buckets.reduce(0.0) { partial, bucket in
+                partial + (self.number(bucket["request_count"] ?? bucket["requests"]) ?? 0)
+            }
+            totalRequests = bucketSum
+        }
+        let rawRange = (root["range"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rangeLabel = (rawRange?.isEmpty == false) ? rawRange : nil
 
         let modelSources: [Any?] = [monthly?["models"], limits?["models"], root["models"]]
         let models = modelSources.lazy
@@ -52,7 +66,9 @@ struct OllamaCloudUsage: Equatable {
             sessionUsage: self.number(session?["usage"]),
             weeklyUsage: self.number(weekly?["usage"]),
             models: models,
-            cost: self.number(activity?["cost"]))
+            cost: self.number(activity?["cost"]),
+            totalRequests: totalRequests,
+            rangeLabel: rangeLabel)
     }
 
     /// A JSON number or a numeric string ("12.34", "$12.34", "1,234.5").
@@ -133,16 +149,31 @@ extension OllamaCloudUsage {
 
         var primary: RateWindow
         var secondary: RateWindow?
+        var tertiary: RateWindow?
         if let monthly = self.monthlyUsage {
             primary = Self.window(
                 fraction: monthly,
                 minutes: Self.monthlyWindowMinutes,
                 label: "Monthly credits",
                 description: topModels)
-            secondary = nil
+            secondary = session ?? weekly
+            tertiary = session == nil ? nil : weekly
         } else if let first = session ?? weekly {
             primary = first.withDescription(topModels)
             secondary = session == nil ? nil : weekly
+            tertiary = nil
+        } else if let totalRequests = self.totalRequests {
+            let countText = "\(Int(totalRequests.rounded())) requests"
+            let requestText = self.rangeLabel.map { "\(countText) (\($0))" } ?? countText
+            primary = RateWindow(
+                usedPercent: 0,
+                windowMinutes: nil,
+                resetsAt: nil,
+                resetDescription: [requestText, topModels].compactMap(\.self).joined(separator: " · "),
+                label: "Requests",
+                hasKnownLimit: false)
+            secondary = nil
+            tertiary = nil
         } else {
             primary = RateWindow(
                 usedPercent: 0,
@@ -152,6 +183,7 @@ extension OllamaCloudUsage {
                     .compactMap(\.self).joined(separator: " · "),
                 hasKnownLimit: false)
             secondary = nil
+            tertiary = nil
         }
 
         let providerCost = self.cost.map {
@@ -167,7 +199,7 @@ extension OllamaCloudUsage {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
-            tertiary: nil,
+            tertiary: tertiary,
             providerCost: providerCost,
             updatedAt: now,
             identity: nil)

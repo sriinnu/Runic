@@ -91,6 +91,9 @@ public struct UsageSnapshot: Codable, Sendable {
     public let primary: RateWindow
     public let secondary: RateWindow?
     public let tertiary: RateWindow?
+    /// Overflow rate windows beyond `primary`, `secondary`, and `tertiary` (for
+    /// multi-group or multi-model providers such as Antigravity, Claude, Codex, Gemini, Zai).
+    public let additionalWindows: [RateWindow]?
     public let providerCost: ProviderCostSnapshot?
     public let zaiUsage: ZaiUsageSnapshot?
     /// Banked, manually-redeemable limit resets (Codex "2 resets"), when the
@@ -105,6 +108,7 @@ public struct UsageSnapshot: Codable, Sendable {
         case primary
         case secondary
         case tertiary
+        case additionalWindows
         case providerCost
         case resetCredits
         case balance
@@ -119,6 +123,7 @@ public struct UsageSnapshot: Codable, Sendable {
         primary: RateWindow,
         secondary: RateWindow?,
         tertiary: RateWindow? = nil,
+        additionalWindows: [RateWindow]? = nil,
         providerCost: ProviderCostSnapshot? = nil,
         zaiUsage: ZaiUsageSnapshot? = nil,
         resetCredits: UsageResetCredits? = nil,
@@ -129,6 +134,7 @@ public struct UsageSnapshot: Codable, Sendable {
         self.primary = primary
         self.secondary = secondary
         self.tertiary = tertiary
+        self.additionalWindows = additionalWindows?.isEmpty == true ? nil : additionalWindows
         self.providerCost = providerCost
         self.zaiUsage = zaiUsage
         self.resetCredits = resetCredits
@@ -142,6 +148,8 @@ public struct UsageSnapshot: Codable, Sendable {
         self.primary = try container.decode(RateWindow.self, forKey: .primary)
         self.secondary = try container.decodeIfPresent(RateWindow.self, forKey: .secondary)
         self.tertiary = try container.decodeIfPresent(RateWindow.self, forKey: .tertiary)
+        let decodedAdditional = try container.decodeIfPresent([RateWindow].self, forKey: .additionalWindows)
+        self.additionalWindows = decodedAdditional?.isEmpty == true ? nil : decodedAdditional
         self.providerCost = try container.decodeIfPresent(ProviderCostSnapshot.self, forKey: .providerCost)
         self.zaiUsage = nil // Not persisted, fetched fresh each time
         self.resetCredits = try container.decodeIfPresent(UsageResetCredits.self, forKey: .resetCredits)
@@ -174,6 +182,9 @@ public struct UsageSnapshot: Codable, Sendable {
             try container.encodeNil(forKey: .secondary)
         }
         try container.encodeIfPresent(self.tertiary, forKey: .tertiary)
+        if let additionalWindows = self.additionalWindows, !additionalWindows.isEmpty {
+            try container.encode(additionalWindows, forKey: .additionalWindows)
+        }
         try container.encodeIfPresent(self.providerCost, forKey: .providerCost)
         try container.encodeIfPresent(self.resetCredits, forKey: .resetCredits)
         try container.encodeIfPresent(self.balance, forKey: .balance)
@@ -182,6 +193,28 @@ public struct UsageSnapshot: Codable, Sendable {
         try container.encodeIfPresent(self.identity?.accountEmail, forKey: .accountEmail)
         try container.encodeIfPresent(self.identity?.accountOrganization, forKey: .accountOrganization)
         try container.encodeIfPresent(self.identity?.loginMethod, forKey: .loginMethod)
+    }
+
+    /// All rate windows carried by this snapshot in display order.
+    public var allWindows: [RateWindow] {
+        var windows: [RateWindow] = [self.primary]
+        if let secondary = self.secondary { windows.append(secondary) }
+        if let tertiary = self.tertiary { windows.append(tertiary) }
+        if let additional = self.additionalWindows { windows.append(contentsOf: additional) }
+        return windows
+    }
+
+    /// Preferred quota-backed window for summary badges, switcher bars, and menubar percentages.
+    ///
+    /// Returns `nil` when all windows are informational/limitless (`hasKnownLimit == false`), so
+    /// prepaid wallets without a separate periodic limit never show a bogus percentage.
+    public func preferredQuotaWindow(for provider: UsageProvider) -> RateWindow? {
+        let candidates: [RateWindow] = if provider == .factory {
+            [self.secondary, self.primary, self.tertiary].compactMap(\.self) + (self.additionalWindows ?? [])
+        } else {
+            self.allWindows
+        }
+        return candidates.first { $0.hasKnownLimit != false }
     }
 
     public func identity(for provider: UsageProvider) -> ProviderIdentitySnapshot? {
@@ -209,6 +242,7 @@ public struct UsageSnapshot: Codable, Sendable {
             primary: self.primary,
             secondary: self.secondary,
             tertiary: self.tertiary,
+            additionalWindows: self.additionalWindows,
             providerCost: self.providerCost,
             zaiUsage: self.zaiUsage,
             resetCredits: self.resetCredits,

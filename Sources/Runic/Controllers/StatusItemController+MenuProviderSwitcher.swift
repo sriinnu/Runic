@@ -147,17 +147,22 @@ extension StatusItemController {
             let todayTokens = self.store.ledgerDailySummary(for: provider)?.totals.totalTokens ?? 0
             totalToday += todayTokens
 
-            let resetDesc = OverviewMenuView.resetPill(for: snapshot?.primary)
-            let windowLabel = snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let overviewWindow = snapshot?.preferredQuotaWindow(for: provider) ?? snapshot?.primary
+            let resetDesc = OverviewMenuView.resetPill(for: overviewWindow)
+            let windowLabel = overviewWindow?.label?.trimmingCharacters(in: .whitespacesAndNewlines)
             let topModel = self.store.ledgerTopModel(for: provider)
             let topModelContext = ProviderContextWindowRegistry.shared
                 .contextLabel(for: provider, model: topModel?.model)?
                 .text
 
-            let hasQuota = OverviewMenuView.windowHasQuota(snapshot?.primary)
-            // "Active" stays anchored on raw consumption so the used/left
-            // toggle doesn't change which providers the overview lists.
-            if (snapshot?.primary.usedPercent ?? 0) > 0 || todayTokens > 0 {
+            let hasQuota = OverviewMenuView.windowHasQuota(overviewWindow)
+            // "Active" stays anchored on raw consumption across any measured
+            // window so a fresh 5h reset doesn't drop a provider with active
+            // weekly spend, and so the used/left toggle doesn't change the list.
+            let hasUsedQuota = snapshot?.allWindows.contains {
+                $0.hasKnownLimit != false && $0.usedPercent > 0
+            } ?? false
+            if hasUsedQuota || todayTokens > 0 {
                 activeIDs.insert(provider.rawValue)
             }
 
@@ -172,7 +177,7 @@ extension StatusItemController {
                 provider: provider,
                 name: meta.displayName,
                 icon: icon,
-                usedPercent: OverviewMenuView.displayPercent(for: snapshot?.primary, showsUsed: showsUsed),
+                usedPercent: OverviewMenuView.displayPercent(for: overviewWindow, showsUsed: showsUsed),
                 todayTokens: todayTokens,
                 brandColor: brandColor,
                 resetDescription: resetDesc,
@@ -217,8 +222,10 @@ extension StatusItemController {
 
         let snapshot = self.store.snapshot(for: provider)
         let showUsed = self.settings.usageBarsShowUsed
-        let primary = showUsed ? snapshot?.primary.usedPercent : snapshot?.primary.remainingPercent
-        let weekly = showUsed ? snapshot?.secondary?.usedPercent : snapshot?.secondary?.remainingPercent
+        let (primary, weekly) = Self.menuBarWavePercents(
+            for: provider,
+            snapshot: snapshot,
+            showUsed: showUsed)
         let credits = provider == .codex ? self.store.credits?.remaining : nil
         let stale = self.store.isStale(provider: provider)
         let style = self.store.style(for: provider)
@@ -240,14 +247,6 @@ extension StatusItemController {
 
     func switcherWeeklyRemaining(for provider: UsageProvider) -> Double? {
         let snapshot = self.store.snapshot(for: provider)
-        let ordered: [RateWindow?] = if provider == .factory {
-            [snapshot?.secondary, snapshot?.primary]
-        } else {
-            [snapshot?.primary, snapshot?.secondary]
-        }
-        // Prefer a window backed by a real limit; providers with only
-        // informational windows get no quota bar at all.
-        let window = ordered.compactMap(\.self).first { $0.hasKnownLimit != false }
-        return window?.gaugePercent(showUsed: self.settings.usageBarsShowUsed)
+        return snapshot?.preferredQuotaWindow(for: provider)?.gaugePercent(showUsed: self.settings.usageBarsShowUsed)
     }
 }
