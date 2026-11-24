@@ -63,6 +63,9 @@ extension ClaudeWebAPIFetcher {
         public let weeklyPercentUsed: Double?
         public let weeklyResetsAt: Date?
         public let opusPercentUsed: Double?
+        public let opusResetsAt: Date?
+        public let sonnetPercentUsed: Double?
+        public let sonnetResetsAt: Date?
         public let extraUsageCost: ProviderCostSnapshot?
         public let accountOrganization: String?
         public let accountEmail: String?
@@ -76,6 +79,9 @@ extension ClaudeWebAPIFetcher {
             weeklyPercentUsed: Double?,
             weeklyResetsAt: Date?,
             opusPercentUsed: Double?,
+            opusResetsAt: Date? = nil,
+            sonnetPercentUsed: Double? = nil,
+            sonnetResetsAt: Date? = nil,
             extraUsageCost: ProviderCostSnapshot?,
             accountOrganization: String?,
             accountEmail: String?,
@@ -86,6 +92,9 @@ extension ClaudeWebAPIFetcher {
             self.weeklyPercentUsed = weeklyPercentUsed
             self.weeklyResetsAt = weeklyResetsAt
             self.opusPercentUsed = opusPercentUsed
+            self.opusResetsAt = opusResetsAt
+            self.sonnetPercentUsed = sonnetPercentUsed
+            self.sonnetResetsAt = sonnetResetsAt
             self.extraUsageCost = extraUsageCost
             self.accountOrganization = accountOrganization
             self.accountEmail = accountEmail

@@ -98,6 +98,7 @@ public struct QwenUsageSnapshot: Sendable {
     public let totalRequests: Int
     public let totalEstimatedCostUSD: Double
     public let updatedAt: Date
+    public let endpointUnavailable: Bool
 
     public init(
         modelEntries: [QwenModelUsageEntry],
@@ -106,7 +107,8 @@ public struct QwenUsageSnapshot: Sendable {
         totalTokens: Int,
         totalRequests: Int,
         totalEstimatedCostUSD: Double,
-        updatedAt: Date)
+        updatedAt: Date,
+        endpointUnavailable: Bool = false)
     {
         self.modelEntries = modelEntries
         self.totalInputTokens = totalInputTokens
@@ -115,6 +117,7 @@ public struct QwenUsageSnapshot: Sendable {
         self.totalRequests = totalRequests
         self.totalEstimatedCostUSD = totalEstimatedCostUSD
         self.updatedAt = updatedAt
+        self.endpointUnavailable = endpointUnavailable
     }
 }
 
@@ -122,6 +125,9 @@ extension QwenUsageSnapshot {
     /// Human-readable roll-up of the fetched totals (tokens, requests, and
     /// estimated cost) for display on the usage card.
     public var usageSummaryText: String {
+        if self.endpointUnavailable {
+            return "Connected · no usage endpoint"
+        }
         var parts = ["\(UsageFormatter.tokenCountString(self.totalTokens)) tokens"]
         if self.totalRequests > 0 {
             parts.append("\(self.totalRequests) req")
@@ -132,7 +138,7 @@ extension QwenUsageSnapshot {
         return parts.joined(separator: " · ")
     }
 
-    public func toUsageSnapshot() -> UsageSnapshot {
+    public func toUsageSnapshot(providerID: UsageProvider = .qwen) -> UsageSnapshot {
         // The DashScope usage API reports consumption with no hard cap, so
         // there is no denominator for a percentage — surface the token,
         // request, and estimated-cost totals as text and mark the window as
@@ -145,7 +151,7 @@ extension QwenUsageSnapshot {
             hasKnownLimit: false)
 
         let identity = ProviderIdentitySnapshot(
-            providerID: .qwen,
+            providerID: providerID,
             accountEmail: nil,
             accountOrganization: nil,
             loginMethod: nil)
@@ -229,13 +235,16 @@ public struct QwenUsageFetcher: Sendable {
     private static let log = RunicLog.logger("qwen-usage")
 
     /// Default international DashScope host. Overridable per subscription region or custom gateway.
-    static let defaultBaseURL = "https://dashscope.aliyuncs.com"
+    static let defaultBaseURL = "https://dashscope-intl.aliyuncs.com"
+    static let chinaBaseURL = "https://dashscope.aliyuncs.com"
     private static let usagePath = "/api/v1/usage"
 
     /// Build the usage URL from an optional user-supplied base URL.
     ///
     /// Accepts hosts with or without a scheme or a trailing slash (for example
-    /// `https://token-plan.ap-southeast-1.maas.aliyuncs.com`). Empty/nil uses the default host.
+    /// `https://token-plan.ap-southeast-1.maas.aliyuncs.com`), and normalizes
+    /// OpenAI-compatible suffixes such as `/compatible-mode/v1` before appending
+    /// `/api/v1/usage`. Empty/nil uses the default host.
     static func usageURL(baseURL: String?) -> URL? {
         var base = (baseURL?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
             $0.isEmpty ? nil : $0
@@ -246,6 +255,13 @@ public struct QwenUsageFetcher: Sendable {
         }
         while base.hasSuffix("/") {
             base.removeLast()
+        }
+        let lower = base.lowercased()
+        for suffix in ["/api/v1/usage", "/compatible-mode/v1", "/compatible-mode", "/api/v1", "/v1"]
+            where lower.hasSuffix(suffix)
+        {
+            base = String(base.dropLast(suffix.count))
+            break
         }
         guard let url = URL(string: "\(base)\(Self.usagePath)"), url.host?.isEmpty == false else {
             return nil
@@ -361,7 +377,8 @@ public struct QwenUsageFetcher: Sendable {
                 totalTokens: 0,
                 totalRequests: 0,
                 totalEstimatedCostUSD: 0,
-                updatedAt: Date())
+                updatedAt: Date(),
+                endpointUnavailable: true)
         }
     }
 

@@ -13,8 +13,7 @@ struct ProviderReloadButton: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        let isBusy = self.store.refreshSlots(for: self.provider)
-            .contains { self.store.refreshingProviders.contains($0) }
+        let isBusy = self.store.isRefreshing(provider: self.provider)
         let name = self.store.metadata(for: self.provider).displayName
 
         Button {

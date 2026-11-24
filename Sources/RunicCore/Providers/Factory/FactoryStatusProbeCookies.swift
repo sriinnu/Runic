@@ -202,7 +202,7 @@ extension FactoryStatusProbe {
             request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
         }
 
-        var body: [String: Any] = ["useCache": true]
+        var body: [String: Any] = ["useCache": false]
         if let userId {
             body["userId"] = userId
         }

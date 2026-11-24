@@ -57,9 +57,9 @@ struct OllamaCloudWebFetchStrategy: ProviderFetchStrategy {
     let id: String = "ollamacloud.web"
     let kind: ProviderFetchKind = .web
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
         #if os(macOS)
-        true
+        context.account?.isDefault != false
         #else
         false
         #endif
@@ -91,10 +91,38 @@ struct OllamaCloudAPIFetchStrategy: ProviderFetchStrategy {
         guard let apiKey = context.credential(for: .ollamacloud)?.token else {
             throw OllamaCloudSettingsError.missingToken
         }
-        let usage = try await OllamaCloudUsageFetcher.fetchUsage(apiKey: apiKey)
+        var usage = try await OllamaCloudUsageFetcher.fetchUsage(apiKey: apiKey)
+        var sourceLabel = "api"
+        #if os(macOS)
+        if Self.shouldEnrichFromWeb(context: context, usage: usage),
+           let webUsage = try? await OllamaCloudWebUsageFetcher.fetchUsage(),
+           webUsage.monthlyUsage != nil || webUsage.sessionUsage != nil || webUsage.weeklyUsage != nil
+        {
+            usage = OllamaCloudUsage(
+                monthlyUsage: webUsage.monthlyUsage,
+                sessionUsage: webUsage.sessionUsage,
+                weeklyUsage: webUsage.weeklyUsage,
+                models: usage.models,
+                cost: usage.cost ?? webUsage.cost,
+                totalRequests: usage.totalRequests,
+                rangeLabel: usage.rangeLabel,
+                sessionResetsAt: webUsage.sessionResetsAt,
+                weeklyResetsAt: webUsage.weeklyResetsAt)
+            sourceLabel = "api + web"
+        }
+        #endif
         return self.makeResult(
             usage: usage.toUsageSnapshot(),
-            sourceLabel: "api")
+            sourceLabel: sourceLabel)
+    }
+
+    static func shouldEnrichFromWeb(context: ProviderFetchContext, usage: OllamaCloudUsage) -> Bool {
+        context.runtime == .app
+            && context.account?.isDefault != false
+            && context.sourceMode == .auto
+            && usage.monthlyUsage == nil
+            && usage.sessionUsage == nil
+            && usage.weeklyUsage == nil
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {

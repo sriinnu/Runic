@@ -11,6 +11,33 @@ public struct ClaudeStatusSnapshot: Sendable {
     public let secondaryResetDescription: String?
     public let opusResetDescription: String?
     public let rawText: String
+    public let opusLabel: String?
+
+    public init(
+        sessionPercentLeft: Int?,
+        weeklyPercentLeft: Int?,
+        opusPercentLeft: Int?,
+        accountEmail: String?,
+        accountOrganization: String?,
+        loginMethod: String?,
+        primaryResetDescription: String?,
+        secondaryResetDescription: String?,
+        opusResetDescription: String?,
+        rawText: String,
+        opusLabel: String? = nil)
+    {
+        self.sessionPercentLeft = sessionPercentLeft
+        self.weeklyPercentLeft = weeklyPercentLeft
+        self.opusPercentLeft = opusPercentLeft
+        self.accountEmail = accountEmail
+        self.accountOrganization = accountOrganization
+        self.loginMethod = loginMethod
+        self.primaryResetDescription = primaryResetDescription
+        self.secondaryResetDescription = secondaryResetDescription
+        self.opusResetDescription = opusResetDescription
+        self.rawText = rawText
+        self.opusLabel = opusLabel
+    }
 }
 
 public struct ClaudeAccountIdentity: Sendable {

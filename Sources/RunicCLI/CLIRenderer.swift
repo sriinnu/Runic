@@ -12,22 +12,39 @@ enum CLIRenderer {
         var lines: [String] = []
         lines.append(self.headerLine(context.header, useColor: context.useColor))
 
-        lines.append(self.rateLine(title: meta.sessionLabel, window: snapshot.primary, useColor: context.useColor))
-        if let reset = snapshot.primary.resetDescription {
+        let primaryTitle = UsageFormatter.windowTitle(
+            for: snapshot.primary,
+            fallback: meta.primaryWindowTitle(for: snapshot.primary))
+        lines.append(self.rateLine(title: primaryTitle, window: snapshot.primary, useColor: context.useColor))
+        if snapshot.primary.hasKnownLimit != false, let reset = snapshot.primary.resetDescription {
             lines.append(self.resetLine(reset))
         }
 
         if let weekly = snapshot.secondary {
-            lines.append(self.rateLine(title: meta.weeklyLabel, window: weekly, useColor: context.useColor))
-            if let reset = weekly.resetDescription {
+            let weeklyTitle = UsageFormatter.windowTitle(for: weekly, fallback: meta.weeklyLabel)
+            lines.append(self.rateLine(title: weeklyTitle, window: weekly, useColor: context.useColor))
+            if weekly.hasKnownLimit != false, let reset = weekly.resetDescription {
                 lines.append(self.resetLine(reset))
             }
         }
 
-        if meta.supportsOpus, let opus = snapshot.tertiary {
-            lines.append(self.rateLine(title: meta.opusLabel ?? "Sonnet", window: opus, useColor: context.useColor))
-            if let reset = opus.resetDescription {
+        if let tertiary = snapshot.tertiary {
+            let tertiaryTitle = UsageFormatter.windowTitle(
+                for: tertiary,
+                fallback: meta.opusLabel ?? "Sonnet")
+            lines.append(self.rateLine(title: tertiaryTitle, window: tertiary, useColor: context.useColor))
+            if tertiary.hasKnownLimit != false, let reset = tertiary.resetDescription {
                 lines.append(self.resetLine(reset))
+            }
+        }
+
+        if let additional = snapshot.additionalWindows {
+            for (index, extra) in additional.enumerated() {
+                let extraTitle = UsageFormatter.windowTitle(for: extra, fallback: "Quota \(index + 4)")
+                lines.append(self.rateLine(title: extraTitle, window: extra, useColor: context.useColor))
+                if extra.hasKnownLimit != false, let reset = extra.resetDescription {
+                    lines.append(self.resetLine(reset))
+                }
             }
         }
 
@@ -46,15 +63,18 @@ enum CLIRenderer {
     }
 
     static func rateLine(title: String, window: RateWindow, useColor: Bool) -> String {
+        guard window.gaugePercent(showUsed: true) != nil else {
+            let summary = window.resetDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let info = (summary?.isEmpty == false ? summary : nil) ?? window.label ?? "No usage limit reported"
+            return "\(title): \(info)"
+        }
         let text = UsageFormatter.usageLine(remaining: window.remainingPercent, used: window.usedPercent)
         let colored = self.colorizeUsage(text, remainingPercent: window.remainingPercent, useColor: useColor)
         return "\(title): \(colored)"
     }
 
     private static func resetLine(_ reset: String) -> String {
-        let trimmed = reset.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.lowercased().hasPrefix("resets") { return trimmed }
-        return "Resets \(trimmed)"
+        UsageFormatter.formattedWindowDescription(reset)
     }
 
     private static func headerLine(_ header: String, useColor: Bool) -> String {

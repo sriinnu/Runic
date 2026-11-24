@@ -91,7 +91,8 @@ extension TTYCommandRunner {
             Self.settleGenericCapture(context: context, state: &state, request: request)
         }
 
-        let text = String(data: context.buffer, encoding: .utf8) ?? ""
+        guard !context.buffer.isEmpty else { throw Error.timedOut }
+        let text = Self.decodeLossyUTF8(context.buffer)
         guard !text.isEmpty else { throw Error.timedOut }
         return Result(text: text)
     }
@@ -112,12 +113,18 @@ extension TTYCommandRunner {
     static func updateRecentText(_ newData: Data, state: inout GenericCaptureState) {
         guard !newData.isEmpty else { return }
         state.lastOutputAt = Date()
-        if let chunkText = String(bytes: newData, encoding: .utf8) {
-            state.recentText += chunkText
-            if state.recentText.count > 8192 {
-                state.recentText.removeFirst(state.recentText.count - 8192)
-            }
+        let chunkText = Self.decodeLossyUTF8(newData)
+        state.recentText += chunkText
+        if state.recentText.count > 8192 {
+            state.recentText.removeFirst(state.recentText.count - 8192)
         }
+    }
+
+    private static func decodeLossyUTF8(_ data: Data) -> String {
+        // PTY reads frequently split multi-byte UTF-8 glyphs (`─`, `⣷`); lossy decoding
+        // preserves adjacent ASCII prompt markers instead of dropping the whole chunk.
+        // swiftlint:disable:next optional_data_string_conversion
+        String(decoding: data, as: UTF8.self)
     }
 
     static func respondToCursorQuery(

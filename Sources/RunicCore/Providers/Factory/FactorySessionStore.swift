@@ -22,8 +22,12 @@ public actor FactorySessionStore {
         self.fileURL = dir.appendingPathComponent("factory-session.json")
     }
 
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+
     public func setCookies(_ cookies: [HTTPCookie]) {
-        self.didLoadFromDisk = true
+        self.loadFromDiskIfNeeded()
         self.sessionCookies = cookies
         self.saveToDisk()
     }
@@ -34,7 +38,7 @@ public actor FactorySessionStore {
     }
 
     public func setBearerToken(_ token: String?) {
-        self.didLoadFromDisk = true
+        self.loadFromDiskIfNeeded()
         self.bearerToken = token
         self.saveToDisk()
     }
@@ -45,7 +49,7 @@ public actor FactorySessionStore {
     }
 
     public func setRefreshToken(_ token: String?) {
-        self.didLoadFromDisk = true
+        self.loadFromDiskIfNeeded()
         self.refreshToken = token
         self.saveToDisk()
     }
@@ -102,9 +106,11 @@ public actor FactorySessionStore {
             payload["refreshToken"] = refreshToken
         }
 
-        guard !payload.isEmpty,
-              let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted])
-        else {
+        guard !payload.isEmpty else {
+            try? FileManager.default.removeItem(at: self.fileURL)
+            return
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted]) else {
             return
         }
         try? data.write(to: self.fileURL)

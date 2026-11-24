@@ -10,9 +10,24 @@ extension StatusItemController {
     /// so `refreshNow` performs a full refresh of every provider instead of
     /// silently pinging codex — which may not even be enabled.
     func refreshTargetProvider() -> UsageProvider? {
-        if let last = self.lastMenuProvider { return last }
-        if self.shouldMergeIcons, self.selectedMenuProvider == nil { return nil }
-        return self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first
+        Self.resolveRefreshTarget(
+            selectedMenuProvider: self.selectedMenuProvider,
+            lastMenuProvider: self.lastMenuProvider,
+            isMultiProviderOverviewCapable: self.shouldMergeIcons || self.usesSwiftUIPopoverMenu,
+            enabledProviders: self.store.enabledProviders())
+    }
+
+    nonisolated static func resolveRefreshTarget(
+        selectedMenuProvider: UsageProvider?,
+        lastMenuProvider: UsageProvider?,
+        isMultiProviderOverviewCapable: Bool,
+        enabledProviders: [UsageProvider]) -> UsageProvider?
+    {
+        if let last = lastMenuProvider { return last }
+        if isMultiProviderOverviewCapable, selectedMenuProvider == nil, enabledProviders.count > 1 {
+            return nil
+        }
+        return enabledProviders.contains(.codex) ? .codex : enabledProviders.first
     }
 
     /// The slot provider-targeted actions (dashboard, status page, export) act
@@ -26,16 +41,19 @@ extension StatusItemController {
         return self.store.menuLeadSlot(for: preferred)
     }
 
-    /// True when a refresh is already running (global or single-provider — both
-    /// set `isRefreshing`). Callers use this to surface feedback instead of the
-    /// silent no-op inside `UsageStore.refresh()`.
+    /// True when a refresh is already running for the target provider (or globally when target is nil).
+    /// Callers use this to surface feedback instead of a silent no-op.
     var isRefreshInFlight: Bool {
-        self.store.isRefreshing
+        self.isRefreshInFlight(for: self.refreshTargetProvider())
+    }
+
+    func isRefreshInFlight(for target: UsageProvider?) -> Bool {
+        self.store.isRefreshing(provider: target)
     }
 
     @objc func refreshNow() {
-        guard !self.isRefreshInFlight else { return }
         let provider = self.refreshTargetProvider()
+        guard !self.isRefreshInFlight(for: provider) else { return }
         if let provider {
             Task {
                 await self.store.refreshSingleProvider(provider)

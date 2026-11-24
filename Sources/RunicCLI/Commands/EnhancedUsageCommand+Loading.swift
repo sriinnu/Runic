@@ -62,7 +62,9 @@ extension EnhancedUsageCommand {
         var windows: [WindowData] = []
 
         windows.append(WindowData(
-            name: metadata.sessionLabel,
+            name: UsageFormatter.windowTitle(
+                for: snapshot.primary,
+                fallback: metadata.primaryWindowTitle(for: snapshot.primary)),
             used: nil,
             limit: nil,
             usedPercent: snapshot.primary.usedPercent,
@@ -72,7 +74,7 @@ extension EnhancedUsageCommand {
 
         if let secondary = snapshot.secondary {
             windows.append(WindowData(
-                name: metadata.weeklyLabel,
+                name: UsageFormatter.windowTitle(for: secondary, fallback: metadata.weeklyLabel),
                 used: nil,
                 limit: nil,
                 usedPercent: secondary.usedPercent,
@@ -81,9 +83,33 @@ extension EnhancedUsageCommand {
                 hasKnownLimit: secondary.hasKnownLimit))
         }
 
+        if let tertiary = snapshot.tertiary {
+            windows.append(WindowData(
+                name: UsageFormatter.windowTitle(for: tertiary, fallback: metadata.opusLabel ?? "Sonnet"),
+                used: nil,
+                limit: nil,
+                usedPercent: tertiary.usedPercent,
+                remainingPercent: tertiary.remainingPercent,
+                resetDescription: tertiary.resetDescription,
+                hasKnownLimit: tertiary.hasKnownLimit))
+        }
+
+        if let additional = snapshot.additionalWindows {
+            for (index, extra) in additional.enumerated() {
+                windows.append(WindowData(
+                    name: UsageFormatter.windowTitle(for: extra, fallback: "Quota \(index + 4)"),
+                    used: nil,
+                    limit: nil,
+                    usedPercent: extra.usedPercent,
+                    remainingPercent: extra.remainingPercent,
+                    resetDescription: extra.resetDescription,
+                    hasKnownLimit: extra.hasKnownLimit))
+            }
+        }
+
         return ProviderUsageData(
             provider: provider,
-            providerName: provider.rawValue.capitalized,
+            providerName: metadata.displayName,
             snapshot: snapshot,
             credits: credits,
             windows: windows,
@@ -153,7 +179,7 @@ extension EnhancedUsageCommand {
 
         let comparisons = providerData.map { data in
             let totalTokens = data.windows.reduce(0) { $0 + ($1.used ?? 0) }
-            let efficiency = data.windows.map(\.usedPercent).min() ?? 100
+            let efficiency = data.windows.filter { $0.hasKnownLimit != false }.map(\.usedPercent).min() ?? 100
 
             return ProviderComparisonItem(
                 provider: data.providerName,

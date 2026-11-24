@@ -28,12 +28,13 @@ public struct GeminiStatusSnapshot: Sendable {
     }
 
     /// Converts Gemini quotas to a unified UsageSnapshot.
-    /// Prioritizes Pro and Flash tiers, then fills an optional tertiary slot with the next-most-constrained model.
+    /// Prioritizes Pro and Flash tiers, then fills tertiary and any additional windows with remaining models.
     public func toUsageSnapshot() -> UsageSnapshot {
         let selected = Self.selectDisplayQuotas(self.modelQuotas)
         let primaryQuota = selected.first
         let secondaryQuota = selected.count > 1 ? selected[1] : nil
         let tertiaryQuota = selected.count > 2 ? selected[2] : nil
+        let additional = selected.count > 3 ? selected.dropFirst(3).compactMap { Self.rateWindow(from: $0) } : nil
 
         let primary = Self.rateWindow(from: primaryQuota) ?? .noLimitsReported
         let secondary = Self.rateWindow(from: secondaryQuota)
@@ -48,6 +49,7 @@ public struct GeminiStatusSnapshot: Sendable {
             primary: primary,
             secondary: secondary,
             tertiary: tertiary,
+            additionalWindows: additional,
             updatedAt: Date(),
             identity: identity)
     }
@@ -78,12 +80,12 @@ public struct GeminiStatusSnapshot: Sendable {
                 return lhs.modelId.localizedCaseInsensitiveCompare(rhs.modelId) == .orderedAscending
             }
             return lhs.percentLeft < rhs.percentLeft
-        }) where ordered.count < 3 {
+        }) {
             guard !Self.containsModel(ordered, matching: quota) else { continue }
             ordered.append(quota)
         }
 
-        return Array(ordered.prefix(3))
+        return ordered
     }
 
     private static func containsModel(_ quotas: [GeminiModelQuota], matching candidate: GeminiModelQuota) -> Bool {

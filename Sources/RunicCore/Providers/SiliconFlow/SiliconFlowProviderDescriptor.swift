@@ -97,8 +97,11 @@ struct SiliconFlowAPIFetchStrategy: ProviderFetchStrategy {
             throw SiliconFlowSettingsError.missingToken
         }
         let usage = try await SiliconFlowUsageFetcher.fetchModels(apiKey: tokenRes.token)
+        let balanceIssue = (context.account?.isDefault != false)
+            ? SiliconFlowConsoleTrace.lastFailure(china: false)
+            : nil
         return self.makeResult(
-            usage: usage.toUsageSnapshot(balanceIssue: SiliconFlowConsoleTrace.lastFailure(china: false)),
+            usage: usage.toUsageSnapshot(balanceIssue: balanceIssue),
             sourceLabel: tokenRes.source.rawValue)
     }
 

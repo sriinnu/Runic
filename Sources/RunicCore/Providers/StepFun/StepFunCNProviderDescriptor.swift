@@ -60,7 +60,7 @@ struct StepFunCNAPIFetchStrategy: ProviderFetchStrategy {
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
         guard let tokenRes = context.credential(for: .stepfunCN) else {
-            throw StepFunSettingsError.missingToken
+            throw StepFunCNSettingsError.missingToken
         }
         let snapshot = try await StepFunUsageFetcher.fetchAccount(apiKey: tokenRes.token, baseURL: Self.baseURL)
         return self.makeResult(
@@ -70,5 +70,17 @@ struct StepFunCNAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
+    }
+}
+
+enum StepFunCNSettingsError: LocalizedError {
+    case missingToken
+
+    var errorDescription: String? {
+        switch self {
+        case .missingToken:
+            "StepFun (China) API key not found. Set it in Preferences → Providers → StepFun (China) or " +
+                "export STEPFUN_CN_API_KEY."
+        }
     }
 }

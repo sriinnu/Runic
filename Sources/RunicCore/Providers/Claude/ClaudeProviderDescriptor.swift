@@ -163,6 +163,7 @@ struct ClaudeOAuthFetchStrategy: ProviderFetchStrategy {
             primary: usage.primary,
             secondary: usage.secondary,
             tertiary: usage.opus,
+            additionalWindows: usage.additionalWindows,
             providerCost: usage.providerCost,
             resetCredits: usage.resetCredits,
             updatedAt: usage.updatedAt,

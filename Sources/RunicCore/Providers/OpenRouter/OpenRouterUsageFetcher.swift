@@ -188,13 +188,7 @@ extension OpenRouterCreditsResponse {
 
         var identityMethod: String?
         if let keyInfo {
-            var parts: [String] = []
-            if keyInfo.isFreeTier { parts.append("Free tier") }
-            if let label = keyInfo.data?.label, !label.isEmpty { parts.append(label) }
-            if let rpm = keyInfo.rateLimitRequests, let interval = keyInfo.rateLimitInterval {
-                parts.append("\(rpm) req/\(interval)")
-            }
-            if !parts.isEmpty { identityMethod = parts.joined(separator: " · ") }
+            identityMethod = keyInfo.resolvedIdentityMethod
         }
 
         let identity = identityMethod.map {
@@ -219,7 +213,8 @@ extension OpenRouterCreditsResponse {
                 usedPercent: total > 0 ? percent : 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: resetDesc),
+                resetDescription: resetDesc,
+                hasKnownLimit: false),
             secondary: keyInfo.flatMap { Self.keyLimitWindow($0, now: now) },
             tertiary: keyInfo.flatMap { Self.freeRequestsWindow($0, now: now) },
             balance: ProviderBalance(
@@ -236,8 +231,15 @@ extension OpenRouterCreditsResponse {
     /// "never" or unknown means a lifetime cap with no reset.
     static func keyLimitWindow(_ keyInfo: OpenRouterKeyInfoResponse, now: Date) -> RateWindow? {
         guard let limit = keyInfo.data?.limit, limit > 0 else { return nil }
-        let remaining = keyInfo.data?.limit_remaining ?? max(0, limit - (keyInfo.data?.usage ?? 0))
         let period = OpenRouterResetPeriod(rawValue: keyInfo.data?.limit_reset?.lowercased() ?? "")
+        let periodUsage: Double? = switch period {
+        case .daily: keyInfo.data?.usage_daily
+        case .weekly: keyInfo.data?.usage_weekly
+        case .monthly: keyInfo.data?.usage_monthly
+        case nil: nil
+        }
+        let remaining = keyInfo.data?.limit_remaining
+            ?? max(0, limit - (periodUsage ?? keyInfo.data?.usage ?? 0))
         return RateWindow(
             usedPercent: min(100, max(0, (limit - remaining) / limit * 100)),
             windowMinutes: period?.minutes,
@@ -271,6 +273,16 @@ extension OpenRouterCreditsResponse {
 }
 
 extension OpenRouterKeyInfoResponse {
+    var resolvedIdentityMethod: String? {
+        var parts: [String] = []
+        if self.isFreeTier { parts.append("Free tier") }
+        if let label = self.data?.label, !label.isEmpty { parts.append(label) }
+        if let rpm = self.rateLimitRequests, let interval = self.rateLimitInterval {
+            parts.append("\(rpm) req/\(interval)")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     /// Key-only view for when `/credits` refuses the key: no account balance,
     /// but the key's own day/month spend and limits still show.
     func toUsageSnapshot(now: Date = Date()) -> UsageSnapshot {
@@ -279,6 +291,13 @@ extension OpenRouterKeyInfoResponse {
         if let daily = key?.usage_daily { parts.append(String(format: "$%.2f today", daily)) }
         if let monthly = key?.usage_monthly { parts.append(String(format: "$%.2f this month", monthly)) }
         if parts.isEmpty { parts.append(String(format: "$%.2f spent", self.keyUsage)) }
+        let identity = self.resolvedIdentityMethod.map {
+            ProviderIdentitySnapshot(
+                providerID: .openrouter,
+                accountEmail: nil,
+                accountOrganization: nil,
+                loginMethod: $0)
+        }
         return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
@@ -290,7 +309,7 @@ extension OpenRouterKeyInfoResponse {
             secondary: OpenRouterCreditsResponse.keyLimitWindow(self, now: now),
             tertiary: OpenRouterCreditsResponse.freeRequestsWindow(self, now: now),
             updatedAt: now,
-            identity: nil)
+            identity: identity)
     }
 }
 

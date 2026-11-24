@@ -14,6 +14,7 @@ public enum ZaiLimitUnit: Int, Sendable {
     case days = 1
     case hours = 3
     case minutes = 5
+    case weeks = 6
 }
 
 // MARK: - Quota limit models
@@ -70,6 +71,8 @@ extension ZaiLimitEntry {
             return self.number * 60
         case .days:
             return self.number * 24 * 60
+        case .weeks:
+            return self.number * 7 * 24 * 60
         case .unknown:
             return nil
         }
@@ -81,6 +84,7 @@ extension ZaiLimitEntry {
         case .minutes: "minute"
         case .hours: "hour"
         case .days: "day"
+        case .weeks: "week"
         case .unknown: nil
         }
         guard let unitLabel else { return nil }

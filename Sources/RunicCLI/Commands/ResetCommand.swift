@@ -152,14 +152,14 @@ public enum ResetCommand {
 
     // MARK: - Reset Information Models
 
-    private struct ProviderResetInfo: Encodable {
+    struct ProviderResetInfo: Encodable {
         let provider: UsageProvider
         let providerName: String
         let windows: [WindowResetInfo]
         let status: String
     }
 
-    private struct WindowResetInfo: Encodable {
+    struct WindowResetInfo: Encodable {
         let windowName: String
         let resetDescription: String?
         let resetAt: Date?
@@ -167,6 +167,7 @@ public enum ResetCommand {
         let usedPercent: Double
         let remainingPercent: Double
         let isNearLimit: Bool
+        let hasKnownLimit: Bool?
     }
 
     // MARK: - Data Loading
@@ -205,7 +206,7 @@ public enum ResetCommand {
         return results
     }
 
-    private static func buildResetInfo(
+    static func buildResetInfo(
         provider: UsageProvider,
         snapshot: UsageSnapshot,
         metadata: ProviderMetadata) -> ProviderResetInfo
@@ -214,32 +215,40 @@ public enum ResetCommand {
 
         // Primary window
         windows.append(self.buildWindowInfo(
-            windowName: metadata.sessionLabel,
+            windowName: UsageFormatter.windowTitle(
+                for: snapshot.primary,
+                fallback: metadata.primaryWindowTitle(for: snapshot.primary)),
             window: snapshot.primary))
 
         // Secondary window
         if let secondary = snapshot.secondary {
             windows.append(self.buildWindowInfo(
-                windowName: metadata.weeklyLabel,
+                windowName: UsageFormatter.windowTitle(for: secondary, fallback: metadata.weeklyLabel),
                 window: secondary))
         }
 
-        // Tertiary window (Opus-style providers keep their metadata label;
-        // others — a second MiniMax model, Gemini's third model — use the
-        // window's own label instead of a misleading "Opus" fallback).
+        // Tertiary window
         if let tertiary = snapshot.tertiary {
             let fallbackName = metadata.opusLabel ?? "Opus"
-            let windowName = metadata.supportsOpus ? fallbackName : (tertiary.label ?? fallbackName)
             windows.append(self.buildWindowInfo(
-                windowName: windowName,
+                windowName: UsageFormatter.windowTitle(for: tertiary, fallback: fallbackName),
                 window: tertiary))
+        }
+
+        // Additional windows beyond tertiary
+        if let additional = snapshot.additionalWindows {
+            for (index, extra) in additional.enumerated() {
+                windows.append(self.buildWindowInfo(
+                    windowName: UsageFormatter.windowTitle(for: extra, fallback: "Quota \(index + 4)"),
+                    window: extra))
+            }
         }
 
         let status = self.determineStatus(windows: windows)
 
         return ProviderResetInfo(
             provider: provider,
-            providerName: provider.rawValue.capitalized,
+            providerName: metadata.displayName,
             windows: windows,
             status: status)
     }
@@ -248,7 +257,9 @@ public enum ResetCommand {
         windowName: String,
         window: RateWindow) -> WindowResetInfo
     {
-        let resetAt = self.extractResetDate(from: window.resetDescription)
+        let resetAt = window.resetsAt
+            ?? UsageResetParsing.date(fromRelative: window.resetDescription)
+            ?? self.extractResetDate(from: window.resetDescription)
         let timeUntilReset = resetAt?.timeIntervalSinceNow
 
         return WindowResetInfo(
@@ -258,7 +269,8 @@ public enum ResetCommand {
             timeUntilReset: timeUntilReset,
             usedPercent: window.usedPercent,
             remainingPercent: window.remainingPercent,
-            isNearLimit: window.usedPercent >= 75)
+            isNearLimit: window.hasKnownLimit != false && window.usedPercent >= 75,
+            hasKnownLimit: window.hasKnownLimit)
     }
 
     private static func extractResetDate(from description: String?) -> Date? {
@@ -292,7 +304,10 @@ public enum ResetCommand {
     }
 
     private static func determineStatus(windows: [WindowResetInfo]) -> String {
-        let maxUsed = windows.map(\.usedPercent).max() ?? 0
+        let measurable = windows.filter { $0.hasKnownLimit != false }
+        guard let maxUsed = measurable.map(\.usedPercent).max() else {
+            return "No quota limit"
+        }
 
         switch maxUsed {
         case 90...:
@@ -380,9 +395,11 @@ public enum ResetCommand {
                     print("    Reset: \(description)")
                 }
 
-                let used = String(format: "%.1f", window.usedPercent)
-                let remaining = String(format: "%.1f", window.remainingPercent)
-                print("    Usage: \(used)% used, \(remaining)% remaining")
+                if window.hasKnownLimit != false {
+                    let used = String(format: "%.1f", window.usedPercent)
+                    let remaining = String(format: "%.1f", window.remainingPercent)
+                    print("    Usage: \(used)% used, \(remaining)% remaining")
+                }
 
                 if window.isNearLimit {
                     let warning = "⚠ High usage - consider monitoring closely"

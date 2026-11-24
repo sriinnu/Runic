@@ -329,6 +329,9 @@ extension UsageStore {
         if let tertiary = snapshot.tertiary {
             lines.append(self.debugRateWindowSummary(label: "tertiary", window: tertiary))
         }
+        for (index, extra) in (snapshot.additionalWindows ?? []).enumerated() {
+            lines.append(self.debugRateWindowSummary(label: "additional[\(index)]", window: extra))
+        }
         if let identity = snapshot.identity {
             lines.append("identity.email=\(identity.accountEmail ?? "nil")")
             lines.append("identity.organization=\(identity.accountOrganization ?? "nil")")

@@ -61,10 +61,11 @@ struct RPCCreditsSnapshot: Decodable, Encodable {
     let balance: String?
 }
 
-enum RPCWireError: Error, CustomStringConvertible {
+enum RPCWireError: Error, CustomStringConvertible, Equatable {
     case startFailed(String)
     case requestFailed(String)
     case malformed(String)
+    case timedOut(String)
 
     var description: String {
         switch self {
@@ -74,6 +75,8 @@ enum RPCWireError: Error, CustomStringConvertible {
             "RPC request failed: \(message)"
         case let .malformed(message):
             "Malformed response: \(message)"
+        case let .timedOut(method):
+            "Codex RPC request '\(method)' timed out"
         }
     }
 }
@@ -84,29 +87,106 @@ final class CodexRPCClient: @unchecked Sendable {
     private let stdinPipe = Pipe()
     private let stdoutPipe = Pipe()
     private let stderrPipe = Pipe()
-    private let stdoutLineStream: AsyncStream<Data>
-    private let stdoutLineContinuation: AsyncStream<Data>.Continuation
+    private let lineQueue = LineQueue()
+    private let requestTimeout: TimeInterval
+    private let shutdownLock = NSLock()
+    private var hasShutDown = false
     private var nextID = 1
     private var processGroup: pid_t?
 
-    private final class LineBuffer: @unchecked Sendable {
+    private final class LineQueue: @unchecked Sendable {
         private let lock = NSLock()
         private var buffer = Data()
+        private var pendingLines: [Data] = []
+        private var waiters: [(id: UInt64, continuation: CheckedContinuation<Data?, Never>)] = []
+        private var nextWaiterID: UInt64 = 1
+        private var finished = false
 
-        func appendAndDrainLines(_ data: Data) -> [Data] {
+        func append(_ data: Data) {
+            var toResume: [(CheckedContinuation<Data?, Never>, Data?)] = []
             self.lock.lock()
-            defer { self.lock.unlock() }
-
-            self.buffer.append(data)
-            var out: [Data] = []
-            while let newline = self.buffer.firstIndex(of: 0x0A) {
-                let lineData = Data(self.buffer[..<newline])
-                self.buffer.removeSubrange(...newline)
-                if !lineData.isEmpty {
-                    out.append(lineData)
+            if !self.finished {
+                self.buffer.append(data)
+                while let newline = self.buffer.firstIndex(of: 0x0A) {
+                    let lineData = Data(self.buffer[..<newline])
+                    self.buffer.removeSubrange(...newline)
+                    guard !lineData.isEmpty else { continue }
+                    if !self.waiters.isEmpty {
+                        let waiter = self.waiters.removeFirst()
+                        toResume.append((waiter.continuation, lineData))
+                    } else {
+                        self.pendingLines.append(lineData)
+                    }
                 }
             }
-            return out
+            self.lock.unlock()
+
+            for (continuation, line) in toResume {
+                continuation.resume(returning: line)
+            }
+        }
+
+        func finish() {
+            var waitersToResume: [(id: UInt64, continuation: CheckedContinuation<Data?, Never>)] = []
+            self.lock.lock()
+            if !self.finished {
+                self.finished = true
+                waitersToResume = self.waiters
+                self.waiters.removeAll()
+            }
+            self.lock.unlock()
+
+            for waiter in waitersToResume {
+                waiter.continuation.resume(returning: nil)
+            }
+        }
+
+        func nextLine() async -> Data? {
+            let waiterID = self.allocateWaiterID()
+            return await withTaskCancellationHandler {
+                await withCheckedContinuation { continuation in
+                    enum Action {
+                        case resume(Data?)
+                        case wait
+                    }
+
+                    let action: Action
+                    self.lock.lock()
+                    if !self.pendingLines.isEmpty {
+                        action = .resume(self.pendingLines.removeFirst())
+                    } else if self.finished || Task.isCancelled {
+                        action = .resume(nil)
+                    } else {
+                        self.waiters.append((id: waiterID, continuation: continuation))
+                        action = .wait
+                    }
+                    self.lock.unlock()
+
+                    if case let .resume(line) = action {
+                        continuation.resume(returning: line)
+                    }
+                }
+            } onCancel: {
+                self.cancelWaiter(id: waiterID)
+            }
+        }
+
+        private func allocateWaiterID() -> UInt64 {
+            self.lock.lock()
+            defer { self.lock.unlock() }
+            let id = self.nextWaiterID
+            self.nextWaiterID &+= 1
+            return id
+        }
+
+        private func cancelWaiter(id: UInt64) {
+            var cancelled: CheckedContinuation<Data?, Never>?
+            self.lock.lock()
+            if let index = self.waiters.firstIndex(where: { $0.id == id }) {
+                cancelled = self.waiters.remove(at: index).continuation
+            }
+            self.lock.unlock()
+            cancelled?.resume(returning: nil)
         }
     }
 
@@ -118,16 +198,18 @@ final class CodexRPCClient: @unchecked Sendable {
 
     init(
         executable: String = "codex",
-        arguments: [String] = ["-s", "read-only", "-a", "never", "app-server"]) throws
+        arguments: [String] = ["-s", "read-only", "-a", "never", "app-server"],
+        requestTimeout: TimeInterval = 15.0) throws
     {
-        var stdoutContinuation: AsyncStream<Data>.Continuation!
-        self.stdoutLineStream = AsyncStream<Data> { continuation in
-            stdoutContinuation = continuation
-        }
-        self.stdoutLineContinuation = stdoutContinuation
+        self.requestTimeout = max(0.05, requestTimeout)
 
-        let resolvedExec = BinaryLocator.resolveCodexBinary()
-            ?? TTYCommandRunner.which(executable)
+        let resolvedExec: String? = if executable == "codex" {
+            BinaryLocator.resolveCodexBinary() ?? TTYCommandRunner.which(executable)
+        } else if FileManager.default.isExecutableFile(atPath: executable) {
+            executable
+        } else {
+            TTYCommandRunner.which(executable)
+        }
 
         guard let resolvedExec else {
             throw RPCWireError.startFailed(
@@ -157,21 +239,16 @@ final class CodexRPCClient: @unchecked Sendable {
         }
 
         let stdoutHandle = self.stdoutPipe.fileHandleForReading
-        let stdoutLineContinuation = self.stdoutLineContinuation
-        let stdoutBuffer = LineBuffer()
+        let lineQueue = self.lineQueue
         stdoutHandle.readabilityHandler = { handle in
             let data = handle.availableData
             if data.isEmpty {
                 handle.readabilityHandler = nil
-                stdoutLineContinuation.finish()
+                lineQueue.finish()
                 return
             }
 
-            let lines = stdoutBuffer.appendAndDrainLines(data)
-
-            for lineData in lines {
-                stdoutLineContinuation.yield(lineData)
-            }
+            lineQueue.append(data)
         }
 
         let stderrHandle = self.stderrPipe.fileHandleForReading
@@ -208,27 +285,48 @@ final class CodexRPCClient: @unchecked Sendable {
     }
 
     func shutdown() {
+        let shouldShutdown: Bool = self.shutdownLock.withLock {
+            if self.hasShutDown { return false }
+            self.hasShutDown = true
+            return true
+        }
+        guard shouldShutdown else { return }
+
+        let pgid = self.processGroup
+        self.processGroup = nil
+
         self.stdoutPipe.fileHandleForReading.readabilityHandler = nil
         self.stderrPipe.fileHandleForReading.readabilityHandler = nil
-        if self.process.isRunning {
-            self.process.terminate()
-        }
-        if let pgid = self.processGroup {
-            kill(-pgid, SIGTERM)
-        }
-        let waitDeadline = Date().addingTimeInterval(2.0)
-        while self.process.isRunning, Date() < waitDeadline {
-            usleep(100_000)
-        }
-        if self.process.isRunning {
-            if let pgid = self.processGroup {
-                kill(-pgid, SIGKILL)
-            }
-            kill(self.process.processIdentifier, SIGKILL)
-        }
+        self.lineQueue.finish()
         try? self.stdinPipe.fileHandleForWriting.close()
-        try? self.stdoutPipe.fileHandleForReading.close()
-        try? self.stderrPipe.fileHandleForReading.close()
+
+        let process = self.process
+        let pid = process.processIdentifier
+        if process.isRunning {
+            process.terminate()
+            if let pgid {
+                kill(-pgid, SIGTERM)
+            }
+        }
+
+        let stdoutHandle = self.stdoutPipe.fileHandleForReading
+        let stderrHandle = self.stderrPipe.fileHandleForReading
+        DispatchQueue.global(qos: .utility).async {
+            let waitDeadline = Date().addingTimeInterval(2.0)
+            while process.isRunning, Date() < waitDeadline {
+                usleep(100_000)
+            }
+            if process.isRunning {
+                if let pgid {
+                    kill(-pgid, SIGKILL)
+                }
+                if pid > 0 {
+                    kill(pid, SIGKILL)
+                }
+            }
+            try? stdoutHandle.close()
+            try? stderrHandle.close()
+        }
     }
 
     private func request(method: String, params: [String: Any]? = nil) async throws -> [String: Any] {
@@ -236,8 +334,9 @@ final class CodexRPCClient: @unchecked Sendable {
         self.nextID += 1
         try self.sendRequest(id: id, method: method, params: params)
 
+        let deadline = Date().addingTimeInterval(self.requestTimeout)
         while true {
-            let message = try await self.readNextMessage()
+            let message = try await self.readNextMessage(deadline: deadline, method: method)
 
             if message["id"] == nil, let methodName = message["method"] as? String {
                 Self.debugWriteStderr("[codex notify] \(methodName)\n")
@@ -271,14 +370,52 @@ final class CodexRPCClient: @unchecked Sendable {
         self.stdinPipe.fileHandleForWriting.write(Data([0x0A]))
     }
 
-    private func readNextMessage() async throws -> [String: Any] {
-        for await lineData in self.stdoutLineStream {
+    private func readNextMessage(deadline: Date, method: String) async throws -> [String: Any] {
+        while true {
+            let lineData = try await self.readNextLine(deadline: deadline, method: method)
             if lineData.isEmpty { continue }
             if let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any] {
                 return json
             }
         }
-        throw RPCWireError.malformed("codex app-server closed stdout")
+    }
+
+    private func readNextLine(deadline: Date, method: String) async throws -> Data {
+        try Task.checkCancellation()
+        let lineQueue = self.lineQueue
+        do {
+            return try await withThrowingTaskGroup(of: Data.self) { group in
+                group.addTask {
+                    try Task.checkCancellation()
+                    guard let line = await lineQueue.nextLine() else {
+                        try Task.checkCancellation()
+                        throw RPCWireError.malformed("codex app-server closed stdout")
+                    }
+                    return line
+                }
+                group.addTask {
+                    let remaining = deadline.timeIntervalSinceNow
+                    if remaining > 0 {
+                        try await Task.sleep(for: .seconds(remaining))
+                    }
+                    try Task.checkCancellation()
+                    throw RPCWireError.timedOut(method)
+                }
+                guard let line = try await group.next() else {
+                    try Task.checkCancellation()
+                    throw RPCWireError.timedOut(method)
+                }
+                group.cancelAll()
+                return line
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as RPCWireError {
+            if case .timedOut = error {
+                self.shutdown()
+            }
+            throw error
+        }
     }
 
     private func decodeResult<T: Decodable>(from message: [String: Any]) throws -> T {

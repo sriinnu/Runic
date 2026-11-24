@@ -62,18 +62,31 @@ extension CursorStatusProbe {
     }
 
     func parseUsageSummary(_ summary: CursorUsageSummary, userInfo: CursorUserInfo?) -> CursorStatusSnapshot {
-        let billingCycleEnd: Date? = summary.billingCycleEnd.flatMap { dateString in
+        func parseISO8601(_ dateString: String) -> Date? {
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             return formatter.date(from: dateString) ?? ISO8601DateFormatter().date(from: dateString)
         }
+        let billingCycleStart: Date? = summary.billingCycleStart.flatMap(parseISO8601)
+        let billingCycleEnd: Date? = summary.billingCycleEnd.flatMap(parseISO8601)
+        let windowMinutes: Int? = if let billingCycleStart, let billingCycleEnd {
+            max(0, Int(billingCycleEnd.timeIntervalSince(billingCycleStart) / 60))
+        } else {
+            nil
+        }
+        let positiveWindowMinutes = (windowMinutes ?? 0) > 0 ? windowMinutes : nil
 
         let planUsedRaw = Double(summary.individualUsage?.plan?.used ?? 0)
         let planLimitRaw = Double(summary.individualUsage?.plan?.limit ?? 0)
         let planUsed = planUsedRaw / 100.0
         let planLimit = planLimitRaw / 100.0
-        let planPercentUsed: Double = if planLimitRaw > 0 {
-            (planUsedRaw / planLimitRaw) * 100
+        let planDisabledOrUnlimited = (summary.isUnlimited == true) || (summary.individualUsage?.plan?.enabled == false)
+        let hasFinitePlanQuota = !planDisabledOrUnlimited
+            && (planLimitRaw > 0 || summary.individualUsage?.plan?.totalPercentUsed != nil)
+        let planPercentUsed: Double = if !hasFinitePlanQuota {
+            0
+        } else if planLimitRaw > 0 {
+            min(100, max(0, (planUsedRaw / planLimitRaw) * 100))
         } else if let totalPercentUsed = summary.individualUsage?.plan?.totalPercentUsed {
             // The units of totalPercentUsed are ambiguous: the field name says
             // percent, but real payloads have been observed carrying a 0-1
@@ -84,7 +97,7 @@ extension CursorStatusProbe {
             // an exhausted plan as nearly untouched — the worst direction to
             // fail. Misreading a genuine 1%-as-1.0 as 100% merely over-warns.
             // Values above 1.0 pass through as already-scaled percents.
-            totalPercentUsed <= 1 ? totalPercentUsed * 100 : totalPercentUsed
+            min(100, max(0, totalPercentUsed <= 1 ? totalPercentUsed * 100 : totalPercentUsed))
         } else {
             0
         }
@@ -103,6 +116,8 @@ extension CursorStatusProbe {
             onDemandLimitUSD: onDemandLimit,
             teamOnDemandUsedUSD: teamOnDemandUsed,
             teamOnDemandLimitUSD: teamOnDemandLimit,
+            billingCycleWindowMinutes: positiveWindowMinutes,
+            hasKnownLimit: hasFinitePlanQuota,
             billingCycleEnd: billingCycleEnd,
             membershipType: summary.membershipType,
             accountEmail: userInfo?.email,

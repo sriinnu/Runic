@@ -28,6 +28,7 @@ extension UsageStore {
                 primary: snapshot?.primary,
                 secondary: snapshot?.secondary,
                 tertiary: snapshot?.tertiary,
+                additionalWindows: snapshot?.additionalWindows,
                 creditsRemaining: self.credits(for: provider)?.remaining,
                 creditsUpdatedAt: self.credits(for: provider)?.updatedAt,
                 creditsHasError: self.creditsError(for: provider) != nil,

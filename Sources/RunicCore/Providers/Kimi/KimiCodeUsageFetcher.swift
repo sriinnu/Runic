@@ -129,7 +129,7 @@ enum KimiCodeUsageFetcher {
 
         // The plan-wide summary kimi-cli labels "Weekly limit".
         if let usage = payload["usage"] as? [String: Any],
-           let weekly = Self.countWindow(usage, windowMinutes: nil, fallbackLabel: "Weekly")
+           let weekly = Self.countWindow(usage, windowMinutes: 10080, fallbackLabel: "Weekly")
         {
             windows.append(weekly)
         }
@@ -143,7 +143,7 @@ enum KimiCodeUsageFetcher {
                 windows.insert(window, at: 0)
             }
             if let pool = (pools["limit_month_total"] ?? pools["limit_month_code"]) as? [String: Any],
-               let window = Self.ratioWindow(pool, windowMinutes: nil, label: "Monthly")
+               let window = Self.ratioWindow(pool, windowMinutes: 43200, label: "Monthly")
             {
                 windows.append(window)
             }
@@ -153,6 +153,7 @@ enum KimiCodeUsageFetcher {
             primary: windows.first ?? .noLimitsReported,
             secondary: windows.dropFirst().first,
             tertiary: windows.dropFirst(2).first,
+            additionalWindows: windows.count > 3 ? Array(windows.dropFirst(3)) : nil,
             updatedAt: now,
             identity: nil)
     }
@@ -193,6 +194,8 @@ enum KimiCodeUsageFetcher {
     private static func windowMinutes(duration: Any?, timeUnit: Any?) -> Int? {
         guard let duration = number(duration).map(Int.init), duration > 0 else { return nil }
         let unit = (timeUnit as? String)?.uppercased() ?? ""
+        if unit.contains("MILLI") { return max(1, Int((Double(duration) / 60000.0).rounded())) }
+        if unit.contains("SECOND") { return max(1, Int((Double(duration) / 60.0).rounded())) }
         if unit.contains("MINUTE") { return duration }
         if unit.contains("HOUR") { return duration * 60 }
         if unit.contains("DAY") { return duration * 1440 }
@@ -209,9 +212,17 @@ enum KimiCodeUsageFetcher {
 
     static func number(_ value: Any?) -> Double? {
         switch value {
-        case let value as NSNumber: value.doubleValue
-        case let value as String: Double(value.trimmingCharacters(in: .whitespacesAndNewlines))
-        default: nil
+        case let value as NSNumber:
+            guard CFGetTypeID(value) != CFBooleanGetTypeID() else { return nil }
+            let double = value.doubleValue
+            return double.isFinite ? double : nil
+        case let value as String:
+            guard let double = Double(value.trimmingCharacters(in: .whitespacesAndNewlines)),
+                  double.isFinite
+            else { return nil }
+            return double
+        default:
+            return nil
         }
     }
 

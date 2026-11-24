@@ -109,10 +109,15 @@ extension MenuPopoverView {
             let topModel = self.store.ledgerTopModel(for: provider)
             let context = ProviderContextWindowRegistry.shared.contextLabel(for: provider, model: topModel?.model)?.text
 
-            let hasQuota = OverviewMenuView.windowHasQuota(snapshot?.primary)
-            // "Active" stays anchored on raw consumption so the used/left
-            // toggle doesn't change which providers the overview lists.
-            if (snapshot?.primary.usedPercent ?? 0) > 0 || todayTokens > 0 {
+            let overviewWindow = snapshot?.preferredQuotaWindow(for: provider) ?? snapshot?.primary
+            let hasQuota = OverviewMenuView.windowHasQuota(overviewWindow)
+            // "Active" stays anchored on raw consumption across any measured
+            // window so a fresh 5h reset doesn't drop a provider with active
+            // weekly spend, and so the used/left toggle doesn't change the list.
+            let hasUsedQuota = snapshot?.allWindows.contains {
+                $0.hasKnownLimit != false && $0.usedPercent > 0
+            } ?? false
+            if hasUsedQuota || todayTokens > 0 {
                 activeIDs.insert(provider.rawValue)
             }
 
@@ -127,11 +132,11 @@ extension MenuPopoverView {
                 provider: provider,
                 name: UsageProvider.compactDisplayName(meta.displayName),
                 icon: ProviderBrandIcon.image(for: provider, size: 20),
-                usedPercent: OverviewMenuView.displayPercent(for: snapshot?.primary, showsUsed: showsUsed),
+                usedPercent: OverviewMenuView.displayPercent(for: overviewWindow, showsUsed: showsUsed),
                 todayTokens: todayTokens,
                 brandColor: brandColor,
-                resetDescription: OverviewMenuView.resetPill(for: snapshot?.primary),
-                windowLabel: snapshot?.primary.label?.trimmingCharacters(in: .whitespacesAndNewlines),
+                resetDescription: OverviewMenuView.resetPill(for: overviewWindow),
+                windowLabel: overviewWindow?.label?.trimmingCharacters(in: .whitespacesAndNewlines),
                 topModelContext: context,
                 hasQuota: hasQuota,
                 bankedResetsText: OverviewMenuView.bankedResetsPill(for: snapshot?.resetCredits),

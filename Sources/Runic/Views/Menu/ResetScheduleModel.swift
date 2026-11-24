@@ -184,8 +184,13 @@ enum ResetScheduleBuilder {
             let weeklyTitle = input.metadata.weeklyLabel.isEmpty ? "Weekly" : input.metadata.weeklyLabel
             append(snapshot.primary, slot: "primary", defaultTitle: sessionTitle)
             append(snapshot.secondary, slot: "secondary", defaultTitle: weeklyTitle)
-            let tertiaryTitle = input.metadata.supportsOpus ? (input.metadata.opusLabel ?? "Sonnet") : "Model"
+            let tertiaryTitle = input.metadata.opusLabel ?? (input.metadata.supportsOpus ? "Sonnet" : "Model")
             append(snapshot.tertiary, slot: "tertiary", defaultTitle: tertiaryTitle)
+            if let additional = snapshot.additionalWindows {
+                for (index, extra) in additional.enumerated() {
+                    append(extra, slot: "extra-\(index)", defaultTitle: "Quota \(index + 4)")
+                }
+            }
         }
         return results
     }

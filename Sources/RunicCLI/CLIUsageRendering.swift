@@ -17,27 +17,40 @@ extension RunicCLI {
         }
 
         let meta = ProviderDescriptorRegistry.descriptor(for: provider).metadata
-        lines.append(Self.rateLine(title: meta.sessionLabel, window: snapshot.primary, useColor: useColor))
-        if snapshot.primary.hasKnownLimit != false, let reset = snapshot.primary.resetDescription {
-            lines.append(Self.resetLine(reset))
+        let primaryTitle = UsageFormatter.windowTitle(
+            for: snapshot.primary,
+            fallback: meta.primaryWindowTitle(for: snapshot.primary))
+        lines.append(Self.rateLine(title: primaryTitle, window: snapshot.primary, useColor: useColor))
+        if let reset = snapshot.primary.resetDescription {
+            if snapshot.primary.hasKnownLimit != false {
+                lines.append(Self.resetLine(reset))
+            }
         }
 
         if let secondary = snapshot.secondary {
-            lines.append(Self.rateLine(title: meta.weeklyLabel, window: secondary, useColor: useColor))
+            let secondaryTitle = UsageFormatter.windowTitle(for: secondary, fallback: meta.weeklyLabel)
+            lines.append(Self.rateLine(title: secondaryTitle, window: secondary, useColor: useColor))
             if secondary.hasKnownLimit != false, let reset = secondary.resetDescription {
                 lines.append(Self.resetLine(reset))
             }
         }
 
         if let tertiary = snapshot.tertiary {
-            // Opus-style providers keep their metadata label; others (a
-            // second MiniMax model, Gemini's third model, Copilot Chat) use
-            // the window's own label so it isn't mislabeled "Sonnet".
             let fallbackTitle = meta.opusLabel ?? "Sonnet"
-            let title = meta.supportsOpus ? fallbackTitle : (tertiary.label ?? fallbackTitle)
+            let title = UsageFormatter.windowTitle(for: tertiary, fallback: fallbackTitle)
             lines.append(Self.rateLine(title: title, window: tertiary, useColor: useColor))
             if tertiary.hasKnownLimit != false, let reset = tertiary.resetDescription {
                 lines.append(Self.resetLine(reset))
+            }
+        }
+
+        if let additional = snapshot.additionalWindows {
+            for (index, extra) in additional.enumerated() {
+                let extraTitle = UsageFormatter.windowTitle(for: extra, fallback: "Quota \(index + 4)")
+                lines.append(Self.rateLine(title: extraTitle, window: extra, useColor: useColor))
+                if extra.hasKnownLimit != false, let reset = extra.resetDescription {
+                    lines.append(Self.resetLine(reset))
+                }
             }
         }
 
@@ -98,9 +111,7 @@ extension RunicCLI {
     }
 
     private static func resetLine(_ reset: String) -> String {
-        let trimmed = reset.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.lowercased().hasPrefix("resets") { return trimmed }
-        return "Resets \(trimmed)"
+        UsageFormatter.formattedWindowDescription(reset)
     }
 
     private static func usageLine(remaining: Double, used: Double) -> String {

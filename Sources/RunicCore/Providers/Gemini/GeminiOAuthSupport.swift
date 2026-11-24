@@ -137,35 +137,11 @@ extension GeminiStatusProbe {
     private static func extractOAuthCredentials() -> GeminiOAuthClientCredentials? {
         let env = ProcessInfo.processInfo.environment
         let fm = FileManager.default
-
-        let candidates: [String]
-        if let override = env["GEMINI_CLI_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !override.isEmpty
-        {
-            candidates = fm.isExecutableFile(atPath: override) ? [override] : []
-        } else {
-            // Collect every candidate Gemini binary in priority order — PATH may
-            // find a wrapper before the real CLI (e.g. a Python script shadowing
-            // the Homebrew Node.js binary).
-            var rawCandidates: [String] = []
-            if let path = BinaryLocator.resolveGeminiBinary(
-                env: env,
-                loginPATH: LoginShellPathCache.shared.current)
-                ?? TTYCommandRunner.which("gemini")
-            {
-                rawCandidates.append(path)
-            }
-            // Homebrew (ARM Mac).
-            if fm.isExecutableFile(atPath: "/opt/homebrew/bin/gemini") {
-                rawCandidates.append("/opt/homebrew/bin/gemini")
-            }
-            // Homebrew (Intel Mac).
-            if fm.isExecutableFile(atPath: "/usr/local/bin/gemini") {
-                rawCandidates.append("/usr/local/bin/gemini")
-            }
-            var seen = Set<String>()
-            candidates = rawCandidates.filter { seen.insert($0).inserted }
-        }
+        let candidates = Self.collectGeminiBinaryCandidates(
+            env: env,
+            loginPATH: LoginShellPathCache.shared.current,
+            fileManager: fm,
+            home: NSHomeDirectory())
 
         for geminiPath in candidates {
             // Resolve all symlink hops, not just the first one.
@@ -188,6 +164,103 @@ extension GeminiStatusProbe {
             "count": "\(candidates.count)",
         ])
         return nil
+    }
+
+    private static func isExecutableRegularFile(atPath path: String, fileManager fm: FileManager) -> Bool {
+        var isDirectory = ObjCBool(false)
+        guard fm.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue else {
+            return false
+        }
+        return fm.isExecutableFile(atPath: path)
+    }
+
+    static func collectGeminiBinaryCandidates(
+        env: [String: String],
+        loginPATH: [String]?,
+        fileManager fm: FileManager = .default,
+        home: String = NSHomeDirectory(),
+        includeSystemFallbacks: Bool = true) -> [String]
+    {
+        if let override = env["GEMINI_CLI_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !override.isEmpty
+        {
+            return self.isExecutableRegularFile(atPath: override, fileManager: fm) ? [override] : []
+        }
+
+        // Collect EVERY executable `gemini` in priority order instead of
+        // stopping at the first match: a custom wrapper (e.g. ~/.local/bin/gemini)
+        // or dangling Homebrew symlink can shadow an nvm/fnm/npm @google/gemini-cli.
+        var rawCandidates: [String] = []
+        let pathDirs = (loginPATH ?? []) + (env["PATH"]?.split(separator: ":").map(String.init) ?? [])
+        for dir in pathDirs where !dir.isEmpty {
+            let candidate = (dir as NSString).appendingPathComponent("gemini")
+            if Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
+                rawCandidates.append(candidate)
+            }
+        }
+        if let locatorHit = BinaryLocator.resolveGeminiBinary(
+            env: env,
+            loginPATH: loginPATH,
+            fileManager: fm,
+            home: home),
+            Self.isExecutableRegularFile(atPath: locatorHit, fileManager: fm)
+        {
+            rawCandidates.append(locatorHit)
+        }
+        if includeSystemFallbacks,
+           let whichHit = TTYCommandRunner.which("gemini", env: env),
+           Self.isExecutableRegularFile(atPath: whichHit, fileManager: fm)
+        {
+            rawCandidates.append(whichHit)
+        }
+
+        // Version-manager & global npm/bun installs under home (newest Node first).
+        let nvmDir = (home as NSString).appendingPathComponent(".nvm/versions/node")
+        if let versions = try? fm.contentsOfDirectory(atPath: nvmDir) {
+            let sorted = versions.sorted { $0.compare($1, options: .numeric) == .orderedDescending }
+            for version in sorted {
+                let candidate = "\(nvmDir)/\(version)/bin/gemini"
+                if Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
+                    rawCandidates.append(candidate)
+                }
+            }
+        }
+        let fnmDir = (home as NSString).appendingPathComponent(".fnm/node-versions")
+        if let versions = try? fm.contentsOfDirectory(atPath: fnmDir) {
+            let sorted = versions.sorted { $0.compare($1, options: .numeric) == .orderedDescending }
+            for version in sorted {
+                let candidate = "\(fnmDir)/\(version)/installation/bin/gemini"
+                if Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
+                    rawCandidates.append(candidate)
+                }
+            }
+        }
+        var fixedCandidates = [
+            "\(home)/.volta/bin/gemini",
+            "\(home)/.asdf/shims/gemini",
+            "\(home)/.bun/bin/gemini",
+            "\(home)/.npm-global/bin/gemini",
+        ]
+        if includeSystemFallbacks {
+            fixedCandidates.append(contentsOf: [
+                "/opt/homebrew/bin/gemini",
+                "/usr/local/bin/gemini",
+            ])
+        }
+        for candidate in fixedCandidates where Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
+            rawCandidates.append(candidate)
+        }
+
+        var seenRaw = Set<String>()
+        var seenResolved = Set<String>()
+        var deduped: [String] = []
+        for candidate in rawCandidates {
+            guard seenRaw.insert(candidate).inserted else { continue }
+            let resolved = (candidate as NSString).resolvingSymlinksInPath
+            guard seenResolved.insert(resolved).inserted else { continue }
+            deduped.append(candidate)
+        }
+        return deduped
     }
 
     static func searchOAuthFile(realPath: String, fm: FileManager) -> GeminiOAuthClientCredentials? {

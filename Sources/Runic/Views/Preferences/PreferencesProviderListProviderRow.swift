@@ -21,7 +21,7 @@ struct ProviderListProviderRowView: View {
     @Environment(\.runicTheme) private var runicTheme
 
     var body: some View {
-        let isRefreshing = self.store.refreshingProviders.contains(self.provider)
+        let isRefreshing = self.store.isRefreshing(provider: self.provider)
         let showReorderHandle = self.isHovering || self.isToggleFocused
         let metadata = self.store.metadata(for: self.provider)
         let insightLines = ProviderInsightsComposer.lines(for: self.provider, store: self.store, maxRows: 4)

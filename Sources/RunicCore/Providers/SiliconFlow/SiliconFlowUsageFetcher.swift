@@ -60,6 +60,7 @@ extension SiliconFlowModelsResponse {
                 windowMinutes: nil,
                 resetsAt: nil,
                 resetDescription: summary,
+                label: "API Key",
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,

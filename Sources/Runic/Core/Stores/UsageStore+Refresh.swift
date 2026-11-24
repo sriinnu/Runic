@@ -18,7 +18,11 @@ extension UsageStore {
     /// redraw: in-memory checks first, with a synchronous keychain read only for
     /// enabled China variants (see below).
     func providerHasMenuPresence(_ provider: UsageProvider) -> Bool {
-        if self.refreshingProviders.contains(provider) { return true }
+        if self.activeSingleRefreshes.contains(provider)
+            || self.accounts(for: provider).contains(where: { self.refreshingProviders.contains($0.id) })
+        {
+            return true
+        }
         if self.snapshots[provider] != nil { return true }
         if self.ledgerTopModels[provider] != nil || self.ledgerDailySummaries[provider] != nil {
             return true
@@ -160,7 +164,7 @@ extension UsageStore {
     /// The Settings reload button: lets the provider re-read changed
     /// credentials (may prompt once), then refreshes every slot of its brand.
     func reloadProvider(_ provider: UsageProvider) async {
-        guard !self.refreshSlots(for: provider).contains(where: { self.refreshingProviders.contains($0) }) else {
+        guard !self.isRefreshing(provider: provider) else {
             return
         }
         await ProviderImplementationRegistry.implementation(for: provider)?.prepareManualReload()
@@ -178,17 +182,38 @@ extension UsageStore {
     /// False when it was still running at the timeout.
     func waitForRunningRefresh(of provider: UsageProvider, timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        while self.refreshSlots(for: provider).contains(where: { self.refreshingProviders.contains($0) }) {
+        while self.isRefreshing(provider: provider) {
             guard Date() < deadline else { return false }
             try? await Task.sleep(for: .milliseconds(100))
         }
         return true
     }
 
+    private func syncRefreshingFlag() {
+        self.isRefreshing = self.isGlobalRefreshing
+            || !self.activeSingleRefreshes.isEmpty
+            || !self.refreshingProviders.isEmpty
+    }
+
+    func isRefreshing(provider: UsageProvider?) -> Bool {
+        guard let provider else { return self.isGlobalRefreshing }
+        let slots = Set(self.refreshSlots(for: provider)).union([provider])
+        if slots.contains(where: { self.activeSingleRefreshes.contains($0) }) { return true }
+        return slots.contains { slot in
+            self.accounts(for: slot).contains { self.refreshingProviders.contains($0.id) }
+        }
+    }
+
     func refreshSingleProvider(_ provider: UsageProvider) async {
+        guard !self.isRefreshing(provider: provider) else { return }
         let startedAt = Date()
-        self.isRefreshing = true
-        defer { self.isRefreshing = false }
+        let trackedSlots = Set(self.refreshSlots(for: provider)).union([provider])
+        self.activeSingleRefreshes.formUnion(trackedSlots)
+        self.syncRefreshingFlag()
+        defer {
+            self.activeSingleRefreshes.subtract(trackedSlots)
+            self.syncRefreshingFlag()
+        }
         await withTaskGroup(of: Void.self) { group in
             for slot in self.refreshSlots(for: provider) {
                 group.addTask { await self.refreshProvider(slot, trigger: .manual) }
@@ -206,7 +231,7 @@ extension UsageStore {
     }
 
     func refresh(trigger: RefreshTrigger = .manual, forceTokenUsage: Bool = false) async {
-        guard !self.isRefreshing else { return }
+        guard !self.isGlobalRefreshing else { return }
         let now = Date()
         if trigger == .menuOpen {
             self.resetMenuOpenRefreshBudgetIfNeeded(now: now)
@@ -220,8 +245,12 @@ extension UsageStore {
 
         self.lastRefreshTrigger = trigger
         self.lastRefreshAt = now
-        self.isRefreshing = true
-        defer { self.isRefreshing = false }
+        self.isGlobalRefreshing = true
+        self.syncRefreshingFlag()
+        defer {
+            self.isGlobalRefreshing = false
+            self.syncRefreshingFlag()
+        }
 
         let inactiveProviders = trigger.isAuto ? self.inactiveProviders(now: now) : []
         let skipCodexExtras = trigger.isAuto && inactiveProviders.contains(.codex)
@@ -307,17 +336,15 @@ extension UsageStore {
 
         if !spec.isEnabled() {
             for account in self.accounts(for: provider) {
-                self.refreshingProviders.remove(account.id)
-                await MainActor.run { self.clearAccountState(account) }
+                self.clearAccountState(account)
             }
-            await MainActor.run {
-                self.tokenSnapshots.removeValue(forKey: provider)
-                self.tokenErrors[provider] = nil
-                self.tokenFailureGates[provider]?.reset()
-                self.lastTokenFetchAt.removeValue(forKey: provider)
-                self.lastLedgerActivityAt.removeValue(forKey: provider)
-                self.ledgerCompactions.removeValue(forKey: provider)
-            }
+            self.syncRefreshingFlag()
+            self.tokenSnapshots.removeValue(forKey: provider)
+            self.tokenErrors[provider] = nil
+            self.tokenFailureGates[provider]?.reset()
+            self.lastTokenFetchAt.removeValue(forKey: provider)
+            self.lastLedgerActivityAt.removeValue(forKey: provider)
+            self.ledgerCompactions.removeValue(forKey: provider)
             return
         }
 
@@ -342,6 +369,10 @@ extension UsageStore {
     }
 
     private func clearAccountState(_ account: ProviderAccount) {
+        self.accountFetchGenerations[account.id] = (self.accountFetchGenerations[account.id] ?? 0) &+ 1
+        self.inFlightAccountFetches.removeValue(forKey: account.id)?.cancel()
+        self.pendingForceSurface.remove(account.id)
+        self.refreshingProviders.remove(account.id)
         self.snapshots.removeValue(forKey: account.id)
         self.errors[account.id] = nil
         self.lastSourceLabels.removeValue(forKey: account.id)
@@ -360,23 +391,43 @@ extension UsageStore {
         _ account: ProviderAccount,
         credential: CredentialRef?,
         spec: ProviderSpec,
-        trigger _: RefreshTrigger) async
+        trigger: RefreshTrigger) async
     {
         let provider = account.id.kind
         let accountID = account.id
-        self.refreshingProviders.insert(accountID)
-        defer { self.refreshingProviders.remove(accountID) }
-
-        let previousSnapshot = self.snapshots[accountID]
-        let outcome = await spec.fetch(accountID, credential)
-        await MainActor.run {
-            self.lastFetchAttempts[accountID] = outcome.attempts
+        if trigger == .manual {
+            self.pendingForceSurface.insert(accountID)
+        }
+        if let existing = self.inFlightAccountFetches[accountID] {
+            await existing.value
+            return
         }
 
-        switch outcome.result {
-        case let .success(result):
-            let scoped = result.usage.scoped(to: provider)
-            await MainActor.run {
+        let generation = (self.accountFetchGenerations[accountID] ?? 0) &+ 1
+        self.accountFetchGenerations[accountID] = generation
+        self.refreshingProviders.insert(accountID)
+        self.syncRefreshingFlag()
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.accountFetchGenerations[accountID] == generation {
+                    self.inFlightAccountFetches.removeValue(forKey: accountID)
+                    self.pendingForceSurface.remove(accountID)
+                    self.refreshingProviders.remove(accountID)
+                    self.syncRefreshingFlag()
+                }
+            }
+
+            let previousSnapshot = self.snapshots[accountID]
+            let outcome = await spec.fetch(accountID, credential)
+            guard self.accountFetchGenerations[accountID] == generation else { return }
+
+            self.lastFetchAttempts[accountID] = outcome.attempts
+
+            switch outcome.result {
+            case let .success(result):
+                let scoped = result.usage.scoped(to: provider)
                 if accountID.isDefault {
                     self.handleSessionQuotaTransition(provider: provider, snapshot: scoped)
                 }
@@ -416,12 +467,16 @@ extension UsageStore {
                         previous: previousSnapshot,
                         current: scoped)
                 }
-            }
-        case let .failure(error):
-            await MainActor.run {
-                self.recordProviderFetchFailure(accountID, message: error.localizedDescription)
+            case let .failure(error):
+                let shouldForceSurface = self.pendingForceSurface.remove(accountID) != nil || trigger == .manual
+                self.recordProviderFetchFailure(
+                    accountID,
+                    message: error.localizedDescription,
+                    forceSurface: shouldForceSurface)
             }
         }
+        self.inFlightAccountFetches[accountID] = task
+        await task.value
     }
 
     /// Record a fetch failure without discarding the last-known-good snapshot.
@@ -430,43 +485,50 @@ extension UsageStore {
     /// snapshot's `updatedAt`) with the error header surfaced alongside once the
     /// failure gate lets it through. Wiping the snapshot here used to flip the
     /// card from usage bars to error-text-only on the first surfaced failure.
-    func recordProviderFetchFailure(_ provider: UsageProvider, message: String) {
-        self.recordProviderFetchFailure(provider.defaultAccount, message: message)
+    func recordProviderFetchFailure(_ provider: UsageProvider, message: String, forceSurface: Bool = false) {
+        self.recordProviderFetchFailure(provider.defaultAccount, message: message, forceSurface: forceSurface)
     }
 
-    func recordProviderFetchFailure(_ account: AccountID, message: String) {
+    func recordProviderFetchFailure(_ account: AccountID, message: String, forceSurface: Bool = false) {
         let hadPriorData = self.snapshots[account] != nil
         if self.failureGates[account] == nil {
             self.failureGates[account] = ConsecutiveFailureGate()
         }
         let shouldSurface = self.failureGates[account]?
             .shouldSurfaceError(onFailureWithPriorData: hadPriorData) ?? true
-        self.errors[account] = shouldSurface ? message : nil
+        self.errors[account] = (forceSurface || shouldSurface) ? message : nil
     }
 
-    private func handleSessionQuotaTransition(provider: UsageProvider, snapshot: UsageSnapshot) {
-        let currentRemaining = snapshot.primary.remainingPercent
+    func handleSessionQuotaTransition(provider: UsageProvider, snapshot: UsageSnapshot) {
+        let currentRemaining: Double
+        let quotaKind: SessionQuotaKind
+        if snapshot.primary.hasKnownLimit == false,
+           let balance = snapshot.balance
+        {
+            currentRemaining = balance.blocksAPICalls ? 0 : 100
+            quotaKind = .credits
+        } else {
+            currentRemaining = snapshot.primary.remainingPercent
+            // A 0%-remaining window with no real quota evidence (no window duration,
+            // no reset time, no reset/balance text) is a hardcoded stub, not a
+            // measurement. Bail before recording it: posting would spam a phantom
+            // depletion alert, and remembering it as "previous = 0" would fire a
+            // phantom "restored" alert once real data arrives.
+            if SessionQuotaNotificationLogic.isDepleted(currentRemaining),
+               !SessionQuotaNotificationLogic.hasRealQuota(snapshot.primary)
+            {
+                let providerText = provider.rawValue
+                self.sessionQuotaLogger.debug("ignoring stub depleted window: provider=\(providerText)")
+                return
+            }
+            quotaKind = SessionQuotaNotificationLogic.quotaKind(
+                windowMinutes: snapshot.primary.windowMinutes,
+                resetsAt: snapshot.primary.resetsAt,
+                supportsCredits: self.metadata(for: provider).supportsCredits)
+        }
         let previousRemaining = self.lastKnownSessionRemaining[provider]
 
-        // A 0%-remaining window with no real quota evidence (no window duration,
-        // no reset time, no reset/balance text) is a hardcoded stub, not a
-        // measurement. Bail before recording it: posting would spam a phantom
-        // depletion alert, and remembering it as "previous = 0" would fire a
-        // phantom "restored" alert once real data arrives.
-        if SessionQuotaNotificationLogic.isDepleted(currentRemaining),
-           !SessionQuotaNotificationLogic.hasRealQuota(snapshot.primary)
-        {
-            let providerText = provider.rawValue
-            self.sessionQuotaLogger.debug("ignoring stub depleted window: provider=\(providerText)")
-            return
-        }
-
         defer { self.lastKnownSessionRemaining[provider] = currentRemaining }
-
-        let quotaKind = SessionQuotaNotificationLogic.quotaKind(
-            windowMinutes: snapshot.primary.windowMinutes,
-            resetsAt: snapshot.primary.resetsAt,
-            supportsCredits: self.metadata(for: provider).supportsCredits)
 
         guard self.settings.sessionQuotaNotificationsEnabled else {
             if SessionQuotaNotificationLogic.isDepleted(currentRemaining) ||

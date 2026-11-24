@@ -67,7 +67,7 @@ struct ZaiCNAPIFetchStrategy: ProviderFetchStrategy {
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
         guard let tokenRes = context.credential(for: .zaiCN) else {
-            throw ZaiSettingsError.missingToken
+            throw ZaiCNSettingsError.missingToken
         }
         let usage = try await ZaiUsageFetcher.fetchUsage(apiKey: tokenRes.token, baseURL: Self.baseURL)
         return self.makeResult(
@@ -77,5 +77,17 @@ struct ZaiCNAPIFetchStrategy: ProviderFetchStrategy {
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {
         false
+    }
+}
+
+enum ZaiCNSettingsError: LocalizedError {
+    case missingToken
+
+    var errorDescription: String? {
+        switch self {
+        case .missingToken:
+            "z.ai (China) API token not found. Set it in Preferences → Providers → z.ai (China) or " +
+                "export ZAI_CN_API_KEY."
+        }
     }
 }

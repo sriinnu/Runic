@@ -16,8 +16,10 @@ extension StatusItemController {
         // IconRenderer treats these values as a left-to-right "progress fill" percentage. Depending on the
         // user setting, pass either "percent left" or "percent used". Windows without a real limit
         // yield nil so the plain icon renders instead of a fake full/empty gauge.
-        var primary = snapshot?.primary.gaugePercent(showUsed: showUsed)
-        var weekly = snapshot?.secondary?.gaugePercent(showUsed: showUsed)
+        var (primary, weekly) = Self.menuBarWavePercents(
+            for: primaryProvider,
+            snapshot: snapshot,
+            showUsed: showUsed)
         var credits: Double? = primaryProvider == .codex ? self.store.credits?.remaining : nil
         var stale = self.store.isStale(provider: primaryProvider)
         var morphProgress: Double?
@@ -97,8 +99,10 @@ extension StatusItemController {
             self.setButtonTitle(percentText, for: button)
             return
         }
-        var primary = snapshot?.primary.gaugePercent(showUsed: showUsed)
-        var weekly = snapshot?.secondary?.gaugePercent(showUsed: showUsed)
+        var (primary, weekly) = Self.menuBarWavePercents(
+            for: provider,
+            snapshot: snapshot,
+            showUsed: showUsed)
         var credits: Double? = provider == .codex ? self.store.credits?.remaining : nil
         var stale = self.store.isStale(provider: provider)
         var morphProgress: Double?
@@ -207,10 +211,24 @@ extension StatusItemController {
     }
 
     private func menuBarPercentWindow(for provider: UsageProvider, snapshot: UsageSnapshot?) -> RateWindow? {
-        let ordered: [RateWindow?] = provider == .factory
-            ? [snapshot?.secondary, snapshot?.primary]
-            : [snapshot?.primary, snapshot?.secondary]
-        let windows = ordered.compactMap(\.self)
-        return windows.first { $0.hasKnownLimit != false } ?? windows.first
+        snapshot?.preferredQuotaWindow(for: provider)
+    }
+
+    static func menuBarWavePercents(
+        for provider: UsageProvider,
+        snapshot: UsageSnapshot?,
+        showUsed: Bool) -> (Double?, Double?)
+    {
+        guard let snapshot else { return (nil, nil) }
+        let ordered: [RateWindow] = if provider == .factory {
+            [snapshot.secondary, snapshot.primary, snapshot.tertiary].compactMap(\.self)
+                + (snapshot.additionalWindows ?? [])
+        } else {
+            snapshot.allWindows
+        }
+        let quotaBacked = ordered.filter { $0.hasKnownLimit != false }
+        return (
+            quotaBacked.first?.gaugePercent(showUsed: showUsed),
+            quotaBacked.dropFirst().first?.gaugePercent(showUsed: showUsed))
     }
 }

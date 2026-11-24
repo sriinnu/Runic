@@ -37,10 +37,16 @@ public enum MiniMaxProviderDescriptor {
                 noDataMessage: { "MiniMax cost summary is not supported." }),
             fetchPlan: ProviderFetchPlan(
                 sourceModes: [.auto, .api, .web],
-                pipeline: ProviderFetchPipeline(resolveStrategies: { _ in [
-                    MiniMaxAPIFetchStrategy(),
-                    MiniMaxWebFetchStrategy(),
-                ] })),
+                pipeline: ProviderFetchPipeline(resolveStrategies: { context in
+                    switch context.sourceMode {
+                    case .api:
+                        [MiniMaxAPIFetchStrategy()]
+                    case .web:
+                        [MiniMaxWebFetchStrategy()]
+                    default:
+                        [MiniMaxAPIFetchStrategy(), MiniMaxWebFetchStrategy()]
+                    }
+                })),
             cli: ProviderCLIConfig(
                 name: "minimax",
                 aliases: ["minimax-api"],

@@ -10,7 +10,7 @@ public enum VertexAIProviderDescriptor {
             metadata: ProviderMetadata(
                 id: .vertexai,
                 displayName: "Vertex AI",
-                sessionLabel: "Requests",
+                sessionLabel: "AI models",
                 weeklyLabel: "",
                 opusLabel: nil,
                 supportsOpus: false,
@@ -49,8 +49,8 @@ struct VertexAICLIFetchStrategy: ProviderFetchStrategy {
     let id: String = "vertexai.cli"
     let kind: ProviderFetchKind = .cli
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
-        true
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
+        Self.resolveProject(context: context) != nil
     }
 
     func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
@@ -63,7 +63,8 @@ struct VertexAICLIFetchStrategy: ProviderFetchStrategy {
 
         let usage = try await VertexAIUsageFetcher.fetchModels(
             project: project,
-            location: location ?? "us-central1")
+            location: location ?? "us-central1",
+            env: context.env)
 
         return self.makeResult(
             usage: usage.toUsageSnapshot(project: project, location: location ?? "us-central1"),

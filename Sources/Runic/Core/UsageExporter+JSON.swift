@@ -94,7 +94,7 @@ extension UsageExporter {
 
         if scope == .all || scope == .windows {
             if let snapshot = store.snapshot(for: provider) {
-                root["usageWindows"] = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
+                root["usageWindows"] = snapshot.allWindows
                     .map { window -> [String: Any] in
                         // Windows without a real limit export a null percent so
                         // consumers can't mistake the placeholder for 0% used.

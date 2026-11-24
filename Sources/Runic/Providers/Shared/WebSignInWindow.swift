@@ -27,7 +27,7 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
     struct Step {
         let site: String
         let url: URL
-        let validate: @Sendable ([HTTPCookie]) async throws -> (@Sendable () -> Void)?
+        let validate: @Sendable ([HTTPCookie]) async throws -> (@Sendable () throws -> Void)?
     }
 
     /// Only one at a time. Holds the window alive while it's open.
@@ -136,7 +136,7 @@ final class WebSignInWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, W
 
         do {
             guard let keep = try await self.step.validate(cookies), !self.isFinished else { return }
-            keep()
+            try keep()
             self.advance()
         } catch {
             guard !self.isFinished else { return }

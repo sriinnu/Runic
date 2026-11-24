@@ -85,6 +85,7 @@ enum SiliconFlowConsoleError: LocalizedError, Equatable {
     case notConnected(china: Bool)
     case sessionExpired(china: Bool)
     case invalidPastedSession(china: Bool)
+    case keychainSaveFailed
     case httpError(statusCode: Int)
 
     var errorDescription: String? {
@@ -101,6 +102,8 @@ enum SiliconFlowConsoleError: LocalizedError, Equatable {
         case let .invalidPastedSession(china):
             "That doesn’t look like a SiliconFlow sign-in. Copy the Cookie header or fetch(…) request " +
                 "for \(SiliconFlowConsole.host(china: china)) from Developer Tools."
+        case .keychainSaveFailed:
+            "Could not save the SiliconFlow sign-in to Keychain. Check Keychain access for Runic and try again."
         case let .needsSubjectID(china):
             "Signed in to SiliconFlow, but the console also wants your user ID " +
                 "(avatar menu, top right of the console). Export " +
@@ -166,12 +169,19 @@ final class SiliconFlowConsoleTrace: @unchecked Sendable {
         self.requests.append(entry)
     }
 
-    func finish(china: Bool, isConnect: Bool = false, failure: String?) {
+    func finish(
+        china: Bool,
+        isConnect: Bool = false,
+        failure: String?,
+        diagnosticsDirectory: URL? = nil,
+        writeToDisk: Bool = true)
+    {
         if !isConnect {
             Self.lock.withLock { Self.lastFailureByRegion[china] = failure }
         } else if failure == nil {
             Self.lock.withLock { Self.lastFailureByRegion[china] = nil }
         }
+        guard writeToDisk else { return }
         var report: [String: Any] = [
             "at": ISO8601DateFormatter().string(from: Date()),
             "host": SiliconFlowConsole.host(china: china),
@@ -179,7 +189,8 @@ final class SiliconFlowConsoleTrace: @unchecked Sendable {
             "requests": self.requests,
         ]
         if let failure { report["failure"] = failure }
-        guard let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        guard let directory = diagnosticsDirectory ?? FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first?.appendingPathComponent("Runic/diagnostics", isDirectory: true),
             let json = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
         else { return }
@@ -194,6 +205,10 @@ final class SiliconFlowConsoleTrace: @unchecked Sendable {
 
     static func lastFailure(china: Bool) -> String? {
         self.lock.withLock { self.lastFailureByRegion[china] }
+    }
+
+    static func clearFailure(china: Bool) {
+        self.lock.withLock { _ = self.lastFailureByRegion.removeValue(forKey: china) }
     }
 }
 
@@ -218,7 +233,9 @@ public enum SiliconFlowConsoleFetcher {
                 china: china,
                 environment: environment,
                 trace: trace)
-            self.savedSession(china: china).store(session.cookieHeader)
+            guard self.savedSession(china: china).store(session.cookieHeader) else {
+                throw SiliconFlowConsoleError.keychainSaveFailed
+            }
             trace.finish(china: china, isConnect: true, failure: nil)
             return session.sourceLabel
         } catch {
@@ -236,7 +253,7 @@ public enum SiliconFlowConsoleFetcher {
     public static func validate(
         cookies: [HTTPCookie],
         china: Bool,
-        environment: [String: String]) async -> (@Sendable () -> Void)?
+        environment: [String: String]) async -> (@Sendable () throws -> Void)?
     {
         let trace = SiliconFlowConsoleTrace()
         guard let header = SiliconFlowCookieImporter.signInCookieHeader(from: cookies, china: china) else {
@@ -256,7 +273,13 @@ public enum SiliconFlowConsoleFetcher {
         }
         trace.finish(china: china, isConnect: true, failure: nil)
         let saved = self.savedSession(china: china)
-        return { saved.store(header) }
+        return {
+            guard saved.store(header) else {
+                let error = SiliconFlowConsoleError.keychainSaveFailed
+                SiliconFlowConsoleTrace().finish(china: china, isConnect: true, failure: error.localizedDescription)
+                throw error
+            }
+        }
     }
 
     public static func looksLikePastedSession(_ text: String) -> Bool {
@@ -282,7 +305,7 @@ public enum SiliconFlowConsoleFetcher {
         do {
             _ = try await self.firstBalance(sessions: [session], china: china, environment: environment, trace: trace)
             guard self.savedSession(china: china).store(header) else {
-                throw SiliconFlowConsoleError.notSignedIn(china: china)
+                throw SiliconFlowConsoleError.keychainSaveFailed
             }
             trace.finish(china: china, isConnect: true, failure: nil)
         } catch {
@@ -293,6 +316,7 @@ public enum SiliconFlowConsoleFetcher {
 
     public static func disconnect(china: Bool) {
         self.savedSession(china: china).clear()
+        SiliconFlowConsoleTrace.clearFailure(china: china)
     }
 
     public static func isConnected(china: Bool) -> Bool {

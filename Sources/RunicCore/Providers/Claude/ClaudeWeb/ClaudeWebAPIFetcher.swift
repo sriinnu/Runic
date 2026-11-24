@@ -29,7 +29,7 @@ public enum ClaudeWebAPIFetcher {
         let log: (String) -> Void = { msg in logger?("[claude-web] \(msg)") }
 
         let sessionInfo = try extractSessionKeyInfo(logger: log)
-        log("Found session key: \(sessionInfo.key.prefix(20))...")
+        log("Found session key from \(sessionInfo.sourceLabel)")
 
         return try await self.fetchUsage(using: sessionInfo, logger: log)
     }
@@ -57,6 +57,9 @@ public enum ClaudeWebAPIFetcher {
                 weeklyPercentUsed: usage.weeklyPercentUsed,
                 weeklyResetsAt: usage.weeklyResetsAt,
                 opusPercentUsed: usage.opusPercentUsed,
+                opusResetsAt: usage.opusResetsAt,
+                sonnetPercentUsed: usage.sonnetPercentUsed,
+                sonnetResetsAt: usage.sonnetResetsAt,
                 extraUsageCost: extra,
                 accountOrganization: usage.accountOrganization,
                 accountEmail: usage.accountEmail,
@@ -69,6 +72,9 @@ public enum ClaudeWebAPIFetcher {
                 weeklyPercentUsed: usage.weeklyPercentUsed,
                 weeklyResetsAt: usage.weeklyResetsAt,
                 opusPercentUsed: usage.opusPercentUsed,
+                opusResetsAt: usage.opusResetsAt,
+                sonnetPercentUsed: usage.sonnetPercentUsed,
+                sonnetResetsAt: usage.sonnetResetsAt,
                 extraUsageCost: usage.extraUsageCost,
                 accountOrganization: usage.accountOrganization,
                 accountEmail: account.email,
@@ -81,6 +87,9 @@ public enum ClaudeWebAPIFetcher {
                 weeklyPercentUsed: usage.weeklyPercentUsed,
                 weeklyResetsAt: usage.weeklyResetsAt,
                 opusPercentUsed: usage.opusPercentUsed,
+                opusResetsAt: usage.opusResetsAt,
+                sonnetPercentUsed: usage.sonnetPercentUsed,
+                sonnetResetsAt: usage.sonnetResetsAt,
                 extraUsageCost: usage.extraUsageCost,
                 accountOrganization: name,
                 accountEmail: usage.accountEmail,

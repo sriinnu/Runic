@@ -234,7 +234,7 @@ extension UsageExporter {
     private static func exportWindowsCSV(store: UsageStore, provider: UsageProvider) -> String {
         var lines = ["window_label,used_percent,reset_description,resets_at"]
         guard let snapshot = store.snapshot(for: provider) else { return lines.joined(separator: "\n") }
-        for window in [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self) {
+        for window in snapshot.allWindows {
             let label = Self.csvEscape(window.label ?? "Usage window")
             let reset = Self.csvEscape(window.resetDescription ?? "")
             let resetsAt = window.resetsAt.map(\.description) ?? ""

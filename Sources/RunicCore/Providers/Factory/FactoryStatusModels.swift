@@ -155,6 +155,15 @@ public struct FactoryStatusSnapshot: Sendable {
 
     /// Convert to UsageSnapshot for the common provider interface
     public func toUsageSnapshot() -> UsageSnapshot {
+        let periodWindowMinutes: Int? = if let periodStart = self.periodStart, let periodEnd = self.periodEnd {
+            {
+                let mins = Int(periodEnd.timeIntervalSince(periodStart) / 60)
+                return mins > 0 ? mins : nil
+            }()
+        } else {
+            nil
+        }
+
         // Primary: Standard tokens used (as percentage of allowance)
         let standardUsage = self.calculateUsage(
             used: self.standardUserTokens,
@@ -163,7 +172,7 @@ public struct FactoryStatusSnapshot: Sendable {
 
         let primary = RateWindow(
             usedPercent: standardUsage.usedPercent,
-            windowMinutes: nil,
+            windowMinutes: periodWindowMinutes,
             resetsAt: self.periodEnd,
             resetDescription: self.periodEnd.map { Self.formatResetDate($0) },
             hasKnownLimit: standardUsage.hasKnownLimit)
@@ -176,7 +185,7 @@ public struct FactoryStatusSnapshot: Sendable {
 
         let secondary = RateWindow(
             usedPercent: premiumUsage.usedPercent,
-            windowMinutes: nil,
+            windowMinutes: periodWindowMinutes,
             resetsAt: self.periodEnd,
             resetDescription: self.periodEnd.map { Self.formatResetDate($0) },
             hasKnownLimit: premiumUsage.hasKnownLimit)
@@ -225,7 +234,7 @@ public struct FactoryStatusSnapshot: Sendable {
         if allowance > unlimitedThreshold || allowance <= 0 {
             return (0, false)
         }
-        return (min(100, Double(used) / Double(allowance) * 100), nil)
+        return (min(100, max(0, Double(used) / Double(allowance) * 100)), nil)
     }
 
     private static func formatResetDate(_ date: Date) -> String {

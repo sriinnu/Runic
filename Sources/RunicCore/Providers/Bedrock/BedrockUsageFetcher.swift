@@ -22,11 +22,13 @@ struct BedrockUsageFetcher {
     static func fetchModels(
         region: String,
         profile: String?,
-        modelFilter: String?) async throws -> BedrockModelsResponse
+        modelFilter: String?,
+        env: [String: String] = ProcessInfo.processInfo.environment) async throws -> BedrockModelsResponse
     {
         let output = try await self.runAWSCLI(
             arguments: ["bedrock", "list-foundation-models", "--region", region, "--output", "json"],
-            profile: profile)
+            profile: profile,
+            env: env)
 
         let decoder = JSONDecoder()
         let decoded: BedrockModelsResponse
@@ -49,8 +51,12 @@ struct BedrockUsageFetcher {
         return BedrockModelsResponse(modelSummaries: filtered)
     }
 
-    private static func runAWSCLI(arguments: [String], profile: String?) async throws -> Data {
-        var environment = ProcessInfo.processInfo.environment
+    private static func runAWSCLI(
+        arguments: [String],
+        profile: String?,
+        env: [String: String]) async throws -> Data
+    {
+        var environment = ProcessInfo.processInfo.environment.merging(env) { _, new in new }
         environment["PATH"] = self.effectivePATH(existing: environment["PATH"])
         if let profile = self.cleaned(profile) {
             environment["AWS_PROFILE"] = profile

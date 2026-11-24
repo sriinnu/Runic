@@ -11,9 +11,15 @@ struct DeepSeekBalanceResponse: Decodable {
         let topped_up_balance: String?
 
         var totalBalanceValue: Double? {
-            Self.parse(self.total_balance) ??
-                Self.parse(self.topped_up_balance) ??
-                Self.parse(self.granted_balance)
+            if let total = Self.parse(self.total_balance) {
+                return total
+            }
+            let toppedUp = Self.parse(self.topped_up_balance)
+            let granted = Self.parse(self.granted_balance)
+            if toppedUp != nil || granted != nil {
+                return (toppedUp ?? 0) + (granted ?? 0)
+            }
+            return nil
         }
 
         private static func parse(_ raw: String?) -> Double? {
@@ -53,20 +59,43 @@ enum DeepSeekUsageFetcher {
 }
 
 extension DeepSeekBalanceResponse {
-    private var preferredBalanceInfo: BalanceInfo? {
+    private static func normalizedCurrency(_ raw: String?) -> String? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
+              !trimmed.isEmpty
+        else { return nil }
+        return trimmed
+    }
+
+    private var preferredBalanceIndex: Int? {
         guard let infos = self.balance_infos, !infos.isEmpty else { return nil }
-        if let funded = infos.first(where: { ($0.totalBalanceValue ?? 0) > 0 }) {
-            return funded
-        }
-        return infos.first
+        return infos.firstIndex(where: { ($0.totalBalanceValue ?? 0) > 0 }) ?? infos.startIndex
+    }
+
+    private var preferredBalanceInfo: BalanceInfo? {
+        guard let infos = self.balance_infos, let idx = self.preferredBalanceIndex else { return nil }
+        return infos[idx]
     }
 
     private var remainingBalance: Double {
         self.preferredBalanceInfo?.totalBalanceValue ?? 0
     }
 
-    private var currencyCode: String {
-        self.preferredBalanceInfo?.currency?.uppercased() ?? "USD"
+    private var currencyCode: String? {
+        Self.normalizedCurrency(self.preferredBalanceInfo?.currency)
+    }
+
+    private var additionalCurrencySummary: String? {
+        let preferredCurrency = self.currencyCode
+        let preferredIndex = self.preferredBalanceIndex
+        let extras = (self.balance_infos ?? []).enumerated().compactMap { index, info -> String? in
+            guard index != preferredIndex else { return nil }
+            guard let value = info.totalBalanceValue, value > 0 else { return nil }
+            let code = Self.normalizedCurrency(info.currency)
+            if let code, code == preferredCurrency { return nil }
+            let formatted = String(format: "%.2f", value)
+            return code.map { "\(formatted) \($0)" } ?? formatted
+        }
+        return extras.isEmpty ? nil : extras.joined(separator: " · ")
     }
 
     func toUsageSnapshot() -> UsageSnapshot {
@@ -74,12 +103,19 @@ extension DeepSeekBalanceResponse {
         // percentage — mark the window as limit-less so UIs show the balance
         // text instead of a fake 0% gauge. The live balance itself flows to
         // the UI through `toCreditsSnapshot()`.
-        UsageSnapshot(
+        let primaryAmount = String(format: "%.2f", self.remainingBalance)
+        let baseDescription = self.currencyCode.map { "Balance: \(primaryAmount) \($0)" }
+            ?? "Balance: \(primaryAmount)"
+        let resetDescription = [baseDescription, self.additionalCurrencySummary]
+            .compactMap(\.self)
+            .joined(separator: " · ")
+
+        return UsageSnapshot(
             primary: RateWindow(
                 usedPercent: 0,
                 windowMinutes: nil,
                 resetsAt: nil,
-                resetDescription: "Balance: \(String(format: "%.2f", self.remainingBalance)) \(self.currencyCode)",
+                resetDescription: resetDescription,
                 hasKnownLimit: false),
             secondary: nil,
             tertiary: nil,

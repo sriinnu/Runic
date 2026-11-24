@@ -26,6 +26,7 @@ extension GeminiStatusProbe {
         }
 
         var accessToken = storedAccessToken
+        var didRefresh = false
         if let expiry = creds.expiryDate, expiry < Date() {
             Self.log.info("Token expired; attempting refresh", metadata: [
                 "expiry": "\(expiry)",
@@ -41,35 +42,50 @@ extension GeminiStatusProbe {
                 timeout: timeout,
                 homeDirectory: homeDirectory,
                 dataLoader: dataLoader)
+            didRefresh = true
         }
 
-        // Discover the Gemini project ID for accurate quota data
-        let projectId = try? await Self.discoverGeminiProjectId(
-            accessToken: accessToken,
-            timeout: timeout,
-            dataLoader: dataLoader)
+        func performQuotaRequest(token: String) async throws -> (Data, HTTPURLResponse) {
+            // Discover the Gemini project ID for accurate quota data
+            let projectId = try? await Self.discoverGeminiProjectId(
+                accessToken: token,
+                timeout: timeout,
+                dataLoader: dataLoader)
 
-        guard let url = URL(string: Self.quotaEndpoint) else {
-            throw GeminiStatusProbeError.apiError("Invalid endpoint URL")
+            guard let url = URL(string: Self.quotaEndpoint) else {
+                throw GeminiStatusProbeError.apiError("Invalid endpoint URL")
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            // Include project ID if discovered for accurate quota
+            if let projectId {
+                request.httpBody = Data("{\"project\": \"\(projectId)\"}".utf8)
+            } else {
+                request.httpBody = Data("{}".utf8)
+            }
+            request.timeoutInterval = timeout
+
+            let (responseData, response) = try await dataLoader(request)
+            guard let http = response as? HTTPURLResponse else {
+                throw GeminiStatusProbeError.apiError("Invalid response")
+            }
+            return (responseData, http)
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        var (data, httpResponse) = try await performQuotaRequest(token: accessToken)
 
-        // Include project ID if discovered for accurate quota
-        if let projectId {
-            request.httpBody = Data("{\"project\": \"\(projectId)\"}".utf8)
-        } else {
-            request.httpBody = Data("{}".utf8)
-        }
-        request.timeoutInterval = timeout
-
-        let (data, response) = try await dataLoader(request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw GeminiStatusProbeError.apiError("Invalid response")
+        if httpResponse.statusCode == 401, !didRefresh, let refreshToken = creds.refreshToken {
+            Self.log.info("Quota request returned 401; attempting token refresh")
+            accessToken = try await Self.refreshAccessToken(
+                refreshToken: refreshToken,
+                timeout: timeout,
+                homeDirectory: homeDirectory,
+                dataLoader: dataLoader)
+            (data, httpResponse) = try await performQuotaRequest(token: accessToken)
         }
 
         if httpResponse.statusCode == 401 {

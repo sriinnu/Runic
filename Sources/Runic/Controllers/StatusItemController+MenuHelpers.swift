@@ -357,7 +357,7 @@ extension StatusItemController {
             ledgerUpdatedAt: ledgerUpdatedAt,
             providerContextStatus: providerContextStatus,
             account: self.account,
-            isRefreshing: self.store.refreshingProviders.contains(target),
+            isRefreshing: self.store.isRefreshing(provider: target),
             lastError: self.store.error(for: target),
             usageBarsShowUsed: self.settings.usageBarsShowUsed,
             usageMetricDisplayMode: self.settings.usageMetricDisplayMode,

@@ -70,17 +70,23 @@ public struct MiniMaxModelQuota: Sendable {
     /// `current_interval_remaining_percent`). When set, `usedPercent` is
     /// derived directly from this value instead of computed from counts.
     public let remainingPercent: Double?
+    public let windowMinutes: Int?
+    public let resetsAt: Date?
 
     public init(
         total: Int,
         used: Int,
         modelName: String? = nil,
-        remainingPercent: Double? = nil)
+        remainingPercent: Double? = nil,
+        windowMinutes: Int? = nil,
+        resetsAt: Date? = nil)
     {
         self.total = total
         self.used = used
         self.modelName = modelName
         self.remainingPercent = remainingPercent
+        self.windowMinutes = windowMinutes
+        self.resetsAt = resetsAt
     }
 
     var remaining: Int {
@@ -106,9 +112,9 @@ public struct MiniMaxModelQuota: Sendable {
     {
         RateWindow(
             usedPercent: self.usedPercent,
-            windowMinutes: windowMinutes ?? 24 * 60,
-            resetsAt: resetsAt,
-            resetDescription: "\(self.remaining) / \(self.total) remaining",
+            windowMinutes: windowMinutes ?? self.windowMinutes ?? 24 * 60,
+            resetsAt: resetsAt ?? self.resetsAt,
+            resetDescription: self.total > 0 ? "\(self.remaining) / \(self.total) remaining" : nil,
             label: self.modelName?.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 }
@@ -159,6 +165,9 @@ public struct MiniMaxUsageSnapshot: Sendable {
 
     public var isValid: Bool {
         self.total > 0
+            || self.remainingPercent != nil
+            || self.weeklyQuota != nil
+            || !self.additionalModels.isEmpty
     }
 }
 
@@ -179,8 +188,10 @@ extension MiniMaxUsageSnapshot {
             windowMinutes: 7 * 24 * 60,
             resetsAt: self.weeklyResetsAt)
         // Additional model quotas beyond the primary and beyond the weekly
-        // slot fill tertiary.
-        let tertiary = self.additionalModels.first?.toRateWindow()
+        // slot fill tertiary, with any further models preserved in additionalWindows.
+        let extraModelWindows = self.additionalModels.map { $0.toRateWindow() }
+        let tertiary = extraModelWindows.first
+        let overflow = extraModelWindows.count > 1 ? Array(extraModelWindows.dropFirst()) : nil
 
         let identity = ProviderIdentitySnapshot(
             providerID: providerID,
@@ -192,6 +203,7 @@ extension MiniMaxUsageSnapshot {
             primary: session ?? weekly ?? .noLimitsReported,
             secondary: session == nil ? nil : weekly,
             tertiary: tertiary,
+            additionalWindows: overflow,
             providerCost: nil,
             updatedAt: self.updatedAt,
             identity: identity)
@@ -228,6 +240,10 @@ public struct MiniMaxUsageFetcher: Sendable {
             throw MiniMaxUsageError.networkError("Invalid response")
         }
 
+        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+            throw MiniMaxUsageError.invalidCredentials
+        }
+
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Self.log.error("MiniMax API returned \(httpResponse.statusCode): \(errorMessage)")
@@ -236,21 +252,29 @@ public struct MiniMaxUsageFetcher: Sendable {
 
         Self.log.debug("MiniMax API response: HTTP \(httpResponse.statusCode), \(data.count) bytes")
 
+        return try Self.parseUsageResponse(data)
+    }
+
+    static func parseUsageResponse(_ data: Data, now: Date = Date()) throws -> MiniMaxUsageSnapshot {
         let decoder = JSONDecoder()
         do {
             let apiResponse = try decoder.decode(MiniMaxQuotaResponse.self, from: data)
 
+            if apiResponse.baseResponse.statusCode == 1004 {
+                throw MiniMaxUsageError.invalidCredentials
+            }
             if apiResponse.baseResponse.statusCode != 0 {
                 throw MiniMaxUsageError.apiError(apiResponse.baseResponse.statusMsg)
             }
 
             guard let models = apiResponse.modelRemains, !models.isEmpty else {
-                return MiniMaxUsageSnapshot(total: 0, used: 0, updatedAt: Date())
+                return MiniMaxUsageSnapshot(total: 0, used: 0, updatedAt: now)
             }
 
-            // Pick the first model with a non-zero session quota as primary.
-            guard let primaryModel = models.first(where: { $0.currentIntervalTotalCount > 0 })
-                ?? models.first
+            // Pick the first model with a non-zero session quota (count or percent) as primary.
+            guard let primaryModel = models.first(where: {
+                $0.currentIntervalTotalCount > 0 || $0.currentIntervalRemainingPercent != nil
+            }) ?? models.first
             else {
                 throw MiniMaxUsageError.parseFailed("No model quota found")
             }
@@ -266,24 +290,28 @@ public struct MiniMaxUsageFetcher: Sendable {
                     let name = ($0.modelName ?? "")
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     return !name.isEmpty && name != primaryName
-                        && $0.currentIntervalTotalCount > 0
+                        && ($0.currentIntervalTotalCount > 0 || $0.currentIntervalRemainingPercent != nil)
                 }
                 .map {
                     MiniMaxModelQuota(
                         total: $0.currentIntervalTotalCount,
                         used: $0.currentIntervalUsageCount,
                         modelName: $0.modelName,
-                        remainingPercent: $0.currentIntervalRemainingPercent)
+                        remainingPercent: $0.currentIntervalRemainingPercent,
+                        windowMinutes: Self.windowMinutes(start: $0.startTime, end: $0.endTime),
+                        resetsAt: Self.resolveReset(remainsTime: $0.remainsTime, endTime: $0.endTime))
                 }
 
-            // Build weekly quota when the endpoint supplies a non-zero total.
-            let weeklyQuota: MiniMaxModelQuota? = if let weeklyTotal = primaryModel.currentWeeklyTotalCount,
-                                                     weeklyTotal > 0
+            // Build weekly quota when the endpoint supplies a count total or remaining percentage.
+            let weeklyLabel = primaryName.isEmpty ? "Weekly" : "\(primaryName) Weekly"
+            let weeklyTotal = primaryModel.currentWeeklyTotalCount ?? 0
+            let weeklyQuota: MiniMaxModelQuota? = if weeklyTotal > 0 || primaryModel
+                .currentWeeklyRemainingPercent != nil
             {
                 MiniMaxModelQuota(
                     total: weeklyTotal,
                     used: primaryModel.currentWeeklyUsageCount ?? 0,
-                    modelName: primaryName,
+                    modelName: weeklyLabel,
                     remainingPercent: primaryModel.currentWeeklyRemainingPercent)
             } else {
                 nil
@@ -309,7 +337,7 @@ public struct MiniMaxUsageFetcher: Sendable {
                 sessionWindowMinutes: sessionWindowMinutes,
                 sessionResetsAt: sessionResetsAt,
                 weeklyResetsAt: weeklyResetsAt,
-                updatedAt: Date())
+                updatedAt: now)
 
         } catch let error as MiniMaxUsageError {
             throw error

@@ -66,6 +66,8 @@ public struct CopilotUsageResponse: Sendable, Decodable {
     public let copilotPlan: String?
     public let assignedDate: String?
     public let quotaResetDate: String?
+    public let quotaResetDateUTC: String?
+    public let limitedUserResetDate: String?
     public let accessTypeSKU: String?
     public let chatEnabled: Bool?
     public let organizationLoginList: [String]?
@@ -76,6 +78,8 @@ public struct CopilotUsageResponse: Sendable, Decodable {
         case copilotPlan = "copilot_plan"
         case assignedDate = "assigned_date"
         case quotaResetDate = "quota_reset_date"
+        case quotaResetDateUTC = "quota_reset_date_utc"
+        case limitedUserResetDate = "limited_user_reset_date"
         case accessTypeSKU = "access_type_sku"
         case chatEnabled = "chat_enabled"
         case organizationLoginList = "organization_login_list"

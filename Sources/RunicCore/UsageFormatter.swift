@@ -538,4 +538,58 @@ public enum UsageFormatter {
         }
         return nil
     }
+
+    /// Resolves a window's display title, honoring its own explicit label before
+    /// falling back to a provider-slot default.
+    public static func windowTitle(for window: RateWindow, fallback: String) -> String {
+        guard let own = window.label?.trimmingCharacters(in: .whitespacesAndNewlines), !own.isEmpty else {
+            return fallback
+        }
+        return own
+    }
+
+    private static let resetRelativeDurationRegex: NSRegularExpression? = try? NSRegularExpression(
+        pattern: #"^(?:in\s+)?(?:\d+(?:\.\d+)?\s*"#
+            + #"(?:d(?:ays?)?|h(?:ours?|rs?)?|m(?:in(?:ute)?s?)?|s(?:ec(?:ond)?s?)?)[,\s]*)+$"#,
+        options: [])
+
+    private static let resetTimingPrefixRegex: NSRegularExpression? = try? NSRegularExpression(
+        pattern: #"^(?:(?:at|on|after)\s+\S|(?:today|tomorrow)\b|"#
+            + #"(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b|"#
+            + #"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|"#
+            + #"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d|"#
+            + #"\d{1,2}:\d{2}\b|\d{1,2}\s*(?:am|pm)\b|\d{4}-\d{2}-\d{2}\b)"#,
+        options: [])
+
+    private static let resetCycleWords: Set<String> = [
+        "daily",
+        "weekly",
+        "monthly",
+        "hourly",
+        "today",
+        "tomorrow",
+        "now",
+        "soon",
+    ]
+
+    /// Formats a `RateWindow.resetDescription` for CLI/menu display without
+    /// prepending `"Resets "` to balances, status lines, or activity summaries.
+    public static func formattedWindowDescription(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+        let lower = trimmed.lowercased()
+        if lower.hasPrefix("resets") || lower.hasPrefix("reset ") {
+            return trimmed
+        }
+        if Self.resetCycleWords.contains(lower) {
+            return "Resets \(trimmed)"
+        }
+        let range = NSRange(lower.startIndex..<lower.endIndex, in: lower)
+        if Self.resetRelativeDurationRegex?.firstMatch(in: lower, options: [], range: range) != nil
+            || Self.resetTimingPrefixRegex?.firstMatch(in: lower, options: [], range: range) != nil
+        {
+            return "Resets \(trimmed)"
+        }
+        return trimmed
+    }
 }

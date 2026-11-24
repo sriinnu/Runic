@@ -88,6 +88,10 @@ public struct CursorStatusSnapshot: Sendable {
     public let teamOnDemandUsedUSD: Double?
     /// Team on-demand limit in USD
     public let teamOnDemandLimitUSD: Double?
+    /// Billing cycle duration in minutes when start/end dates are provided
+    public let billingCycleWindowMinutes: Int?
+    /// Whether the plan has a finite measured quota
+    public let hasKnownLimit: Bool
     /// Billing cycle reset date
     public let billingCycleEnd: Date?
     /// Membership type (e.g., "enterprise", "pro", "hobby")
@@ -107,6 +111,8 @@ public struct CursorStatusSnapshot: Sendable {
         onDemandLimitUSD: Double?,
         teamOnDemandUsedUSD: Double?,
         teamOnDemandLimitUSD: Double?,
+        billingCycleWindowMinutes: Int? = nil,
+        hasKnownLimit: Bool = true,
         billingCycleEnd: Date?,
         membershipType: String?,
         accountEmail: String?,
@@ -120,6 +126,8 @@ public struct CursorStatusSnapshot: Sendable {
         self.onDemandLimitUSD = onDemandLimitUSD
         self.teamOnDemandUsedUSD = teamOnDemandUsedUSD
         self.teamOnDemandLimitUSD = teamOnDemandLimitUSD
+        self.billingCycleWindowMinutes = billingCycleWindowMinutes
+        self.hasKnownLimit = hasKnownLimit
         self.billingCycleEnd = billingCycleEnd
         self.membershipType = membershipType
         self.accountEmail = accountEmail
@@ -130,15 +138,17 @@ public struct CursorStatusSnapshot: Sendable {
     /// Convert to UsageSnapshot for the common provider interface
     public func toUsageSnapshot() -> UsageSnapshot {
         let primary = RateWindow(
-            usedPercent: self.planPercentUsed,
-            windowMinutes: nil,
+            usedPercent: self.hasKnownLimit ? min(100, max(0, self.planPercentUsed)) : 0,
+            windowMinutes: self.billingCycleWindowMinutes,
             resetsAt: self.billingCycleEnd,
-            resetDescription: self.billingCycleEnd.map { Self.formatResetDate($0) })
+            resetDescription: self.billingCycleEnd.map { Self.formatResetDate($0) },
+            hasKnownLimit: self.hasKnownLimit ? nil : false)
 
         let resolvedOnDemandUsed: Double
         let resolvedOnDemandLimit: Double?
 
         if let teamLimit = self.teamOnDemandLimitUSD,
+           teamLimit > 0,
            let teamUsed = self.teamOnDemandUsedUSD
         {
             resolvedOnDemandUsed = teamUsed
@@ -152,8 +162,8 @@ public struct CursorStatusSnapshot: Sendable {
                                         limit > 0
         {
             RateWindow(
-                usedPercent: (resolvedOnDemandUsed / limit) * 100,
-                windowMinutes: nil,
+                usedPercent: min(100, max(0, (resolvedOnDemandUsed / limit) * 100)),
+                windowMinutes: self.billingCycleWindowMinutes,
                 resetsAt: self.billingCycleEnd,
                 resetDescription: self.billingCycleEnd.map { Self.formatResetDate($0) })
         } else {

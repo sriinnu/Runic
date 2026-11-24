@@ -27,6 +27,7 @@ public struct TTYCommandRunner {
         public var stopOnURL: Bool
         public var stopOnSubstrings: [String]
         public var settleAfterStop: TimeInterval
+        public var env: [String: String]?
 
         public init(
             rows: UInt16 = 50,
@@ -40,7 +41,8 @@ public struct TTYCommandRunner {
             sendOnSubstrings: [String: String] = [:],
             stopOnURL: Bool = false,
             stopOnSubstrings: [String] = [],
-            settleAfterStop: TimeInterval = 0.25)
+            settleAfterStop: TimeInterval = 0.25,
+            env: [String: String]? = nil)
         {
             self.rows = rows
             self.cols = cols
@@ -54,6 +56,7 @@ public struct TTYCommandRunner {
             self.stopOnURL = stopOnURL
             self.stopOnSubstrings = stopOnSubstrings
             self.settleAfterStop = settleAfterStop
+            self.env = env
         }
     }
 
@@ -210,18 +213,21 @@ public struct TTYCommandRunner {
         throw Error.binaryNotFound(binary)
     }
 
-    public static func which(_ tool: String) -> String? {
-        if tool == "codex", let located = BinaryLocator.resolveCodexBinary() { return located }
-        if tool == "claude", let located = BinaryLocator.resolveClaudeBinary() { return located }
-        if tool == "muse", let located = BinaryLocator.resolveMuseBinary() { return located }
-        return self.runWhich(tool)
+    public static func which(
+        _ tool: String,
+        env: [String: String] = ProcessInfo.processInfo.environment) -> String?
+    {
+        if tool == "codex", let located = BinaryLocator.resolveCodexBinary(env: env) { return located }
+        if tool == "claude", let located = BinaryLocator.resolveClaudeBinary(env: env) { return located }
+        if tool == "muse", let located = BinaryLocator.resolveMuseBinary(env: env) { return located }
+        return self.runWhich(tool, env: env)
     }
 
-    private static func runWhich(_ tool: String) -> String? {
+    private static func runWhich(_ tool: String, env baseEnv: [String: String]) -> String? {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         proc.arguments = [tool]
-        var env = ProcessInfo.processInfo.environment
+        var env = baseEnv
         env["PATH"] = PathBuilder.effectivePATH(purposes: [.tty, .nodeTooling], env: env)
         proc.environment = env
         let pipe = Pipe()

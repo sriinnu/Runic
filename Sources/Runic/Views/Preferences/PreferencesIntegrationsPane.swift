@@ -484,6 +484,7 @@ struct IntegrationsPane: View {
         let age = max(0, Int(Date().timeIntervalSince(state.generatedAt)))
         let populated = state.providers.filter { provider in
             provider.primary != nil || provider.secondary != nil || provider.tertiary != nil ||
+                !(provider.additionalWindows?.isEmpty ?? true) ||
                 provider.creditsRemaining != nil || provider.balance != nil || provider.extraUsage != nil
         }
         let names = populated.map(\.id.rawValue).joined(separator: ", ")
@@ -703,6 +704,11 @@ private struct MCPDataPreview: View {
                     if let tertiary = provider.tertiary {
                         self.value(Self.windowText(tertiary, name: "Tertiary"))
                     }
+                    if let additional = provider.additionalWindows {
+                        ForEach(Array(additional.enumerated()), id: \.offset) { index, window in
+                            self.value(Self.windowText(window, name: "Quota \(index + 4)"))
+                        }
+                    }
                     if let credits = provider.creditsRemaining {
                         self.value("Credits remaining: \(Self.number(credits))")
                     } else if provider.creditsHasError == true {
@@ -724,6 +730,7 @@ private struct MCPDataPreview: View {
                         }
                     }
                     if provider.primary == nil, provider.secondary == nil, provider.tertiary == nil,
+                       provider.additionalWindows?.isEmpty ?? true,
                        provider.creditsRemaining == nil, provider.balance == nil, provider.extraUsage == nil
                     {
                         self.value(provider.hasError ? "Usage refresh failed" : "No provider values yet")

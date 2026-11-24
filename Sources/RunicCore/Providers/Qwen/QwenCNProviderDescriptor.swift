@@ -63,10 +63,10 @@ struct QwenCNAPIFetchStrategy: ProviderFetchStrategy {
         guard let tokenRes = context.credential(for: .qwenCN) else {
             throw QwenCNSettingsError.missingToken
         }
-        let baseURL = Self.resolveBaseURL(context: context)
+        let baseURL = Self.resolveBaseURL(context: context) ?? QwenUsageFetcher.chinaBaseURL
         let usage = try await QwenUsageFetcher.fetchUsageOrEmpty(apiKey: tokenRes.token, baseURL: baseURL)
         return self.makeResult(
-            usage: usage.toUsageSnapshot(),
+            usage: usage.toUsageSnapshot(providerID: .qwenCN),
             sourceLabel: tokenRes.source.rawValue)
     }
 

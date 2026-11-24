@@ -170,18 +170,16 @@ public struct CopilotUsageFetcher: Sendable {
         return cleaned
     }
 
-    private func makeSnapshot(from usage: CopilotUsageResponse) throws -> UsageSnapshot {
-        let resetDate = self.parseDate(usage.quotaResetDate)
-        let orderedSnapshots = self.orderedQuotaSnapshots(usage.quotaSnapshots)
-        let primary = self.makeRateWindow(from: orderedSnapshots.first, resetAt: resetDate)
-        let secondary = self.makeRateWindow(
-            from: orderedSnapshots.count > 1 ? orderedSnapshots[1] : nil,
-            resetAt: resetDate)
-        let tertiary = self.makeRateWindow(
-            from: orderedSnapshots.count > 2 ? orderedSnapshots[2] : nil,
-            resetAt: resetDate)
-
-        let resolvedPrimary = primary ?? .noLimitsReported
+    func makeSnapshot(from usage: CopilotUsageResponse) throws -> UsageSnapshot {
+        let resetDate = self.parseDate(usage.quotaResetDateUTC)
+            ?? self.parseDate(usage.quotaResetDate)
+            ?? self.parseDate(usage.limitedUserResetDate)
+        let mapped = self.orderedQuotaSnapshots(usage.quotaSnapshots)
+            .compactMap { self.makeRateWindow(from: $0, resetAt: resetDate) }
+        let windows = mapped.filter { $0.hasKnownLimit != false } + mapped.filter { $0.hasKnownLimit == false }
+        let primary = windows.first ?? .noLimitsReported
+        let secondary = windows.count > 1 ? windows[1] : nil
+        let tertiary = windows.count > 2 ? windows[2] : nil
 
         let plan = usage.copilotPlan?
             .replacingOccurrences(of: "_", with: " ")
@@ -195,7 +193,7 @@ public struct CopilotUsageFetcher: Sendable {
             accountOrganization: organization,
             loginMethod: plan)
         return UsageSnapshot(
-            primary: resolvedPrimary,
+            primary: primary,
             secondary: secondary,
             tertiary: tertiary,
             providerCost: nil,
@@ -216,6 +214,15 @@ public struct CopilotUsageFetcher: Sendable {
         resetAt: Date?) -> RateWindow?
     {
         guard let snapshot else { return nil }
+        if snapshot.unlimited == true {
+            return RateWindow(
+                usedPercent: 0,
+                windowMinutes: nil,
+                resetsAt: nil,
+                resetDescription: "Unlimited",
+                label: self.quotaLabel(snapshot.quotaId),
+                hasKnownLimit: false)
+        }
         guard let percentRemaining = snapshot.normalizedPercentRemaining else { return nil }
         let usedPercent = max(0, min(100, 100 - percentRemaining))
 
@@ -224,15 +231,30 @@ public struct CopilotUsageFetcher: Sendable {
             windowMinutes: nil,
             resetsAt: resetAt,
             resetDescription: nil,
-            label: self.quotaLabel(snapshot.quotaId))
+            label: self.quotaLabel(snapshot.quotaId),
+            hasKnownLimit: true)
     }
 
-    private func parseDate(_ raw: String?) -> Date? {
+    func parseDate(_ raw: String?) -> Date? {
         guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        let fractionalISO = ISO8601DateFormatter()
+        fractionalISO.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let parsed = fractionalISO.date(from: raw) {
+            return parsed
+        }
+        let standardISO = ISO8601DateFormatter()
+        standardISO.formatOptions = [.withInternetDateTime]
+        if let parsed = standardISO.date(from: raw) {
+            return parsed
+        }
         if let parsed = try? Date(raw, strategy: .iso8601) {
             return parsed
         }
-        return ISO8601DateFormatter().date(from: raw)
+        let dayFormatter = DateFormatter()
+        dayFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dayFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        return dayFormatter.date(from: raw)
     }
 
     private func quotaLabel(_ quotaID: String?) -> String? {
@@ -248,26 +270,31 @@ public struct CopilotUsageFetcher: Sendable {
         .QuotaSnapshots?) -> [CopilotUsageResponse.QuotaSnapshot]
     {
         guard let snapshots else { return [] }
-        let candidates = [snapshots.premiumInteractions, snapshots.completions, snapshots.chat]
+        let candidates: [(slot: String, snapshot: CopilotUsageResponse.QuotaSnapshot?)] = [
+            ("premium_interactions", snapshots.premiumInteractions),
+            ("completions", snapshots.completions),
+            ("chat", snapshots.chat),
+        ]
         var ordered: [CopilotUsageResponse.QuotaSnapshot] = []
         var seen: Set<String> = []
 
-        for candidate in candidates {
-            guard let candidate else { continue }
-            let fingerprint = self.quotaFingerprint(candidate)
+        for entry in candidates {
+            guard let candidate = entry.snapshot else { continue }
+            let fingerprint = self.quotaFingerprint(candidate, slot: entry.slot)
             guard seen.insert(fingerprint).inserted else { continue }
             ordered.append(candidate)
         }
         return ordered
     }
 
-    private func quotaFingerprint(_ snapshot: CopilotUsageResponse.QuotaSnapshot) -> String {
+    private func quotaFingerprint(_ snapshot: CopilotUsageResponse.QuotaSnapshot, slot: String) -> String {
         if let quotaID = snapshot.quotaId?.trimmingCharacters(in: .whitespacesAndNewlines),
            !quotaID.isEmpty
         {
             return "id:\(quotaID.lowercased())"
         }
-        return "fallback:\(snapshot.entitlement ?? -1)|\(snapshot.normalizedRemaining ?? -1)|" +
+        return "fallback:\(slot)|\(snapshot.unlimited ?? false)|" +
+            "\(snapshot.entitlement ?? -1)|\(snapshot.normalizedRemaining ?? -1)|" +
             "\(snapshot.percentRemaining ?? -1)|\(snapshot.timestampUTC ?? "")"
     }
 

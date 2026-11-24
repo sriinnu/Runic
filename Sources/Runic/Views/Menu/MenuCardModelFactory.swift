@@ -402,15 +402,25 @@ extension UsageMenuCardView.Model {
             // model-scoped weekly...). A window that names itself wins;
             // opus-style providers keep their metadata label otherwise.
             let fallbackTitle = input.metadata.opusLabel ?? "Sonnet"
-            let ownLabel = tertiary.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let title = ownLabel.isEmpty ? fallbackTitle : ownLabel
             metrics.append(Metric(
                 id: "tertiary",
-                title: title,
+                title: title(tertiary, fallback: fallbackTitle),
                 percent: Self.metricPercent(for: tertiary, showUsed: input.usageBarsShowUsed),
                 percentStyle: percentStyle,
                 resetText: Self.resetText(for: tertiary, prefersCountdown: true),
                 detailText: nil))
+        }
+
+        if let additional = snapshot.additionalWindows {
+            for (idx, extra) in additional.enumerated() {
+                metrics.append(Metric(
+                    id: "extra-\(idx)",
+                    title: title(extra, fallback: "Quota \(idx + 4)"),
+                    percent: Self.metricPercent(for: extra, showUsed: input.usageBarsShowUsed),
+                    percentStyle: percentStyle,
+                    resetText: Self.resetText(for: extra, prefersCountdown: true),
+                    detailText: nil))
+            }
         }
 
         if input.provider == .codex, let remaining = input.dashboard?.codeReviewRemainingPercent {

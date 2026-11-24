@@ -24,7 +24,8 @@ struct VertexAIUsageFetcher {
 
     static func fetchModels(
         project: String,
-        location: String) async throws -> VertexAIModelsResponse
+        location: String,
+        env: [String: String] = ProcessInfo.processInfo.environment) async throws -> VertexAIModelsResponse
     {
         let output = try await self.runGCloudCLI(
             arguments: [
@@ -32,7 +33,8 @@ struct VertexAIUsageFetcher {
                 "--project=\(project)",
                 "--region=\(location)",
                 "--format=json",
-            ])
+            ],
+            env: env)
 
         let decoder = JSONDecoder()
         let decoded: VertexAIModelsResponse
@@ -45,8 +47,14 @@ struct VertexAIUsageFetcher {
         return decoded
     }
 
-    private static func runGCloudCLI(arguments: [String]) async throws -> Data {
+    private static func runGCloudCLI(
+        arguments: [String],
+        env: [String: String]) async throws -> Data
+    {
         var environment = ProcessInfo.processInfo.environment
+        for (key, value) in env {
+            environment[key] = value
+        }
         environment["PATH"] = self.effectivePATH(existing: environment["PATH"])
 
         do {

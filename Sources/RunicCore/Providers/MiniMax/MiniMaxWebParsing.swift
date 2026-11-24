@@ -122,10 +122,20 @@ enum MiniMaxWebParsing {
             return candidateName != primaryName
         }
 
-        let startTime = self.timestamp(payload["start_time"])
-        let endTime = self.timestamp(payload["end_time"])
-        let remainsTime = self.doubleValue(payload["remains_time"])
-        let resetsAt = self.resolveResetDate(remainsTime: remainsTime, endTime: endTime, now: now)
+        let rawStart = self.doubleValue(payload["start_time"])
+        let rawEnd = self.doubleValue(payload["end_time"])
+        let startTime = rawStart.flatMap { self.timestamp($0) } ?? modelRemains.startTime
+        let endTime = rawEnd.flatMap { self.timestamp($0) } ?? modelRemains.endTime
+        let usesMillisecondTimestamps =
+            (rawStart.map { $0 > 10_000_000_000 } ?? false) ||
+            (rawEnd.map { $0 > 10_000_000_000 } ?? false) ||
+            modelRemains.usesMillisecondTimestamps
+        let remainsTime = self.doubleValue(payload["remains_time"]) ?? modelRemains.remainsTime
+        let resetsAt = self.resolveResetDate(
+            remainsTime: remainsTime,
+            endTime: endTime,
+            now: now,
+            usesMillisecondTimestamps: usesMillisecondTimestamps)
         let windowMinutes = self.windowMinutes(start: startTime, end: endTime)
         let resetDescription = resetsAt.map { UsageFormatter.resetDescription(from: $0, now: now) }
         let planName = self.firstString(in: payload, keys: ["plan_name", "plan", "tier", "plan_title", "planType"])
@@ -271,6 +281,26 @@ enum MiniMaxWebParsing {
     struct ModelRemainsUsage {
         let usedPercent: Double
         let modelName: String?
+        let startTime: Date?
+        let endTime: Date?
+        let remainsTime: Double?
+        let usesMillisecondTimestamps: Bool
+
+        init(
+            usedPercent: Double,
+            modelName: String?,
+            startTime: Date? = nil,
+            endTime: Date? = nil,
+            remainsTime: Double? = nil,
+            usesMillisecondTimestamps: Bool = false)
+        {
+            self.usedPercent = usedPercent
+            self.modelName = modelName
+            self.startTime = startTime
+            self.endTime = endTime
+            self.remainsTime = remainsTime
+            self.usesMillisecondTimestamps = usesMillisecondTimestamps
+        }
     }
 
     /// Returns every model quota entry found under `model_remains` (or its
@@ -301,18 +331,32 @@ enum MiniMaxWebParsing {
     }
 
     private static func extractUsagePercent(from value: Any) -> ModelRemainsUsage? {
-        guard let dict = value as? [String: Any] else { return nil }
+        guard let dict = value as? [String: Any],
+              let usedPercent = self.extractUsedPercentValue(from: dict)
+        else { return nil }
         let modelName = self.firstString(in: dict, keys: ["model_name", "model", "name", "label"])
+        let rawStart = self.doubleValue(dict["start_time"])
+        let rawEnd = self.doubleValue(dict["end_time"])
+        let usesMillisecondTimestamps =
+            (rawStart.map { $0 > 10_000_000_000 } ?? false) ||
+            (rawEnd.map { $0 > 10_000_000_000 } ?? false)
+        return ModelRemainsUsage(
+            usedPercent: usedPercent,
+            modelName: modelName,
+            startTime: rawStart.flatMap { self.timestamp($0) },
+            endTime: rawEnd.flatMap { self.timestamp($0) },
+            remainsTime: self.doubleValue(dict["remains_time"]),
+            usesMillisecondTimestamps: usesMillisecondTimestamps)
+    }
 
+    private static func extractUsedPercentValue(from dict: [String: Any]) -> Double? {
         // Pre-computed remaining percent (token_plan provides this directly).
         // Only trusted when a non-zero total is also present — a lone
         // remaining_percent with no quota context is ambiguous.
         if let remainingPct = self.doubleValue(dict["current_interval_remaining_percent"]),
            let totalVal = self.doubleValue(dict["current_interval_total_count"]), totalVal > 0
         {
-            return ModelRemainsUsage(
-                usedPercent: min(100, max(0, 100 - remainingPct)),
-                modelName: modelName)
+            return min(100, max(0, 100 - remainingPct))
         }
 
         // Real API fields: current_interval_total_count / current_interval_usage_count.
@@ -325,9 +369,7 @@ enum MiniMaxWebParsing {
             if let count = self.doubleValue(dict["current_interval_usage_count"]) {
                 let remaining = min(count, total)
                 let used = total - remaining
-                return ModelRemainsUsage(
-                    usedPercent: min(100, max(0, used / total * 100)),
-                    modelName: modelName)
+                return min(100, max(0, used / total * 100))
             }
             return nil
         }
@@ -338,14 +380,10 @@ enum MiniMaxWebParsing {
         let remaining = self.doubleValue(dict["remaining"] ?? dict["remaining_quota"] ?? dict["remainingQuota"])
 
         if let used, let total, total > 0 {
-            return ModelRemainsUsage(
-                usedPercent: min(100, max(0, used / total * 100)),
-                modelName: modelName)
+            return min(100, max(0, used / total * 100))
         }
         if let remaining, let total, total > 0 {
-            return ModelRemainsUsage(
-                usedPercent: min(100, max(0, (total - remaining) / total * 100)),
-                modelName: modelName)
+            return min(100, max(0, (total - remaining) / total * 100))
         }
         return nil
     }
@@ -356,14 +394,22 @@ enum MiniMaxWebParsing {
         return minutes > 0 ? minutes : nil
     }
 
-    private static func resolveResetDate(remainsTime: Double?, endTime: Date?, now: Date) -> Date? {
-        if let remains = remainsTime {
+    private static func resolveResetDate(
+        remainsTime: Double?,
+        endTime: Date?,
+        now: Date,
+        usesMillisecondTimestamps: Bool = false) -> Date?
+    {
+        if let remains = remainsTime, remains > 0 {
             if remains > 1_000_000_000 {
                 return self.timestamp(remains)
             }
-            // MiniMax `remains_time` is in milliseconds (e.g. 14_400_000 for 4h).
-            let seconds = remains > 1_000_000 ? remains / 1000 : remains
-            return now.addingTimeInterval(seconds)
+            // MiniMax coding_plan / token_plan uses millisecond epochs (> 10B), where
+            // `remains_time` is also in milliseconds even for sub-16-minute remainders.
+            if usesMillisecondTimestamps || remains > 1_000_000 {
+                return now.addingTimeInterval(remains / 1000.0)
+            }
+            return now.addingTimeInterval(remains)
         }
         return endTime
     }

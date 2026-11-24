@@ -8,6 +8,7 @@ public struct RunicMCPState: Codable, Sendable {
         public let primary: RateWindow?
         public let secondary: RateWindow?
         public let tertiary: RateWindow?
+        public let additionalWindows: [RateWindow]?
         public let creditsRemaining: Double?
         public let creditsUpdatedAt: Date?
         public let creditsHasError: Bool?
@@ -22,6 +23,7 @@ public struct RunicMCPState: Codable, Sendable {
             primary: RateWindow?,
             secondary: RateWindow?,
             tertiary: RateWindow?,
+            additionalWindows: [RateWindow]? = nil,
             creditsRemaining: Double?,
             creditsUpdatedAt: Date? = nil,
             creditsHasError: Bool = false,
@@ -35,6 +37,7 @@ public struct RunicMCPState: Codable, Sendable {
             self.primary = primary
             self.secondary = secondary
             self.tertiary = tertiary
+            self.additionalWindows = additionalWindows?.isEmpty == true ? nil : additionalWindows
             self.creditsRemaining = creditsRemaining
             self.creditsUpdatedAt = creditsUpdatedAt
             self.creditsHasError = creditsHasError
