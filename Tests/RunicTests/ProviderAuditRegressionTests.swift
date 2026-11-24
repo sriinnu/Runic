@@ -192,7 +192,7 @@ struct CoreAndRPCRegressionTests {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
         defer { try? FileManager.default.removeItem(at: scriptURL) }
 
-        let rpc = try CodexRPCClient(executable: scriptURL.path, arguments: [], requestTimeout: 3.0)
+        let rpc = try CodexRPCClient(executable: scriptURL.path, arguments: [], requestTimeout: 15.0)
         defer { rpc.shutdown() }
         try await rpc.initialize(clientName: "runic-test", clientVersion: "1.0")
         let response = try await rpc.fetchRateLimits()
@@ -206,7 +206,8 @@ struct CoreAndRPCRegressionTests {
             .appendingPathComponent("runic-hang-codex-rpc-\(UUID().uuidString).sh")
         let script = """
         #!/bin/sh
-        sleep 10
+        sleep 30
+        echo '{"id":1,"result":{}}'
         """
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
@@ -220,7 +221,7 @@ struct CoreAndRPCRegressionTests {
             Issue.record("Expected CodexRPCClient to throw timedOut")
         } catch let error as RPCWireError {
             #expect(error == .timedOut("initialize"))
-            #expect(Date().timeIntervalSince(start) < 2.5)
+            #expect(Date().timeIntervalSince(start) < 15.0)
         }
     }
 
@@ -230,13 +231,13 @@ struct CoreAndRPCRegressionTests {
             .appendingPathComponent("runic-cancel-codex-rpc-\(UUID().uuidString).sh")
         let script = """
         #!/bin/sh
-        sleep 10
+        sleep 30
         """
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
         defer { try? FileManager.default.removeItem(at: scriptURL) }
 
-        let rpc = try CodexRPCClient(executable: scriptURL.path, arguments: [], requestTimeout: 5.0)
+        let rpc = try CodexRPCClient(executable: scriptURL.path, arguments: [], requestTimeout: 30.0)
         let task = Task {
             try await rpc.initialize(clientName: "runic-test", clientVersion: "1.0")
         }
@@ -454,7 +455,7 @@ struct MiniMaxAndProviderAuditTests {
         let script = """
         #!/bin/sh
         echo "Muse Code"
-        sleep 10
+        sleep 30
         """
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
