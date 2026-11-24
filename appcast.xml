@@ -3,6 +3,36 @@
     <channel>
         <title>Runic</title>
         <item>
+            <title>2.18.1</title>
+            <pubDate>Tue, 24 Nov 2026 14:01:41 +0100</pubDate>
+            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
+            <sparkle:version>222</sparkle:version>
+            <sparkle:shortVersionString>2.18.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>Runic 2.18.1</h2>
+<h3>Providers & Quotas</h3>
+<ul>
+<li><strong>Antigravity Gemini priority & multi-window quotas</strong>: Antigravity now leads with <code>Gemini 5h</code> and <code>Gemini Weekly</code> while preserving <code>Claude & GPT</code> 5-hour and weekly windows across provider cards, Overview, Reset schedules, widgets, exports, and <code>runic usage</code>.</li>
+<li><strong>Consistent menu bar indicator</strong>: Menu bar percentages, wave bars, and Overview cards now follow the same active provider quota selection and ignore informational windows with no real denominator.</li>
+<li><strong>Decoupled manual refresh & concurrency safety</strong>: Refreshing a single provider no longer stalls on or blocks other providers, bypasses URL caches, and coalesces concurrent per-account fetches with stale-write protection.</li>
+<li><strong>Provider probe & parser hardening</strong>: Hardened 20+ provider fetchers and CLI probes — including <code>Antigravity</code> UTF-8 capture and timeouts, <code>Codex</code> RPC request timeouts and cancellation safety, <code>Claude</code> OAuth flat/scoped model deduplication and reset parsing, <code>Gemini</code> multi-PATH CLI resolution, <code>Muse Code</code> cancellation propagation, <code>MiniMax</code> and <code>Kimi</code> timestamp parsing, <code>Ollama Cloud</code> web-enrichment scoping, and prepaid balance alerts for balance-only providers.</li>
+</ul>
+<h3>CLI & Exports</h3>
+<ul>
+<li><strong>Reliable <code>runic usage</code> exit codes & full window output</strong>: <code>runic usage</code> now surfaces all additional model/quota windows consistently across text, JSON, CSV, and <code>runic reset</code>, honors <code>--provider all</code>, writes provider errors to <code>stderr</code> without corrupting stdout JSON, and exits non-zero when an explicitly requested provider fails.</li>
+</ul>
+<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
+]]></description>
+            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.18.1/Runic-2.18.1.zip" length="52291412" type="application/octet-stream" sparkle:edSignature="0Gm6lofxc9OtZazHPfTy02mo5f6sy0m/ZSSX/VYd4Y4Cqr80RT6ICHu2PAys82labOi8T6DBlABAfOvTRAsPCw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.18.1/Runic222-211.delta" sparkle:deltaFrom="211" length="13235578" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="aSleMCC+cFSXoIdkt/UKFgNJRnNUuyUEcaLRaoO65JG93liqJekPaJP421h+08a22rxWt63MbG0yFogEBuNqBg=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.18.1/Runic222-210.delta" sparkle:deltaFrom="210" length="13273490" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="6Pu/xgQKUkBvoqez5hKJrlQ5DKFapKwaFzKTmpryVJdLyJQQnc6DXSMDaC1Tq1+H3N1TTO1T8IoqhY7WJeqsCQ=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.18.1/Runic222-209.delta" sparkle:deltaFrom="209" length="13539662" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Naop+0rxu2FQ/ybviNMg4KpqNugH4yLWMJiKSShnme3MjaW/+ud3JFbHjyUluP8Es3KYv00qjRlj0XljX7YlDQ=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.18.1/Runic222-207.delta" sparkle:deltaFrom="207" length="13517382" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="tSaEafKMBJAy1cDQLlrfax/0cxqeuIaAhxe762FzRoIhffgiJUlOQJq2gzPH2x492PWZi1d6Fe2uwVj7M59BDQ=="/>
+                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.18.1/Runic222-192.delta" sparkle:deltaFrom="192" length="15142874" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="fGBeXJOh9aNNHVucfdiJEOkNskoiWpSx9W1ILxW1+HRipnEfGOudl0eFCpGMBhNYfixsg7MmiEkc7478M/aQCA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>2.18.0</title>
             <pubDate>Sun, 22 Nov 2026 21:55:28 +0100</pubDate>
             <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
@@ -48,37 +78,6 @@
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.17.0/Runic220-209.delta" sparkle:deltaFrom="209" length="11171758" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="eZ1Y7/adh3aHQF7Ta26BPje5yFeP/eKLeD2e+H6HzfowQA4wqNQ27mT79LeNd8aj1RzkGqFt/wtqflS3ruaPBg=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.17.0/Runic220-207.delta" sparkle:deltaFrom="207" length="11191466" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hPPtvMgR4YjARpY2Rvu0YiGUT+YPERWlBN8jpSk0/wQ4r4Uqy7+P8kCFCBCsirfR3ii2NnM0kRKnEH3BxyuKBQ=="/>
                 <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.17.0/Runic220-192.delta" sparkle:deltaFrom="192" length="13404418" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="6oQoO4uGsW+S7AiNo2zC4APvVBsSaYbtRHtevCwHmYlQ5fA9vjWKpEwpPY5nYedZnx+H/oLCpQSWaX2uJQsBBw=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>2.16.0</title>
-            <pubDate>Sat, 21 Nov 2026 22:41:05 +0100</pubDate>
-            <link>https://raw.githubusercontent.com/sriinnu/Runic/main/appcast.xml</link>
-            <sparkle:version>219</sparkle:version>
-            <sparkle:shortVersionString>2.16.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description><![CDATA[<h2>Runic 2.16.0</h2>
-<h3>Skins & UI</h3>
-<ul>
-<li><strong>New Meridian skin</strong>: An adaptive Swiss astronomical chronometer skin (Porcelain Enamel light / Grand Feu Midnight dark) with a 200° power-reserve sub-dial, tapered Dauphine hand, ruby cabochon pivot, calibrated railway gauges, and faceted status jewels. Replaces retired <code>Yantra</code>, <code>Receipt</code>, and <code>Retro</code> themes with automatic preference migration (<code>yantra</code> → <code>meridian</code>, <code>receipt</code> → <code>gazette</code>, <code>retro</code> → <code>relief</code>).</li>
-<li><strong>Liquid Glass MK II, Relief MK II & Flight Deck MK II</strong>: Liquid Glass is now the default theme, with refined capillary gauges, tactile neomorphic wells on Relief, and upgraded PFD cockpit attitude/burn indicators on Flight Deck.</li>
-<li><strong>Redesigned Settings window</strong>: Cleaner 820×680 split layout with updated Appearance theme previews, clearer General/Integrations structure, and updated CLI/MCP install paths (<code>Settings → General → Install CLI</code>, <code>Settings → Integrations → Runic MCP</code>).</li>
-</ul>
-<h3>Providers, Plan Tiers & Quotas</h3>
-<ul>
-<li><strong>Plan tier badges everywhere</strong>: Overview cards, skin headers, and <code>runic usage</code> CLI output now surface live provider tiers including <code>Google AI Ultra</code> (Antigravity) and Claude <code>Ultra</code> / <code>Max 5x</code> / <code>Max 20x</code> with preserved acronyms.</li>
-<li><strong>Antigravity CLI (<code>agy /usage</code>)</strong>: Live quota scraping across all 4 model windows with ANSI stream plan-label capture (<code>Plan: Google AI Ultra</code>) and desktop fallback when the CLI is unavailable.</li>
-<li><strong>Claude & Gemini fixes</strong>: <code>ClaudeStatusProbe</code> dismisses startup prompts and captures identity/plan banners reliably (<code>Plan: Ultra</code>); Gemini CLI <code>0.68.0</code> OAuth refreshes cleanly from <code>bundle/chunk-*.js</code> (respecting <code>GEMINI_CLI_PATH</code>) and explains Google's personal-OAuth deprecation with guidance toward Antigravity for Pro/Ultra quotas.</li>
-</ul>
-<p><a href="https://github.com/sriinnu/Runic/blob/main/CHANGELOG.md">View full changelog</a></p>
-]]></description>
-            <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic-2.16.0.zip" length="50821994" type="application/octet-stream" sparkle:edSignature="FHiExjeh3pJ+Y+giDsCzBdCj0Z5MZ4xN7a3Zuw7csAZUVB96WD7x7CkiaEIFMs/WlPTY18L9fnejHxpTMa1kBA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-211.delta" sparkle:deltaFrom="211" length="9938722" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4P15B6ZG2NA2sis+vW1y9zPJWSk9iuXBUvN4LMjD6bcm5FPsRdcqWGvNRKmsFvKKjvW323GyMNaIbq/NyBkeAg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-210.delta" sparkle:deltaFrom="210" length="9942626" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Yp7+7jPd3/juQS4bbKNg9ngHskVzZ/mB591PSeneZlCg9gk6J6lJrr/rnt1lJp+DiXmWm5vPKuDbDPl4e94DCg=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-209.delta" sparkle:deltaFrom="209" length="10614670" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="979KDvUaRxTAdLLnH4nJ3cPIeV7CdfHw0wfBX7tTWqI9s6zHk2622pbr+rd24nyR4oS5FydO6zVPpClxu/NTBQ=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-207.delta" sparkle:deltaFrom="207" length="10655986" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="8i/Z/CK7dOfKsNwYaE1faxh7iwh4mjScyLImGJUpOIikeH2Ww9zUEME6aBp4sPC3RISx0kmFa1uSdCaNg0F5DA=="/>
-                <enclosure url="https://github.com/sriinnu/Runic/releases/download/v2.16.0/Runic219-192.delta" sparkle:deltaFrom="192" length="12893754" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="jaE9JG8CQeiAkDeOX6Y3eQxQjIxk+scWgJUj3mStObLQYWO74jVms+4CCnZ6bWyy7h3SuTcFWQavSuTuezRLCw=="/>
             </sparkle:deltas>
         </item>
     </channel>
