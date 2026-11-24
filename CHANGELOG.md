@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.18.1 — 2026-11-24
+
+### Providers & Quotas
+
+- **Antigravity Gemini priority & multi-window quotas**: Antigravity now leads with `Gemini 5h` and `Gemini Weekly` while preserving `Claude & GPT` 5-hour and weekly windows across provider cards, Overview, Reset schedules, widgets, exports, and `runic usage`.
+- **Consistent menu bar indicator**: Menu bar percentages, wave bars, and Overview cards now follow the same active provider quota selection and ignore informational windows with no real denominator.
+- **Decoupled manual refresh & concurrency safety**: Refreshing a single provider no longer stalls on or blocks other providers, bypasses URL caches, and coalesces concurrent per-account fetches with stale-write protection.
+- **Provider probe & parser hardening**: Hardened 20+ provider fetchers and CLI probes — including `Antigravity` UTF-8 capture and timeouts, `Codex` RPC request timeouts and cancellation safety, `Claude` OAuth flat/scoped model deduplication and reset parsing, `Gemini` multi-PATH CLI resolution, `Muse Code` cancellation propagation, `MiniMax` and `Kimi` timestamp parsing, `Ollama Cloud` web-enrichment scoping, and prepaid balance alerts for balance-only providers.
+
+### CLI & Exports
+
+- **Reliable `runic usage` exit codes & full window output**: `runic usage` now surfaces all additional model/quota windows consistently across text, JSON, CSV, and `runic reset`, honors `--provider all`, writes provider errors to `stderr` without corrupting stdout JSON, and exits non-zero when an explicitly requested provider fails.
+
 ## 2.18.0 — 2026-11-22
 
 ### Skins & UI
