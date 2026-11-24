@@ -132,7 +132,9 @@ struct QuotaRows: View {
             UsageFormatter.windowTitle(for: $0, fallback: fallbackWeekly)
         } ?? fallbackWeekly
         WindowUsageRow(title: primaryTitle, window: self.entry.primary, color: color)
-        if self.entry.secondary != nil || (!weeklyTitle.isEmpty && primaryTitle != weeklyTitle) {
+        if self.entry.secondary != nil
+            || (self.entry.primary == nil && !weeklyTitle.isEmpty && primaryTitle != weeklyTitle)
+        {
             WindowUsageRow(title: weeklyTitle, window: self.entry.secondary, color: color)
         }
     }

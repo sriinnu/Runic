@@ -253,20 +253,12 @@ extension UsageStore {
     private func usageChanged(previous: UsageSnapshot?, current: UsageSnapshot) -> Bool {
         guard let previous else { return true }
 
-        func windowChanged(_ lhs: RateWindow?, _ rhs: RateWindow?) -> Bool {
-            switch (lhs, rhs) {
-            case (nil, nil):
-                false
-            case let (l?, r?):
-                abs(l.usedPercent - r.usedPercent) >= 0.1
-            case (nil, _), (_, nil):
-                true
-            }
+        let prevWindows = previous.allWindows
+        let currWindows = current.allWindows
+        if prevWindows.count != currWindows.count { return true }
+        for (lhs, rhs) in zip(prevWindows, currWindows) where abs(lhs.usedPercent - rhs.usedPercent) >= 0.1 {
+            return true
         }
-
-        if windowChanged(previous.primary, current.primary) { return true }
-        if windowChanged(previous.secondary, current.secondary) { return true }
-        if windowChanged(previous.tertiary, current.tertiary) { return true }
 
         switch (previous.providerCost, current.providerCost) {
         case (nil, nil):

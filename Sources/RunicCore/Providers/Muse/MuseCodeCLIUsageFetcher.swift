@@ -30,34 +30,53 @@ public enum MuseCodeCLIUsageFetcher {
         }
     }
 
-    public static func load(binary: String = "muse") async throws -> UsageSnapshot {
+    public static func load(
+        binary: String = "muse",
+        env: [String: String] = ProcessInfo.processInfo.environment) async throws -> UsageSnapshot
+    {
+        try Task.checkCancellation()
         let resolved: String
-        if binary == "muse", let located = BinaryLocator.resolveMuseBinary() {
+        if binary == "muse", let located = BinaryLocator.resolveMuseBinary(env: env) {
             resolved = located
-        } else if let hit = TTYCommandRunner.which(binary) {
+        } else if binary.contains("/"), FileManager.default.isExecutableFile(atPath: binary) {
+            var isDirectory = ObjCBool(false)
+            guard FileManager.default.fileExists(atPath: binary, isDirectory: &isDirectory),
+                  !isDirectory.boolValue
+            else {
+                throw Error.unavailable
+            }
+            resolved = binary
+        } else if let hit = TTYCommandRunner.which(binary, env: env) {
             resolved = hit
         } else {
             throw Error.unavailable
         }
-        let text = try await Task.detached(priority: .utility) {
+        let task = Task.detached(priority: .utility) {
             do {
-                return try self.capture(binary: resolved, timeout: 18)
+                return try Self.capture(binary: resolved, env: env, timeout: 18)
             } catch Error.noSubscriptionUsage {
-                if Task.isCancelled { throw CancellationError() }
+                try Task.checkCancellation()
                 self.log.info("Retrying Muse Code usage card after an incomplete CLI response")
-                return try self.capture(binary: resolved, timeout: 10)
+                return try Self.capture(binary: resolved, env: env, timeout: 10)
             }
-        }.value
+        }
+        let text = try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
         return try self.parse(text: text)
     }
 
-    private static func capture(binary: String, timeout: TimeInterval) throws -> String {
+    private static func capture(binary: String, env: [String: String], timeout: TimeInterval) throws -> String {
+        try Task.checkCancellation()
         let options = TTYCommandRunner.Options(
             rows: 42,
             cols: 120,
             timeout: timeout,
             workingDirectory: FileManager.default.temporaryDirectory,
-            extraArgs: ["--provider", "meta"])
+            extraArgs: ["--provider", "meta"],
+            env: env)
         let context = try TTYCommandRunner.PTYRunContext(resolved: binary, options: options)
         defer { context.cleanup() }
         try context.launch()
@@ -67,16 +86,25 @@ public enum MuseCodeCLIUsageFetcher {
         var commandSentAt: Date?
         var sentEnter = false
         var foundAt: Date?
+        var clean = ""
+        var needsDecode = true
         var cursorQueryBuffer = TTYCommandRunner.RollingBuffer(maxNeedle: TTYCommandRunner.cursorQuery.count)
         while Date() < deadline {
             if Task.isCancelled { throw CancellationError() }
             let chunk = context.readChunk()
-            if cursorQueryBuffer.append(chunk).range(of: TTYCommandRunner.cursorQuery) != nil {
-                try context.send("\u{1b}[1;1R")
+            if !chunk.isEmpty {
+                needsDecode = true
+                if cursorQueryBuffer.append(chunk).range(of: TTYCommandRunner.cursorQuery) != nil {
+                    try context.send("\u{1b}[1;1R")
+                }
             }
             guard context.buffer.count <= 524_288 else { throw Error.noSubscriptionUsage }
             let elapsed = Date().timeIntervalSince(started)
-            let clean = TextParsing.stripANSICodes(Self.decodeLossyText(context.buffer))
+            let shouldInspectText = (elapsed > 3 && commandSentAt == nil) || sentEnter
+            if shouldInspectText, needsDecode {
+                clean = TextParsing.stripANSICodes(Self.decodeLossyText(context.buffer))
+                needsDecode = false
+            }
             if elapsed > 3, commandSentAt == nil {
                 if clean.localizedCaseInsensitiveContains("Muse Code") {
                     try context.send("/usage")
@@ -86,6 +114,10 @@ public enum MuseCodeCLIUsageFetcher {
             if let commandSentAt, Date().timeIntervalSince(commandSentAt) > 1, !sentEnter {
                 try context.send("\r")
                 sentEnter = true
+                if needsDecode {
+                    clean = TextParsing.stripANSICodes(Self.decodeLossyText(context.buffer))
+                    needsDecode = false
+                }
             }
             if sentEnter {
                 if self.subscriptionUnavailable(in: clean) { throw Error.subscriptionUnavailable }
@@ -99,7 +131,9 @@ public enum MuseCodeCLIUsageFetcher {
             if !context.proc.isRunning { break }
             usleep(100_000)
         }
-        let clean = TextParsing.stripANSICodes(Self.decodeLossyText(context.buffer))
+        if needsDecode {
+            clean = TextParsing.stripANSICodes(Self.decodeLossyText(context.buffer))
+        }
         self.log.warning("Muse Code usage card unavailable", metadata: [
             "bytes": "\(context.buffer.count)",
             "elapsedSeconds": "\(Int(Date().timeIntervalSince(started)))",

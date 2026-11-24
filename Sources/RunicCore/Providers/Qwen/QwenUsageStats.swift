@@ -256,7 +256,10 @@ public struct QwenUsageFetcher: Sendable {
         while base.hasSuffix("/") {
             base.removeLast()
         }
-        for suffix in ["/compatible-mode/v1", "/compatible-mode", "/v1"] where base.hasSuffix(suffix) {
+        let lower = base.lowercased()
+        for suffix in ["/api/v1/usage", "/compatible-mode/v1", "/compatible-mode", "/api/v1", "/v1"]
+            where lower.hasSuffix(suffix)
+        {
             base = String(base.dropLast(suffix.count))
             break
         }

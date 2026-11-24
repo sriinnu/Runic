@@ -71,6 +71,10 @@ struct AuggieUsageFetcher {
                 body: body?.isEmpty == false ? body : nil)
         }
 
+        return try Self.parseDailyUsageResponse(data)
+    }
+
+    static func parseDailyUsageResponse(_ data: Data) throws -> AuggieUsageMetrics {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw AuggieAPIError.decodingError
         }

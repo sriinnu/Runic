@@ -194,6 +194,7 @@ enum KimiCodeUsageFetcher {
     private static func windowMinutes(duration: Any?, timeUnit: Any?) -> Int? {
         guard let duration = number(duration).map(Int.init), duration > 0 else { return nil }
         let unit = (timeUnit as? String)?.uppercased() ?? ""
+        if unit.contains("MILLI") { return max(1, Int((Double(duration) / 60000.0).rounded())) }
         if unit.contains("SECOND") { return max(1, Int((Double(duration) / 60.0).rounded())) }
         if unit.contains("MINUTE") { return duration }
         if unit.contains("HOUR") { return duration * 60 }

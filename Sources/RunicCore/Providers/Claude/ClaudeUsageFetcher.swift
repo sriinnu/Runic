@@ -492,8 +492,15 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             modelWindows.append(opus)
         }
         for scoped in Self.scopedLimitWindows(usage.limits) {
+            let scopedKey = Self.normalizedModelWindowKey(scoped.label)
             let duplicate = modelWindows.contains { existing in
-                existing.label?.caseInsensitiveCompare(scoped.label ?? "") == .orderedSame
+                if existing.label?.caseInsensitiveCompare(scoped.label ?? "") == .orderedSame {
+                    return true
+                }
+                guard let scopedKey, let existingKey = Self.normalizedModelWindowKey(existing.label) else {
+                    return false
+                }
+                return scopedKey == existingKey && existing.windowMinutes == scoped.windowMinutes
             }
             if !duplicate {
                 modelWindows.append(scoped)
@@ -539,6 +546,16 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
     /// the Resets panel show it as its own window.
     static func scopedLimitWindow(_ limits: [OAuthLimitEntry]?) -> RateWindow? {
         self.scopedLimitWindows(limits).first
+    }
+
+    private static func normalizedModelWindowKey(_ label: String?) -> String? {
+        guard var text = label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !text.isEmpty
+        else { return nil }
+        for suffix in [" weekly", " session"] where text.hasSuffix(suffix) {
+            text = String(text.dropLast(suffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return text.isEmpty ? nil : text
     }
 
     static func scopedLimitWindows(_ limits: [OAuthLimitEntry]?) -> [RateWindow] {

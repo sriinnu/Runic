@@ -44,7 +44,7 @@ extension MenuPopoverView {
             ledgerUpdatedAt: self.store.ledgerUpdatedAt(for: provider),
             providerContextStatus: providerContextStatus,
             account: self.account,
-            isRefreshing: self.store.refreshingProviders.contains(provider),
+            isRefreshing: self.store.isRefreshing(provider: provider),
             lastError: self.store.error(for: provider),
             usageBarsShowUsed: self.settings.usageBarsShowUsed,
             usageMetricDisplayMode: self.settings.usageMetricDisplayMode,

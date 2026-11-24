@@ -59,12 +59,21 @@ enum DeepSeekUsageFetcher {
 }
 
 extension DeepSeekBalanceResponse {
-    private var preferredBalanceInfo: BalanceInfo? {
+    private static func normalizedCurrency(_ raw: String?) -> String? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
+              !trimmed.isEmpty
+        else { return nil }
+        return trimmed
+    }
+
+    private var preferredBalanceIndex: Int? {
         guard let infos = self.balance_infos, !infos.isEmpty else { return nil }
-        if let funded = infos.first(where: { ($0.totalBalanceValue ?? 0) > 0 }) {
-            return funded
-        }
-        return infos.first
+        return infos.firstIndex(where: { ($0.totalBalanceValue ?? 0) > 0 }) ?? infos.startIndex
+    }
+
+    private var preferredBalanceInfo: BalanceInfo? {
+        guard let infos = self.balance_infos, let idx = self.preferredBalanceIndex else { return nil }
+        return infos[idx]
     }
 
     private var remainingBalance: Double {
@@ -72,20 +81,17 @@ extension DeepSeekBalanceResponse {
     }
 
     private var currencyCode: String? {
-        guard let raw = self.preferredBalanceInfo?.currency?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .uppercased(),
-            !raw.isEmpty
-        else { return nil }
-        return raw
+        Self.normalizedCurrency(self.preferredBalanceInfo?.currency)
     }
 
     private var additionalCurrencySummary: String? {
         let preferredCurrency = self.currencyCode
-        let extras = (self.balance_infos ?? []).compactMap { info -> String? in
+        let preferredIndex = self.preferredBalanceIndex
+        let extras = (self.balance_infos ?? []).enumerated().compactMap { index, info -> String? in
+            guard index != preferredIndex else { return nil }
             guard let value = info.totalBalanceValue, value > 0 else { return nil }
-            let code = info.currency?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-            guard code != preferredCurrency else { return nil }
+            let code = Self.normalizedCurrency(info.currency)
+            if let code, code == preferredCurrency { return nil }
             let formatted = String(format: "%.2f", value)
             return code.map { "\(formatted) \($0)" } ?? formatted
         }

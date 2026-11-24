@@ -166,16 +166,25 @@ extension GeminiStatusProbe {
         return nil
     }
 
+    private static func isExecutableRegularFile(atPath path: String, fileManager fm: FileManager) -> Bool {
+        var isDirectory = ObjCBool(false)
+        guard fm.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue else {
+            return false
+        }
+        return fm.isExecutableFile(atPath: path)
+    }
+
     static func collectGeminiBinaryCandidates(
         env: [String: String],
         loginPATH: [String]?,
         fileManager fm: FileManager = .default,
-        home: String = NSHomeDirectory()) -> [String]
+        home: String = NSHomeDirectory(),
+        includeSystemFallbacks: Bool = true) -> [String]
     {
         if let override = env["GEMINI_CLI_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !override.isEmpty
         {
-            return fm.isExecutableFile(atPath: override) ? [override] : []
+            return self.isExecutableRegularFile(atPath: override, fileManager: fm) ? [override] : []
         }
 
         // Collect EVERY executable `gemini` in priority order instead of
@@ -185,7 +194,7 @@ extension GeminiStatusProbe {
         let pathDirs = (loginPATH ?? []) + (env["PATH"]?.split(separator: ":").map(String.init) ?? [])
         for dir in pathDirs where !dir.isEmpty {
             let candidate = (dir as NSString).appendingPathComponent("gemini")
-            if fm.isExecutableFile(atPath: candidate) {
+            if Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
                 rawCandidates.append(candidate)
             }
         }
@@ -193,11 +202,15 @@ extension GeminiStatusProbe {
             env: env,
             loginPATH: loginPATH,
             fileManager: fm,
-            home: home)
+            home: home),
+            Self.isExecutableRegularFile(atPath: locatorHit, fileManager: fm)
         {
             rawCandidates.append(locatorHit)
         }
-        if let whichHit = TTYCommandRunner.which("gemini") {
+        if includeSystemFallbacks,
+           let whichHit = TTYCommandRunner.which("gemini", env: env),
+           Self.isExecutableRegularFile(atPath: whichHit, fileManager: fm)
+        {
             rawCandidates.append(whichHit)
         }
 
@@ -207,7 +220,9 @@ extension GeminiStatusProbe {
             let sorted = versions.sorted { $0.compare($1, options: .numeric) == .orderedDescending }
             for version in sorted {
                 let candidate = "\(nvmDir)/\(version)/bin/gemini"
-                if fm.isExecutableFile(atPath: candidate) { rawCandidates.append(candidate) }
+                if Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
+                    rawCandidates.append(candidate)
+                }
             }
         }
         let fnmDir = (home as NSString).appendingPathComponent(".fnm/node-versions")
@@ -215,18 +230,24 @@ extension GeminiStatusProbe {
             let sorted = versions.sorted { $0.compare($1, options: .numeric) == .orderedDescending }
             for version in sorted {
                 let candidate = "\(fnmDir)/\(version)/installation/bin/gemini"
-                if fm.isExecutableFile(atPath: candidate) { rawCandidates.append(candidate) }
+                if Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
+                    rawCandidates.append(candidate)
+                }
             }
         }
-        let fixedCandidates = [
+        var fixedCandidates = [
             "\(home)/.volta/bin/gemini",
             "\(home)/.asdf/shims/gemini",
             "\(home)/.bun/bin/gemini",
             "\(home)/.npm-global/bin/gemini",
-            "/opt/homebrew/bin/gemini",
-            "/usr/local/bin/gemini",
         ]
-        for candidate in fixedCandidates where fm.isExecutableFile(atPath: candidate) {
+        if includeSystemFallbacks {
+            fixedCandidates.append(contentsOf: [
+                "/opt/homebrew/bin/gemini",
+                "/usr/local/bin/gemini",
+            ])
+        }
+        for candidate in fixedCandidates where Self.isExecutableRegularFile(atPath: candidate, fileManager: fm) {
             rawCandidates.append(candidate)
         }
 

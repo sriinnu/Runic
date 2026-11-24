@@ -167,6 +167,7 @@ public enum ResetCommand {
         let usedPercent: Double
         let remainingPercent: Double
         let isNearLimit: Bool
+        let hasKnownLimit: Bool?
     }
 
     // MARK: - Data Loading
@@ -247,7 +248,7 @@ public enum ResetCommand {
 
         return ProviderResetInfo(
             provider: provider,
-            providerName: provider.rawValue.capitalized,
+            providerName: metadata.displayName,
             windows: windows,
             status: status)
     }
@@ -268,7 +269,8 @@ public enum ResetCommand {
             timeUntilReset: timeUntilReset,
             usedPercent: window.usedPercent,
             remainingPercent: window.remainingPercent,
-            isNearLimit: window.usedPercent >= 75)
+            isNearLimit: window.hasKnownLimit != false && window.usedPercent >= 75,
+            hasKnownLimit: window.hasKnownLimit)
     }
 
     private static func extractResetDate(from description: String?) -> Date? {
@@ -302,7 +304,10 @@ public enum ResetCommand {
     }
 
     private static func determineStatus(windows: [WindowResetInfo]) -> String {
-        let maxUsed = windows.map(\.usedPercent).max() ?? 0
+        let measurable = windows.filter { $0.hasKnownLimit != false }
+        guard let maxUsed = measurable.map(\.usedPercent).max() else {
+            return "No quota limit"
+        }
 
         switch maxUsed {
         case 90...:
@@ -390,9 +395,11 @@ public enum ResetCommand {
                     print("    Reset: \(description)")
                 }
 
-                let used = String(format: "%.1f", window.usedPercent)
-                let remaining = String(format: "%.1f", window.remainingPercent)
-                print("    Usage: \(used)% used, \(remaining)% remaining")
+                if window.hasKnownLimit != false {
+                    let used = String(format: "%.1f", window.usedPercent)
+                    let remaining = String(format: "%.1f", window.remainingPercent)
+                    print("    Usage: \(used)% used, \(remaining)% remaining")
+                }
 
                 if window.isNearLimit {
                     let warning = "⚠ High usage - consider monitoring closely"

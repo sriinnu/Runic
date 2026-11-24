@@ -100,9 +100,13 @@ public struct UsageFetcher: Sendable {
     {
         do {
             return try await primary()
+        } catch is CancellationError {
+            throw CancellationError()
         } catch let primaryError {
             do {
                 return try await secondary()
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 // Preserve the original failure so callers see the primary path error.
                 throw primaryError

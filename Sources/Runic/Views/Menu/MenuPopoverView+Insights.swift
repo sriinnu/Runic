@@ -204,7 +204,7 @@ extension MenuPopoverView {
 
     func modelQuotaWindows(for provider: UsageProvider) -> [RateWindow] {
         guard let snapshot = self.store.snapshot(for: provider) else { return [] }
-        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
+        let windows = snapshot.allWindows
         var seen: Set<String> = []
         var result: [RateWindow] = []
 

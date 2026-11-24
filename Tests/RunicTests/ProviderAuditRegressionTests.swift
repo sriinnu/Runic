@@ -54,6 +54,22 @@ struct CoreAndRPCRegressionTests {
         ])
         #expect(decoded.scoped(to: .antigravity).additionalWindows == [fourth])
         #expect(decoded.preferredQuotaWindow(for: .antigravity)?.label == "Gemini 5h")
+
+        // Exercise copy-constructor path when identity has a different providerID.
+        let foreignSnapshot = UsageSnapshot(
+            primary: primary,
+            secondary: secondary,
+            tertiary: tertiary,
+            additionalWindows: [fourth],
+            updatedAt: now,
+            identity: ProviderIdentitySnapshot(
+                providerID: .claude,
+                accountEmail: "dev@example.com",
+                accountOrganization: nil,
+                loginMethod: "Max"))
+        let rescoped = foreignSnapshot.scoped(to: .antigravity)
+        #expect(rescoped.identity?.providerID == .antigravity)
+        #expect(rescoped.additionalWindows == [fourth])
     }
 
     @Test
@@ -209,6 +225,34 @@ struct CoreAndRPCRegressionTests {
     }
 
     @Test
+    func `codexRPCClient propagates cancellation and double shutdown is safe`() async throws {
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-cancel-codex-rpc-\(UUID().uuidString).sh")
+        let script = """
+        #!/bin/sh
+        sleep 10
+        """
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let rpc = try CodexRPCClient(executable: scriptURL.path, arguments: [], requestTimeout: 5.0)
+        let task = Task {
+            try await rpc.initialize(clientName: "runic-test", clientVersion: "1.0")
+        }
+        try? await Task.sleep(for: .milliseconds(80))
+        task.cancel()
+        do {
+            try await task.value
+            Issue.record("Expected CodexRPCClient to throw CancellationError")
+        } catch is CancellationError {
+            // Expected cancellation propagation.
+        }
+        rpc.shutdown()
+        rpc.shutdown()
+    }
+
+    @Test
     func `ttyCommandRunner updateRecentText preserves markers across split utf8 chunks`() {
         var state = TTYCommandRunner.GenericCaptureState(maxNeedle: 32)
         let chunk = Data([0x80, 0x94] + Array("───\r\n? for shortcuts".utf8))
@@ -250,6 +294,30 @@ struct MiniMaxAndProviderAuditTests {
         } catch let MiniMaxWebUsageError.notLoggedIn(message) {
             #expect(message == "not logged in")
         }
+
+        // M6: Percentage-only MiniMax quota (total == 0) remains valid, selected, and omits "0 / 0 remaining".
+        let percentOnlyJSON = """
+        {
+          "base_resp": { "status_code": 0, "status_msg": "success" },
+          "model_remains": [
+            {
+              "model_name": "MiniMax-M2.5",
+              "current_interval_total_count": 0,
+              "current_interval_usage_count": 0,
+              "current_interval_remaining_percent": 80.0,
+              "current_weekly_total_count": 0,
+              "current_weekly_remaining_percent": 90.0
+            }
+          ]
+        }
+        """
+        let apiParsed = try MiniMaxUsageFetcher.parseUsageResponse(Data(percentOnlyJSON.utf8), now: now)
+        #expect(apiParsed.isValid == true)
+        let apiSnap = apiParsed.toUsageSnapshot()
+        #expect(apiSnap.primary.usedPercent == 20)
+        #expect(apiSnap.primary.resetDescription == nil)
+        #expect(apiSnap.secondary?.usedPercent == 10)
+        #expect(apiSnap.secondary?.resetDescription == nil)
     }
 
     @Test
@@ -258,13 +326,17 @@ struct MiniMaxAndProviderAuditTests {
         let root = fm.temporaryDirectory.appendingPathComponent("runic-gemini-\(UUID().uuidString)")
         let binA = root.appendingPathComponent("binA")
         let binB = root.appendingPathComponent("binB")
+        let binC = root.appendingPathComponent("binC")
+        let binD = root.appendingPathComponent("binD")
         try fm.createDirectory(at: binA, withIntermediateDirectories: true)
         try fm.createDirectory(at: binB, withIntermediateDirectories: true)
+        try fm.createDirectory(at: binC, withIntermediateDirectories: true)
+        try fm.createDirectory(at: binD.appendingPathComponent("gemini"), withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: root) }
 
         let wrapperA = binA.appendingPathComponent("gemini")
         let realB = binB.appendingPathComponent("gemini")
-        let symlinkB = binA.appendingPathComponent("gemini-alias")
+        let symlinkB = binC.appendingPathComponent("gemini")
         try "#!/bin/sh\n".write(to: wrapperA, atomically: true, encoding: .utf8)
         try "#!/bin/sh\n".write(to: realB, atomically: true, encoding: .utf8)
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: wrapperA.path)
@@ -272,13 +344,14 @@ struct MiniMaxAndProviderAuditTests {
         try fm.createSymbolicLink(atPath: symlinkB.path, withDestinationPath: realB.path)
 
         let candidates = GeminiStatusProbe.collectGeminiBinaryCandidates(
-            env: ["PATH": "\(binA.path):\(binB.path):\(binA.path)"],
+            env: ["PATH": "\(binD.path):\(binA.path):\(binB.path):\(binC.path):\(binA.path)"],
             loginPATH: [binB.path],
             fileManager: fm,
-            home: root.path)
-        #expect(candidates.contains(wrapperA.path))
-        #expect(candidates.contains(realB.path))
-        #expect(candidates.count(where: { $0 == realB.path }) == 1)
+            home: root.path,
+            includeSystemFallbacks: false)
+        #expect(candidates == [realB.path, wrapperA.path])
+        #expect(!candidates.contains(symlinkB.path))
+        #expect(!candidates.contains(binD.appendingPathComponent("gemini").path))
 
         let snap = GeminiStatusSnapshot(
             modelQuotas: [
@@ -343,10 +416,24 @@ struct MiniMaxAndProviderAuditTests {
         #expect(snapshot.tertiary?.label == "completions")
         #expect(snapshot.tertiary?.hasKnownLimit == false)
         #expect(snapshot.tertiary?.resetDescription == "Unlimited")
+
+        // Distinct slots lacking `quota_id` remain distinct even when both are unlimited.
+        let unnamedPayload = """
+        {
+          "copilot_plan": "individual",
+          "quota_snapshots": {
+            "completions": { "unlimited": true },
+            "chat": { "unlimited": true }
+          }
+        }
+        """
+        let unnamedDecoded = try JSONDecoder().decode(CopilotUsageResponse.self, from: Data(unnamedPayload.utf8))
+        let unnamedSnap = try fetcher.makeSnapshot(from: unnamedDecoded)
+        #expect(unnamedSnap.allWindows.count == 2)
     }
 
     @Test
-    func `muse parses single window output and handles lossy utf8 safely`() throws {
+    func `muse parses single window output, handles lossy utf8, and propagates cancellation`() async throws {
         let singleWindow = """
         Muse Code High Usage
         Current 24% used · Resets at 7:39 PM
@@ -360,10 +447,34 @@ struct MiniMaxAndProviderAuditTests {
         let bytes = Array("Current 10% used ".utf8) + [0xE2, 0x96]
         let decoded = MuseCodeCLIUsageFetcher.decodeLossyText(Data(bytes))
         #expect(decoded.contains("Current 10% used"))
+
+        // H5: Cancelling the caller task aborts the PTY subprocess cleanly.
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-mock-muse-\(UUID().uuidString).sh")
+        let script = """
+        #!/bin/sh
+        echo "Muse Code"
+        sleep 10
+        """
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        let task = Task {
+            try await MuseCodeCLIUsageFetcher.load(binary: scriptURL.path, env: [:])
+        }
+        try? await Task.sleep(for: .milliseconds(80))
+        task.cancel()
+        do {
+            _ = try await task.value
+            Issue.record("Expected MuseCodeCLIUsageFetcher to throw CancellationError")
+        } catch is CancellationError {
+            // Expected cancellation propagation.
+        }
     }
 
     @Test
-    func `ollamacloud extracts request counts when limits lack usage percentages`() throws {
+    func `ollamacloud extracts request counts and gates web enrichment to default auto app`() throws {
         let json = """
         {
           "totals": { "request_count": 42 },
@@ -386,13 +497,58 @@ struct MiniMaxAndProviderAuditTests {
           "totals": { "request_count": 17 }
         }
         """
-        let counterSnap = try OllamaCloudUsage.parse(Data(counterOnlyJSON.utf8)).toUsageSnapshot()
+        let emptyUsage = try OllamaCloudUsage.parse(Data(counterOnlyJSON.utf8))
+        let counterSnap = emptyUsage.toUsageSnapshot()
         #expect(counterSnap.primary.hasKnownLimit == false)
         #expect(counterSnap.primary.resetDescription == "17 requests")
+
+        // H4: Web enrichment runs ONLY on default account in `.app` + `.auto` mode.
+        let fetcher = UsageFetcher(environment: [:])
+        let defaultAutoContext = ProviderFetchContext(
+            runtime: .app,
+            sourceMode: .auto,
+            includeCredits: false,
+            webTimeout: 10,
+            webDebugDumpHTML: false,
+            verbose: false,
+            env: [:],
+            settings: nil,
+            fetcher: fetcher,
+            claudeFetcher: ClaudeUsageFetcher(),
+            account: AccountID(kind: .ollamacloud))
+        let secondaryAccountContext = ProviderFetchContext(
+            runtime: .app,
+            sourceMode: .auto,
+            includeCredits: false,
+            webTimeout: 10,
+            webDebugDumpHTML: false,
+            verbose: false,
+            env: [:],
+            settings: nil,
+            fetcher: fetcher,
+            claudeFetcher: ClaudeUsageFetcher(),
+            account: AccountID(kind: .ollamacloud, slug: "work"))
+        let cliModeContext = ProviderFetchContext(
+            runtime: .app,
+            sourceMode: .cli,
+            includeCredits: false,
+            webTimeout: 10,
+            webDebugDumpHTML: false,
+            verbose: false,
+            env: [:],
+            settings: nil,
+            fetcher: fetcher,
+            claudeFetcher: ClaudeUsageFetcher(),
+            account: AccountID(kind: .ollamacloud))
+        #expect(OllamaCloudAPIFetchStrategy.shouldEnrichFromWeb(context: defaultAutoContext, usage: emptyUsage) == true)
+        #expect(
+            OllamaCloudAPIFetchStrategy
+                .shouldEnrichFromWeb(context: secondaryAccountContext, usage: emptyUsage) == false)
+        #expect(OllamaCloudAPIFetchStrategy.shouldEnrichFromWeb(context: cliModeContext, usage: emptyUsage) == false)
     }
 
     @Test
-    func `claude parses fable label and oauth retains both sonnet and opus alongside session/weekly`() throws {
+    func `claude parses fable label and deduplicates flat and scoped weekly model windows`() throws {
         let text = """
         Current session
         [████      ] 20% used
@@ -410,7 +566,25 @@ struct MiniMaxAndProviderAuditTests {
           "five_hour": { "utilization": 15.0, "resets_at": "2026-12-01T05:00:00Z" },
           "seven_day": { "utilization": 40.0, "resets_at": "2026-12-07T00:00:00Z" },
           "seven_day_opus": { "utilization": 10.0, "resets_at": "2026-12-07T00:00:00Z" },
-          "seven_day_sonnet": { "utilization": 22.0, "resets_at": "2026-12-07T00:00:00Z" }
+          "seven_day_sonnet": { "utilization": 22.0, "resets_at": "2026-12-07T00:00:00Z" },
+          "limits": [
+            {
+              "kind": "weekly",
+              "group": "weekly",
+              "percent": 22.0,
+              "resets_at": "2026-12-07T00:00:00Z",
+              "is_active": true,
+              "scope": { "model": { "id": "claude-sonnet-4", "display_name": "Sonnet" } }
+            },
+            {
+              "kind": "weekly",
+              "group": "weekly",
+              "percent": 5.0,
+              "resets_at": "2026-12-07T00:00:00Z",
+              "is_active": true,
+              "scope": { "model": { "id": "claude-haiku-4", "display_name": "Haiku" } }
+            }
+          ]
         }
         """
         let oauth = try ClaudeUsageFetcher._mapOAuthUsageForTesting(
@@ -418,8 +592,9 @@ struct MiniMaxAndProviderAuditTests {
             rateLimitTier: "default_claude_max_5x")
         #expect(oauth.primary.usedPercent == 15)
         #expect(oauth.secondary?.usedPercent == 40)
-        #expect(oauth.opus != nil)
-        #expect(oauth.additionalWindows?.isEmpty == false)
+        // Opus + Sonnet + Haiku (scoped Sonnet weekly deduplicated against flat seven_day_sonnet).
+        #expect(oauth.opus?.label == "Sonnet")
+        #expect(oauth.additionalWindows?.map(\.label) == ["Opus", "Haiku weekly"])
     }
 
     @Test
@@ -493,9 +668,15 @@ struct MiniMaxAndProviderAuditTests {
     }
 
     @Test
-    func `qwen and zai normalize urls, weeks unit, fractional percents, and CN identities`() throws {
+    func `qwen, zai, and kimi normalize urls, weeks/ms units, contiguous slots, and CN identities`() throws {
         let url = QwenUsageFetcher.usageURL(baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1")
         #expect(url?.absoluteString == "https://dashscope.aliyuncs.com/api/v1/usage")
+        #expect(
+            QwenUsageFetcher.usageURL(baseURL: "https://dashscope.aliyuncs.com/api/v1")?
+                .absoluteString == "https://dashscope.aliyuncs.com/api/v1/usage")
+        #expect(
+            QwenUsageFetcher.usageURL(baseURL: "https://dashscope.aliyuncs.com/api/v1/usage")?
+                .absoluteString == "https://dashscope.aliyuncs.com/api/v1/usage")
 
         let qwenSnap = QwenUsageSnapshot(
             modelEntries: [],
@@ -539,15 +720,42 @@ struct MiniMaxAndProviderAuditTests {
             percentage: 10,
             usageDetails: [],
             nextResetTime: nil)
+        let extraC = ZaiLimitEntry(
+            type: .tokensLimit,
+            unit: .hours,
+            number: 5,
+            usage: 20,
+            currentValue: 4,
+            remaining: 16,
+            percentage: 20,
+            usageDetails: [],
+            nextResetTime: nil)
         let zaiSnap = ZaiUsageSnapshot(
             tokenLimit: entry,
             timeLimit: nil,
-            extraLimits: [extraA, extraB],
+            extraLimits: [extraA, extraB, extraC],
             planName: "Pro",
             updatedAt: Date()).toUsageSnapshot(providerID: .zaiCN)
-        #expect(zaiSnap.tertiary != nil)
+        // M7: Contiguous promotion fills secondary -> tertiary -> additionalWindows without leaving secondary nil.
+        #expect(zaiSnap.secondary?.windowMinutes == 30 * 1440)
+        #expect(zaiSnap.tertiary?.windowMinutes == 24 * 60)
         #expect(zaiSnap.additionalWindows?.count == 1)
         #expect(zaiSnap.identity?.providerID == .zaiCN)
+
+        // Low: Kimi TIME_UNIT_MILLISECOND converts via 60,000 ms/min instead of matching SECOND.
+        let kimiJSON = """
+        {
+          "limits": [
+            {
+              "window": { "duration": 18000000, "timeUnit": "TIME_UNIT_MILLISECOND" },
+              "detail": { "limit": 100, "used": 25 }
+            }
+          ]
+        }
+        """
+        let kimiSnap = try KimiCodeUsageFetcher.parse(Data(kimiJSON.utf8))
+        #expect(kimiSnap.primary.windowMinutes == 300)
+        #expect(kimiSnap.primary.usedPercent == 25)
     }
 
     @Test
@@ -555,6 +763,10 @@ struct MiniMaxAndProviderAuditTests {
         #expect(
             AzureUsageFetcher.deploymentsURL(
                 endpoint: "http://insecure.example.com",
+                apiVersion: "2024-10-21") == nil)
+        #expect(
+            AzureUsageFetcher.deploymentsURL(
+                endpoint: "https:///openai/deployments",
                 apiVersion: "2024-10-21") == nil)
         #expect(
             AzureUsageFetcher.deploymentsURL(
@@ -570,6 +782,11 @@ struct MiniMaxAndProviderAuditTests {
         #expect(throws: (any Error).self) {
             _ = try StepFunUsageFetcher.parseAccount(data: Data("not-json".utf8))
         }
+        let stepFunNonFinite = try StepFunUsageFetcher.parseAccount(
+            data: Data(#"{"balance": " Infinity ", "flag": true, "available_balance": " 12.5 "}"#.utf8))
+        #expect(stepFunNonFinite.availableBalance == 12.5)
+        let stepFunNaN = try StepFunUsageFetcher.parseAccount(data: Data(#"{"balance": "NaN"}"#.utf8))
+        #expect(stepFunNaN.availableBalance == nil)
 
         let deepSeekJSON = """
         {
@@ -583,29 +800,67 @@ struct MiniMaxAndProviderAuditTests {
         #expect(deepSeekSnap.balance?.currency == nil)
         #expect(deepSeekSnap.balance?.blocksAPICalls == true)
 
-        let auggieSnap = AuggieUsageMetrics(requestCount: 5, totalTokens: 100, inputTokens: 60, outputTokens: 40)
+        // M8: Funded blank-currency entry is not duplicated in resetDescription.
+        let fundedBlankCurrency = """
+        {
+          "is_available": true,
+          "balance_infos": [{ "currency": "  ", "total_balance": "12.50" }]
+        }
+        """
+        let fundedSnap = try JSONDecoder().decode(DeepSeekBalanceResponse.self, from: Data(fundedBlankCurrency.utf8))
             .toUsageSnapshot()
-        #expect(auggieSnap.primary.hasKnownLimit == false)
+        #expect(fundedSnap.primary.resetDescription == "Balance: 12.50")
+
+        // Nested summary object paired with breakdown array must not double-count metrics.
+        let auggieJSON = """
+        {
+          "summary": { "total_requests": 5, "total_tokens": 100 },
+          "daily": [
+            { "total_requests": 3, "total_tokens": 60 },
+            { "total_requests": 2, "total_tokens": 40 }
+          ]
+        }
+        """
+        let auggieParsed = try AuggieUsageFetcher.parseDailyUsageResponse(Data(auggieJSON.utf8))
+        #expect(auggieParsed.requestCount == 5)
+        #expect(auggieParsed.totalTokens == 100)
+        #expect(auggieParsed.toUsageSnapshot().primary.hasKnownLimit == false)
 
         let tempFile = FileManager.default.temporaryDirectory
             .appendingPathComponent("runic-factory-session-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: tempFile) }
-        let store = FactorySessionStore(fileURL: tempFile)
-        await store.setBearerToken("tok-1")
+        let writerStore = FactorySessionStore(fileURL: tempFile)
+        await writerStore.setRefreshToken("ref-1")
+        // Cold reader must load existing disk state before writing so unrelated keys stay intact.
+        let coldStore = FactorySessionStore(fileURL: tempFile)
+        await coldStore.setBearerToken("tok-1")
+        #expect(await coldStore.getRefreshToken() == "ref-1")
+        #expect(await coldStore.getBearerToken() == "tok-1")
+        await coldStore.setBearerToken(nil)
         #expect(FileManager.default.fileExists(atPath: tempFile.path))
-        await store.clearSession()
+        await coldStore.setRefreshToken(nil)
         #expect(!FileManager.default.fileExists(atPath: tempFile.path))
 
         let cursorProbe = CursorStatusProbe()
         let cursorSummary = try JSONDecoder().decode(
             CursorUsageSummary.self,
-            from: Data(#"{"limitType":"unlimited","individualUsage":{"plan":{"limit":0}}}"#.utf8))
+            from: Data(#"{"isUnlimited":true,"limitType":"unlimited","individualUsage":{"plan":{"limit":1000}}}"#.utf8))
         let cursorSnap = cursorProbe.parseUsageSummary(cursorSummary, userInfo: nil).toUsageSnapshot()
         #expect(cursorSnap.primary.hasKnownLimit == false)
 
+        // M10: Tests never touch real ~/Library/Application Support/Runic/diagnostics.
+        let diagDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("runic-sf-diag-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: diagDir) }
         let trace = SiliconFlowConsoleTrace()
-        trace.finish(china: false, isConnect: false, failure: "401 unauthorized")
+        trace.finish(
+            china: false,
+            isConnect: false,
+            failure: "401 unauthorized",
+            diagnosticsDirectory: diagDir,
+            writeToDisk: true)
         #expect(SiliconFlowConsoleTrace.lastFailure(china: false) != nil)
+        #expect(FileManager.default.fileExists(atPath: diagDir.appendingPathComponent("siliconflow-console.json").path))
         SiliconFlowConsoleTrace.clearFailure(china: false)
         #expect(SiliconFlowConsoleTrace.lastFailure(china: false) == nil)
     }

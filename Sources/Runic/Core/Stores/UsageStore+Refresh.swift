@@ -18,7 +18,11 @@ extension UsageStore {
     /// redraw: in-memory checks first, with a synchronous keychain read only for
     /// enabled China variants (see below).
     func providerHasMenuPresence(_ provider: UsageProvider) -> Bool {
-        if self.refreshingProviders.contains(provider) { return true }
+        if self.activeSingleRefreshes.contains(provider)
+            || self.accounts(for: provider).contains(where: { self.refreshingProviders.contains($0.id) })
+        {
+            return true
+        }
         if self.snapshots[provider] != nil { return true }
         if self.ledgerTopModels[provider] != nil || self.ledgerDailySummaries[provider] != nil {
             return true
@@ -160,7 +164,7 @@ extension UsageStore {
     /// The Settings reload button: lets the provider re-read changed
     /// credentials (may prompt once), then refreshes every slot of its brand.
     func reloadProvider(_ provider: UsageProvider) async {
-        guard !self.refreshSlots(for: provider).contains(where: { self.refreshingProviders.contains($0) }) else {
+        guard !self.isRefreshing(provider: provider) else {
             return
         }
         await ProviderImplementationRegistry.implementation(for: provider)?.prepareManualReload()
@@ -178,7 +182,7 @@ extension UsageStore {
     /// False when it was still running at the timeout.
     func waitForRunningRefresh(of provider: UsageProvider, timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        while self.refreshSlots(for: provider).contains(where: { self.refreshingProviders.contains($0) }) {
+        while self.isRefreshing(provider: provider) {
             guard Date() < deadline else { return false }
             try? await Task.sleep(for: .milliseconds(100))
         }
@@ -193,8 +197,9 @@ extension UsageStore {
 
     func isRefreshing(provider: UsageProvider?) -> Bool {
         guard let provider else { return self.isGlobalRefreshing }
-        if self.activeSingleRefreshes.contains(provider) { return true }
-        return self.refreshSlots(for: provider).contains { slot in
+        let slots = Set(self.refreshSlots(for: provider)).union([provider])
+        if slots.contains(where: { self.activeSingleRefreshes.contains($0) }) { return true }
+        return slots.contains { slot in
             self.accounts(for: slot).contains { self.refreshingProviders.contains($0.id) }
         }
     }
@@ -202,10 +207,11 @@ extension UsageStore {
     func refreshSingleProvider(_ provider: UsageProvider) async {
         guard !self.isRefreshing(provider: provider) else { return }
         let startedAt = Date()
-        self.activeSingleRefreshes.insert(provider)
+        let trackedSlots = Set(self.refreshSlots(for: provider)).union([provider])
+        self.activeSingleRefreshes.formUnion(trackedSlots)
         self.syncRefreshingFlag()
         defer {
-            self.activeSingleRefreshes.remove(provider)
+            self.activeSingleRefreshes.subtract(trackedSlots)
             self.syncRefreshingFlag()
         }
         await withTaskGroup(of: Void.self) { group in
@@ -330,17 +336,15 @@ extension UsageStore {
 
         if !spec.isEnabled() {
             for account in self.accounts(for: provider) {
-                self.refreshingProviders.remove(account.id)
-                await MainActor.run { self.clearAccountState(account) }
+                self.clearAccountState(account)
             }
-            await MainActor.run {
-                self.tokenSnapshots.removeValue(forKey: provider)
-                self.tokenErrors[provider] = nil
-                self.tokenFailureGates[provider]?.reset()
-                self.lastTokenFetchAt.removeValue(forKey: provider)
-                self.lastLedgerActivityAt.removeValue(forKey: provider)
-                self.ledgerCompactions.removeValue(forKey: provider)
-            }
+            self.syncRefreshingFlag()
+            self.tokenSnapshots.removeValue(forKey: provider)
+            self.tokenErrors[provider] = nil
+            self.tokenFailureGates[provider]?.reset()
+            self.lastTokenFetchAt.removeValue(forKey: provider)
+            self.lastLedgerActivityAt.removeValue(forKey: provider)
+            self.ledgerCompactions.removeValue(forKey: provider)
             return
         }
 
@@ -365,6 +369,10 @@ extension UsageStore {
     }
 
     private func clearAccountState(_ account: ProviderAccount) {
+        self.accountFetchGenerations[account.id] = (self.accountFetchGenerations[account.id] ?? 0) &+ 1
+        self.inFlightAccountFetches.removeValue(forKey: account.id)?.cancel()
+        self.pendingForceSurface.remove(account.id)
+        self.refreshingProviders.remove(account.id)
         self.snapshots.removeValue(forKey: account.id)
         self.errors[account.id] = nil
         self.lastSourceLabels.removeValue(forKey: account.id)
@@ -387,23 +395,39 @@ extension UsageStore {
     {
         let provider = account.id.kind
         let accountID = account.id
+        if trigger == .manual {
+            self.pendingForceSurface.insert(accountID)
+        }
+        if let existing = self.inFlightAccountFetches[accountID] {
+            await existing.value
+            return
+        }
+
+        let generation = (self.accountFetchGenerations[accountID] ?? 0) &+ 1
+        self.accountFetchGenerations[accountID] = generation
         self.refreshingProviders.insert(accountID)
         self.syncRefreshingFlag()
-        defer {
-            self.refreshingProviders.remove(accountID)
-            self.syncRefreshingFlag()
-        }
 
-        let previousSnapshot = self.snapshots[accountID]
-        let outcome = await spec.fetch(accountID, credential)
-        await MainActor.run {
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.accountFetchGenerations[accountID] == generation {
+                    self.inFlightAccountFetches.removeValue(forKey: accountID)
+                    self.pendingForceSurface.remove(accountID)
+                    self.refreshingProviders.remove(accountID)
+                    self.syncRefreshingFlag()
+                }
+            }
+
+            let previousSnapshot = self.snapshots[accountID]
+            let outcome = await spec.fetch(accountID, credential)
+            guard self.accountFetchGenerations[accountID] == generation else { return }
+
             self.lastFetchAttempts[accountID] = outcome.attempts
-        }
 
-        switch outcome.result {
-        case let .success(result):
-            let scoped = result.usage.scoped(to: provider)
-            await MainActor.run {
+            switch outcome.result {
+            case let .success(result):
+                let scoped = result.usage.scoped(to: provider)
                 if accountID.isDefault {
                     self.handleSessionQuotaTransition(provider: provider, snapshot: scoped)
                 }
@@ -443,15 +467,16 @@ extension UsageStore {
                         previous: previousSnapshot,
                         current: scoped)
                 }
-            }
-        case let .failure(error):
-            await MainActor.run {
+            case let .failure(error):
+                let shouldForceSurface = self.pendingForceSurface.remove(accountID) != nil || trigger == .manual
                 self.recordProviderFetchFailure(
                     accountID,
                     message: error.localizedDescription,
-                    forceSurface: trigger == .manual)
+                    forceSurface: shouldForceSurface)
             }
         }
+        self.inFlightAccountFetches[accountID] = task
+        await task.value
     }
 
     /// Record a fetch failure without discarding the last-known-good snapshot.
@@ -478,8 +503,7 @@ extension UsageStore {
         let currentRemaining: Double
         let quotaKind: SessionQuotaKind
         if snapshot.primary.hasKnownLimit == false,
-           let balance = snapshot.balance,
-           self.metadata(for: provider).supportsCredits
+           let balance = snapshot.balance
         {
             currentRemaining = balance.blocksAPICalls ? 0 : 100
             quotaKind = .credits

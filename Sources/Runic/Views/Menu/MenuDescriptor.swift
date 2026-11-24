@@ -382,6 +382,17 @@ struct MenuDescriptor {
     }
 
     private static func appendRateWindow(entries: inout [Entry], title: String, window: RateWindow) {
+        guard window.hasKnownLimit != false else {
+            let summary = window.resetDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let info = (summary?.isEmpty == false ? summary : nil) ?? window.label ?? "No usage limit reported"
+            entries.append(.text("\(title): \(info)", .primary))
+            if let resetsAt = window.resetsAt {
+                let countdown = UsageFormatter.resetCountdownDescription(from: resetsAt)
+                let expiry = UsageFormatter.resetExpiryString(from: resetsAt)
+                entries.append(.text("Resets \(countdown) · \(expiry)", .secondary))
+            }
+            return
+        }
         let line = UsageFormatter
             .usageLine(remaining: window.remainingPercent, used: window.usedPercent)
         entries.append(.text("\(title): \(line)", .primary))

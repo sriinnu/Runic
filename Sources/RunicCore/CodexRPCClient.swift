@@ -89,6 +89,8 @@ final class CodexRPCClient: @unchecked Sendable {
     private let stderrPipe = Pipe()
     private let lineQueue = LineQueue()
     private let requestTimeout: TimeInterval
+    private let shutdownLock = NSLock()
+    private var hasShutDown = false
     private var nextID = 1
     private var processGroup: pid_t?
 
@@ -283,28 +285,48 @@ final class CodexRPCClient: @unchecked Sendable {
     }
 
     func shutdown() {
+        let shouldShutdown: Bool = self.shutdownLock.withLock {
+            if self.hasShutDown { return false }
+            self.hasShutDown = true
+            return true
+        }
+        guard shouldShutdown else { return }
+
+        let pgid = self.processGroup
+        self.processGroup = nil
+
         self.stdoutPipe.fileHandleForReading.readabilityHandler = nil
         self.stderrPipe.fileHandleForReading.readabilityHandler = nil
         self.lineQueue.finish()
-        if self.process.isRunning {
-            self.process.terminate()
-        }
-        if let pgid = self.processGroup {
-            kill(-pgid, SIGTERM)
-        }
-        let waitDeadline = Date().addingTimeInterval(2.0)
-        while self.process.isRunning, Date() < waitDeadline {
-            usleep(100_000)
-        }
-        if self.process.isRunning {
-            if let pgid = self.processGroup {
-                kill(-pgid, SIGKILL)
-            }
-            kill(self.process.processIdentifier, SIGKILL)
-        }
         try? self.stdinPipe.fileHandleForWriting.close()
-        try? self.stdoutPipe.fileHandleForReading.close()
-        try? self.stderrPipe.fileHandleForReading.close()
+
+        let process = self.process
+        let pid = process.processIdentifier
+        if process.isRunning {
+            process.terminate()
+            if let pgid {
+                kill(-pgid, SIGTERM)
+            }
+        }
+
+        let stdoutHandle = self.stdoutPipe.fileHandleForReading
+        let stderrHandle = self.stderrPipe.fileHandleForReading
+        DispatchQueue.global(qos: .utility).async {
+            let waitDeadline = Date().addingTimeInterval(2.0)
+            while process.isRunning, Date() < waitDeadline {
+                usleep(100_000)
+            }
+            if process.isRunning {
+                if let pgid {
+                    kill(-pgid, SIGKILL)
+                }
+                if pid > 0 {
+                    kill(pid, SIGKILL)
+                }
+            }
+            try? stdoutHandle.close()
+            try? stderrHandle.close()
+        }
     }
 
     private func request(method: String, params: [String: Any]? = nil) async throws -> [String: Any] {
@@ -359,11 +381,14 @@ final class CodexRPCClient: @unchecked Sendable {
     }
 
     private func readNextLine(deadline: Date, method: String) async throws -> Data {
+        try Task.checkCancellation()
         let lineQueue = self.lineQueue
         do {
             return try await withThrowingTaskGroup(of: Data.self) { group in
                 group.addTask {
+                    try Task.checkCancellation()
                     guard let line = await lineQueue.nextLine() else {
+                        try Task.checkCancellation()
                         throw RPCWireError.malformed("codex app-server closed stdout")
                     }
                     return line
@@ -373,14 +398,18 @@ final class CodexRPCClient: @unchecked Sendable {
                     if remaining > 0 {
                         try await Task.sleep(for: .seconds(remaining))
                     }
+                    try Task.checkCancellation()
                     throw RPCWireError.timedOut(method)
                 }
                 guard let line = try await group.next() else {
+                    try Task.checkCancellation()
                     throw RPCWireError.timedOut(method)
                 }
                 group.cancelAll()
                 return line
             }
+        } catch is CancellationError {
+            throw CancellationError()
         } catch let error as RPCWireError {
             if case .timedOut = error {
                 self.shutdown()

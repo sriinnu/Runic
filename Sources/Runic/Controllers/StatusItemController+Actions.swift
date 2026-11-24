@@ -10,9 +10,24 @@ extension StatusItemController {
     /// so `refreshNow` performs a full refresh of every provider instead of
     /// silently pinging codex — which may not even be enabled.
     func refreshTargetProvider() -> UsageProvider? {
-        if let last = self.lastMenuProvider { return last }
-        if self.shouldMergeIcons, self.selectedMenuProvider == nil { return nil }
-        return self.store.isEnabled(.codex) ? .codex : self.store.enabledProviders().first
+        Self.resolveRefreshTarget(
+            selectedMenuProvider: self.selectedMenuProvider,
+            lastMenuProvider: self.lastMenuProvider,
+            isMultiProviderOverviewCapable: self.shouldMergeIcons || self.usesSwiftUIPopoverMenu,
+            enabledProviders: self.store.enabledProviders())
+    }
+
+    nonisolated static func resolveRefreshTarget(
+        selectedMenuProvider: UsageProvider?,
+        lastMenuProvider: UsageProvider?,
+        isMultiProviderOverviewCapable: Bool,
+        enabledProviders: [UsageProvider]) -> UsageProvider?
+    {
+        if let last = lastMenuProvider { return last }
+        if isMultiProviderOverviewCapable, selectedMenuProvider == nil, enabledProviders.count > 1 {
+            return nil
+        }
+        return enabledProviders.contains(.codex) ? .codex : enabledProviders.first
     }
 
     /// The slot provider-targeted actions (dashboard, status page, export) act

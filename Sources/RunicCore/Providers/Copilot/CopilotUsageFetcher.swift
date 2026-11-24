@@ -270,26 +270,31 @@ public struct CopilotUsageFetcher: Sendable {
         .QuotaSnapshots?) -> [CopilotUsageResponse.QuotaSnapshot]
     {
         guard let snapshots else { return [] }
-        let candidates = [snapshots.premiumInteractions, snapshots.completions, snapshots.chat]
+        let candidates: [(slot: String, snapshot: CopilotUsageResponse.QuotaSnapshot?)] = [
+            ("premium_interactions", snapshots.premiumInteractions),
+            ("completions", snapshots.completions),
+            ("chat", snapshots.chat),
+        ]
         var ordered: [CopilotUsageResponse.QuotaSnapshot] = []
         var seen: Set<String> = []
 
-        for candidate in candidates {
-            guard let candidate else { continue }
-            let fingerprint = self.quotaFingerprint(candidate)
+        for entry in candidates {
+            guard let candidate = entry.snapshot else { continue }
+            let fingerprint = self.quotaFingerprint(candidate, slot: entry.slot)
             guard seen.insert(fingerprint).inserted else { continue }
             ordered.append(candidate)
         }
         return ordered
     }
 
-    private func quotaFingerprint(_ snapshot: CopilotUsageResponse.QuotaSnapshot) -> String {
+    private func quotaFingerprint(_ snapshot: CopilotUsageResponse.QuotaSnapshot, slot: String) -> String {
         if let quotaID = snapshot.quotaId?.trimmingCharacters(in: .whitespacesAndNewlines),
            !quotaID.isEmpty
         {
             return "id:\(quotaID.lowercased())"
         }
-        return "fallback:\(snapshot.entitlement ?? -1)|\(snapshot.normalizedRemaining ?? -1)|" +
+        return "fallback:\(slot)|\(snapshot.unlimited ?? false)|" +
+            "\(snapshot.entitlement ?? -1)|\(snapshot.normalizedRemaining ?? -1)|" +
             "\(snapshot.percentRemaining ?? -1)|\(snapshot.timestampUTC ?? "")"
     }
 

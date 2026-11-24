@@ -339,7 +339,7 @@ extension ProviderSidebarDetailView {
 
     func labeledQuotaWindows(from snapshot: UsageSnapshot?) -> [(label: String, window: RateWindow)] {
         guard let snapshot else { return [] }
-        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
+        let windows = snapshot.allWindows
         var seen: Set<String> = []
         var labeled: [(label: String, window: RateWindow)] = []
 

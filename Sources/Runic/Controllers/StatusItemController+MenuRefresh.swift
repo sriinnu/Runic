@@ -86,8 +86,8 @@ extension StatusItemController {
             try? await Task.sleep(for: Self.menuOpenPingDelay)
             guard !Task.isCancelled else { return }
             guard self.openMenus[ObjectIdentifier(menu)] != nil else { return }
-            guard !self.store.isGlobalRefreshing else { return }
             let provider = self.menuProvider(for: menu) ?? self.resolvedMenuProvider()
+            guard !self.store.isGlobalRefreshing, !self.store.isRefreshing(provider: provider) else { return }
             // Error-stale, missing, or simply AGED data all warrant a ping —
             // `isStale` alone is error-keyed, so old-but-successful snapshots
             // never re-pinged on menu open. (`.manual` is already excluded by

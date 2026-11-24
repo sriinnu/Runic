@@ -101,6 +101,10 @@ final class UsageStore {
     var isGlobalRefreshing = false
     var activeSingleRefreshes: Set<UsageProvider> = []
     var refreshingProviders: Set<AccountID> = []
+    @ObservationIgnored var inFlightAccountFetches: [AccountID: Task<Void, Never>] = [:]
+    @ObservationIgnored var accountFetchGenerations: [AccountID: UInt64] = [:]
+    @ObservationIgnored var pendingForceSurface: Set<AccountID> = []
+    @ObservationIgnored var inFlightCreditsRefresh: Task<Void, Never>?
     var debugForceAnimation = false
     var pathDebugInfo: PathDebugSnapshot = .empty
     var statuses: [AccountID: ProviderStatus] = [:]

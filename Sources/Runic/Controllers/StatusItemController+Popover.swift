@@ -63,7 +63,8 @@ extension StatusItemController {
             self.lastMenuProvider = initialProvider
         } else if enabledProviders.count == 1 {
             self.lastMenuProvider = enabledProviders.first
-        } else if self.shouldMergeIcons {
+        } else {
+            self.selectedMenuProvider = nil
             self.lastMenuProvider = nil
         }
 
@@ -128,7 +129,8 @@ extension StatusItemController {
             onSelectProvider: { [weak self] provider in
                 guard let self else { return }
                 self.selectedMenuProvider = provider
-                self.lastMenuProvider = provider ?? (self.shouldMergeIcons ? nil : self.store.enabledProviders().first)
+                let enabled = self.store.enabledProviders()
+                self.lastMenuProvider = provider ?? (enabled.count > 1 ? nil : enabled.first)
                 self.applyIcon(phase: nil)
             })
             .environment(\.runicFonts, RunicFontStore.shared)
@@ -228,8 +230,8 @@ extension StatusItemController {
             try? await Task.sleep(for: PerformanceConstants.menuOpenPingDelay)
             guard !Task.isCancelled else { return }
             guard self.popover?.isShown == true else { return }
-            guard !self.store.isGlobalRefreshing else { return }
             let target = provider ?? self.selectedMenuProvider ?? self.store.enabledProviders().first
+            guard !self.store.isGlobalRefreshing, !self.store.isRefreshing(provider: target) else { return }
             let shouldPing = target.map { self.store.shouldPingOnMenuOpen(provider: $0) }
                 ?? self.store.isStale
             guard shouldPing else { return }

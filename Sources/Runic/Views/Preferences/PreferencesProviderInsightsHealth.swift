@@ -116,7 +116,7 @@ extension ProviderInsightsComposer {
 
     static func windowModelsValue(_ snapshot: UsageSnapshot?) -> String? {
         guard let snapshot else { return nil }
-        let windows = [snapshot.primary, snapshot.secondary, snapshot.tertiary].compactMap(\.self)
+        let windows = snapshot.allWindows
         guard !windows.isEmpty else { return nil }
 
         var seen: Set<String> = []

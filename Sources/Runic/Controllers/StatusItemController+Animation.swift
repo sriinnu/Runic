@@ -230,7 +230,7 @@ extension StatusItemController {
         guard isVisible else { return false }
 
         // Critical: Only animate while actively fetching
-        guard self.store.refreshingProviders.contains(provider) else { return false }
+        guard self.store.isRefreshing(provider: provider) else { return false }
 
         // Stop animation if we have data OR reached error state (stale = error/cached)
         let isStale = self.store.isStale(provider: provider)

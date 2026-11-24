@@ -57,9 +57,9 @@ struct OllamaCloudWebFetchStrategy: ProviderFetchStrategy {
     let id: String = "ollamacloud.web"
     let kind: ProviderFetchKind = .web
 
-    func isAvailable(_: ProviderFetchContext) async -> Bool {
+    func isAvailable(_ context: ProviderFetchContext) async -> Bool {
         #if os(macOS)
-        true
+        context.account?.isDefault != false
         #else
         false
         #endif
@@ -94,10 +94,7 @@ struct OllamaCloudAPIFetchStrategy: ProviderFetchStrategy {
         var usage = try await OllamaCloudUsageFetcher.fetchUsage(apiKey: apiKey)
         var sourceLabel = "api"
         #if os(macOS)
-        if context.runtime == .app,
-           usage.monthlyUsage == nil,
-           usage.sessionUsage == nil,
-           usage.weeklyUsage == nil,
+        if Self.shouldEnrichFromWeb(context: context, usage: usage),
            let webUsage = try? await OllamaCloudWebUsageFetcher.fetchUsage(),
            webUsage.monthlyUsage != nil || webUsage.sessionUsage != nil || webUsage.weeklyUsage != nil
         {
@@ -117,6 +114,15 @@ struct OllamaCloudAPIFetchStrategy: ProviderFetchStrategy {
         return self.makeResult(
             usage: usage.toUsageSnapshot(),
             sourceLabel: sourceLabel)
+    }
+
+    static func shouldEnrichFromWeb(context: ProviderFetchContext, usage: OllamaCloudUsage) -> Bool {
+        context.runtime == .app
+            && context.account?.isDefault != false
+            && context.sourceMode == .auto
+            && usage.monthlyUsage == nil
+            && usage.sessionUsage == nil
+            && usage.weeklyUsage == nil
     }
 
     func shouldFallback(on _: Error, context _: ProviderFetchContext) -> Bool {

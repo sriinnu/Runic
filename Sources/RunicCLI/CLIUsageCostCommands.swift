@@ -2,6 +2,19 @@ import Foundation
 import Helix
 import RunicCore
 
+struct CLIUsageQueryOptions {
+    let explicitFilter: Bool
+    let isJson: Bool
+    let isPretty: Bool
+    let useColor: Bool
+}
+
+struct CLIUsageCommandOutput: Equatable {
+    let stdout: String?
+    let stderrErrors: [String]
+    let exitCode: Int32
+}
+
 private struct CLIUsageJSONEntry: Encodable {
     let provider: UsageProvider
     let displayName: String
@@ -20,25 +33,71 @@ extension RunicCLI {
         let noColor = invocation.parsedValues.flags.contains("noColor")
         let useColor = !noColor
 
-        let explicitFilter = providerArg != nil
-        let providers: [UsageProvider] = if let providerName = providerArg?.lowercased() {
+        let normalizedProviderArg = providerArg?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let explicitFilter = normalizedProviderArg.map { !$0.isEmpty && $0 != "all" } ?? false
+        let providers: [UsageProvider] = if let normalizedProviderArg, !normalizedProviderArg.isEmpty {
             Self.resolveProviderList(
-                providerName,
+                normalizedProviderArg,
                 defaultProviders: ProviderDescriptorRegistry.all.map(\.id))
         } else {
             ProviderDescriptorRegistry.all.map(\.id)
         }
 
         let fetcher = UsageFetcher()
+        let options = CLIUsageQueryOptions(
+            explicitFilter: explicitFilter,
+            isJson: isJson,
+            isPretty: isPretty,
+            useColor: useColor)
+        let outcome = await Self.executeUsageQuery(providers: providers, options: options) { provider in
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            let context = ProviderFetchContext(
+                runtime: .cli,
+                sourceMode: .cli,
+                includeCredits: true,
+                webTimeout: 60,
+                webDebugDumpHTML: false,
+                verbose: false,
+                env: ProcessInfo.processInfo.environment,
+                settings: nil,
+                fetcher: fetcher,
+                claudeFetcher: ClaudeUsageFetcher())
+            let result = try await descriptor.fetchOutcome(context: context).result.get()
+            return (sourceLabel: result.sourceLabel, usage: result.usage, credits: result.credits)
+        }
+
+        if let stdout = outcome.stdout {
+            print(stdout)
+            fflush(Foundation.stdout)
+        }
+        for errorMessage in outcome.stderrErrors {
+            Self.printError(errorMessage)
+        }
+        if outcome.exitCode != 0 {
+            Foundation.exit(outcome.exitCode)
+        }
+    }
+
+    static func executeUsageQuery(
+        providers: [UsageProvider],
+        options: CLIUsageQueryOptions,
+        fetchProvider: @Sendable (UsageProvider) async throws -> (
+            sourceLabel: String,
+            usage: UsageSnapshot,
+            credits: CreditsSnapshot?)) async -> CLIUsageCommandOutput
+    {
         var textBlocks: [String] = []
+        var textErrors: [String] = []
         var jsonEntries: [CLIUsageJSONEntry] = []
+        var attemptedLiveCount = 0
+        var failedLiveCount = 0
 
         for provider in providers {
             let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
             if !descriptor.metadata.providesLiveSnapshot {
-                if explicitFilter {
+                if options.explicitFilter {
                     let note = "Provider uses local logs only (no live snapshot)."
-                    if isJson {
+                    if options.isJson {
                         jsonEntries.append(CLIUsageJSONEntry(
                             provider: provider,
                             displayName: descriptor.metadata.displayName,
@@ -53,42 +112,31 @@ extension RunicCLI {
                 continue
             }
 
+            attemptedLiveCount += 1
             do {
-                let context = ProviderFetchContext(
-                    runtime: .cli,
-                    sourceMode: .cli,
-                    includeCredits: true,
-                    webTimeout: 60,
-                    webDebugDumpHTML: false,
-                    verbose: false,
-                    env: ProcessInfo.processInfo.environment,
-                    settings: nil,
-                    fetcher: fetcher,
-                    claudeFetcher: ClaudeUsageFetcher())
+                let fetched = try await fetchProvider(provider)
 
-                let outcome = await descriptor.fetchOutcome(context: context)
-                let result = try outcome.result.get()
-
-                if isJson {
+                if options.isJson {
                     jsonEntries.append(CLIUsageJSONEntry(
                         provider: provider,
                         displayName: descriptor.metadata.displayName,
-                        source: result.sourceLabel,
-                        snapshot: result.usage.scoped(to: provider),
-                        credits: result.credits,
+                        source: fetched.sourceLabel,
+                        snapshot: fetched.usage.scoped(to: provider),
+                        credits: fetched.credits,
                         error: nil))
                 } else {
                     let header = descriptor.metadata.displayName
                     let text = Self.renderUsageText(
                         provider: provider,
-                        snapshot: result.usage,
-                        credits: result.credits,
+                        snapshot: fetched.usage,
+                        credits: fetched.credits,
                         header: header,
-                        useColor: useColor)
+                        useColor: options.useColor)
                     textBlocks.append(text)
                 }
             } catch {
-                if isJson {
+                failedLiveCount += 1
+                if options.isJson {
                     jsonEntries.append(CLIUsageJSONEntry(
                         provider: provider,
                         displayName: descriptor.metadata.displayName,
@@ -97,27 +145,39 @@ extension RunicCLI {
                         credits: nil,
                         error: error.localizedDescription))
                 } else {
-                    textBlocks.append("Error fetching \(provider.rawValue): \(error.localizedDescription)")
+                    textErrors.append("Error fetching \(provider.rawValue): \(error.localizedDescription)")
                 }
             }
         }
 
-        if isJson {
+        let shouldFail = (options.explicitFilter && failedLiveCount > 0)
+            || (attemptedLiveCount > 0 && failedLiveCount == attemptedLiveCount)
+
+        if options.isJson {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
-            if isPretty {
+            if options.isPretty {
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             }
             if let data = try? encoder.encode(jsonEntries),
                let encoded = String(data: data, encoding: .utf8)
             {
-                print(encoded)
-            } else {
-                print("[]")
+                return CLIUsageCommandOutput(
+                    stdout: encoded,
+                    stderrErrors: textErrors,
+                    exitCode: shouldFail ? 1 : 0)
             }
-        } else {
-            print(textBlocks.joined(separator: "\n"))
+            return CLIUsageCommandOutput(
+                stdout: nil,
+                stderrErrors: textErrors + ["Failed to encode usage JSON output."],
+                exitCode: 1)
         }
+
+        let stdout = textBlocks.isEmpty ? nil : textBlocks.joined(separator: "\n")
+        return CLIUsageCommandOutput(
+            stdout: stdout,
+            stderrErrors: textErrors,
+            exitCode: shouldFail ? 1 : 0)
     }
 
     static func runCost(_ invocation: CommandInvocation) async {

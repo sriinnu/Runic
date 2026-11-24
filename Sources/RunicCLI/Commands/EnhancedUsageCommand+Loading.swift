@@ -109,7 +109,7 @@ extension EnhancedUsageCommand {
 
         return ProviderUsageData(
             provider: provider,
-            providerName: provider.rawValue.capitalized,
+            providerName: metadata.displayName,
             snapshot: snapshot,
             credits: credits,
             windows: windows,
@@ -179,7 +179,7 @@ extension EnhancedUsageCommand {
 
         let comparisons = providerData.map { data in
             let totalTokens = data.windows.reduce(0) { $0 + ($1.used ?? 0) }
-            let efficiency = data.windows.map(\.usedPercent).min() ?? 100
+            let efficiency = data.windows.filter { $0.hasKnownLimit != false }.map(\.usedPercent).min() ?? 100
 
             return ProviderComparisonItem(
                 provider: data.providerName,

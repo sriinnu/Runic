@@ -81,7 +81,9 @@ struct AzureOpenAIAPIFetchStrategy: ProviderFetchStrategy {
         if let credential = context.credential(for: .azure) {
             return credential
         }
-        if let token = cleaned(context.settings?.azure?.apiToken) {
+        if context.account?.isDefault != false,
+           let token = cleaned(context.settings?.azure?.apiToken)
+        {
             return ProviderTokenResolution(token: token, source: .keychain)
         }
         return nil

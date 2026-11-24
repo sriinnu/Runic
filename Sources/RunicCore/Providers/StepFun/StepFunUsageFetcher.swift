@@ -55,10 +55,18 @@ public enum StepFunUsageFetcher {
     private static func findBalance(in payload: [String: Any]) -> Double? {
         for key in self.balanceKeys {
             if let value = payload[key] {
-                if let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() {
+                if let number = value as? NSNumber,
+                   CFGetTypeID(number) != CFBooleanGetTypeID(),
+                   number.doubleValue.isFinite
+                {
                     return number.doubleValue
                 }
-                if let string = value as? String, let number = Double(string) { return number }
+                if let string = value as? String,
+                   let number = Double(string.trimmingCharacters(in: .whitespacesAndNewlines)),
+                   number.isFinite
+                {
+                    return number
+                }
             }
         }
         for key in payload.keys.sorted() {

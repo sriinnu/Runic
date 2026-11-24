@@ -9,18 +9,22 @@ extension UsageStore {
 
     func refreshCreditsIfNeeded() async {
         guard self.isEnabled(.codex) else { return }
-        do {
-            let credits = try await self.codexFetcher.loadLatestCredits()
-            await MainActor.run {
+        if let existing = self.inFlightCreditsRefresh {
+            await existing.value
+            return
+        }
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.inFlightCreditsRefresh = nil }
+            do {
+                let credits = try await self.codexFetcher.loadLatestCredits()
                 self.credits = credits
                 self.lastCreditsError = nil
                 self.lastCreditsSnapshot = credits
                 self.creditsFailureStreak = 0
-            }
-        } catch {
-            let message = error.localizedDescription
-            if message.localizedCaseInsensitiveContains("data not available yet") {
-                await MainActor.run {
+            } catch {
+                let message = error.localizedDescription
+                if message.localizedCaseInsensitiveContains("data not available yet") {
                     if let cached = self.lastCreditsSnapshot {
                         self.credits = cached
                         self.lastCreditsError = nil
@@ -28,11 +32,9 @@ extension UsageStore {
                         self.credits = nil
                         self.lastCreditsError = "Codex credits are still loading; will retry shortly."
                     }
+                    return
                 }
-                return
-            }
 
-            await MainActor.run {
                 self.creditsFailureStreak += 1
                 if let cached = self.lastCreditsSnapshot {
                     self.credits = cached
@@ -45,6 +47,8 @@ extension UsageStore {
                 }
             }
         }
+        self.inFlightCreditsRefresh = task
+        await task.value
     }
 
     private func openAIDashboardFriendlyError(

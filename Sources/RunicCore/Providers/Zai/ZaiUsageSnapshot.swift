@@ -35,14 +35,12 @@ public struct ZaiUsageSnapshot: Sendable {
 
 extension ZaiUsageSnapshot {
     public func toUsageSnapshot(providerID: UsageProvider = .zai) -> UsageSnapshot {
-        let primaryLimit = self.tokenLimit ?? self.timeLimit
-        let secondaryLimit = (self.tokenLimit != nil && self.timeLimit != nil) ? self.timeLimit : nil
-
-        let primary = primaryLimit.map { Self.rateWindow(for: $0) } ?? .noLimitsReported
-        let secondary = secondaryLimit.map { Self.rateWindow(for: $0) }
-        let extraWindows = self.extraLimits.map { Self.rateWindow(for: $0) }
-        let tertiary = extraWindows.first
-        let additional = extraWindows.count > 1 ? Array(extraWindows.dropFirst()) : nil
+        let ordered = [self.tokenLimit, self.timeLimit].compactMap(\.self) + self.extraLimits
+        let windows = ordered.map { Self.rateWindow(for: $0) }
+        let primary = windows.first ?? .noLimitsReported
+        let secondary = windows.count > 1 ? windows[1] : nil
+        let tertiary = windows.count > 2 ? windows[2] : nil
+        let additional = windows.count > 3 ? Array(windows.dropFirst(3)) : nil
 
         let planName = self.planName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let loginMethod = (planName?.isEmpty ?? true) ? nil : planName

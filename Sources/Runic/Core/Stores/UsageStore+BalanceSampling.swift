@@ -37,7 +37,7 @@ extension UsageStore {
     }
 
     private func sampleBalances() async {
-        for provider in self.balanceSampleTargets() where !self.refreshingProviders.contains(provider) {
+        for provider in self.balanceSampleTargets() where !self.isRefreshing(provider: provider) {
             guard !Task.isCancelled else { return }
             await self.refreshProvider(provider, trigger: .autoTimer)
         }

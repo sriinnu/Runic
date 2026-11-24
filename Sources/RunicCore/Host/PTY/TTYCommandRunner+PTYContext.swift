@@ -142,7 +142,8 @@ extension TTYCommandRunner {
             self.proc.standardOutput = self.secondaryHandle
             self.proc.standardError = self.secondaryHandle
 
-            var env = TTYCommandRunner.enrichedEnvironment()
+            var env = TTYCommandRunner.enrichedEnvironment(
+                baseEnv: options.env ?? ProcessInfo.processInfo.environment)
             if let workingDirectory = options.workingDirectory {
                 self.proc.currentDirectoryURL = workingDirectory
                 env["PWD"] = workingDirectory.path

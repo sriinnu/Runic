@@ -57,11 +57,12 @@ struct MuseCodeCLIFetchStrategy: ProviderFetchStrategy {
     let kind: ProviderFetchKind = .cli
 
     func isAvailable(_ context: ProviderFetchContext) async -> Bool {
-        BinaryLocator.resolveMuseBinary(env: context.env) != nil || TTYCommandRunner.which("muse") != nil
+        BinaryLocator.resolveMuseBinary(env: context.env) != nil
+            || TTYCommandRunner.which("muse", env: context.env) != nil
     }
 
-    func fetch(_: ProviderFetchContext) async throws -> ProviderFetchResult {
-        let usage = try await MuseCodeCLIUsageFetcher.load()
+    func fetch(_ context: ProviderFetchContext) async throws -> ProviderFetchResult {
+        let usage = try await MuseCodeCLIUsageFetcher.load(env: context.env)
         return self.makeResult(usage: usage, sourceLabel: "muse-code-cli")
     }
 

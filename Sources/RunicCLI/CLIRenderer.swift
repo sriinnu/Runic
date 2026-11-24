@@ -16,14 +16,14 @@ enum CLIRenderer {
             for: snapshot.primary,
             fallback: meta.primaryWindowTitle(for: snapshot.primary))
         lines.append(self.rateLine(title: primaryTitle, window: snapshot.primary, useColor: context.useColor))
-        if let reset = snapshot.primary.resetDescription {
+        if snapshot.primary.hasKnownLimit != false, let reset = snapshot.primary.resetDescription {
             lines.append(self.resetLine(reset))
         }
 
         if let weekly = snapshot.secondary {
             let weeklyTitle = UsageFormatter.windowTitle(for: weekly, fallback: meta.weeklyLabel)
             lines.append(self.rateLine(title: weeklyTitle, window: weekly, useColor: context.useColor))
-            if let reset = weekly.resetDescription {
+            if weekly.hasKnownLimit != false, let reset = weekly.resetDescription {
                 lines.append(self.resetLine(reset))
             }
         }
@@ -33,7 +33,7 @@ enum CLIRenderer {
                 for: tertiary,
                 fallback: meta.opusLabel ?? "Sonnet")
             lines.append(self.rateLine(title: tertiaryTitle, window: tertiary, useColor: context.useColor))
-            if let reset = tertiary.resetDescription {
+            if tertiary.hasKnownLimit != false, let reset = tertiary.resetDescription {
                 lines.append(self.resetLine(reset))
             }
         }
@@ -42,7 +42,7 @@ enum CLIRenderer {
             for (index, extra) in additional.enumerated() {
                 let extraTitle = UsageFormatter.windowTitle(for: extra, fallback: "Quota \(index + 4)")
                 lines.append(self.rateLine(title: extraTitle, window: extra, useColor: context.useColor))
-                if let reset = extra.resetDescription {
+                if extra.hasKnownLimit != false, let reset = extra.resetDescription {
                     lines.append(self.resetLine(reset))
                 }
             }
@@ -63,6 +63,11 @@ enum CLIRenderer {
     }
 
     static func rateLine(title: String, window: RateWindow, useColor: Bool) -> String {
+        guard window.gaugePercent(showUsed: true) != nil else {
+            let summary = window.resetDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let info = (summary?.isEmpty == false ? summary : nil) ?? window.label ?? "No usage limit reported"
+            return "\(title): \(info)"
+        }
         let text = UsageFormatter.usageLine(remaining: window.remainingPercent, used: window.usedPercent)
         let colored = self.colorizeUsage(text, remainingPercent: window.remainingPercent, useColor: useColor)
         return "\(title): \(colored)"

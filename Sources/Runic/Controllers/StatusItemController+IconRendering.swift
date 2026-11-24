@@ -220,13 +220,13 @@ extension StatusItemController {
         showUsed: Bool) -> (Double?, Double?)
     {
         guard let snapshot else { return (nil, nil) }
-        if provider == .factory {
-            let first = snapshot.secondary?.gaugePercent(showUsed: showUsed)
-                ?? snapshot.primary.gaugePercent(showUsed: showUsed)
-            let second = snapshot.secondary == nil ? nil : snapshot.primary.gaugePercent(showUsed: showUsed)
-            return (first, second)
+        let ordered: [RateWindow] = if provider == .factory {
+            [snapshot.secondary, snapshot.primary, snapshot.tertiary].compactMap(\.self)
+                + (snapshot.additionalWindows ?? [])
+        } else {
+            snapshot.allWindows
         }
-        let quotaBacked = snapshot.allWindows.filter { $0.hasKnownLimit != false }
+        let quotaBacked = ordered.filter { $0.hasKnownLimit != false }
         return (
             quotaBacked.first?.gaugePercent(showUsed: showUsed),
             quotaBacked.dropFirst().first?.gaugePercent(showUsed: showUsed))
